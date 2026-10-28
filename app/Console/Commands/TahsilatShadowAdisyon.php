@@ -31,42 +31,46 @@ class TahsilatShadowAdisyon extends Command
         $ids = Adisyonlar::where('salon_id', $salon)->orderByDesc('id')->limit($limit)->pluck('id');
         $this->info("Salon $salon — {$ids->count()} adisyon karsilastiriliyor...");
 
-        $netSapan = [];
-        $odenenSapan = [];      // parent (yeni) vs kalem-split (eski API)
-        $tamEslesen = 0;
+        // (A) PARITE: yeni servis (mobil-parite kalem) == eski mobil formul (kalem)?
+        $pariteSapan = [];
+        // (B) MUTABAKAT: parent 'tahsilatlar' vs kalem-split (ileriki tek-ledger icin)
+        $mutabakatSapan = [];
+        $pariteTam = 0;
 
         foreach ($ids as $id) {
-            $yeni = $servis->getir($id)['hesap'];     // net/odenen(parent)/kalan — kurus
-            $eski = $this->eskiFormul((int) $id);     // net/odenen(kalem)/kalan — kurus
+            $yeni = $servis->getir($id)['hesap'];     // net + odenen(kalem) — kurus
+            $eski = $this->eskiFormul((int) $id);     // net + odenen(kalem) — kurus
 
-            $netOk    = $yeni['net_kurus'] === $eski['net_kurus'];
-            $odenenOk = $yeni['odenen_kurus'] === $eski['odenen_kurus'];
+            $ok = $yeni['net_kurus'] === $eski['net_kurus']
+               && $yeni['odenen_kurus'] === $eski['odenen_kurus'];
+            if ($ok) {
+                $pariteTam++;
+            } else {
+                $pariteSapan[] = ['id' => $id, 'yeni' => $yeni, 'eski' => $eski];
+            }
 
-            if (! $netOk) {
-                $netSapan[] = ['id' => $id, 'yeni' => $yeni['net_kurus'], 'eski' => $eski['net_kurus']];
-            }
-            if (! $odenenOk) {
-                $odenenSapan[] = ['id' => $id, 'yeni_parent' => $yeni['odenen_kurus'], 'eski_kalem' => $eski['odenen_kurus']];
-            }
-            if ($netOk && $odenenOk) {
-                $tamEslesen++;
+            $parentKurus = $this->parentOdenenKurus((int) $id);
+            if ($parentKurus !== $eski['odenen_kurus']) {
+                $mutabakatSapan[] = ['id' => $id, 'parent' => $parentKurus, 'kalem' => $eski['odenen_kurus']];
             }
         }
 
         $this->line('');
-        $this->info("Tam eslesen (net+odenen): $tamEslesen / {$ids->count()}");
-        $this->warn('NET sapan: '.count($netSapan));
-        $this->warn('ODENEN sapan (parent vs kalem-split): '.count($odenenSapan));
-
-        foreach (array_slice($netSapan, 0, 20) as $s) {
-            $this->line("  NET  #{$s['id']}  yeni={$s['yeni']}  eski={$s['eski']}  (fark=".($s['yeni'] - $s['eski']).')');
+        $this->info("=== PARITE (yeni v2 vs eski mobil) ===");
+        $this->info("Tam eslesen: $pariteTam / {$ids->count()}");
+        $this->warn('Parite sapan: '.count($pariteSapan));
+        foreach (array_slice($pariteSapan, 0, 20) as $s) {
+            $this->line("  #{$s['id']}  net yeni/eski={$s['yeni']['net_kurus']}/{$s['eski']['net_kurus']}  odenen yeni/eski={$s['yeni']['odenen_kurus']}/{$s['eski']['odenen_kurus']}");
         }
-        foreach (array_slice($odenenSapan, 0, 20) as $s) {
-            $this->line("  ODE  #{$s['id']}  parent={$s['yeni_parent']}  kalem={$s['eski_kalem']}  (fark=".($s['yeni_parent'] - $s['eski_kalem']).')');
+        if (empty($pariteSapan)) {
+            $this->info('PARITE TAM — v2 okuma, eski mobil ile birebir (Flutter rakamlari degismez).');
         }
 
-        if (empty($netSapan) && empty($odenenSapan)) {
-            $this->info('SIFIR SAPMA — yeni hesap eski formulle birebir tutuyor.');
+        $this->line('');
+        $this->info("=== MUTABAKAT (parent tahsilatlar vs kalem-split) — ileriki tek-ledger icin bilgi ===");
+        $this->warn('Celisen adisyon: '.count($mutabakatSapan).' / '.$ids->count());
+        foreach (array_slice($mutabakatSapan, 0, 20) as $s) {
+            $this->line("  #{$s['id']}  parent={$s['parent']}  kalem={$s['kalem']}  (fark=".($s['parent'] - $s['kalem']).')');
         }
 
         return self::SUCCESS;
@@ -103,5 +107,18 @@ class TahsilatShadowAdisyon extends Command
             'odenen_kurus' => $odenenKurus,
             'kalan_kurus'  => $netKurus - $odenenKurus,
         ];
+    }
+
+    /** Parent 'tahsilatlar' (komisyon geliri haric) toplami — KURUS. */
+    private function parentOdenenKurus(int $id): int
+    {
+        $tl = (float) DB::table('tahsilatlar')
+            ->where('adisyon_id', $id)
+            ->where(function ($q) {
+                $q->where('para_girisi', 0)->orWhereNull('para_girisi');
+            })
+            ->selectRaw('COALESCE(SUM(tutar),0) s')->value('s');
+
+        return (int) round($tl * 100);
     }
 }

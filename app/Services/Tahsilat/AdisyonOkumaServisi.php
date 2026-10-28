@@ -9,13 +9,19 @@ use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Models\Tahsilat;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Adisyon OKUMA servisi (Faz 1 — salt okuma, hicbir sey yazmaz).
  *
- * Bir adisyonun basligini, kalemlerini (hizmet/urun/paket) ve tahsilatlarini
- * getirir; parasal ozeti AdisyonHesap (saf, kurus) ile hesaplar. net/kalan
- * formulu shadow ile dogrulanana kadar 'hesap.not' alaninda isaretlidir.
+ * ODENEN KAYNAGI: eski MOBIL API (formatAdisyonFast) ile BIREBIR — yani kalem
+ * tahsilat tablolari (tahsilat_hizmetler/urunler/paketler) toplami. Boylece
+ * Flutter ekranlari v2'ye tasininca gosterilen rakam DEGISMEZ.
+ *
+ * NOT (mutabakat): parent 'tahsilatlar' tablosu ile kalem-split tablolari
+ * gecmis veride ~%52 adisyonda CELISIYOR (shadow ile tespit edildi). "Tek
+ * ledger" hedefi ileride parent'i kanonik yapip gecmisi reconcile etmekle
+ * cozulecek AYRI bir istir; Faz 1 davranis degistirmez (mobil paritesi).
  */
 class AdisyonOkumaServisi
 {
@@ -41,7 +47,8 @@ class AdisyonOkumaServisi
         $urunler   = AdisyonUrunler::where('adisyon_id', $adisyonId)->get();
         $paketler  = AdisyonPaketler::where('adisyon_id', $adisyonId)->get();
 
-        // Odeme satirlari: komisyon GELIRI (para_girisi=1) HARIC — kanonik 'odenen'.
+        // Gorüntü icin odeme kayitlari: parent 'tahsilatlar', komisyon geliri
+        // (para_girisi=1) HARIC. (Eski mobil de parent satirlari listeler.)
         $tahsilatlar = Tahsilat::where('adisyon_id', $adisyonId)
             ->where(function ($q) {
                 $q->where('para_girisi', 0)->orWhereNull('para_girisi');
@@ -61,8 +68,11 @@ class AdisyonOkumaServisi
             $kalemler[] = ['fiyat' => $u->fiyat, 'indirim' => $u->indirim_tutari];
         }
 
-        $ozet = AdisyonHesap::ozet($kalemler, $tahsilatlar->pluck('tutar')->all());
-        $ozet['not'] = 'Kanonik API formulu (formatAdisyonFast) ile hizali; tahsilat:shadow-adisyon ile dogrulandi.';
+        // ODENEN = kalem tahsilat tablolari toplami (mobil API ile BIREBIR).
+        $odenenTl = self::kalemOdenenTl($adisyonId);
+
+        $ozet = AdisyonHesap::ozet($kalemler, [$odenenTl]);
+        $ozet['not'] = 'Odenen = kalem-split (mobil parite). net=Σ(fiyat−indirim). Shadow: tahsilat:shadow-adisyon.';
 
         return [
             'adisyon' => [
@@ -79,5 +89,29 @@ class AdisyonOkumaServisi
             'tahsilatlar' => $tahsilatlar,
             'hesap'     => $ozet,
         ];
+    }
+
+    /**
+     * Kalem tahsilat tablolari (tahsilat_hizmetler/urunler/paketler) toplami — TL.
+     * Eski mobil API'nin 'odenen'i ile birebir ayni kaynak.
+     */
+    public static function kalemOdenenTl(int $adisyonId): float
+    {
+        $hizmet = (float) DB::table('tahsilat_hizmetler as t')
+            ->join('adisyon_hizmetler as a', 't.adisyon_hizmet_id', '=', 'a.id')
+            ->where('a.adisyon_id', $adisyonId)
+            ->selectRaw('COALESCE(SUM(t.tutar),0) s')->value('s');
+
+        $urun = (float) DB::table('tahsilat_urunler as t')
+            ->join('adisyon_urunler as a', 't.adisyon_urun_id', '=', 'a.id')
+            ->where('a.adisyon_id', $adisyonId)
+            ->selectRaw('COALESCE(SUM(t.tutar),0) s')->value('s');
+
+        $paket = (float) DB::table('tahsilat_paketler as t')
+            ->join('adisyon_paketler as a', 't.adisyon_paket_id', '=', 'a.id')
+            ->where('a.adisyon_id', $adisyonId)
+            ->selectRaw('COALESCE(SUM(t.tutar),0) s')->value('s');
+
+        return $hizmet + $urun + $paket;
     }
 }
