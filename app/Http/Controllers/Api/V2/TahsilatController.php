@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
+use App\Models\Personeller;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -53,11 +54,40 @@ class TahsilatController extends Controller
         // Kapsam + yetki.
         $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
 
-        // GÜVENLİK: gerçek finansal yazma HENÜZ ETKİN DEĞİL. dry_run zorunlu.
+        // GERÇEK YAZMA yolu — yalnızca dry_run=false iken.
         if (! $request->boolean('dry_run')) {
-            return ApiCevap::hata('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).', 409);
+            // Çift güvenlik: config bayrağı kapalıysa asla yazma.
+            if (! config('tahsilat.yazma_aktif')) {
+                return ApiCevap::hata('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).', 409);
+            }
+            // Henüz desteklenmeyen akışlar — sessizce yanlış yazmaktansa reddet.
+            if ((float) $request->input('indirim', 0) > 0) {
+                return ApiCevap::hata('Harici indirim v2 yazmada henüz desteklenmiyor', 422);
+            }
+            if ($request->filled('taksit_vade_id') || $request->filled('senet_vade_id')) {
+                return ApiCevap::hata('Taksit/senet vade ödemesi v2 yazmada henüz desteklenmiyor', 422);
+            }
+            if (! $request->filled('idempotency_key')) {
+                return ApiCevap::hata('idempotency_key zorunlu', 422);
+            }
+
+            $olusturanId = Personeller::where('salon_id', $salonId)
+                ->where('yetkili_id', $user->id)->value('id');
+
+            $sonuc = $this->servis->yaz(
+                array_merge($request->all(), ['salon_id' => $salonId, 'adisyon_id' => $adisyonId]),
+                ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
+            );
+
+            $sonuc['hesap'] = $this->adisyonServisi->getir($adisyonId)['hesap'];
+
+            return ApiCevap::basarili(
+                $sonuc,
+                ($sonuc['replay'] ?? false) ? 'Bu istek zaten işlenmişti (replay — yeni kayıt yok).' : 'Tahsilat kaydedildi.'
+            );
         }
 
+        // DRY-RUN yolu — hiçbir şey yazmaz.
         $plan = $this->servis->planla(array_merge($request->all(), [
             'salon_id'   => $salonId,
             'adisyon_id' => $adisyonId,

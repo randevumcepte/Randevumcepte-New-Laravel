@@ -5,10 +5,20 @@ namespace App\Services\Tahsilat;
 use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\TahsilatDagitim;
 use App\Exceptions\BulunamadiException;
+use App\Exceptions\CakismaException;
+use App\Models\Adisyonlar;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
+use App\Models\Masraf;
+use App\Models\MasrafKategorisi;
+use App\Models\Tahsilat;
+use App\Models\TahsilatHizmetler;
+use App\Models\TahsilatPaketler;
+use App\Models\TahsilatUrunler;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Tahsilat YAZMA servisi — şimdilik yalnızca DRY-RUN (planla).
@@ -139,6 +149,161 @@ class TahsilatYazServisi
             ],
             'uyarilar' => $uyarilar,
         ];
+    }
+
+    /**
+     * GERÇEK YAZMA — transaction + adisyon kilidi + idempotency + plan persist.
+     * Yalnızca config('tahsilat.yazma_aktif')=true iken controller buraya girer.
+     * Dry-run planıyla AYNI satırları yazar (parent + kalem + komisyon).
+     *
+     * @param array $meta ['yetkili_id','salon_id','olusturan_id']
+     * @return array ['tahsilat_id','adisyon_id','yazilan','replay']
+     *
+     * @throws CakismaException
+     */
+    public function yaz(array $g, array $meta): array
+    {
+        $anahtar = trim((string) ($g['idempotency_key'] ?? ''));
+        if ($anahtar === '') {
+            throw new CakismaException('idempotency_key zorunlu (çift-kayıt koruması)');
+        }
+
+        // Daha önce işlendiyse aynı yanıtı dön — YENİ YAZMA YOK (replay).
+        $mevcut = DB::table('api_idempotency_anahtarlari')
+            ->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
+        if ($mevcut && $mevcut->yanit_json) {
+            $v = json_decode($mevcut->yanit_json, true);
+            $v['replay'] = true;
+
+            return $v;
+        }
+
+        try {
+            return DB::transaction(function () use ($g, $meta, $anahtar) {
+                $adisyonId = (int) $g['adisyon_id'];
+
+                // Serileştirme: adisyonu kilitle (eşzamanlı tahsilat tutarı bozmasın).
+                DB::table('adisyonlar')->where('id', $adisyonId)->lockForUpdate()->first();
+
+                // Idempotency REZERVE: unique(anahtar,uc) → eşzamanlı aynı key patlar,
+                // tüm transaction geri alınır (çift yazma İMKANSIZ).
+                DB::table('api_idempotency_anahtarlari')->insert([
+                    'anahtar'    => $anahtar,
+                    'uc'         => 'tahsilat',
+                    'yetkili_id' => $meta['yetkili_id'] ?? null,
+                    'salon_id'   => $meta['salon_id'] ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                // Planı KİLİT ALTINDA taze hesapla.
+                $plan = $this->planla($g);
+                $adisyon = Adisyonlar::find($adisyonId);
+                $salonId = $meta['salon_id'] ?? ($adisyon->salon_id ?? null);
+                $olusturanId = $meta['olusturan_id'] ?? null;
+
+                // 1) Parent tahsilatlar
+                $t = new Tahsilat();
+                $t->adisyon_id = $adisyonId;
+                $t->tutar = $plan['parent_tahsilat']['tutar'];
+                if (Schema::hasColumn('tahsilatlar', 'komisyon_tutari')) {
+                    $t->komisyon_tutari = $plan['parent_tahsilat']['komisyon_tutari'];
+                }
+                $t->user_id = $adisyon->user_id ?? null;
+                $t->odeme_tarihi = $plan['parent_tahsilat']['odeme_tarihi'];
+                $t->olusturan_id = $olusturanId;
+                $t->salon_id = $salonId;
+                $t->yapilan_odeme = $plan['parent_tahsilat']['tutar'];
+                $t->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
+                $t->notlar = $g['notlar'] ?? null;
+                $t->save();
+
+                // 2) Kalem tahsilatları (plandaki paylar)
+                foreach ($plan['kalem_tahsilatlari'] as $kt) {
+                    if ($kt['tip'] === 'hizmet') {
+                        $o = new TahsilatHizmetler();
+                        $o->adisyon_hizmet_id = $kt['adisyon_hizmet_id'];
+                    } elseif ($kt['tip'] === 'urun') {
+                        $o = new TahsilatUrunler();
+                        $o->adisyon_urun_id = $kt['adisyon_urun_id'];
+                    } else {
+                        $o = new TahsilatPaketler();
+                        $o->adisyon_paket_id = $kt['adisyon_paket_id'];
+                    }
+                    $o->tahsilat_id = $t->id;
+                    $o->tutar = $kt['tutar'];
+                    $o->save();
+                }
+
+                // 3) Komisyon: gelir (para_girisi=1) + Masraf 'Banka Ödemeleri'
+                if ($plan['komisyon']) {
+                    $kom = $plan['komisyon']['gelir_tahsilat']['tutar'];
+
+                    $kt = new Tahsilat();
+                    $kt->adisyon_id = $adisyonId;
+                    $kt->tutar = $kom;
+                    $kt->user_id = $adisyon->user_id ?? null;
+                    $kt->odeme_tarihi = $plan['parent_tahsilat']['odeme_tarihi'];
+                    $kt->olusturan_id = $olusturanId;
+                    $kt->salon_id = $salonId;
+                    $kt->yapilan_odeme = $kom;
+                    $kt->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
+                    $kt->para_girisi = 1;
+                    $kt->notlar = 'Komisyon Geliri (tahsilat #'.$t->id.')';
+                    $kt->save();
+
+                    $bankaKat = MasrafKategorisi::firstOrCreate(['kategori' => 'Banka Ödemeleri']);
+                    $m = new Masraf();
+                    $m->salon_id = $salonId;
+                    if (Schema::hasColumn('masraflar', 'adisyon_id')) {
+                        $m->adisyon_id = $adisyonId;
+                    }
+                    $m->harcayan_id = $olusturanId;
+                    $m->masraf_kategori_id = $bankaKat->id;
+                    $m->tarih = $plan['parent_tahsilat']['odeme_tarihi'];
+                    $m->tutar = $kom;
+                    $m->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
+                    $m->aciklama = 'Komisyon Tutarı';
+                    $m->save();
+                }
+
+                $yanit = [
+                    'tahsilat_id' => (int) $t->id,
+                    'adisyon_id'  => $adisyonId,
+                    'yazilan'     => [
+                        'parent'   => 1,
+                        'kalem'    => count($plan['kalem_tahsilatlari']),
+                        'komisyon' => (bool) $plan['komisyon'],
+                    ],
+                    'replay' => false,
+                ];
+
+                DB::table('api_idempotency_anahtarlari')
+                    ->where('anahtar', $anahtar)->where('uc', 'tahsilat')
+                    ->update(['yanit_kodu' => 200, 'yanit_json' => json_encode($yanit), 'updated_at' => now()]);
+
+                return $yanit;
+            });
+        } catch (QueryException $e) {
+            // Idempotency unique ihlali → eşzamanlı/tekrar istek. ÇİFT YAZMA OLMADI.
+            if ($this->benzersizIhlali($e)) {
+                $row = DB::table('api_idempotency_anahtarlari')
+                    ->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
+                if ($row && $row->yanit_json) {
+                    $v = json_decode($row->yanit_json, true);
+                    $v['replay'] = true;
+
+                    return $v;
+                }
+                throw new CakismaException('Bu istek zaten işleniyor, lütfen tekrar deneyin');
+            }
+            throw $e;
+        }
+    }
+
+    private function benzersizIhlali(QueryException $e): bool
+    {
+        return (($e->errorInfo[1] ?? null) === 1062) || ((string) $e->getCode() === '23000');
     }
 
     private function kalemGetir(string $model, int $adisyonId, array $ids)
