@@ -122,10 +122,27 @@ Route::prefix('v2')->group(function () {
             $dbHata = $e->getMessage();
         }
 
+        // 3) league/oauth2-server (Passport'un kullandigi) dogrulayicisini DOGRUDAN
+        //    calistirip firlatan exception'i yakala — asil red sebebi burada.
+        $leagueSonuc = null;
+        try {
+            $guzzle = new \GuzzleHttp\Psr7\HttpFactory();
+            $psrFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory($guzzle, $guzzle, $guzzle, $guzzle);
+            $psr = $psrFactory->createRequest($request);
+            app(\League\OAuth2\Server\ResourceServer::class)->validateAuthenticatedRequest($psr);
+            $leagueSonuc = 'GECERLI';
+        } catch (\Throwable $e) {
+            $leagueSonuc = get_class($e)
+                . ' | ' . $e->getMessage()
+                . ' | hint=' . (method_exists($e, 'getHint') ? $e->getHint() : '-')
+                . ' | prev=' . ($e->getPrevious() ? get_class($e->getPrevious()).': '.$e->getPrevious()->getMessage() : '-');
+        }
+
         return response()->json([
             'header'  => $header,
             'payload' => $payload,
             'imza_dogrulama' => $imzaSonuc,
+            'league_dogrulama' => $leagueSonuc,
             'public_key_var' => (bool) $pub,
             'oauth_access_tokens' => $tokenRow ? [
                 'bulundu' => true,
