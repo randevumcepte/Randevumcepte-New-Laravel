@@ -13,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Yetki karar motoru — request boyunca tek ornek (cache paylasimi icin singleton).
+        $this->app->singleton(\App\Services\Yetki\YetkiServisi::class);
     }
 
     /**
