@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Her /api/* istegi JSON beklesin (auth'tan ONCE calisir). Boylece
+        // kimliksiz istek 'login' rotasina yonlendirilmeye calisilmaz; temiz
+        // 401 JSON doner. (api grubu withRouting api: ile otomatik uygulanir.)
+        $middleware->prependToGroup('api', \App\Http\Middleware\ApiJsonKabul::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
