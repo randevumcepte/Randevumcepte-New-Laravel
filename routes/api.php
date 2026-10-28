@@ -79,4 +79,68 @@ Route::prefix('v2')->group(function () {
         ], 401);
     });
 
+    /*
+     | GET /api/v2/token-debug  — GEÇİCİ TEŞHİS
+     | JWT'yi elle çözer, imzayı storage/oauth-public.key ile doğrular ve
+     | oauth_access_tokens / oauth_clients kayıtlarını kontrol eder. Hangi
+     | adimda patladigini (imza mi, DB kaydi mi) net gosterir.
+     */
+    Route::get('/token-debug', function (\Illuminate\Http\Request $request) {
+        $jwt = $request->bearerToken();
+        if (! $jwt) {
+            return response()->json(['hata' => 'Bearer token yok'], 400);
+        }
+
+        $parcalar = explode('.', $jwt);
+        if (count($parcalar) !== 3) {
+            return response()->json(['hata' => 'JWT 3 parcali degil', 'parca_sayisi' => count($parcalar)], 400);
+        }
+
+        $b64url = fn ($d) => base64_decode(strtr($d, '-_', '+/'));
+        $header  = json_decode($b64url($parcalar[0]), true);
+        $payload = json_decode($b64url($parcalar[1]), true);
+        $imza    = $b64url($parcalar[2]);
+
+        // 1) Imza dogrulama (RS256) — kopyalanan public key ile
+        $pubPath = storage_path('oauth-public.key');
+        $pub     = is_file($pubPath) ? file_get_contents($pubPath) : null;
+        $imzaSonuc = 'public-key-yok';
+        if ($pub) {
+            $res = openssl_verify($parcalar[0].'.'.$parcalar[1], $imza, $pub, OPENSSL_ALGO_SHA256);
+            $imzaSonuc = $res === 1 ? 'GECERLI' : ($res === 0 ? 'GECERSIZ (imza tutmuyor)' : 'HATA: '.openssl_error_string());
+        }
+
+        // 2) DB kayitlari
+        $jti = $payload['jti'] ?? null;
+        $aud = $payload['aud'] ?? null;
+        $tokenRow = $client = null;
+        $dbHata = null;
+        try {
+            $tokenRow = $jti ? \DB::table('oauth_access_tokens')->where('id', $jti)->first() : null;
+            $client   = $aud ? \DB::table('oauth_clients')->where('id', $aud)->first() : null;
+        } catch (\Throwable $e) {
+            $dbHata = $e->getMessage();
+        }
+
+        return response()->json([
+            'header'  => $header,
+            'payload' => $payload,
+            'imza_dogrulama' => $imzaSonuc,
+            'public_key_var' => (bool) $pub,
+            'oauth_access_tokens' => $tokenRow ? [
+                'bulundu' => true,
+                'revoked' => $tokenRow->revoked ?? null,
+                'user_id' => $tokenRow->user_id ?? null,
+                'client_id' => $tokenRow->client_id ?? null,
+                'expires_at' => $tokenRow->expires_at ?? null,
+            ] : ['bulundu' => false],
+            'oauth_clients' => $client ? [
+                'bulundu' => true,
+                'revoked' => $client->revoked ?? null,
+                'name' => $client->name ?? null,
+            ] : ['bulundu' => false],
+            'db_hata' => $dbHata,
+        ]);
+    });
+
 });
