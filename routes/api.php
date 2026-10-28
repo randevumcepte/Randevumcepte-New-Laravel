@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AdisyonController;
+use App\Http\Controllers\Api\V2\SatisController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,7 @@ Route::prefix('v2')->group(function () {
      */
     Route::middleware('auth:isletmeyonetim-api')->group(function () {
         Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');
+        Route::get('/satislar', [SatisController::class, 'index']);
     });
 
 });
