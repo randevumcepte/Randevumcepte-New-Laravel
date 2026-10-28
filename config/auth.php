@@ -42,6 +42,16 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Eski monolitle PAYLASILAN Passport guard'i. Flutter'in login ucundan
+        // (AuthController@login -> $user->createToken) aldigi 1 yillik personal
+        // access token bu guard ile dogrulanir. provider 'users' => App\Models\User
+        // (paylasilan 'users' tablosu). Token imzasi ortak oauth-public.key ile,
+        // iptal kontrolu paylasilan oauth_access_tokens tablosundan yapilir.
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*

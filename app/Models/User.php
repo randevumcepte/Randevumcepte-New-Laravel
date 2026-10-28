@@ -18,6 +18,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
+     * Eski monolitle PAYLASILAN 'users' tablosu. Sema eski sistemce yonetilir;
+     * burada migrate YOK. Passport 'api' guard'i token dogruladiktan sonra
+     * kullaniciyi bu model/tablo uzerinden id ile cozer (retrieveById).
+     */
+    protected $table = 'users';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

@@ -53,11 +53,16 @@ return [
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
+            // Eski monolitle AYNI veritabanini paylasiyoruz. Charset/collation
+            // eski sistemle birebir ayni tutulmali (Turkce karakter bozulmasin).
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'strict' => true,
+            // Legacy sema uzerinde calistigimiz icin strict mode KAPALI (eski
+            // monolitin ONLY_FULL_GROUP_BY'a uymayan sorgulariyla uyum). Eski
+            // projenin 'api' baglantisi da strict=false kullaniyor.
+            'strict' => env('DB_STRICT', false),
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
