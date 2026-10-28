@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V2\AdisyonController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +67,14 @@ Route::prefix('v2')->group(function () {
             'basarili' => false,
             'mesaj'    => 'Token dogrulanamadi',
         ], 401);
+    });
+
+    /*
+     | TAHSILAT DOMAIN — Faz 1 (salt-okuma). Isletme yetkilisi guard'i.
+     | Kapsam + yetki denetimi controller icinde GuvenlikKapisi ile yapilir.
+     */
+    Route::middleware('auth:isletmeyonetim-api')->group(function () {
+        Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');
     });
 
 });

@@ -22,4 +22,31 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Is kurali ihlallerini TUTARLI zarfa cevir: {basarili:false, veri:null, mesaj}.
+        // Istemciler (Flutter + web) her uc icin ayri hata mantigi yazmasin.
+        $exceptions->render(function (\App\Exceptions\ApiException $e) {
+            return \App\Support\ApiCevap::hata($e->getMessage(), $e->durumKodu);
+        });
+
+        // Kimlik dogrulanamadi (guard null / auth middleware) → 401 ayni zarf.
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return \App\Support\ApiCevap::hata('Oturum geçersiz veya token hatalı', 401);
+            }
+        });
+
+        // Dogrulama hatasi → 422 ayni zarf (alan hatalari 'veri'de).
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return \App\Support\ApiCevap::hata('Girdi doğrulanamadı', 422, $e->errors());
+            }
+        });
+
+        // Bulunamayan rota/kayit → 404 ayni zarf.
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return \App\Support\ApiCevap::hata('Kayıt bulunamadı', 404);
+            }
+        });
     })->create();
