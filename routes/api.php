@@ -9,20 +9,22 @@ use Illuminate\Support\Facades\Route;
 | API v2 — Strangler Geçiş Uçları
 |--------------------------------------------------------------------------
 |
-| Bu dosyadaki uçlar hem WEB panelinin (Vue island) hem de FLUTTER mobil
-| uygulamasının TEK ortak kaynağıdır. İş mantığı burada DEĞİL,
-| `app/Services` altındaki servislerdedir.
+| KVKK / veri koruma ilkesi (ZORUNLU):
+|   - KİŞİSEL VERİ içeren HER uç 'auth:isletmeyonetim-api' (legacy-passport)
+|     arkasindadir + controller icinde GuvenlikKapisi ile KAPSAM (isletme/sube)
+|     + YETKI denetimi yapar. Varsayilan KORUMALI; yeni uclar korumali gruba
+|     eklenir. Yalnizca kisisel veri ICERMEYEN uclar (health) public olabilir.
+|   - Veri minimizasyonu: Resource/servis yalnizca gereken alanlari dondurur
+|     (ham model dokumu YOK). Telefon vb. hassas alan maskelenir (musteri.telefon_gor).
 |
-| Kimlik: eski monolitle paylaşılan Passport token'ı, AppServiceProvider'daki
-| 'legacy-passport' guard'i ile doğrulanır. İşletme uçları (tahsilat vb.)
-| 'isletmeyonetim-api', müşteri uçları 'api' guard'ını kullanır.
+| Hem web paneli (Vue) hem Flutter AYNI uclari tuketir; is mantigi servislerde.
 |
 */
 
 Route::prefix('v2')->group(function () {
 
     /*
-     | GET /api/v2/health — auth gerektirmez. Servis + paylaşılan DB sağlığı.
+     | PUBLIC — kisisel veri ICERMEZ (yalnizca servis + DB sagligi).
      */
     Route::get('/health', function () {
         $veritabani = 'down';
@@ -43,35 +45,8 @@ Route::prefix('v2')->group(function () {
     });
 
     /*
-     | GET /api/v2/whoami — auth köprüsü duman testi (isletme + musteri token).
-     | Hangi guard doğruladıysa onu raporlar. (Faz temizliğinde kaldırılabilir.)
-     */
-    Route::get('/whoami', function (\Illuminate\Http\Request $request) {
-        foreach (['isletmeyonetim-api', 'api'] as $guard) {
-            $user = auth($guard)->user();
-
-            if ($user) {
-                return response()->json([
-                    'basarili' => true,
-                    'veri' => [
-                        'guard' => $guard,
-                        'id'    => $user->getAuthIdentifier(),
-                        'tablo' => $user->getTable(),
-                    ],
-                    'mesaj' => 'Token dogrulandi',
-                ]);
-            }
-        }
-
-        return response()->json([
-            'basarili' => false,
-            'mesaj'    => 'Token dogrulanamadi',
-        ], 401);
-    });
-
-    /*
-     | TAHSILAT DOMAIN — Faz 1 (salt-okuma). Isletme yetkilisi guard'i.
-     | Kapsam + yetki denetimi controller icinde GuvenlikKapisi ile yapilir.
+     | KORUMALI — kisisel veri iceren TUM uclar buraya. Kimlik ZORUNLU.
+     | Kapsam + yetki her controller'da GuvenlikKapisi ile uygulanir.
      */
     Route::middleware('auth:isletmeyonetim-api')->group(function () {
         Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');

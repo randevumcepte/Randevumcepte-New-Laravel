@@ -72,22 +72,54 @@ class AdisyonOkumaServisi
         $odenenTl = self::kalemOdenenTl($adisyonId);
 
         $ozet = AdisyonHesap::ozet($kalemler, [$odenenTl]);
-        $ozet['not'] = 'Odenen = kalem-split (mobil parite). net=Σ(fiyat−indirim). Shadow: tahsilat:shadow-adisyon.';
 
+        // KVKK veri minimizasyonu: ham model dokumu YOK. Yalnizca gereken alanlar.
+        // Serbest-metin PII (tahsilat.notlar) ve gereksiz kimlik alanlari DONDURULMEZ.
+        // Snake_case (Flutter model uyumu) → ileride ekran gecisi drop-in olur.
         return [
             'adisyon' => [
-                'id'            => (int) $adisyon->id,
-                'salon_id'      => (int) $adisyon->salon_id,
-                'user_id'       => $adisyon->user_id !== null ? (int) $adisyon->user_id : null,
-                'tarih'         => $adisyon->tarih,
-                'odendi'        => (int) ($adisyon->odendi ?? 0),
-                'odendi_tarihi' => $adisyon->odendi_tarihi ?? null,
+                'id'       => (int) $adisyon->id,
+                'salon_id' => (int) $adisyon->salon_id,
+                'user_id'  => $adisyon->user_id !== null ? (int) $adisyon->user_id : null,
+                'tarih'    => $adisyon->tarih,
+                'odendi'   => (int) ($adisyon->odendi ?? 0),
             ],
-            'hizmetler' => $hizmetler,
-            'urunler'   => $urunler,
-            'paketler'  => $paketler,
-            'tahsilatlar' => $tahsilatlar,
-            'hesap'     => $ozet,
+            'hizmetler' => $hizmetler->map(fn ($h) => [
+                'id'            => (int) $h->id,
+                'hizmet_id'     => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,
+                'personel_id'   => $h->personel_id !== null ? (int) $h->personel_id : null,
+                'fiyat'         => $h->fiyat,
+                'indirim_tutari'=> $h->indirim_tutari,
+                'hediye'        => (int) ($h->hediye ?? 0),
+                'islem_tarihi'  => $h->islem_tarihi,
+                'islem_saati'   => $h->islem_saati,
+                'seans_sayisi'  => $h->seans_sayisi,
+            ])->values(),
+            'urunler' => $urunler->map(fn ($u) => [
+                'id'             => (int) $u->id,
+                'urun_id'        => $u->urun_id !== null ? (int) $u->urun_id : null,
+                'personel_id'    => $u->personel_id !== null ? (int) $u->personel_id : null,
+                'adet'           => $u->adet,
+                'fiyat'          => $u->fiyat,
+                'indirim_tutari' => $u->indirim_tutari,
+                'hediye'         => (int) ($u->hediye ?? 0),
+            ])->values(),
+            'paketler' => $paketler->map(fn ($p) => [
+                'id'             => (int) $p->id,
+                'paket_id'       => $p->paket_id !== null ? (int) $p->paket_id : null,
+                'personel_id'    => $p->personel_id !== null ? (int) $p->personel_id : null,
+                'fiyat'          => $p->fiyat,
+                'indirim_tutari' => $p->indirim_tutari,
+                'hediye'         => (int) ($p->hediye ?? 0),
+            ])->values(),
+            // Odeme listesi: minimal (tutar/yontem/tarih). user_id/olusturan/notlar YOK.
+            'tahsilatlar' => $tahsilatlar->map(fn ($t) => [
+                'id'               => (int) $t->id,
+                'tutar'            => $t->tutar,
+                'odeme_yontemi_id' => $t->odeme_yontemi_id !== null ? (int) $t->odeme_yontemi_id : null,
+                'odeme_tarihi'     => $t->odeme_tarihi,
+            ])->values(),
+            'hesap' => $ozet,
         ];
     }
 
