@@ -50,13 +50,16 @@ return [
         //   - usertype 0 (musteri)          -> users tablosu          -> 'api'
         //   - usertype 1 (isletme yetkilisi) -> isletmeyetkilileri tbl -> 'isletmeyonetim-api'
         // Tahsilat/satis ISLETME panelidir => kanonik guard 'isletmeyonetim-api'.
+        // driver 'legacy-passport' => AppServiceProvider'da tanimli ozel guard.
+        // Eski Passport 4 token'ini league ile dogrular, kullaniciyi guard'in
+        // KENDI provider tablosundan cozer (Passport hasValidProvider baypas).
         'api' => [
-            'driver' => 'passport',
+            'driver' => 'legacy-passport',
             'provider' => 'users',
         ],
 
         'isletmeyonetim-api' => [
-            'driver' => 'passport',
+            'driver' => 'legacy-passport',
             'provider' => 'isletmeyetkilileri',
         ],
     ],
