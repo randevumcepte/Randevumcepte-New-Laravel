@@ -125,12 +125,18 @@ Route::prefix('v2')->group(function () {
         // 3) league/oauth2-server (Passport'un kullandigi) dogrulayicisini DOGRUDAN
         //    calistirip firlatan exception'i yakala — asil red sebebi burada.
         $leagueSonuc = null;
+        $leagueAttr = null;
         try {
             $guzzle = new \GuzzleHttp\Psr7\HttpFactory();
             $psrFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory($guzzle, $guzzle, $guzzle, $guzzle);
             $psr = $psrFactory->createRequest($request);
-            app(\League\OAuth2\Server\ResourceServer::class)->validateAuthenticatedRequest($psr);
+            $validated = app(\League\OAuth2\Server\ResourceServer::class)->validateAuthenticatedRequest($psr);
             $leagueSonuc = 'GECERLI';
+            $leagueAttr = [
+                'oauth_user_id'   => $validated->getAttribute('oauth_user_id'),
+                'oauth_client_id' => $validated->getAttribute('oauth_client_id'),
+                'oauth_scopes'    => $validated->getAttribute('oauth_scopes'),
+            ];
         } catch (\Throwable $e) {
             $leagueSonuc = get_class($e)
                 . ' | ' . $e->getMessage()
@@ -138,11 +144,32 @@ Route::prefix('v2')->group(function () {
                 . ' | prev=' . ($e->getPrevious() ? get_class($e->getPrevious()).': '.$e->getPrevious()->getMessage() : '-');
         }
 
+        // 4) Kullanici id'si (sub) hangi tabloda var? + client'in provider kolonu
+        $sub = $payload['sub'] ?? null;
+        $tablolar = [];
+        $clientTamSatir = null;
+        try {
+            $clientTamSatir = $aud ? (array) \DB::table('oauth_clients')->where('id', $aud)->first() : null;
+            foreach (['users' => 'cep_telefon', 'isletmeyetkilileri' => 'gsm1'] as $tbl => $telKol) {
+                $row = $sub ? \DB::table($tbl)->where('id', $sub)->first() : null;
+                $tablolar[$tbl] = $row ? [
+                    'var'     => true,
+                    'ad'      => $row->name ?? $row->ad ?? $row->adi ?? $row->personel_adi ?? null,
+                    'telefon' => $row->{$telKol} ?? null,
+                ] : ['var' => false];
+            }
+        } catch (\Throwable $e) {
+            $tablolar['hata'] = $e->getMessage();
+        }
+
         return response()->json([
             'header'  => $header,
             'payload' => $payload,
             'imza_dogrulama' => $imzaSonuc,
             'league_dogrulama' => $leagueSonuc,
+            'league_attr' => $leagueAttr,
+            'sub_hangi_tabloda' => $tablolar,
+            'oauth_clients_tam' => $clientTamSatir,
             'public_key_var' => (bool) $pub,
             'oauth_access_tokens' => $tokenRow ? [
                 'bulundu' => true,
