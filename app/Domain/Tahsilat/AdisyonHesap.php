@@ -4,16 +4,19 @@ namespace App\Domain\Tahsilat;
 
 /**
  * Adisyon parasal ozeti — SAF hesap (DB yok, test edilebilir). Tum aritmetik
- * TAM SAYI KURUS uzerinden yapilir (float yuvarlama hatasi olmasin).
+ * TAM SAYI KURUS uzerinden (float yuvarlama hatasi olmasin).
  *
- * !!! DIKKAT — net/kalan formulu GECICI (shadow ile dogrulanacak) !!!
- * Varsayimlar (eski monolitle karsilastirilip kesinlesene kadar GUVENILMEZ):
- *   - kalem net = (hediye ? 0 : fiyat * adet) - indirim    (adet: urun icin >1, digerleri 1)
- *   - net < 0 olmaz (max 0)
- *   - odenen = SUM(tahsilatlar.tutar)   ← bu KESIN/iyi tanimli
- *   - kalan = net - odenen
- * odenen degeri guvenilirdir; net/kalan Faz 1 shadow karsilastirmasindan sonra
- * sabitlenecektir. Bu sinif hicbir sey YAZMAZ.
+ * KANONIK FORMUL — eski API `formatAdisyonFast` (ApiController.php:1670-1805)
+ * ile birebir hizalanmistir (Flutter'in kullandigi yol):
+ *   - NET    = Σ(kalem.fiyat − kalem.indirim_tutari)   [hizmet + urun + paket]
+ *              * urun.fiyat ZATEN satir toplamidir (adet ile CARPILMAZ)
+ *              * hediye kalemin fiyati zaten 0'dir (ayri bayrak aritmetikte yok)
+ *              * adisyonlar.indirim_tutari (adisyon seviyesi) API yolunda KULLANILMAZ
+ *   - ODENEN = Σ(tahsilatlar.tutar) WHERE para_girisi IN (0, NULL)  (komisyon haric)
+ *   - KALAN  = NET − ODENEN   (negatif olabilir = fazla odeme)
+ *   - DURUM  = kalan > 0 ? 'acik' : 'kapali'   (kalan <= 0 kapali)
+ *
+ * Bu sinif hicbir sey YAZMAZ.
  */
 class AdisyonHesap
 {
@@ -28,25 +31,20 @@ class AdisyonHesap
     }
 
     /**
-     * @param array<array{fiyat:mixed,indirim:mixed,adet:mixed,hediye:bool}> $kalemler
-     * @param array<mixed> $tahsilatTutarlari  Her tahsilatin tutari (TL)
-     * @return array{net_kurus:int,odenen_kurus:int,kalan_kurus:int,net:float,odenen:float,kalan:float}
+     * @param array<array{fiyat:mixed,indirim:mixed}> $kalemler  Her kalem: fiyat + indirim (TL)
+     * @param array<mixed> $tahsilatTutarlari  Odeme (para_girisi!=1) tutarlari (TL)
+     * @return array{net_kurus:int,odenen_kurus:int,kalan_kurus:int,net:float,odenen:float,kalan:float,durum:string}
      */
     public static function ozet(array $kalemler, array $tahsilatTutarlari): array
     {
         $netKurus = 0;
         foreach ($kalemler as $k) {
-            $adet = (isset($k['adet']) && (float) $k['adet'] > 0) ? (float) $k['adet'] : 1.0;
-            $brutKurus = ! empty($k['hediye'])
-                ? 0
-                : (int) round(((float) ($k['fiyat'] ?? 0)) * $adet * 100);
-            $indirimKurus = (int) round(((float) ($k['indirim'] ?? 0)) * 100);
-            $netKurus += max(0, $brutKurus - $indirimKurus);
+            $netKurus += self::tlToKurus($k['fiyat'] ?? 0) - self::tlToKurus($k['indirim'] ?? 0);
         }
 
         $odenenKurus = 0;
         foreach ($tahsilatTutarlari as $t) {
-            $odenenKurus += (int) round(((float) $t) * 100);
+            $odenenKurus += self::tlToKurus($t);
         }
 
         $kalanKurus = $netKurus - $odenenKurus;
@@ -58,6 +56,7 @@ class AdisyonHesap
             'net'          => self::kurusToTl($netKurus),
             'odenen'       => self::kurusToTl($odenenKurus),
             'kalan'        => self::kurusToTl($kalanKurus),
+            'durum'        => $kalanKurus > 0 ? 'acik' : 'kapali',
         ];
     }
 }

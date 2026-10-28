@@ -40,22 +40,29 @@ class AdisyonOkumaServisi
         $hizmetler = AdisyonHizmetler::where('adisyon_id', $adisyonId)->get();
         $urunler   = AdisyonUrunler::where('adisyon_id', $adisyonId)->get();
         $paketler  = AdisyonPaketler::where('adisyon_id', $adisyonId)->get();
-        $tahsilatlar = Tahsilat::where('adisyon_id', $adisyonId)->get();
 
-        // Saf hesap icin kalemleri normalize et (tip + fiyat + indirim + adet + hediye).
+        // Odeme satirlari: komisyon GELIRI (para_girisi=1) HARIC — kanonik 'odenen'.
+        $tahsilatlar = Tahsilat::where('adisyon_id', $adisyonId)
+            ->where(function ($q) {
+                $q->where('para_girisi', 0)->orWhereNull('para_girisi');
+            })
+            ->get();
+
+        // Saf hesap icin kalemleri normalize et. KANONIK: sadece fiyat + indirim.
+        // (urun.fiyat zaten satir toplami; hediye kalemin fiyati zaten 0.)
         $kalemler = [];
         foreach ($hizmetler as $h) {
-            $kalemler[] = ['tip' => 'hizmet', 'fiyat' => $h->fiyat, 'indirim' => $h->indirim_tutari, 'adet' => 1, 'hediye' => (bool) $h->hediye];
+            $kalemler[] = ['fiyat' => $h->fiyat, 'indirim' => $h->indirim_tutari];
         }
         foreach ($paketler as $p) {
-            $kalemler[] = ['tip' => 'paket', 'fiyat' => $p->fiyat, 'indirim' => $p->indirim_tutari, 'adet' => 1, 'hediye' => (bool) $p->hediye];
+            $kalemler[] = ['fiyat' => $p->fiyat, 'indirim' => $p->indirim_tutari];
         }
         foreach ($urunler as $u) {
-            $kalemler[] = ['tip' => 'urun', 'fiyat' => $u->fiyat, 'indirim' => $u->indirim_tutari, 'adet' => $u->adet, 'hediye' => (bool) $u->hediye];
+            $kalemler[] = ['fiyat' => $u->fiyat, 'indirim' => $u->indirim_tutari];
         }
 
         $ozet = AdisyonHesap::ozet($kalemler, $tahsilatlar->pluck('tutar')->all());
-        $ozet['not'] = 'net/kalan GECICI formul — shadow ile dogrulanacak; odenen kesin.';
+        $ozet['not'] = 'Kanonik API formulu (formatAdisyonFast) ile hizali; tahsilat:shadow-adisyon ile dogrulandi.';
 
         return [
             'adisyon' => [
