@@ -43,14 +43,21 @@ return [
             'provider' => 'users',
         ],
 
-        // Eski monolitle PAYLASILAN Passport guard'i. Flutter'in login ucundan
-        // (AuthController@login -> $user->createToken) aldigi 1 yillik personal
-        // access token bu guard ile dogrulanir. provider 'users' => App\Models\User
-        // (paylasilan 'users' tablosu). Token imzasi ortak oauth-public.key ile,
-        // iptal kontrolu paylasilan oauth_access_tokens tablosundan yapilir.
+        // Eski monolitle PAYLASILAN Passport guard'lari. Token imzasi ortak
+        // oauth-public.key ile dogrulanir; iptal kontrolu paylasilan
+        // oauth_access_tokens tablosundan yapilir. Eski login (AuthController@login)
+        // IKI tip token uretir:
+        //   - usertype 0 (musteri)          -> users tablosu          -> 'api'
+        //   - usertype 1 (isletme yetkilisi) -> isletmeyetkilileri tbl -> 'isletmeyonetim-api'
+        // Tahsilat/satis ISLETME panelidir => kanonik guard 'isletmeyonetim-api'.
         'api' => [
             'driver' => 'passport',
             'provider' => 'users',
+        ],
+
+        'isletmeyonetim-api' => [
+            'driver' => 'passport',
+            'provider' => 'isletmeyetkilileri',
         ],
     ],
 
@@ -72,15 +79,17 @@ return [
     */
 
     'providers' => [
+        // Musteri/danisan — paylasilan 'users' tablosu (giris alani: cep_telefon)
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        // Isletme yetkilisi — paylasilan 'isletmeyetkilileri' tablosu (giris alani: gsm1)
+        'isletmeyetkilileri' => [
+            'driver' => 'eloquent',
+            'model' => \App\Models\IsletmeYetkilileri::class,
+        ],
     ],
 
     /*

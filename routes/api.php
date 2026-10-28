@@ -46,27 +46,37 @@ Route::prefix('v2')->group(function () {
     });
 
     /*
-     | GET /api/v2/whoami  (auth:api)
+     | GET /api/v2/whoami
      | GEÇİCİ TEST UCU — Passport 4 ile üretilmiş eski token'ın Passport 13
-     | tarafından doğrulanıp doğrulanmadığını kanıtlar. Gerçek bir Flutter
-     | Bearer token'ı ile çağrılır. Doğrulama başarılıysa kullanıcı döner.
+     | tarafından doğrulanıp doğrulanmadığını kanıtlar. Token hangi kullanıcı
+     | tipine aitse (musteri=api / isletme=isletmeyonetim-api) o guard doğrular;
+     | bu uç ikisini de dener ve hangisinin tuttuğunu raporlar.
      | Make-or-break testi geçince bu uç kaldırılacak.
      */
     Route::get('/whoami', function (\Illuminate\Http\Request $request) {
-        $user = $request->user();
+        foreach (['isletmeyonetim-api', 'api'] as $guard) {
+            $user = auth($guard)->user();
+
+            if ($user) {
+                return response()->json([
+                    'basarili' => true,
+                    'veri' => [
+                        'guard' => $guard,
+                        'id'    => $user->getAuthIdentifier(),
+                        'tablo' => $user->getTable(),
+                        'ornek' => collect($user->getAttributes())
+                            ->only(['id', 'ad', 'adi', 'isim', 'ad_soyad', 'name', 'gsm1', 'cep_telefon', 'email'])
+                            ->toArray(),
+                    ],
+                    'mesaj' => 'Token dogrulandi',
+                ]);
+            }
+        }
 
         return response()->json([
-            'basarili' => true,
-            'veri' => [
-                'id'    => $user->getAuthIdentifier(),
-                'tablo' => $user->getTable(),
-                // Hangi alanlar varsa onları da görelim (ad/telefon/email olabilir)
-                'ornek' => collect($user->getAttributes())
-                    ->only(['id', 'name', 'ad_soyad', 'email', 'cep_telefon'])
-                    ->toArray(),
-            ],
-            'mesaj' => 'Token dogrulandi',
-        ]);
-    })->middleware('auth:api');
+            'basarili' => false,
+            'mesaj'    => 'Token hicbir guard ile dogrulanamadi (isletmeyonetim-api, api)',
+        ], 401);
+    });
 
 });
