@@ -15,10 +15,17 @@
   --rc-yan-gen: 262px;
   --rc-yan-dar: 76px;
   --rc-header-y: 66px;
-  --rc-golge: 0 1px 3px rgba(23,25,45,.06), 0 1px 2px rgba(23,25,45,.04);
-  --rc-golge-2: 0 10px 30px rgba(23,25,45,.10);
-  --rc-yesil: #16a34a;
-  --rc-kirmizi: #dc2626;
+  --rc-golge: 0 1px 2px rgba(23,25,45,.04), 0 1px 1px rgba(23,25,45,.03);
+  --rc-golge-2: 0 8px 24px rgba(23,25,45,.08);
+  --rc-yesil: #2bb673;
+  --rc-kirmizi: #e4616e;
+  /* Pastel tint paleti — soft kartlar / rozetler / ikon kutucukları (açık & modern) */
+  --rc-t-mor: #f2ecfb;     --rc-t-mor-ink: #7b43b8;
+  --rc-t-yesil: #e7f6ee;   --rc-t-yesil-ink: #1f9159;
+  --rc-t-mavi: #eaf1fe;    --rc-t-mavi-ink: #3a72d6;
+  --rc-t-turuncu: #fdefe1; --rc-t-turuncu-ink: #c9771f;
+  --rc-t-turkuaz: #e3f6f3; --rc-t-turkuaz-ink: #10928a;
+  --rc-t-pembe: #fdebf1;   --rc-t-pembe-ink: #c24277;
 }
 
 * { box-sizing: border-box; }
@@ -93,10 +100,11 @@ html, body { margin: 0; padding: 0; }
 .rc-sidebar:hover .rc-menu-etiket,
 .rc-sabit .rc-menu-etiket { opacity: 1; width: auto; }
 .rc-link.aktif {
-  background: linear-gradient(135deg, var(--rc-mor), var(--rc-mor-2));
-  color: #fff; box-shadow: 0 6px 16px rgba(92,0,142,.28);
+  background: var(--rc-t-mor);
+  color: var(--rc-mor); font-weight: 600; box-shadow: none;
 }
-.rc-link.aktif:hover { color: #fff; }
+.rc-link.aktif .rc-ikon { color: var(--rc-mor); }
+.rc-link.aktif:hover { background: var(--rc-t-mor); color: var(--rc-mor); }
 
 /* ───────────────── Gövde / Header ───────────────── */
 .rc-govde {
@@ -156,7 +164,7 @@ html, body { margin: 0; padding: 0; }
 .rc-kullanici { display: flex; align-items: center; gap: 10px; padding-left: 6px; }
 .rc-avatar {
   width: 40px; height: 40px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--rc-mor), var(--rc-mor-2)); color: #fff;
+  background: var(--rc-mor); color: #fff;
   display: flex; align-items: center; justify-content: center; font-weight: 700;
   background-size: cover; background-position: center;
 }
@@ -218,8 +226,8 @@ html, body { margin: 0; padding: 0; }
 .rc-onay-btns button { flex: 1; padding: 12px; border: 0; border-radius: 12px; font-weight: 700; font-size: 14.5px; cursor: pointer; transition: filter .15s; }
 .rc-onay-btns button:hover { filter: brightness(1.05); }
 .rc-onay-iptal { background: #eef0f6; color: #4b5169; }
-.rc-onay-tamam { background: linear-gradient(135deg, var(--rc-mor), var(--rc-mor-2)); color: #fff; }
-.rc-onay-tamam.tehlike { background: linear-gradient(135deg, #e23b3b, #c62828); }
+.rc-onay-tamam { background: var(--rc-mor); color: #fff; }
+.rc-onay-tamam.tehlike { background: var(--rc-kirmizi); }
 
 /* ───────────────── Responsive ───────────────── */
 @media (max-width: 1100px) {

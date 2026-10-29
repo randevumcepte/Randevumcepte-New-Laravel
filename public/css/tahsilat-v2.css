@@ -88,8 +88,8 @@
 .t-form textarea { resize: vertical; }
 .t-btn { width: 100%; margin-top: 16px; padding: 13px; border: 0; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; color: #fff; transition: filter .15s, transform .1s; }
 .t-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
-.t-btn.mor { background: linear-gradient(135deg, var(--t-mor), var(--t-mor2)); }
-.t-btn.yesil { background: linear-gradient(135deg, #16a34a, #15803d); }
+.t-btn.mor { background: var(--t-mor); }
+.t-btn.yesil { background: #2bb673; }
 .t-btn.ikincil { background: #fff; color: var(--t-mor); border: 1px solid #e0cdf0; margin-top: 10px; }
 .t-btn.ikincil:hover { background: #faf7fe; }
 .t-btn:disabled { opacity: .6; cursor: default; transform: none; }
