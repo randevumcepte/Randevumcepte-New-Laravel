@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V2\AdisyonController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\SatisController;
+use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +60,11 @@ Route::prefix('v2')->group(function () {
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);
         // IADE/SILME — flag korumali (satis.tahsilat_sil).
         Route::delete('/tahsilat/{id}', [TahsilatController::class, 'sil'])->whereNumber('id');
+
+        // SATIS KALEM yonetimi (Satis & Tahsilat Duzenleme) — flag korumali.
+        Route::post('/adisyon/{adisyon}/kalem', [SatisKalemController::class, 'ekle'])->whereNumber('adisyon');
+        Route::patch('/kalem/urun/{id}', [SatisKalemController::class, 'urunAdet'])->whereNumber('id');
+        Route::delete('/kalem/{tip}/{id}', [SatisKalemController::class, 'sil'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
     });
 
 });

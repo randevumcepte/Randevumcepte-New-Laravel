@@ -24,7 +24,7 @@ class KatalogServisi
             ->get(['sh.hizmet_id', 'h.hizmet_adi as ad', 'sh.baslangic_fiyat as fiyat', 'sh.sure_dk as sure'])
             ->map(fn ($r) => [
                 'hizmet_id' => (int) $r->hizmet_id,
-                'ad'        => $r->ad,
+                'ad'        => trim((string) $r->ad),
                 'fiyat'     => $r->fiyat,
                 'sure'      => $r->sure,
             ])->all();
@@ -36,7 +36,7 @@ class KatalogServisi
             ->get(['id', 'urun_adi as ad', 'fiyat', 'stok_adedi as stok'])
             ->map(fn ($r) => [
                 'urun_id' => (int) $r->id,
-                'ad'      => $r->ad,
+                'ad'      => trim((string) $r->ad),
                 'fiyat'   => $r->fiyat,   // BİRİM fiyat
                 'stok'    => $r->stok,
             ])->all();
@@ -55,7 +55,7 @@ class KatalogServisi
             ])
             ->map(fn ($r) => [
                 'paket_id' => (int) $r->id,
-                'ad'       => $r->ad,
+                'ad'       => trim((string) $r->ad),
                 'fiyat'    => $r->fiyat,
                 'seans'    => $r->seans,
             ])->all();
