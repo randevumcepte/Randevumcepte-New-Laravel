@@ -13,6 +13,8 @@ namespace App\Support;
  *   etiket      : görünen ad (Müşteriler/Danışanlar gibi salona göre değişenler servis'te çözülür)
  *   ikon        : bootstrap-icons sınıfı (eski menüyle aynı)
  *   slug        : /isletmeyonetim/<slug> (boş => /isletmeyonetim dashboard)
+ *   v2_rota     : set ise link ESKİ PANELE değil AYNI host'taki v2 sayfasına gider
+ *                 (göreli, örn. /v2/satislar?sube=) — strangler ekranları için
  *   ek_sorgu    : sabit ekstra query (örn. ayarlar?p=temelbilgiler)
  *   pageindex   : aktif-vurgu eşleştirme (opsiyonel; v2 sayfası $aktif slug ile de vurgular)
  *   yetki       : gereken menuYetki anahtar(lar)ı (OR-gate; boşsa herkese açık)
@@ -46,6 +48,8 @@ class PanelMenu
 
             // ───────────── Satış & Finans
             ['etiket' => 'Satış & Tahsilat',   'ikon' => 'bi bi-stars',            'slug' => 'tahsilat-modern',   'pageindex' => 1111,'yetki' => 'satis.tahsilat_al', 'bolum' => 'Satış & Finans'],
+            // v2 ekran (aynı host, göreli link) — eski "Satış Takibi" (adisyonlar) karşılığı.
+            ['etiket' => 'Satış Takibi',       'ikon' => 'bi bi-receipt',          'slug' => 'satis-takibi',      'v2_rota' => '/v2/satislar', 'pageindex' => 1112, 'yetki' => ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al']],
             ['etiket' => 'Adisyonlar',         'ikon' => 'bi bi-files',            'slug' => 'adisyonlar',        'pageindex' => 111, 'yetki' => 'satis.tum_satis_gor'],
             ['etiket' => 'Paket Yönetimi',     'ikon' => 'bi bi-grid-3x3',         'slug' => 'paketsatislari',    'pageindex' => 4,   'yetki' => 'paket.tanim_olustur'],
             ['etiket' => 'Seans Takibi',       'ikon' => 'bi bi-check2-square',    'slug' => 'seanstakip',        'pageindex' => 30,  'yetki' => 'paket.seans_takip'],

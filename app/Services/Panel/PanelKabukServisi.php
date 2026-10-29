@@ -141,6 +141,11 @@ class PanelKabukServisi
 
     private function menuUrl(array $m, int $salonId, string $tabanUrl): string
     {
+        // v2 ekranı: eski panele DEĞİL, aynı host'taki v2 sayfasına (göreli link).
+        if (! empty($m['v2_rota'])) {
+            return $m['v2_rota'].'?'.http_build_query(['sube' => $salonId]);
+        }
+
         $yol = $m['slug'] === '' ? '/isletmeyonetim' : '/isletmeyonetim/'.$m['slug'];
         $sorgu = [];
         if (! empty($m['ek_sorgu'])) {
