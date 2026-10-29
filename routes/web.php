@@ -26,3 +26,14 @@ Route::get('/v2/satislar/{sube?}', function ($sube = null) {
 
     return view('v2.satislar', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Personel Yonetimi v2 — personel listesi + ekle/duzenle + yetki editoru host
+ | sayfasi (ayni island deseni). Veri /api/v2/personel* (Bearer) ile yuklenir;
+ | yazma uclari PERSONEL_V2_YAZMA_AKTIF kapaliyken 409 doner (UI toast gosterir).
+ */
+Route::get('/v2/personel/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.personel', ['salonId' => $salonId]);
+})->whereNumber('sube');
