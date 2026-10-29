@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V2\AdisyonController;
 use App\Http\Controllers\Api\V2\AlacakController;
 use App\Http\Controllers\Api\V2\KabukController;
 use App\Http\Controllers\Api\V2\KatalogController;
+use App\Http\Controllers\Api\V2\RandevuController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
@@ -58,6 +59,11 @@ Route::prefix('v2')->group(function () {
         // Panel kabugu (sol menu + header verisi) — v2 ekranlarinin ortak shell'i.
         Route::get('/kabuk', [KabukController::class, 'goster']);
         Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');
+
+        // RANDEVU (Faz 1 — SALT OKUMA). Yazma yollari sonraki fazlarda.
+        Route::get('/randevu/takvim', [RandevuController::class, 'takvim']);
+        Route::get('/randevu/{id}', [RandevuController::class, 'goster'])->whereNumber('id');
+
         Route::get('/satislar', [SatisController::class, 'index']);
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
