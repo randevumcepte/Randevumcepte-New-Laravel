@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=2">
+    <link rel="stylesheet" href="/css/panel.css?v=3">
     @stack('stil')
 </head>
 {{--
@@ -24,11 +24,11 @@
 
     {{-- ───────────────────────── SOL MENÜ ───────────────────────── --}}
     <aside class="rc-sidebar" id="rcSidebar">
+        @php $eskiPanel = rtrim(config('panel.eski_panel_url', 'https://app.randevumcepte.com.tr'), '/'); @endphp
         <div class="rc-brand">
-            <img src="https://app.randevumcepte.com.tr/public/isletmeyonetim_assets/img/logo.png"
-                 alt="Randevumcepte" class="rc-brand-logo"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
-            <span class="rc-brand-text" style="display:none">Randevum<b>Cepte</b></span>
+            {{-- İkonlar görünürken (daraltılmış): küçük kare; menü açılınca (hover/sabit): tam logo --}}
+            <img class="rc-brand-mini" alt="Randevumcepte" src="{{ $eskiPanel }}/public/profil_resimleri/6adf2d1dbc531.jpg">
+            <img class="rc-brand-tam"  alt="Randevumcepte" src="{{ $eskiPanel }}/public/yeni_panel/vendors/images/randevumcepte.png">
         </div>
         <nav class="rc-menu" id="rcMenu" aria-label="Ana menü">
             <div class="rc-menu-iskele">Menü yükleniyor…</div>
@@ -75,7 +75,7 @@
     </div>
 
     {{-- Ortak kabuk JS (menü/header'ı /api/v2/kabuk ile doldurur) --}}
-    <script type="module" src="/js/panel-kabuk.js?v=2"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=3"></script>
     @stack('betik')
 </body>
 </html>

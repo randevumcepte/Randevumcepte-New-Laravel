@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AdisyonController;
+use App\Http\Controllers\Api\V2\AlacakController;
 use App\Http\Controllers\Api\V2\KabukController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\SatisController;
@@ -68,6 +69,10 @@ Route::prefix('v2')->group(function () {
         Route::post('/adisyon/{adisyon}/kalem', [SatisKalemController::class, 'ekle'])->whereNumber('adisyon');
         Route::patch('/kalem/urun/{id}', [SatisKalemController::class, 'urunAdet'])->whereNumber('id');
         Route::delete('/kalem/{tip}/{id}', [SatisKalemController::class, 'sil'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
+
+        // PLANLANAN ALACAK (receivable) — flag korumali (finans.alacak_yonet).
+        Route::post('/alacak', [AlacakController::class, 'ekle']);
+        Route::delete('/alacak/{id}', [AlacakController::class, 'sil'])->whereNumber('id');
     });
 
 });

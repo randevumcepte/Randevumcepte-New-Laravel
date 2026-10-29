@@ -30,68 +30,82 @@ html, body { margin: 0; padding: 0; }
   -webkit-font-smoothing: antialiased;
 }
 
-/* ───────────────── Sidebar ───────────────── */
+/* ───────────────── Sidebar (varsayılan: ikon-rayı; hover'da açılır overlay) ───────────────── */
 .rc-sidebar {
   position: fixed; top: 0; left: 0; bottom: 0;
-  width: var(--rc-yan-gen);
+  width: var(--rc-yan-dar);           /* varsayılan: yalnız ikonlar */
   background: var(--rc-kart);
   border-right: 1px solid var(--rc-cizgi);
   display: flex; flex-direction: column;
-  z-index: 60;
-  transition: width .22s ease, transform .22s ease;
+  z-index: 60; overflow: hidden;
+  transition: width .2s ease, transform .22s ease, box-shadow .2s ease;
 }
+/* Fare üzerine gelince (ya da kullanıcı sabitlediyse) genişle */
+.rc-sidebar:hover,
+.rc-sabit .rc-sidebar { width: var(--rc-yan-gen); box-shadow: var(--rc-golge-2); }
+.rc-sabit .rc-sidebar { box-shadow: none; }
+
 .rc-brand {
   height: var(--rc-header-y);
-  display: flex; align-items: center; gap: 10px;
-  padding: 0 20px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--rc-cizgi);
-  flex: 0 0 auto;
+  flex: 0 0 auto; overflow: hidden;
 }
-.rc-brand-logo { height: 34px; width: auto; max-width: 180px; object-fit: contain; }
-.rc-brand-text { font-size: 19px; font-weight: 700; color: var(--rc-mor); white-space: nowrap; }
-.rc-brand-text b { font-weight: 800; }
+.rc-brand-mini { height: 38px; width: 38px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; }
+.rc-brand-tam  { height: 34px; width: auto; max-width: 180px; object-fit: contain; display: none; }
+/* Genişken tam logo, daralken mini kare */
+.rc-sidebar:hover .rc-brand-mini,
+.rc-sabit .rc-brand-mini { display: none; }
+.rc-sidebar:hover .rc-brand-tam,
+.rc-sabit .rc-brand-tam { display: inline; }
 
-.rc-menu { flex: 1 1 auto; overflow-y: auto; padding: 12px 12px 28px; }
+.rc-menu { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: 12px 12px 28px; }
 .rc-menu::-webkit-scrollbar { width: 8px; }
 .rc-menu::-webkit-scrollbar-thumb { background: #d9dcec; border-radius: 8px; }
 .rc-menu-iskele { color: #9aa0bd; font-size: 13px; padding: 16px; }
 
 .rc-bolum {
   font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
-  color: #a2a8c6; padding: 16px 12px 6px;
+  color: #a2a8c6; padding: 16px 12px 6px; white-space: nowrap;
+  opacity: 0; height: 0; padding-top: 0; padding-bottom: 0; overflow: hidden;
+  transition: opacity .15s ease;
 }
+.rc-sidebar:hover .rc-bolum,
+.rc-sabit .rc-bolum { opacity: 1; height: auto; padding: 16px 12px 6px; }
 .rc-link {
   display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px; margin: 2px 0;
+  padding: 11px 12px; margin: 2px 0;
   border-radius: 11px;
   color: var(--rc-sol); text-decoration: none;
   font-size: 14.5px; font-weight: 500;
   white-space: nowrap; overflow: hidden;
+  justify-content: center;            /* ray modunda ikon ortalı */
   transition: background .15s, color .15s;
 }
+.rc-sidebar:hover .rc-link,
+.rc-sabit .rc-link { justify-content: flex-start; }
 .rc-link:hover { background: var(--rc-mor-acik); color: var(--rc-mor); }
-.rc-link .rc-ikon { font-size: 18px; width: 22px; text-align: center; flex: 0 0 auto; }
+.rc-link .rc-ikon { font-size: 19px; width: 22px; text-align: center; flex: 0 0 auto; }
+.rc-link .rc-menu-etiket {
+  opacity: 0; width: 0; transition: opacity .15s ease;
+}
+.rc-sidebar:hover .rc-menu-etiket,
+.rc-sabit .rc-menu-etiket { opacity: 1; width: auto; }
 .rc-link.aktif {
   background: linear-gradient(135deg, var(--rc-mor), var(--rc-mor-2));
   color: #fff; box-shadow: 0 6px 16px rgba(92,0,142,.28);
 }
 .rc-link.aktif:hover { color: #fff; }
 
-/* Daraltılmış (icon rail) */
-.rc-daralt .rc-sidebar { width: var(--rc-yan-dar); }
-.rc-daralt .rc-brand { justify-content: center; padding: 0; }
-.rc-daralt .rc-brand-logo { height: 30px; }
-.rc-daralt .rc-menu-etiket, .rc-daralt .rc-bolum { display: none; }
-.rc-daralt .rc-link { justify-content: center; padding: 11px 0; }
-.rc-daralt .rc-govde { margin-left: var(--rc-yan-dar); }
-
 /* ───────────────── Gövde / Header ───────────────── */
 .rc-govde {
-  margin-left: var(--rc-yan-gen);
+  margin-left: var(--rc-yan-dar);     /* içerik ray genişliğine sabit; hover overlay kaydırmaz */
   min-height: 100vh;
-  transition: margin-left .22s ease;
+  transition: margin-left .2s ease;
   display: flex; flex-direction: column;
 }
+.rc-sabit .rc-govde { margin-left: var(--rc-yan-gen); }
 .rc-header {
   position: sticky; top: 0; z-index: 40;
   height: var(--rc-header-y);
@@ -216,6 +230,12 @@ html, body { margin: 0; padding: 0; }
   .rc-sidebar { transform: translateX(-100%); width: var(--rc-yan-gen); }
   .rc-ac-menu .rc-sidebar { transform: translateX(0); box-shadow: var(--rc-golge-2); }
   .rc-govde { margin-left: 0 !important; }
+  /* Mobil çekmece açıkken tam menü (etiket + bölüm + logo) görünür */
+  .rc-sidebar .rc-menu-etiket { opacity: 1; width: auto; }
+  .rc-sidebar .rc-bolum { opacity: 1; height: auto; padding: 16px 12px 6px; }
+  .rc-sidebar .rc-link { justify-content: flex-start; }
+  .rc-sidebar .rc-brand-mini { display: none; }
+  .rc-sidebar .rc-brand-tam { display: inline; }
   .rc-sube-sec, .rc-kullanici-ad { display: none; }
   .rc-ara { width: 100%; max-width: none; }
   .rc-icerik { padding: 14px; }

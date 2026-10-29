@@ -108,15 +108,16 @@ function etkilesimBagla() {
       document.body.classList.toggle('rc-ac-menu');
       el('#rcOverlay').classList.toggle('acik', document.body.classList.contains('rc-ac-menu'));
     } else {
-      const dar = document.body.classList.toggle('rc-daralt');
-      localStorage.setItem('rc_menu_dar', dar ? '1' : '0');
+      // Masaüstü: menüyü açık SABİTLE / hover-ray moduna geri al.
+      const sabit = document.body.classList.toggle('rc-sabit');
+      localStorage.setItem('rc_menu_sabit', sabit ? '1' : '0');
     }
   });
   el('#rcOverlay').addEventListener('click', () => {
     document.body.classList.remove('rc-ac-menu');
     el('#rcOverlay').classList.remove('acik');
   });
-  if (localStorage.getItem('rc_menu_dar') === '1') document.body.classList.add('rc-daralt');
+  if (localStorage.getItem('rc_menu_sabit') === '1') document.body.classList.add('rc-sabit');
 }
 
 /* ───────────── Modern bildirim (toast) + onay modalı (confirm yerine) ───────────── */
