@@ -28,4 +28,15 @@ class Randevular extends Model
 
     /** Kapali-saat bloklarini isaretleyen sentinel musteri id. */
     public const KAPALI_SAAT_USER_ID = 2012;
+
+    /** Randevunun musterisi (users.id). Eski App\Randevular ile ayni iliski adi. */
+    public function users()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function hizmetler()
+    {
+        return $this->hasMany(RandevuHizmetler::class, 'randevu_id');
+    }
 }
