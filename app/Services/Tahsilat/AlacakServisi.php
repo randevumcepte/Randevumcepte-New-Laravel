@@ -61,6 +61,21 @@ class AlacakServisi
         });
     }
 
+    /** Alacağı düzenle (tutar / planlanan tarih / açıklama). */
+    public function guncelle(int $alacakId, float $tutar, ?string $planlananTarih, ?string $aciklama): array
+    {
+        $a = Alacaklar::find($alacakId);
+        if (! $a) {
+            throw new BulunamadiException('Alacak bulunamadı');
+        }
+        $a->tutar = $tutar;
+        $a->planlanan_odeme_tarihi = $planlananTarih ?: null;
+        $a->aciklama = $aciklama ?: null;
+        $a->save();
+
+        return ['alacak_id' => $alacakId, 'adisyon_id' => (int) $a->adisyon_id, 'tutar' => $tutar];
+    }
+
     /** Alacağın salon_id'si (kapsam denetimi için). */
     public function alacakSalonId(int $alacakId): ?int
     {

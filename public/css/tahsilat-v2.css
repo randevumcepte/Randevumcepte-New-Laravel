@@ -23,8 +23,9 @@
 .t-cip.vurgu-kirmizi b { color: var(--t-kirmizi); }
 .t-cip.vurgu-yesil b { color: var(--t-yesil); }
 
-/* İki sütun */
+/* İki sütun: SOL stack (kalemler+tahsilatlar+alacaklar) · SAĞ ödeme */
 .t-kolon { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; align-items: start; }
+.t-sol-grup { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .t-kart { background: #fff; border: 1px solid var(--t-cizgi); border-radius: 18px; box-shadow: var(--rc-golge); overflow: hidden; }
 .t-kart-bas { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--t-cizgi); }
 .t-kart-bas h3 { margin: 0; font-size: 16px; font-weight: 700; }
@@ -57,9 +58,13 @@
 .t-rozet.hizmet { background: #e8f0fe; color: #2a63d6; }
 .t-rozet.urun { background: #fdecec; color: #d33a4b; }
 .t-rozet.paket { background: #f0e8fb; color: #6b1f8f; }
+.t-rozet.yontem { background: #eef1fb; color: #3a4a7a; }
 .t-adet-inp { width: 68px; padding: 6px 8px; border: 1px solid var(--t-cizgi); border-radius: 8px; font-size: 13px; }
 .t-sil { background: #fde8e8; color: var(--t-kirmizi); border: 0; border-radius: 9px; width: 30px; height: 30px; cursor: pointer; font-weight: 700; }
 .t-sil:hover { background: #fbd5d5; }
+.t-duzen { background: #eef1fb; color: #3a4a7a; border: 0; border-radius: 9px; width: 30px; height: 30px; cursor: pointer; font-weight: 700; margin-right: 6px; }
+.t-duzen:hover { background: #e2e7f7; }
+.t-islem { white-space: nowrap; }
 .t-bos { padding: 28px; text-align: center; color: #9aa0bd; }
 
 /* Sağ ödeme paneli (yapışkan) */

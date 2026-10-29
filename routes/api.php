@@ -62,6 +62,8 @@ Route::prefix('v2')->group(function () {
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);
+        // DUZENLE (iade+yeniden yaz, atomik) — flag korumali (satis.tahsilat_al).
+        Route::patch('/tahsilat/{id}', [TahsilatController::class, 'guncelle'])->whereNumber('id');
         // IADE/SILME — flag korumali (satis.tahsilat_sil).
         Route::delete('/tahsilat/{id}', [TahsilatController::class, 'sil'])->whereNumber('id');
 
@@ -72,6 +74,7 @@ Route::prefix('v2')->group(function () {
 
         // PLANLANAN ALACAK (receivable) — flag korumali (finans.alacak_yonet).
         Route::post('/alacak', [AlacakController::class, 'ekle']);
+        Route::patch('/alacak/{id}', [AlacakController::class, 'guncelle'])->whereNumber('id');
         Route::delete('/alacak/{id}', [AlacakController::class, 'sil'])->whereNumber('id');
     });
 

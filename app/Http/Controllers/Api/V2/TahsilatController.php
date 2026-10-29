@@ -12,6 +12,7 @@ use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Tahsilat YAZMA API v2 — şimdilik yalnızca DRY-RUN.
@@ -95,6 +96,55 @@ class TahsilatController extends Controller
         ]));
 
         return ApiCevap::basarili($plan, 'DRY-RUN: hiçbir şey yazılmadı.');
+    }
+
+    /**
+     * PATCH /api/v2/tahsilat/{id} — tahsilat DÜZENLE (eski kaydı iade et + yeniyi yaz, atomik).
+     * KVKK: kimlik + kapsam (tahsilatın salonu) + satis.tahsilat_al. Flag korumalı.
+     */
+    public function guncelle(Request $request, int $id)
+    {
+        $user = auth('isletmeyonetim-api')->user();
+        if (! $user) {
+            throw new YetkisizErisimException('Oturum geçersiz');
+        }
+        if (! config('tahsilat.yazma_aktif')) {
+            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
+        }
+
+        $t = Tahsilat::find($id);
+        if (! $t) {
+            return ApiCevap::hata('Tahsilat bulunamadı', 404);
+        }
+        $salonId = (int) $t->salon_id;
+        $adisyonId = (int) $t->adisyon_id;
+
+        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+
+        $tutar = (float) $request->input('tutar', 0);
+        if ($tutar <= 0) {
+            return ApiCevap::hata('tutar 0’dan büyük olmalı', 422);
+        }
+        if (! $request->filled('idempotency_key')) {
+            return ApiCevap::hata('idempotency_key zorunlu', 422);
+        }
+
+        $olusturanId = Personeller::where('salon_id', $salonId)
+            ->where('yetkili_id', $user->id)->value('id');
+
+        // Atomik: önce eski kaydı iade et, sonra yeniyi yaz (kalan doğru yeniden dağıtılır).
+        $sonuc = DB::transaction(function () use ($id, $request, $salonId, $adisyonId, $user, $olusturanId) {
+            $this->silServisi->sil($id, ['yetkili_id' => $user->id, 'salon_id' => $salonId]);
+
+            return $this->servis->yaz(
+                array_merge($request->all(), ['salon_id' => $salonId, 'adisyon_id' => $adisyonId]),
+                ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
+            );
+        });
+
+        $sonuc['hesap'] = $this->adisyonServisi->getir($adisyonId)['hesap'];
+
+        return ApiCevap::basarili($sonuc, 'Tahsilat güncellendi.');
     }
 
     /**

@@ -73,6 +73,35 @@ class AlacakController extends Controller
         return ApiCevap::basarili($sonuc, 'Alacak oluşturuldu.');
     }
 
+    /** PATCH /api/v2/alacak/{id} — planlanan alacağı düzenle. */
+    public function guncelle(Request $request, int $id)
+    {
+        $user = auth('isletmeyonetim-api')->user();
+        if (! $user) {
+            throw new YetkisizErisimException('Oturum geçersiz');
+        }
+        if (! config('tahsilat.yazma_aktif')) {
+            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
+        }
+        $salonId = $this->servis->alacakSalonId($id);
+        if (! $salonId) {
+            return ApiCevap::hata('Alacak bulunamadı', 404);
+        }
+        $tutar = (float) $request->input('tutar', 0);
+        if ($tutar <= 0) {
+            return ApiCevap::hata('tutar 0’dan büyük olmalı', 422);
+        }
+        $this->kapi->denetle($user->id, $salonId, ['finans.alacak_yonet']);
+
+        $sonuc = $this->servis->guncelle(
+            $id, $tutar,
+            $request->input('planlanan_odeme_tarihi'),
+            $request->input('aciklama')
+        );
+
+        return ApiCevap::basarili($sonuc, 'Alacak güncellendi.');
+    }
+
     /** DELETE /api/v2/alacak/{id} — planlanan alacağı iptal et. */
     public function sil(int $id)
     {
