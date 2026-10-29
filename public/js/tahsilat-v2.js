@@ -37,8 +37,11 @@ const adisyonId = parseInt(kok.dataset.adisyon, 10);
 let adisyon = null;
 let katalog = null;
 let salonId = null;
+let tutarManuel = false; // kullanıcı Tahsilat Tutarı'na elle yazdı mı? (yazdıysa Kalan'la ezme)
 
 function mesaj(metin, tip = 'bilgi') {
+  // Modern toast (shell) varsa onu kullan; yoksa panel içine düş.
+  if (window.rcPanel && window.rcPanel.toast) { window.rcPanel.toast(metin, tip); return; }
   el('#t-mesaj').innerHTML = metin ? `<div class="t-msg ${tip}">${esc(metin)}</div>` : '';
 }
 
@@ -54,8 +57,10 @@ async function adisyonYukle() {
   kalemlerGoster();
   gecmisGoster();
   if (!katalog) katalogYukle();
+  // Tahsilat Tutarı, güncel Kalan'ı takip eder (kalem ekle/sil sonrası canlı güncellenir);
+  // kullanıcı kutuya elle yazmaya başlayınca (kısmi ödeme) müdahale etmeyiz.
   const h = adisyon.hesap;
-  if (h.kalan > 0 && !el('#t-tutar').value) el('#t-tutar').value = h.kalan;
+  if (!tutarManuel) el('#t-tutar').value = h.kalan > 0 ? h.kalan : '';
 }
 
 async function katalogYukle() {
@@ -177,7 +182,10 @@ async function adetDegistir(kalemId, adet) {
 }
 
 async function kalemSil(tip, kalemId) {
-  if (!confirm('Kalemi silmek istediğinize emin misiniz?')) return;
+  const onaylandi = window.rcPanel && window.rcPanel.onay
+    ? await window.rcPanel.onay('Bu kalemi adisyondan silmek istediğinize emin misiniz?', { baslik: 'Kalemi Sil', tamam: 'Sil', iptal: 'Vazgeç' })
+    : confirm('Kalemi silmek istediğinize emin misiniz?');
+  if (!onaylandi) return;
   const { ok, kod, govde } = await api('DELETE', '/kalem/' + tip + '/' + kalemId);
   if (!ok) { mesaj(`Kalem silinemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Kalem silindi.', 'ok');
@@ -221,6 +229,7 @@ async function kaydet() {
   if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); el('#t-onayla').disabled = false; return; }
   mesaj('Tahsilat kaydedildi' + (govde.veri?.replay ? ' (zaten işlenmişti)' : '') + '. Tahsilat #' + (govde.veri?.tahsilat_id ?? '-'), 'ok');
   el('#t-plan').innerHTML = '';
+  tutarManuel = false; // yeni işlem sonrası Tahsilat Tutarı güncel Kalan'a dönsün
   await adisyonYukle();
 }
 
@@ -288,6 +297,7 @@ function iskelet() {
     </section>`;
 
   el('#t-tarih').value = new Date().toISOString().slice(0, 10);
+  el('#t-tutar').addEventListener('input', () => { tutarManuel = true; }); // elle yazınca Kalan'la ezme
   el('#t-onizle').onclick = onizle;
   el('#t-ekle-btn').onclick = kalemEkle;
   el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };

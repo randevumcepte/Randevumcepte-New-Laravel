@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=1">
+    <link rel="stylesheet" href="/css/panel.css?v=2">
     @stack('stil')
 </head>
 {{--
@@ -75,7 +75,7 @@
     </div>
 
     {{-- Ortak kabuk JS (menü/header'ı /api/v2/kabuk ile doldurur) --}}
-    <script type="module" src="/js/panel-kabuk.js?v=1"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=2"></script>
     @stack('betik')
 </body>
 </html>
