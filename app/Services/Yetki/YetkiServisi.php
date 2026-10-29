@@ -247,6 +247,40 @@ class YetkiServisi
     }
 
     /**
+     * Personel yetki ayarlarini kaydet — eski PersonelYetkiServisi::ayarlariKaydet'ten
+     * BIREBIR port. Bilinmeyen sablon → 'ozel'; sadece tanimli anahtarlar kabul edilir
+     * (whitelist, bool cast); updateOrCreate((personel_id,salon_id)).
+     * Kayit sonrasi request-level cache'ler bosaltilir (ayni istek icinde eskimesin).
+     */
+    public function ayarlariKaydet($personelId, $salonId, string $sablon, array $ayarlar): PersonelYetkiAyari
+    {
+        $bilinen = array_keys(YetkiSabitleri::sablonlar());
+        if (! in_array($sablon, $bilinen, true) && $sablon !== 'ozel') {
+            $sablon = 'ozel';
+        }
+
+        $izinli = YetkiSabitleri::tumAnahtarlar();
+        $temizAyarlar = [];
+        foreach ($izinli as $key) {
+            if (array_key_exists($key, $ayarlar)) {
+                $temizAyarlar[$key] = (bool) $ayarlar[$key];
+            }
+        }
+
+        $kayit = PersonelYetkiAyari::updateOrCreate(
+            ['personel_id' => $personelId, 'salon_id' => $salonId],
+            ['sablon' => $sablon, 'ayarlar' => $temizAyarlar]
+        );
+
+        // Request-level cache invalidasyonu (bu personel/salon icin).
+        $roluKey = $personelId.'|'.$salonId;
+        unset($this->ayarlarCache[$roluKey], $this->sablonCache[$roluKey], $this->personelRoluCache[$roluKey]);
+        $this->yetkiliYetkiVarCache = [];
+
+        return $kayit;
+    }
+
+    /**
      * Sysadmin impersonation aktif mi? Eski sistemde web session anahtari
      * ('sysadmin_impersonation_id'). Stateless API'de oturum olmadigi icin
      * normalde false; web paneli de bu app'e tasinirsa calismaya devam eder.
