@@ -18,6 +18,7 @@ const token = () => localStorage.getItem('rc_access_token') || '';
 async function api(method, yol, body) {
   const r = await fetch(BASE + yol, {
     method,
+    cache: 'no-store', // bayat GET (ekleme sonrası eski toplam) önlemek için
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
     body: body ? JSON.stringify(body) : undefined,
   });

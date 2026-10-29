@@ -8,6 +8,6 @@
 <body style="margin:0;background:#eef0f5">
     {{-- Island build gerektirmez; /js/tahsilat-v2.js statik servis edilir (public/). --}}
     <div id="rc-tahsilat" data-adisyon="{{ $adisyonId }}"></div>
-    <script type="module" src="/js/tahsilat-v2.js?v=3"></script>
+    <script type="module" src="/js/tahsilat-v2.js?v=4"></script>
 </body>
 </html>
