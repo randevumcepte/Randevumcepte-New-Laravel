@@ -68,8 +68,28 @@ async function adisyonYukle() {
       <div><span>Kalan</span><b style="color:${h.kalan > 0 ? '#b00020' : '#0a7d2c'}">${TL(h.kalan)}</b></div>
       <div><span>Durum</span><b>${esc(h.durum)}</b></div>
     </div>`;
+  kalemlerGoster(adisyon);
   // Kalan varsa tutar alanına öner.
   if (h.kalan > 0 && !el('#rc-tutar').value) el('#rc-tutar').value = h.kalan;
+}
+
+// Adisyon kalemlerini (hizmet/ürün/paket) HER DURUMDA (kapalı dahil) listeler.
+function kalemlerGoster(v) {
+  const rows = [];
+  (v.hizmetler || []).forEach((h) => rows.push(
+    `<tr><td>${esc(h.ad || 'Hizmet #' + h.hizmet_id)}</td><td>Hizmet${h.seans_sayisi ? ' · ' + h.seans_sayisi + ' seans' : ''}${h.hediye ? ' · Hediye' : ''}</td><td class="r">${TL(h.fiyat)}</td><td class="r">${TL(h.indirim_tutari || 0)}</td></tr>`));
+  (v.paketler || []).forEach((p) => rows.push(
+    `<tr><td>${esc(p.ad || 'Paket #' + p.paket_id)}</td><td>Paket${p.hediye ? ' · Hediye' : ''}</td><td class="r">${TL(p.fiyat)}</td><td class="r">${TL(p.indirim_tutari || 0)}</td></tr>`));
+  (v.urunler || []).forEach((u) => rows.push(
+    `<tr><td>${esc(u.ad || 'Ürün #' + u.urun_id)}</td><td>Ürün${u.adet ? ' · ' + u.adet + ' adet' : ''}${u.hediye ? ' · Hediye' : ''}</td><td class="r">${TL(u.fiyat)}</td><td class="r">${TL(u.indirim_tutari || 0)}</td></tr>`));
+  const gecmis = (v.tahsilatlar || []).map((t) =>
+    `<tr><td colspan="2" style="color:#0a7d2c">Ödeme · ${esc(t.odeme_tarihi || '')}</td><td class="r" colspan="2" style="color:#0a7d2c">${TL(t.tutar)}</td></tr>`).join('');
+  el('#rc-kalemler').innerHTML = `
+    <table class="rc-tbl">
+      <thead><tr><th>Kalem</th><th>Tür</th><th class="r">Fiyat</th><th class="r">İndirim</th></tr></thead>
+      <tbody>${rows.join('') || '<tr><td colspan="4" style="color:#889">Kalem yok</td></tr>'}</tbody>
+      ${gecmis ? '<tfoot>' + gecmis + '</tfoot>' : ''}
+    </table>`;
 }
 
 function planGoster(plan) {
@@ -147,9 +167,15 @@ function iskelet() {
       .rc-plan{margin-top:14px;padding:12px;border:1px solid #e0e0ea;border-radius:10px;background:#fbfbfe}
       .rc-plan h4{margin:0 0 8px;color:#5C008E}
       .rc-plan ul{margin:4px 0 10px;padding-left:18px}
+      .rc-tbl{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;background:#fff;border-radius:10px;overflow:hidden}
+      .rc-tbl th,.rc-tbl td{padding:8px 10px;border-bottom:1px solid #eef;text-align:left}
+      .rc-tbl th{background:#f4f4f8;color:#556;font-weight:600}
+      .rc-tbl td.r,.rc-tbl th.r{text-align:right}
+      .rc-tbl tfoot td{background:#f6fff8;font-weight:600}
     </style>
     <h3>Tahsilat (v2) — Adisyon #${adisyonId}</h3>
     <div id="rc-ozet"></div>
+    <div id="rc-kalemler"></div>
     <div class="rc-form">
       <label>Tahsilat tutarı (₺)</label><input id="rc-tutar" type="number" step="0.01" min="0" />
       <label>İndirim (₺, opsiyonel)</label><input id="rc-indirim" type="number" step="0.01" min="0" value="0" />

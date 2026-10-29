@@ -55,6 +55,12 @@ class AdisyonOkumaServisi
             })
             ->get();
 
+        // Kalem ADLARI (katalog) — batched. Adisyon KAPALI olsa da kalemler her
+        // zaman döner (eski detayda "kapalıda kalem görünmüyor" sorununu çözer).
+        $hizmetAdlari = DB::table('hizmetler')->whereIn('id', $hizmetler->pluck('hizmet_id')->filter()->unique()->all())->pluck('hizmet_adi', 'id');
+        $urunAdlari   = DB::table('urunler')->whereIn('id', $urunler->pluck('urun_id')->filter()->unique()->all())->pluck('urun_adi', 'id');
+        $paketAdlari  = DB::table('paketler')->whereIn('id', $paketler->pluck('paket_id')->filter()->unique()->all())->pluck('paket_adi', 'id');
+
         // Saf hesap icin kalemleri normalize et. KANONIK: sadece fiyat + indirim.
         // (urun.fiyat zaten satir toplami; hediye kalemin fiyati zaten 0.)
         $kalemler = [];
@@ -86,6 +92,7 @@ class AdisyonOkumaServisi
             ],
             'hizmetler' => $hizmetler->map(fn ($h) => [
                 'id'            => (int) $h->id,
+                'ad'            => $hizmetAdlari[$h->hizmet_id] ?? null,
                 'hizmet_id'     => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,
                 'personel_id'   => $h->personel_id !== null ? (int) $h->personel_id : null,
                 'fiyat'         => $h->fiyat,
@@ -97,6 +104,7 @@ class AdisyonOkumaServisi
             ])->values(),
             'urunler' => $urunler->map(fn ($u) => [
                 'id'             => (int) $u->id,
+                'ad'             => $urunAdlari[$u->urun_id] ?? null,
                 'urun_id'        => $u->urun_id !== null ? (int) $u->urun_id : null,
                 'personel_id'    => $u->personel_id !== null ? (int) $u->personel_id : null,
                 'adet'           => $u->adet,
@@ -106,6 +114,7 @@ class AdisyonOkumaServisi
             ])->values(),
             'paketler' => $paketler->map(fn ($p) => [
                 'id'             => (int) $p->id,
+                'ad'             => $paketAdlari[$p->paket_id] ?? null,
                 'paket_id'       => $p->paket_id !== null ? (int) $p->paket_id : null,
                 'personel_id'    => $p->personel_id !== null ? (int) $p->personel_id : null,
                 'fiyat'          => $p->fiyat,
