@@ -49,6 +49,7 @@ class SatisListeServisi
         $acikKapali = ($acikKapali === null || $acikKapali === '') ? -1 : (int) $acikKapali;
         $musteriMi = ! empty($o['musteriMi']);
         $appBundle = $o['appBundle'] ?? null;
+        $fatura = isset($o['fatura']) && $o['fatura'] !== '' && $o['fatura'] !== null ? (string) $o['fatura'] : null; // '1' faturali / '0' faturasiz / null
         $page = max(1, (int) ($o['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($o['per_page'] ?? 20)));
 
@@ -125,7 +126,9 @@ class SatisListeServisi
                 $q2->whereHas('paketler')
                     ->orWhereHas('hizmetler', fn ($s) => $s->whereNull('randevu_id')->where('seans_sayisi', '>', 0));
             }))
-            ->when($faturasizGizle, fn ($q) => $q->where('fatura_kesildi', 1))
+            // Fatura filtresi: acik secim varsa onu uygula; yoksa salon faturasiz_gizle ayari.
+            ->when($fatura === '1' || $fatura === '0', fn ($q) => $q->where('fatura_kesildi', (int) $fatura))
+            ->when($fatura === null && $faturasizGizle, fn ($q) => $q->where('fatura_kesildi', 1))
             ->orderBy('tarih', 'desc');
 
         // ───────── Acik/Kapali sayim (acik_kapali filtresi UYGULANMADAN) ─────────
@@ -163,6 +166,15 @@ class SatisListeServisi
             : ($acikKapali === 0 ? $kapaliSayisi : $acikSayisi + $kapaliSayisi);
         $lastPage = (int) max(1, ceil(($toplamSayisi ?: 1) / $perPage));
 
+        // ───────── Filtre GENELİ para toplamı (sadece sayfa değil → üst özet kartları) ─────────
+        $paraBind = $pid ? array_fill(0, 6, $pid) : [];
+        $para = (clone $base)->toBase()->reorder()
+            ->selectRaw('COALESCE(SUM('.self::netSql($pf).'),0) as toplam, COALESCE(SUM('.self::odenenSql($pf).'),0) as odenen', $paraBind)
+            ->first();
+        $toplamTl = (float) ($para->toplam ?? 0);
+        $odenenTl = (float) ($para->odenen ?? 0);
+        $kalanTl = $toplamTl - $odenenTl;
+
         $sayfa = $base->forPage($page, $perPage)->get();
 
         // ───────── Ek veriler (son tahsilat tarihi + planlanan alacak) ─────────
@@ -181,13 +193,8 @@ class SatisListeServisi
         // Kalem bazli prim haritasi: [personel_id][tur][kalem_id] => yuzde.
         $primHarita = $this->primHaritasi($salonId);
 
-        $odenenToplam = 0.0;
-        $kalanToplam = 0.0;
-
-        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, &$odenenToplam, &$kalanToplam) {
+        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi) {
             $s = AdisyonSatir::hesapla($this->kalemleri($a, $primHarita));
-            $odenenToplam += $s['odenen_numeric'];
-            $kalanToplam += $s['kalan_tutar_numeric'];
 
             $alacak = $alacaklar[$a->user_id] ?? null;
             $planlanan = $alacak && $alacak->planlanan_odeme_tarihi
@@ -218,6 +225,8 @@ class SatisListeServisi
                 'hizmet_veren'          => $s['hizmet_veren'],
                 'toplam'                => $s['toplam'],
                 'toplam_numeric'        => $s['toplam_numeric'],
+                'indirim'               => $s['indirim'],
+                'indirim_numeric'       => $s['indirim_numeric'],
                 'odenen_numeric'        => $s['odenen_numeric'],
                 'kalan_tutar_numeric'   => $s['kalan_tutar_numeric'],
                 'odenen'                => $s['odenen'],
@@ -243,8 +252,13 @@ class SatisListeServisi
             'satisSayisi'   => $toplamSayisi,
             'acik_sayisi'   => $acikSayisi,
             'kapali_sayisi' => $kapaliSayisi,
-            'odenen'        => AdisyonSatir::trFormat($odenenToplam),
-            'kalan'         => AdisyonSatir::trFormat($kalanToplam),
+            // Para toplamlari FILTRE GENELI (tum sayfalar) — ust ozet kartlari.
+            'toplam'        => AdisyonSatir::trFormat($toplamTl),
+            'toplam_numeric' => round($toplamTl, 2),
+            'odenen'        => AdisyonSatir::trFormat($odenenTl),
+            'odenen_numeric' => round($odenenTl, 2),
+            'kalan'         => AdisyonSatir::trFormat($kalanTl),
+            'kalan_numeric' => round($kalanTl, 2),
             'current_page'  => $page,
             'last_page'     => $lastPage,
             'total'         => $toplamSayisi,

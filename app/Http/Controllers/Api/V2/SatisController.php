@@ -70,6 +70,7 @@ class SatisController extends Controller
             'musteri_id'        => $musteriId,
             'personel_id'       => $request->input('personel_id'),
             'acik_kapali'       => $request->input('acik_kapali', $request->input('acikKapali')),
+            'fatura'            => $request->input('fatura'),
             'musteriMi'         => filter_var($request->input('musteriMi'), FILTER_VALIDATE_BOOLEAN),
             'appBundle'         => $request->input('appBundle'),
             'page'              => $request->input('page'),

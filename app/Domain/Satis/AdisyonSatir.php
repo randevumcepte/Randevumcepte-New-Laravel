@@ -37,6 +37,7 @@ class AdisyonSatir
         $paketler = $kalemler['paketler'] ?? [];
 
         $netKurus = 0;
+        $indirimKurus = 0;
         $odenenKurus = 0;
         $hizmetHakedisKurus = 0;
         $urunHakedisKurus = 0;
@@ -54,6 +55,7 @@ class AdisyonSatir
             $fiyat = (float) ($h['fiyat'] ?? 0);
             $tahsilatKurus = AdisyonHesap::tlToKurus($h['tahsilat'] ?? 0);
             $netKurus += AdisyonHesap::tlToKurus($fiyat) - AdisyonHesap::tlToKurus($h['indirim'] ?? 0);
+            $indirimKurus += AdisyonHesap::tlToKurus($h['indirim'] ?? 0);
             $odenenKurus += $tahsilatKurus;
             $hizmetBrut += $fiyat;
 
@@ -80,6 +82,7 @@ class AdisyonSatir
             $fiyat = (float) ($u['fiyat'] ?? 0);
             $tahsilatKurus = AdisyonHesap::tlToKurus($u['tahsilat'] ?? 0);
             $netKurus += AdisyonHesap::tlToKurus($fiyat) - AdisyonHesap::tlToKurus($u['indirim'] ?? 0);
+            $indirimKurus += AdisyonHesap::tlToKurus($u['indirim'] ?? 0);
             $odenenKurus += $tahsilatKurus;
             $urunBrut += $fiyat;
 
@@ -98,6 +101,7 @@ class AdisyonSatir
             $fiyat = (float) ($p['fiyat'] ?? 0);
             $tahsilatKurus = AdisyonHesap::tlToKurus($p['tahsilat'] ?? 0);
             $netKurus += AdisyonHesap::tlToKurus($fiyat) - AdisyonHesap::tlToKurus($p['indirim'] ?? 0);
+            $indirimKurus += AdisyonHesap::tlToKurus($p['indirim'] ?? 0);
             $odenenKurus += $tahsilatKurus;
             $paketBrut += $fiyat;
 
@@ -127,6 +131,10 @@ class AdisyonSatir
             'odenen_numeric'        => AdisyonHesap::kurusToTl($odenenKurus),
             'kalan_tutar'           => self::trFormat(AdisyonHesap::kurusToTl($kalanKurus)),
             'kalan_tutar_numeric'   => AdisyonHesap::kurusToTl($kalanKurus),
+
+            // İndirim toplamı (web ekran İNDİRİM kolonu; Flutter ek anahtarı yok sayar).
+            'indirim'               => self::trFormat(AdisyonHesap::kurusToTl($indirimKurus)),
+            'indirim_numeric'       => AdisyonHesap::kurusToTl($indirimKurus),
 
             // BRUT tutarlar (eski hizmet/urun/paketToplam — indirim DUSULMEZ).
             'hizmet_toplam'         => round($hizmetBrut, 2),
