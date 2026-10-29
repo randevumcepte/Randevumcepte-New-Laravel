@@ -12,155 +12,186 @@ use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Models\Masraf;
 use App\Models\MasrafKategorisi;
+use App\Models\SenetVadeleri;
 use App\Models\Tahsilat;
 use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
+use App\Models\TaksitVadeleri;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tahsilat YAZMA servisi — şimdilik yalnızca DRY-RUN (planla).
+ * Tahsilat YAZMA servisi — DRY-RUN (planla) ve GERÇEK (yaz, flag arkasında).
  *
- * planla(): bir tahsilat girdisinin üreteceği TÜM satırları (parent tahsilatlar +
- * kalem tahsilatları + komisyon gelir/masraf + kalan alacak) hesaplar ve DÖNER;
- * HİÇBİRİNİ YAZMAZ. Gerçek yazma (transaction + idempotency + dual-write) ayrı,
- * kullanıcı onayıyla açılacak.
+ * İKİ MOD:
+ *   - BASİT: adisyona ödeme → taksitsiz/senetsiz açık kalemlere kalan-bazlı havuz.
+ *   - VADE : taksit_vade_id[]/senet_vade_id[] ödemesi → o planın kalemlerine havuz,
+ *            vade 'odendi' işaretlenir; kısmi ödemede taksit vadesi bölünür.
  *
- * Dağıtım: TahsilatDagitim::taksitHavuz (WEB-kanonik, kalan-bazlı, kuruş-kesin).
- * Ödeme her kaleme KALAN borcu oranında dağıtılır; kimse kendi kalanını aşmaz;
- * ödeme toplam kalanı aşarsa fazlası dağıtılmaz (uyarı ile raporlanır).
- *
- * Kapsam notu: taksit/senet VADE ödemesi (taksit_vade_id/senet_vade_id) bu ilk
- * sürümde YOK — sonraki artımda eklenecek. Bu sürüm "adisyona ödeme" çekirdeği.
+ * Dağıtım her yerde TahsilatDagitim (WEB-kanonik havuz+cap, kuruş-kesin). planla()
+ * iki modu da TEK biçim plan üretir; yaz() planı transaction + idempotency ile
+ * aynen persist eder (parent + kalem + komisyon + vade güncellemeleri).
  */
 class TahsilatYazServisi
 {
-    /**
-     * @param array $g Girdi: salon_id, adisyon_id?, tutar, komisyon?, odeme_yontemi_id?,
-     *                  odeme_tarihi?, kalem_hizmet_id[]?, kalem_urun_id[]?, kalem_paket_id[]?
-     * @return array Yazılacak satırların PLANI (hiçbir şey yazılmaz)
-     *
-     * @throws BulunamadiException
-     */
+    private function vadeVar(array $g): bool
+    {
+        return ! empty($g['taksit_vade_id']) || ! empty($g['senet_vade_id']);
+    }
+
     public function planla(array $g): array
     {
-        $salonId = (int) ($g['salon_id'] ?? 0);
-        $adisyonId = (int) ($g['adisyon_id'] ?? 0);
+        return $this->vadeVar($g) ? $this->vadePlanla($g) : $this->basitPlanla($g);
+    }
 
-        // Kalem id dizileri (verilmezse adisyonun TUM taksitsiz/senetsiz kalemleri).
+    // ------------------------------------------------------------------
+    // BASİT MOD — adisyona ödeme
+    // ------------------------------------------------------------------
+    private function basitPlanla(array $g): array
+    {
+        $salonId = (int) ($g['salon_id'] ?? 0);
+        $adisyonId = $this->adisyonIdCoz($g);
+
         $hizmetId = array_map('intval', (array) ($g['kalem_hizmet_id'] ?? []));
         $urunId   = array_map('intval', (array) ($g['kalem_urun_id'] ?? []));
         $paketId  = array_map('intval', (array) ($g['kalem_paket_id'] ?? []));
 
-        // adisyon_id gelmezse kalem id'lerinden türet (eski akış 17169-17177).
-        if (! $adisyonId) {
-            $adisyonId = (int) (
-                (! empty($hizmetId) ? AdisyonHizmetler::whereIn('id', $hizmetId)->value('adisyon_id') : null)
-                ?? (! empty($urunId) ? AdisyonUrunler::whereIn('id', $urunId)->value('adisyon_id') : null)
-                ?? (! empty($paketId) ? AdisyonPaketler::whereIn('id', $paketId)->value('adisyon_id') : null)
-                ?? 0
-            );
-        }
-        if (! $adisyonId) {
-            throw new BulunamadiException('Adisyon belirlenemedi (adisyon_id veya kalem id gerekli)');
-        }
-
-        // Kalemleri topla (verilen id'ler ya da adisyonun tamami); senet/taksit HARIC
-        // (onlar vade akisinda islenir, burada degil).
         $hizmetler = $this->kalemGetir(AdisyonHizmetler::class, $adisyonId, $hizmetId);
         $urunler   = $this->kalemGetir(AdisyonUrunler::class, $adisyonId, $urunId);
         $paketler  = $this->kalemGetir(AdisyonPaketler::class, $adisyonId, $paketId);
 
-        // Her kalem icin ONCEKI tahsilat (kalem-split) — batched.
         $oncekiH = $this->oncekiTahsilat('tahsilat_hizmetler', 'adisyon_hizmet_id', $hizmetler->pluck('id')->all());
         $oncekiU = $this->oncekiTahsilat('tahsilat_urunler', 'adisyon_urun_id', $urunler->pluck('id')->all());
         $oncekiP = $this->oncekiTahsilat('tahsilat_paketler', 'adisyon_paket_id', $paketler->pluck('id')->all());
 
-        // Kalan borc (kurus) per kalem + meta.
-        $kalemler = [];
+        $kalanlar = [];
+        $ref = [];
         foreach ($hizmetler as $h) {
-            $kalemler[] = $this->kalemSatiri('hizmet', 'adisyon_hizmet_id', $h, $oncekiH[$h->id] ?? 0);
-        }
-        foreach ($urunler as $u) {
-            $kalemler[] = $this->kalemSatiri('urun', 'adisyon_urun_id', $u, $oncekiU[$u->id] ?? 0);
+            $kalanlar[] = $this->kalanKurus($h, $oncekiH[$h->id] ?? 0);
+            $ref[] = ['tip' => 'hizmet', 'fk' => 'adisyon_hizmet_id', 'id' => (int) $h->id];
         }
         foreach ($paketler as $p) {
-            $kalemler[] = $this->kalemSatiri('paket', 'adisyon_paket_id', $p, $oncekiP[$p->id] ?? 0);
+            $kalanlar[] = $this->kalanKurus($p, $oncekiP[$p->id] ?? 0);
+            $ref[] = ['tip' => 'paket', 'fk' => 'adisyon_paket_id', 'id' => (int) $p->id];
+        }
+        foreach ($urunler as $u) {
+            $kalanlar[] = $this->kalanKurus($u, $oncekiU[$u->id] ?? 0);
+            $ref[] = ['tip' => 'urun', 'fk' => 'adisyon_urun_id', 'id' => (int) $u->id];
         }
 
-        $tutarKurus    = AdisyonHesap::tlToKurus($g['tutar'] ?? 0);
-        $komisyonKurus = AdisyonHesap::tlToKurus($g['komisyon'] ?? 0);
-        $adisyonPaymentKurus = max(0, $tutarKurus - $komisyonKurus); // komisyon haric fiili odeme
-
-        // Dağıtım (kalan-bazlı havuz + cap).
-        $kalanlar = array_map(fn ($k) => $k['kalan_kurus'], $kalemler);
+        [$tutarKurus, $komisyonKurus, $adisyonPaymentKurus] = $this->tutarlar($g);
         $paylar = TahsilatDagitim::taksitHavuz($kalanlar, $adisyonPaymentKurus);
 
         $kalemTahsilatlari = [];
-        $dagitilanKurus = 0;
+        $dagitilan = 0;
         foreach ($paylar as $i => $payKurus) {
-            $k = $kalemler[$i];
-            $dagitilanKurus += $payKurus;
+            $k = $ref[$i];
+            $dagitilan += $payKurus;
             $kalemTahsilatlari[] = [
-                'tip'        => $k['tip'],
-                $k['fk']     => $k['id'],
-                'tutar'      => AdisyonHesap::kurusToTl($payKurus),
-                'tutar_kurus'=> $payKurus,
+                'tip' => $k['tip'], $k['fk'] => $k['id'],
+                'tutar' => AdisyonHesap::kurusToTl($payKurus), 'tutar_kurus' => $payKurus,
             ];
         }
 
-        $toplamKalanKurus = array_sum($kalanlar);
-        $dagitilmayanKurus = max(0, $adisyonPaymentKurus - $dagitilanKurus); // odeme > kalan ise fazla
-
+        $toplamKalan = array_sum($kalanlar);
+        $dagitilmayan = max(0, $adisyonPaymentKurus - $dagitilan);
         $uyarilar = [];
-        if ($dagitilmayanKurus > 0) {
-            $uyarilar[] = 'Ödeme toplam kalan borçtan fazla; fazla '
-                .AdisyonHesap::kurusToTl($dagitilmayanKurus).' TL dağıtılmadı (fazla ödeme).';
+        if ($dagitilmayan > 0) {
+            $uyarilar[] = 'Ödeme toplam kalan borçtan fazla; fazla '.AdisyonHesap::kurusToTl($dagitilmayan).' TL dağıtılmadı.';
         }
-        if (empty($kalemler)) {
+        if (empty($ref)) {
             $uyarilar[] = 'Adisyonda dağıtılacak (taksitsiz/senetsiz) kalem yok.';
         }
 
-        return [
-            'dry_run'   => true,
-            'adisyon_id' => $adisyonId,
-            'salon_id'   => $salonId,
-            'parent_tahsilat' => [
-                'adisyon_id'       => $adisyonId,
-                'tutar'            => AdisyonHesap::kurusToTl($adisyonPaymentKurus),
-                'komisyon_tutari'  => AdisyonHesap::kurusToTl($komisyonKurus),
-                'para_girisi'      => 0,
-                'odeme_yontemi_id' => isset($g['odeme_yontemi_id']) ? (int) $g['odeme_yontemi_id'] : null,
-                'odeme_tarihi'     => $g['odeme_tarihi'] ?? null,
-            ],
-            'komisyon' => $komisyonKurus > 0 ? [
-                'gelir_tahsilat' => ['tutar' => AdisyonHesap::kurusToTl($komisyonKurus), 'para_girisi' => 1],
-                'masraf'         => ['kategori' => 'Banka Ödemeleri', 'tutar' => AdisyonHesap::kurusToTl($komisyonKurus)],
-            ] : null,
-            'kalem_tahsilatlari' => $kalemTahsilatlari,
-            'ozet' => [
-                'adisyon_payment_kurus' => $adisyonPaymentKurus,
-                'toplam_kalan_kurus'    => $toplamKalanKurus,
-                'dagitilan_kurus'       => $dagitilanKurus,
-                'dagitilmayan_kurus'    => $dagitilmayanKurus,
-                'invariant_ok'          => $dagitilanKurus === min($adisyonPaymentKurus, $toplamKalanKurus),
-            ],
-            'uyarilar' => $uyarilar,
-        ];
+        return $this->planZarfi('basit', $adisyonId, $salonId, $g, $komisyonKurus, $kalemTahsilatlari, [], [
+            'adisyon_payment_kurus' => $adisyonPaymentKurus,
+            'toplam_kalan_kurus'    => $toplamKalan,
+            'dagitilan_kurus'       => $dagitilan,
+            'dagitilmayan_kurus'    => $dagitilmayan,
+            'invariant_ok'          => $dagitilan === min($adisyonPaymentKurus, $toplamKalan),
+        ], $uyarilar);
     }
 
-    /**
-     * GERÇEK YAZMA — transaction + adisyon kilidi + idempotency + plan persist.
-     * Yalnızca config('tahsilat.yazma_aktif')=true iken controller buraya girer.
-     * Dry-run planıyla AYNI satırları yazar (parent + kalem + komisyon).
-     *
-     * @param array $meta ['yetkili_id','salon_id','olusturan_id']
-     * @return array ['tahsilat_id','adisyon_id','yazilan','replay']
-     *
-     * @throws CakismaException
-     */
+    // ------------------------------------------------------------------
+    // VADE MOD — taksit/senet vade ödemesi
+    // ------------------------------------------------------------------
+    private function vadePlanla(array $g): array
+    {
+        $salonId = (int) ($g['salon_id'] ?? 0);
+        $adisyonId = (int) ($g['adisyon_id'] ?? 0);
+        [$tutarKurus, $komisyonKurus, $adisyonPaymentKurus] = $this->tutarlar($g);
+        $odemeYontemi = isset($g['odeme_yontemi_id']) ? (int) $g['odeme_yontemi_id'] : null;
+
+        $taksitIds = array_map('intval', (array) ($g['taksit_vade_id'] ?? []));
+        $senetIds  = array_map('intval', (array) ($g['senet_vade_id'] ?? []));
+
+        $kalemTahsilatlari = [];
+        $vadeGuncellemeleri = [];
+        $uyarilar = [];
+        $dagitilan = 0;
+        $remaining = $adisyonPaymentKurus;
+
+        // Taksit → sonra senet (eski sıra).
+        foreach ([['taksit', $taksitIds, TaksitVadeleri::class, 'taksitli_tahsilat_id'],
+            ['senet', $senetIds, SenetVadeleri::class, 'senet_id']] as [$tip, $ids, $model, $fk]) {
+            foreach ($ids as $vid) {
+                if ($remaining <= 0) {
+                    break;
+                }
+                $vade = $model::find($vid);
+                if (! $vade) {
+                    $uyarilar[] = "$tip vade $vid bulunamadı";
+                    continue;
+                }
+                $vadeTutarKurus = AdisyonHesap::tlToKurus($vade->tutar);
+                $kismiKurus = min($remaining, $vadeTutarKurus);
+
+                [$kalanlar, $ref] = $this->vadeKalemKalanlari($fk, $vade->{$fk});
+                $paylar = TahsilatDagitim::taksitHavuz($kalanlar, $kismiKurus);
+                foreach ($paylar as $i => $payKurus) {
+                    $k = $ref[$i];
+                    $dagitilan += $payKurus;
+                    $kalemTahsilatlari[] = [
+                        'tip' => $k['tip'], $k['fk'] => $k['id'],
+                        'tutar' => AdisyonHesap::kurusToTl($payKurus), 'tutar_kurus' => $payKurus,
+                    ];
+                }
+
+                // Kısmi ödemede taksit/senet vadesi bölünür (kalan kısım yeni vadeye).
+                $split = $vadeTutarKurus > $kismiKurus ? AdisyonHesap::kurusToTl($vadeTutarKurus - $kismiKurus) : null;
+
+                $vadeGuncellemeleri[] = [
+                    'tip'              => $tip,
+                    'vade_id'          => (int) $vade->id,
+                    'odeme_yontemi_id' => $odemeYontemi,
+                    'odendi'           => true,
+                    'paid_tutar'       => AdisyonHesap::kurusToTl($kismiKurus),
+                    'split_yeni_tutar' => $split,
+                ];
+                $remaining -= $kismiKurus;
+            }
+        }
+
+        $dagitilmayan = max(0, $adisyonPaymentKurus - $dagitilan);
+        if ($dagitilmayan > 0) {
+            $uyarilar[] = 'Ödeme vade/kalan toplamından fazla; fazla '.AdisyonHesap::kurusToTl($dagitilmayan).' TL dağıtılmadı.';
+        }
+        if (empty($vadeGuncellemeleri)) {
+            $uyarilar[] = 'Geçerli taksit/senet vadesi bulunamadı.';
+        }
+
+        return $this->planZarfi('vade', $adisyonId, $salonId, $g, $komisyonKurus, $kalemTahsilatlari, $vadeGuncellemeleri, [
+            'adisyon_payment_kurus' => $adisyonPaymentKurus,
+            'dagitilan_kurus'       => $dagitilan,
+            'dagitilmayan_kurus'    => $dagitilmayan,
+        ], $uyarilar);
+    }
+
+    // ------------------------------------------------------------------
+    // GERÇEK YAZMA
+    // ------------------------------------------------------------------
     public function yaz(array $g, array $meta): array
     {
         $anahtar = trim((string) ($g['idempotency_key'] ?? ''));
@@ -168,9 +199,7 @@ class TahsilatYazServisi
             throw new CakismaException('idempotency_key zorunlu (çift-kayıt koruması)');
         }
 
-        // Daha önce işlendiyse aynı yanıtı dön — YENİ YAZMA YOK (replay).
-        $mevcut = DB::table('api_idempotency_anahtarlari')
-            ->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
+        $mevcut = DB::table('api_idempotency_anahtarlari')->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
         if ($mevcut && $mevcut->yanit_json) {
             $v = json_decode($mevcut->yanit_json, true);
             $v['replay'] = true;
@@ -181,28 +210,20 @@ class TahsilatYazServisi
         try {
             return DB::transaction(function () use ($g, $meta, $anahtar) {
                 $adisyonId = (int) $g['adisyon_id'];
-
-                // Serileştirme: adisyonu kilitle (eşzamanlı tahsilat tutarı bozmasın).
                 DB::table('adisyonlar')->where('id', $adisyonId)->lockForUpdate()->first();
 
-                // Idempotency REZERVE: unique(anahtar,uc) → eşzamanlı aynı key patlar,
-                // tüm transaction geri alınır (çift yazma İMKANSIZ).
                 DB::table('api_idempotency_anahtarlari')->insert([
-                    'anahtar'    => $anahtar,
-                    'uc'         => 'tahsilat',
-                    'yetkili_id' => $meta['yetkili_id'] ?? null,
-                    'salon_id'   => $meta['salon_id'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'anahtar' => $anahtar, 'uc' => 'tahsilat',
+                    'yetkili_id' => $meta['yetkili_id'] ?? null, 'salon_id' => $meta['salon_id'] ?? null,
+                    'created_at' => now(), 'updated_at' => now(),
                 ]);
 
-                // Planı KİLİT ALTINDA taze hesapla.
-                $plan = $this->planla($g);
+                $plan = $this->planla($g); // kilit altında taze
                 $adisyon = Adisyonlar::find($adisyonId);
                 $salonId = $meta['salon_id'] ?? ($adisyon->salon_id ?? null);
                 $olusturanId = $meta['olusturan_id'] ?? null;
 
-                // 1) Parent tahsilatlar
+                // 1) Parent tahsilat
                 $t = new Tahsilat();
                 $t->adisyon_id = $adisyonId;
                 $t->tutar = $plan['parent_tahsilat']['tutar'];
@@ -218,7 +239,7 @@ class TahsilatYazServisi
                 $t->notlar = $g['notlar'] ?? null;
                 $t->save();
 
-                // 2) Kalem tahsilatları (plandaki paylar)
+                // 2) Kalem tahsilatları
                 foreach ($plan['kalem_tahsilatlari'] as $kt) {
                     if ($kt['tip'] === 'hizmet') {
                         $o = new TahsilatHizmetler();
@@ -235,60 +256,53 @@ class TahsilatYazServisi
                     $o->save();
                 }
 
-                // 3) Komisyon: gelir (para_girisi=1) + Masraf 'Banka Ödemeleri'
+                // 3) Komisyon
                 if ($plan['komisyon']) {
-                    $kom = $plan['komisyon']['gelir_tahsilat']['tutar'];
+                    $this->komisyonYaz($plan, $adisyonId, $adisyon, $salonId, $olusturanId, $t->id);
+                }
 
-                    $kt = new Tahsilat();
-                    $kt->adisyon_id = $adisyonId;
-                    $kt->tutar = $kom;
-                    $kt->user_id = $adisyon->user_id ?? null;
-                    $kt->odeme_tarihi = $plan['parent_tahsilat']['odeme_tarihi'];
-                    $kt->olusturan_id = $olusturanId;
-                    $kt->salon_id = $salonId;
-                    $kt->yapilan_odeme = $kom;
-                    $kt->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
-                    $kt->para_girisi = 1;
-                    $kt->notlar = 'Komisyon Geliri (tahsilat #'.$t->id.')';
-                    $kt->save();
-
-                    $bankaKat = MasrafKategorisi::firstOrCreate(['kategori' => 'Banka Ödemeleri']);
-                    $m = new Masraf();
-                    $m->salon_id = $salonId;
-                    if (Schema::hasColumn('masraflar', 'adisyon_id')) {
-                        $m->adisyon_id = $adisyonId;
+                // 4) Vade güncellemeleri (taksit/senet odendi + bölme)
+                foreach ($plan['vade_guncellemeleri'] as $vg) {
+                    $model = $vg['tip'] === 'taksit' ? TaksitVadeleri::class : SenetVadeleri::class;
+                    $vade = $model::find($vg['vade_id']);
+                    if (! $vade) {
+                        continue;
                     }
-                    $m->harcayan_id = $olusturanId;
-                    $m->masraf_kategori_id = $bankaKat->id;
-                    $m->tarih = $plan['parent_tahsilat']['odeme_tarihi'];
-                    $m->tutar = $kom;
-                    $m->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
-                    $m->aciklama = 'Komisyon Tutarı';
-                    $m->save();
+                    if ($vg['split_yeni_tutar'] !== null) {
+                        $yeni = $vade->replicate();
+                        $yeni->tutar = $vg['split_yeni_tutar'];
+                        $yeni->odendi = 0;
+                        $yeni->save();
+                        $vade->tutar = $vg['paid_tutar'];
+                    }
+                    $vade->odendi = $vg['odendi'] ? 1 : 0;
+                    if ($vg['odeme_yontemi_id'] !== null) {
+                        $vade->odeme_yontemi_id = $vg['odeme_yontemi_id'];
+                    }
+                    $vade->save();
                 }
 
                 $yanit = [
                     'tahsilat_id' => (int) $t->id,
                     'adisyon_id'  => $adisyonId,
+                    'mod'         => $plan['mod'],
                     'yazilan'     => [
                         'parent'   => 1,
                         'kalem'    => count($plan['kalem_tahsilatlari']),
                         'komisyon' => (bool) $plan['komisyon'],
+                        'vade'     => count($plan['vade_guncellemeleri']),
                     ],
                     'replay' => false,
                 ];
 
-                DB::table('api_idempotency_anahtarlari')
-                    ->where('anahtar', $anahtar)->where('uc', 'tahsilat')
+                DB::table('api_idempotency_anahtarlari')->where('anahtar', $anahtar)->where('uc', 'tahsilat')
                     ->update(['yanit_kodu' => 200, 'yanit_json' => json_encode($yanit), 'updated_at' => now()]);
 
                 return $yanit;
             });
         } catch (QueryException $e) {
-            // Idempotency unique ihlali → eşzamanlı/tekrar istek. ÇİFT YAZMA OLMADI.
             if ($this->benzersizIhlali($e)) {
-                $row = DB::table('api_idempotency_anahtarlari')
-                    ->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
+                $row = DB::table('api_idempotency_anahtarlari')->where('anahtar', $anahtar)->where('uc', 'tahsilat')->first();
                 if ($row && $row->yanit_json) {
                     $v = json_decode($row->yanit_json, true);
                     $v['replay'] = true;
@@ -301,9 +315,78 @@ class TahsilatYazServisi
         }
     }
 
-    private function benzersizIhlali(QueryException $e): bool
+    // ------------------------------------------------------------------
+    // Yardımcılar
+    // ------------------------------------------------------------------
+
+    public function salonIdGetir(int $adisyonId): ?int
     {
-        return (($e->errorInfo[1] ?? null) === 1062) || ((string) $e->getCode() === '23000');
+        $v = Adisyonlar::where('id', $adisyonId)->value('salon_id');
+
+        return $v !== null ? (int) $v : null;
+    }
+
+    private function adisyonIdCoz(array $g): int
+    {
+        $adisyonId = (int) ($g['adisyon_id'] ?? 0);
+        if ($adisyonId) {
+            return $adisyonId;
+        }
+        $hizmetId = array_map('intval', (array) ($g['kalem_hizmet_id'] ?? []));
+        $urunId   = array_map('intval', (array) ($g['kalem_urun_id'] ?? []));
+        $paketId  = array_map('intval', (array) ($g['kalem_paket_id'] ?? []));
+        $adisyonId = (int) (
+            (! empty($hizmetId) ? AdisyonHizmetler::whereIn('id', $hizmetId)->value('adisyon_id') : null)
+            ?? (! empty($urunId) ? AdisyonUrunler::whereIn('id', $urunId)->value('adisyon_id') : null)
+            ?? (! empty($paketId) ? AdisyonPaketler::whereIn('id', $paketId)->value('adisyon_id') : null)
+            ?? 0
+        );
+        if (! $adisyonId) {
+            throw new BulunamadiException('Adisyon belirlenemedi (adisyon_id veya kalem id gerekli)');
+        }
+
+        return $adisyonId;
+    }
+
+    /** @return array{0:int,1:int,2:int} [tutarKurus, komisyonKurus, adisyonPaymentKurus] */
+    private function tutarlar(array $g): array
+    {
+        $tutarKurus = AdisyonHesap::tlToKurus($g['tutar'] ?? 0);
+        $komisyonKurus = AdisyonHesap::tlToKurus($g['komisyon'] ?? 0);
+
+        return [$tutarKurus, $komisyonKurus, max(0, $tutarKurus - $komisyonKurus)];
+    }
+
+    private function kalanKurus($kalem, float $onceki): int
+    {
+        return max(0, AdisyonHesap::tlToKurus($kalem->fiyat ?? 0)
+            - AdisyonHesap::tlToKurus($kalem->indirim_tutari ?? 0)
+            - AdisyonHesap::tlToKurus($onceki));
+    }
+
+    /** Bir taksit/senet planının kalemleri → [kalanlar(kurus)[], ref[]] */
+    private function vadeKalemKalanlari(string $fk, $planId): array
+    {
+        $kalanlar = [];
+        $ref = [];
+        $map = [
+            [AdisyonHizmetler::class, 'hizmet', 'adisyon_hizmet_id', 'tahsilat_hizmetler'],
+            [AdisyonUrunler::class, 'urun', 'adisyon_urun_id', 'tahsilat_urunler'],
+            [AdisyonPaketler::class, 'paket', 'adisyon_paket_id', 'tahsilat_paketler'],
+        ];
+        foreach ($map as [$model, $tip, $kalemFk, $tahTablo]) {
+            $items = $model::where($fk, $planId)->get();
+            if ($items->isEmpty()) {
+                continue;
+            }
+            $onceki = $this->oncekiTahsilat($tahTablo, $kalemFk, $items->pluck('id')->all());
+            foreach ($items as $it) {
+                $kalanlar[] = $this->kalanKurus($it, $onceki[$it->id] ?? 0);
+                $ref[] = ['tip' => $tip, 'fk' => $kalemFk, 'id' => (int) $it->id];
+            }
+        }
+
+        return [$kalanlar, $ref];
     }
 
     private function kalemGetir(string $model, int $adisyonId, array $ids)
@@ -318,21 +401,7 @@ class TahsilatYazServisi
         return $q->get();
     }
 
-    private function kalemSatiri(string $tip, string $fk, $k, float $onceki): array
-    {
-        $kalan = AdisyonHesap::tlToKurus($k->fiyat ?? 0)
-            - AdisyonHesap::tlToKurus($k->indirim_tutari ?? 0)
-            - AdisyonHesap::tlToKurus($onceki);
-
-        return [
-            'tip'         => $tip,
-            'fk'          => $fk,
-            'id'          => (int) $k->id,
-            'kalan_kurus' => max(0, $kalan),
-        ];
-    }
-
-    /** @return array<int,float> kalem_id => onceki tahsilat toplami (TL) */
+    /** @return array<int,float> kalem_id => önceki tahsilat (TL) */
     private function oncekiTahsilat(string $tablo, string $fk, array $kalemIds): array
     {
         if (empty($kalemIds)) {
@@ -346,5 +415,68 @@ class TahsilatYazServisi
             ->pluck('t', 'kid')
             ->map(fn ($v) => (float) $v)
             ->all();
+    }
+
+    private function komisyonYaz(array $plan, int $adisyonId, $adisyon, $salonId, $olusturanId, int $parentId): void
+    {
+        $kom = $plan['komisyon']['gelir_tahsilat']['tutar'];
+
+        $kt = new Tahsilat();
+        $kt->adisyon_id = $adisyonId;
+        $kt->tutar = $kom;
+        $kt->user_id = $adisyon->user_id ?? null;
+        $kt->odeme_tarihi = $plan['parent_tahsilat']['odeme_tarihi'];
+        $kt->olusturan_id = $olusturanId;
+        $kt->salon_id = $salonId;
+        $kt->yapilan_odeme = $kom;
+        $kt->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
+        $kt->para_girisi = 1;
+        $kt->notlar = 'Komisyon Geliri (tahsilat #'.$parentId.')';
+        $kt->save();
+
+        $bankaKat = MasrafKategorisi::firstOrCreate(['kategori' => 'Banka Ödemeleri']);
+        $m = new Masraf();
+        $m->salon_id = $salonId;
+        if (Schema::hasColumn('masraflar', 'adisyon_id')) {
+            $m->adisyon_id = $adisyonId;
+        }
+        $m->harcayan_id = $olusturanId;
+        $m->masraf_kategori_id = $bankaKat->id;
+        $m->tarih = $plan['parent_tahsilat']['odeme_tarihi'];
+        $m->tutar = $kom;
+        $m->odeme_yontemi_id = $plan['parent_tahsilat']['odeme_yontemi_id'];
+        $m->aciklama = 'Komisyon Tutarı';
+        $m->save();
+    }
+
+    private function planZarfi(string $mod, int $adisyonId, int $salonId, array $g, int $komisyonKurus, array $kalemTahsilatlari, array $vadeGuncellemeleri, array $ozet, array $uyarilar): array
+    {
+        return [
+            'dry_run'    => true,
+            'mod'        => $mod,
+            'adisyon_id' => $adisyonId,
+            'salon_id'   => $salonId,
+            'parent_tahsilat' => [
+                'adisyon_id'       => $adisyonId,
+                'tutar'            => AdisyonHesap::kurusToTl(max(0, AdisyonHesap::tlToKurus($g['tutar'] ?? 0) - $komisyonKurus)),
+                'komisyon_tutari'  => AdisyonHesap::kurusToTl($komisyonKurus),
+                'para_girisi'      => 0,
+                'odeme_yontemi_id' => isset($g['odeme_yontemi_id']) ? (int) $g['odeme_yontemi_id'] : null,
+                'odeme_tarihi'     => $g['odeme_tarihi'] ?? null,
+            ],
+            'komisyon' => $komisyonKurus > 0 ? [
+                'gelir_tahsilat' => ['tutar' => AdisyonHesap::kurusToTl($komisyonKurus), 'para_girisi' => 1],
+                'masraf'         => ['kategori' => 'Banka Ödemeleri', 'tutar' => AdisyonHesap::kurusToTl($komisyonKurus)],
+            ] : null,
+            'kalem_tahsilatlari'  => $kalemTahsilatlari,
+            'vade_guncellemeleri' => $vadeGuncellemeleri,
+            'ozet'                => $ozet,
+            'uyarilar'            => $uyarilar,
+        ];
+    }
+
+    private function benzersizIhlali(QueryException $e): bool
+    {
+        return (($e->errorInfo[1] ?? null) === 1062) || ((string) $e->getCode() === '23000');
     }
 }
