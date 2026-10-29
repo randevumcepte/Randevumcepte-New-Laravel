@@ -84,6 +84,23 @@ class TahsilatSilServisi
             // Parent tahsilat.
             $t->delete();
 
+            // Harici indirim geri alma: bu tahsilatın eklediği delta kadar DÜŞ (null'lama YOK).
+            $indirimGeri = 0;
+            $indirimLog = DB::table('tahsilat_indirim_hareketleri')->where('tahsilat_id', $tahsilatId)->get();
+            foreach ($indirimLog as $log) {
+                $model = $log->kalem_tip === 'hizmet' ? AdisyonHizmetler::class
+                    : ($log->kalem_tip === 'urun' ? AdisyonUrunler::class : AdisyonPaketler::class);
+                $kalem = $model::find($log->kalem_id);
+                if ($kalem) {
+                    $kalem->indirim_tutari = max(0, (float) ($kalem->indirim_tutari ?? 0) - (float) $log->indirim_delta);
+                    $kalem->save();
+                    $indirimGeri++;
+                }
+            }
+            if ($indirimLog->count() > 0) {
+                DB::table('tahsilat_indirim_hareketleri')->where('tahsilat_id', $tahsilatId)->delete();
+            }
+
             // VADE geri alma (ödenen tutar kadar vade → odendi=0).
             $vadeReset = $this->vadeleriGeriAl(TaksitVadeleri::class, 'taksitli_tahsilat_id', array_values(array_unique($taksitPlan)), $tahsilatTutar)
                 + $this->vadeleriGeriAl(SenetVadeleri::class, 'senet_id', array_values(array_unique($senetPlan)), $tahsilatTutar);
@@ -97,12 +114,13 @@ class TahsilatSilServisi
             }
 
             return [
-                'silindi'          => true,
-                'tahsilat_id'      => $tahsilatId,
-                'adisyon_id'       => $adisyonId,
-                'silinen_kalem'    => $silinenKalem,
-                'vade_geri_alindi' => $vadeReset,
-                'uyarilar'         => $uyarilar,
+                'silindi'           => true,
+                'tahsilat_id'       => $tahsilatId,
+                'adisyon_id'        => $adisyonId,
+                'silinen_kalem'     => $silinenKalem,
+                'vade_geri_alindi'  => $vadeReset,
+                'indirim_geri_alindi' => $indirimGeri,
+                'uyarilar'          => $uyarilar,
             ];
         });
     }

@@ -63,11 +63,11 @@ class TahsilatController extends Controller
             if (! config('tahsilat.yazma_aktif')) {
                 return ApiCevap::hata('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).', 409);
             }
-            // Henüz desteklenmeyen akış: harici indirim (iade ile entangle — ayrı ele alınacak).
+            // Harici indirim varsa ek yetki: satis.indirim_uygula.
             if ((float) $request->input('indirim', 0) > 0) {
-                return ApiCevap::hata('Harici indirim v2 yazmada henüz desteklenmiyor', 422);
+                $this->kapi->denetle($user->id, $salonId, ['satis.indirim_uygula']);
             }
-            // Taksit/senet vade ödemesi: ARTIK destekleniyor (vade modu).
+            // Taksit/senet vade ödemesi + harici indirim: ARTIK destekleniyor.
             if (! $request->filled('idempotency_key')) {
                 return ApiCevap::hata('idempotency_key zorunlu', 422);
             }
