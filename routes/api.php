@@ -55,6 +55,8 @@ Route::prefix('v2')->group(function () {
         Route::get('/satislar', [SatisController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);
+        // IADE/SILME — flag korumali (satis.tahsilat_sil).
+        Route::delete('/tahsilat/{id}', [TahsilatController::class, 'sil'])->whereNumber('id');
     });
 
 });

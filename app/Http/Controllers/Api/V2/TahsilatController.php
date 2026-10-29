@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V2;
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
 use App\Models\Personeller;
+use App\Models\Tahsilat;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
+use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
@@ -20,6 +22,7 @@ class TahsilatController extends Controller
 {
     public function __construct(
         private TahsilatYazServisi $servis,
+        private TahsilatSilServisi $silServisi,
         private AdisyonOkumaServisi $adisyonServisi,
         private GuvenlikKapisi $kapi,
     ) {}
@@ -94,5 +97,36 @@ class TahsilatController extends Controller
         ]));
 
         return ApiCevap::basarili($plan, 'DRY-RUN: hiçbir şey yazılmadı.');
+    }
+
+    /**
+     * DELETE /api/v2/tahsilat/{id} — tahsilat İADE/SİLME.
+     * KVKK: kimlik + kapsam (tahsilatın salonu) + satis.tahsilat_sil. Flag korumalı.
+     */
+    public function sil(int $id)
+    {
+        $user = auth('isletmeyonetim-api')->user();
+        if (! $user) {
+            throw new YetkisizErisimException('Oturum geçersiz');
+        }
+
+        // Gerçek yazma/iade flag'i (yazma ile aynı kapı).
+        if (! config('tahsilat.yazma_aktif')) {
+            return ApiCevap::hata('Gerçek iade/silme henüz etkin değil', 409);
+        }
+
+        $t = Tahsilat::find($id);
+        if (! $t) {
+            return ApiCevap::hata('Tahsilat bulunamadı', 404);
+        }
+        $salonId = (int) $t->salon_id;
+
+        // Kapsam + yetki.
+        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_sil']);
+
+        $sonuc = $this->silServisi->sil($id, ['yetkili_id' => $user->id, 'salon_id' => $salonId]);
+        $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
+
+        return ApiCevap::basarili($sonuc, 'Tahsilat iade edildi (silindi).');
     }
 }
