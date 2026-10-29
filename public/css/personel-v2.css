@@ -141,9 +141,15 @@
   .p-bolum-bas { color: #c9a7f0; border-color: #34344c; }
 }
 
+/* ── Çalışma / Mola saatleri: iki kolon (dar ekranda tek kolona düşer) ── */
+.p-saatler-izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+.p-saatler-izgara > div > .p-bolum-bas { margin-top: 18px; }
+@media (max-width: 680px) { .p-saatler-izgara { grid-template-columns: 1fr; } }
+
 /* ── Çalışma saatleri satırları ── */
-.p-saat-sat { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #eee; flex-wrap: wrap; }
-.p-saat-gun { width: 92px; font-weight: 700; font-size: 13px; color: #2a2140; }
+.p-saat-sat { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px dashed #eee; flex-wrap: wrap; }
+.p-saat-gun { width: 78px; font-weight: 700; font-size: 13px; color: #2a2140; }
+.p-saat-sat input[type=time] { width: 96px; }
 .p-saat-sat input[type=time] { border: 1px solid #dcdce8; border-radius: 8px; padding: 7px 9px; font-size: 13px; background: #fff; color: #2a2140; }
 .p-saat-sat .p-kapali-etk { font-size: 12.5px; color: #c0392b; font-weight: 600; }
 @media (prefers-color-scheme: dark) { .p-saat-gun { color: #ededf5; } .p-saat-sat input[type=time] { background: #1b1b26; border-color: #34344c; color: #ededf5; } }

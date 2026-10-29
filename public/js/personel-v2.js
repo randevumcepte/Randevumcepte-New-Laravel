@@ -307,8 +307,10 @@ async function formAc(p) {
       <div class="p-alan"><label>Ürün Primi</label><input id="fUrunPrim" type="number" step="0.01" value="${esc(p?.urun_prim_yuzde ?? '')}"></div>
       <div class="p-alan"><label>Paket Primi</label><input id="fPaketPrim" type="number" step="0.01" value="${esc(p?.paket_prim_yuzde ?? '')}"></div>
     </div>
-    ${saatSatirlari('calisma', calisma, 'Çalışma Saatleri')}
-    ${saatSatirlari('mola', mola, 'Mola (Öğle Arası) Saatleri')}`;
+    <div class="p-saatler-izgara">
+      <div>${saatSatirlari('calisma', calisma, 'Çalışma Saatleri')}</div>
+      <div>${saatSatirlari('mola', mola, 'Mola (Öğle Arası) Saatleri')}</div>
+    </div>`;
 
   const alt = `
     <button class="p-btn p-btn-ikincil" id="fIptal">Vazgeç</button>
