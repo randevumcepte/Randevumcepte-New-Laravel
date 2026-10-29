@@ -79,6 +79,11 @@ class AdisyonOkumaServisi
 
         $ozet = AdisyonHesap::ozet($kalemler, [$odenenTl]);
 
+        // Müşteri adı (ekran başlığı için minimum PII — telefon vb. DÖNDÜRÜLMEZ).
+        $musteriAd = $adisyon->user_id
+            ? trim((string) DB::table('users')->where('id', $adisyon->user_id)->value('name'))
+            : null;
+
         // KVKK veri minimizasyonu: ham model dokumu YOK. Yalnizca gereken alanlar.
         // Serbest-metin PII (tahsilat.notlar) ve gereksiz kimlik alanlari DONDURULMEZ.
         // Snake_case (Flutter model uyumu) → ileride ekran gecisi drop-in olur.
@@ -87,6 +92,7 @@ class AdisyonOkumaServisi
                 'id'       => (int) $adisyon->id,
                 'salon_id' => (int) $adisyon->salon_id,
                 'user_id'  => $adisyon->user_id !== null ? (int) $adisyon->user_id : null,
+                'musteri_ad' => $musteriAd ?: null,
                 'tarih'    => $adisyon->tarih,
                 'odendi'   => (int) ($adisyon->odendi ?? 0),
             ],

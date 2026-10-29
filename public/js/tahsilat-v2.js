@@ -1,13 +1,14 @@
 /**
  * Satış & Tahsilat Düzenleme (v2) — build'siz island (sade ES module).
  *
- * Eski panelin "Satış & Tahsilat Düzenleme" ekranının v2 karşılığı. /api/v2 uçlarını
- * Bearer token ile tüketir (web + ileride Flutter AYNI uçlar). Yetenekler:
+ * Modern CRM düzeni: SOL kalemler + ekleme · SAĞ ödeme/özet · ALT yapılan tahsilatlar.
+ * /api/v2 uçlarını Bearer token ile tüketir (web + ileride Flutter AYNI uçlar):
  *   - Adisyon özeti + kalemleri HER DURUMDA (kapalı dahil) adıyla listeler.
  *   - Katalogdan hizmet/ürün/paket EKLE, ürün ADEDİ (kaybolmayan input), kalem SİL.
  *   - Tahsil Et: Önizle (dry-run) → Onayla (gerçek; flag kapalıysa 409).
  *
- * Token: localStorage['rc_access_token'] (pilotta ?token=...).
+ * Token: localStorage['rc_access_token'] (pilotta ?token=). Panel kabuğu (panel.css /
+ * panel-kabuk.js) menü+header'ı sağlar; bu betik yalnızca içerik alanını yönetir.
  */
 
 const BASE = '/api/v2';
@@ -38,8 +39,7 @@ let katalog = null;
 let salonId = null;
 
 function mesaj(metin, tip = 'bilgi') {
-  const renk = tip === 'hata' ? '#b00020' : tip === 'ok' ? '#0a7d2c' : '#334';
-  el('#rc-mesaj').innerHTML = metin ? `<div class="rc-msg" style="color:${renk}">${esc(metin)}</div>` : '';
+  el('#t-mesaj').innerHTML = metin ? `<div class="t-msg ${tip}">${esc(metin)}</div>` : '';
 }
 
 async function adisyonYukle() {
@@ -47,54 +47,79 @@ async function adisyonYukle() {
   if (!ok) { mesaj(`Adisyon yüklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   adisyon = govde.veri;
   salonId = adisyon.adisyon.salon_id;
+  // Panel kabuğunu bu adisyonun salonuna göre tazele (header: salon adı / lisans / menü yetkisi).
+  if (window.rcPanel && salonId) window.rcPanel.salonAyarla(salonId);
+  basligiGoster();
   ozetGoster();
   kalemlerGoster();
+  gecmisGoster();
   if (!katalog) katalogYukle();
   const h = adisyon.hesap;
-  if (h.kalan > 0 && !el('#rc-tutar').value) el('#rc-tutar').value = h.kalan;
+  if (h.kalan > 0 && !el('#t-tutar').value) el('#t-tutar').value = h.kalan;
 }
 
 async function katalogYukle() {
   const { ok, govde } = await api('GET', '/katalog?salon_id=' + salonId);
-  if (ok) { katalog = govde.veri; katalogSelectDoldur(); }
+  if (ok) { katalog = govde.veri; }
+}
+
+function basligiGoster() {
+  const a = adisyon.adisyon;
+  el('#t-musteri').textContent = a.musteri_ad || 'Müşteri';
+  el('#t-adisyon-no').textContent = '#' + adisyonId + (a.tarih ? ' · ' + a.tarih : '');
+  const kapali = adisyon.hesap.durum === 'kapali';
+  const d = el('#t-durum');
+  d.textContent = kapali ? 'KAPALI' : 'AKTİF';
+  d.className = 't-durum ' + (kapali ? 'kapali' : 'acik');
 }
 
 function ozetGoster() {
   const h = adisyon.hesap;
-  el('#rc-ozet').innerHTML = `
-    <div class="rc-kutu"><div><span>Ara Toplam</span><b>${TL(h.net)}</b></div>
-      <div><span>Ödenen</span><b>${TL(h.odenen)}</b></div>
-      <div><span>Kalan (Alacak)</span><b style="color:${h.kalan > 0 ? '#b00020' : '#0a7d2c'}">${TL(h.kalan)}</b></div>
-      <div><span>Durum</span><b>${esc(h.durum)}</b></div></div>`;
+  const kapali = h.durum === 'kapali';
+  el('#t-ozet-serit').innerHTML = `
+    <div class="t-cip"><span>Ara Toplam</span><b>${TL(h.brut ?? h.net)}</b></div>
+    <div class="t-cip"><span>İndirim</span><b>${TL(h.indirim || 0)}</b></div>
+    <div class="t-cip vurgu-yesil"><span>Ödenen</span><b>${TL(h.odenen)}</b></div>
+    <div class="t-cip ${kapali ? 'vurgu-yesil' : 'vurgu-kirmizi'}"><span>Kalan (Alacak)</span><b>${TL(h.kalan)}</b></div>`;
+  const buyuk = el('#t-kalan-buyuk');
+  buyuk.textContent = TL(h.kalan);
+  buyuk.className = kapali ? 'kapali' : '';
+  el('#t-ozet-detay').innerHTML = `
+    <div class="sat"><span>Ara Toplam</span><b>${TL(h.brut ?? h.net)}</b></div>
+    <div class="sat"><span>İndirim</span><b>${TL(h.indirim || 0)}</b></div>
+    <div class="sat"><span>Net Tutar</span><b>${TL(h.net)}</b></div>
+    <div class="sat"><span>Ödenen</span><b style="color:#16a34a">${TL(h.odenen)}</b></div>
+    <div class="sat"><span>Kalan</span><b style="color:${kapali ? '#16a34a' : '#dc2626'}">${TL(h.kalan)}</b></div>`;
 }
 
 function kalemlerGoster() {
   const v = adisyon;
   const rows = [];
-  (v.hizmetler || []).forEach((h) => rows.push(satir('hizmet', h.id, h.ad || 'Hizmet #' + h.hizmet_id, 'Hizmet' + (h.seans_sayisi ? ' · ' + h.seans_sayisi + ' seans' : ''), h.fiyat, h.indirim_tutari, null)));
-  (v.paketler || []).forEach((p) => rows.push(satir('paket', p.id, p.ad || 'Paket #' + p.paket_id, 'Paket', p.fiyat, p.indirim_tutari, null)));
-  (v.urunler || []).forEach((u) => rows.push(satir('urun', u.id, u.ad || 'Ürün #' + u.urun_id, 'Ürün', u.fiyat, u.indirim_tutari, u.adet)));
-  const gec = (v.tahsilatlar || []).map((t) => `<tr><td colspan="3" style="color:#0a7d2c">Ödeme · ${esc(t.odeme_tarihi || '')}</td><td class="r" style="color:#0a7d2c">${TL(t.tutar)}</td><td></td></tr>`).join('');
-  el('#rc-kalemler').innerHTML = `
-    <table class="rc-tbl"><thead><tr><th>Kalem</th><th>Tür / Miktar</th><th class="r">Fiyat</th><th class="r">İndirim</th><th></th></tr></thead>
-      <tbody>${rows.join('') || '<tr><td colspan="5" style="color:#889">Kalem yok</td></tr>'}</tbody>
-      ${gec ? '<tfoot>' + gec + '</tfoot>' : ''}</table>`;
+  (v.hizmetler || []).forEach((h) => rows.push(satir('hizmet', h.id, h.ad || 'Hizmet #' + h.hizmet_id, h.seans_sayisi ? h.seans_sayisi + ' seans' : '', h.fiyat, h.indirim_tutari, null)));
+  (v.paketler || []).forEach((p) => rows.push(satir('paket', p.id, p.ad || 'Paket #' + p.paket_id, '', p.fiyat, p.indirim_tutari, null)));
+  (v.urunler || []).forEach((u) => rows.push(satir('urun', u.id, u.ad || 'Ürün #' + u.urun_id, '', u.fiyat, u.indirim_tutari, u.adet)));
+  el('#t-kalemler').innerHTML = rows.length
+    ? `<table class="t-tbl"><thead><tr><th>Kalem</th><th>Tür</th><th class="r">Fiyat</th><th class="r">İndirim</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+    : '<div class="t-bos">Henüz kalem yok. Yukarıdan hizmet, ürün veya paket ekleyin.</div>';
   kalemOlaylariBagla();
 }
 
-function satir(tip, id, ad, tur, fiyat, indirim, adet) {
-  const miktar = tip === 'urun'
-    ? `<input type="number" min="1" value="${adet || 1}" class="rc-adet" data-id="${id}" style="width:64px"> adet`
-    : esc(tur);
+function satir(tip, id, ad, ek, fiyat, indirim, adet) {
+  const rozet = `<span class="t-rozet ${tip}">${tip === 'hizmet' ? 'Hizmet' : tip === 'urun' ? 'Ürün' : 'Paket'}</span>${ek ? ' <small style="color:#9aa0bd">' + esc(ek) + '</small>' : ''}`;
+  const tur = tip === 'urun'
+    ? `${rozet}<br><input type="number" min="1" value="${adet || 1}" class="t-adet-inp" data-id="${id}"> adet`
+    : rozet;
   return `<tr>
-    <td>${esc(ad)}</td><td>${miktar}</td>
-    <td class="r">${TL(fiyat)}</td><td class="r">${TL(indirim || 0)}</td>
-    <td class="r"><button class="rc-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil">✕</button></td></tr>`;
+    <td><span class="t-kalem-ad">${esc(ad)}</span></td>
+    <td>${tur}</td>
+    <td class="r">${TL(fiyat)}</td>
+    <td class="r">${TL(indirim || 0)}</td>
+    <td class="r"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
 }
 
 function kalemOlaylariBagla() {
-  document.querySelectorAll('.rc-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
-  document.querySelectorAll('.rc-adet').forEach((inp) => {
+  document.querySelectorAll('.t-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
+  document.querySelectorAll('.t-adet-inp').forEach((inp) => {
     let zaman;
     inp.oninput = () => {
       clearTimeout(zaman);
@@ -104,23 +129,43 @@ function kalemOlaylariBagla() {
   });
 }
 
-function katalogSelectDoldur() {
-  const tip = el('#rc-ekle-tip').value;
+function gecmisGoster() {
+  const t = adisyon.tahsilatlar || [];
+  el('#t-gecmis').innerHTML = t.length
+    ? `<table class="t-tbl"><thead><tr><th>Tarih</th><th>Ödeme</th><th class="r">Tutar</th></tr></thead><tbody>${
+        t.map((o) => `<tr><td>${esc(o.odeme_tarihi || '-')}</td><td><i class="bi bi-cash-coin t-odeme-ikon"></i>Tahsilat</td><td class="r" style="color:#16a34a;font-weight:700">${TL(o.tutar)}</td></tr>`).join('')
+      }</tbody></table>`
+    : '<div class="t-bos">Henüz tahsilat yapılmamış.</div>';
+}
+
+/* ───────────── Kalem ekleme paneli ───────────── */
+function ekleAc(tip) {
+  if (!katalog) { mesaj('Katalog yükleniyor, tekrar deneyin.', 'bilgi'); katalogYukle(); return; }
+  const panel = el('#t-ekle-panel');
+  panel.hidden = false;
+  el('#t-ekle-tip').value = tip;
+  katalogDoldur(tip);
+  el('#t-ekle-adet-kutu').style.display = tip === 'urun' ? '' : 'none';
+  el('#t-ekle-baslik').textContent = tip === 'hizmet' ? 'Hizmet Ekle' : tip === 'urun' ? 'Ürün Ekle' : 'Paket Ekle';
+  el('#t-ekle-katalog').focus();
+}
+
+function katalogDoldur(tip) {
   const liste = tip === 'hizmet' ? katalog.hizmetler : tip === 'urun' ? katalog.urunler : katalog.paketler;
   const idAlan = tip === 'hizmet' ? 'hizmet_id' : tip === 'urun' ? 'urun_id' : 'paket_id';
-  el('#rc-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}">${esc(x.ad)} — ${TL(x.fiyat)}</option>`).join('');
-  el('#rc-ekle-adet').style.display = tip === 'urun' ? '' : 'none';
+  el('#t-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}">${esc(x.ad)} — ${TL(x.fiyat)}</option>`).join('');
 }
 
 async function kalemEkle() {
-  const tip = el('#rc-ekle-tip').value;
-  const katalogId = parseInt(el('#rc-ekle-katalog').value, 10);
+  const tip = el('#t-ekle-tip').value;
+  const katalogId = parseInt(el('#t-ekle-katalog').value, 10);
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
-  if (tip === 'urun') body.adet = parseInt(el('#rc-ekle-adet').value || '1', 10);
+  if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
   const { ok, kod, govde } = await api('POST', '/adisyon/' + adisyonId + '/kalem', body);
   if (!ok) { mesaj(`Kalem eklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Kalem eklendi.', 'ok');
+  el('#t-ekle-panel').hidden = true;
   await adisyonYukle();
 }
 
@@ -139,21 +184,21 @@ async function kalemSil(tip, kalemId) {
   await adisyonYukle();
 }
 
-// --- Tahsilat (ödeme) ---
+/* ───────────── Tahsilat (ödeme) ───────────── */
 function girdi(dryRun) {
   return {
     salon_id: salonId, adisyon_id: adisyonId,
-    tutar: parseFloat(el('#rc-tutar').value || '0'),
-    indirim: parseFloat(el('#rc-indirim').value || '0'),
-    odeme_yontemi_id: parseInt(el('#rc-yontem').value, 10),
-    odeme_tarihi: el('#rc-tarih').value,
-    notlar: el('#rc-not').value || null,
+    tutar: parseFloat(el('#t-tutar').value || '0'),
+    indirim: parseFloat(el('#t-indirim').value || '0'),
+    odeme_yontemi_id: parseInt(el('#t-yontem').value, 10),
+    odeme_tarihi: el('#t-tarih').value,
+    notlar: el('#t-not').value || null,
     dry_run: dryRun,
   };
 }
 let idemKey = null;
 async function onizle() {
-  el('#rc-plan').innerHTML = '';
+  el('#t-plan').innerHTML = '';
   idemKey = uuid();
   const { ok, kod, govde } = await api('POST', '/tahsilat', girdi(true));
   if (!ok) { mesaj(`Önizleme hatası (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
@@ -162,78 +207,91 @@ async function onizle() {
   const sat = (p.kalem_tahsilatlari || []).map((k) => `<li>${esc(k.tip)} #${k.adisyon_hizmet_id || k.adisyon_urun_id || k.adisyon_paket_id} → <b>${TL(k.tutar)}</b></li>`).join('');
   const ind = (p.indirim_uygulamalari || []).map((i) => `<li>indirim ${esc(i.tip)} → ${TL(i.delta)}</li>`).join('');
   const uy = (p.uyarilar || []).map((u) => `<li style="color:#b00020">${esc(u)}</li>`).join('');
-  el('#rc-plan').innerHTML = `<div class="rc-plan"><h4>Önizleme (yazılmadı)</h4>
+  el('#t-plan').innerHTML = `<div class="t-plan"><h4>Önizleme (henüz yazılmadı)</h4>
     <div>Ödeme: <b>${TL(p.parent_tahsilat?.tutar)}</b></div>
-    <div>Kalemlere dağıtım:</div><ul>${sat || '<li>-</li>'}</ul>
+    <div style="margin-top:6px">Kalemlere dağıtım:</div><ul>${sat || '<li>-</li>'}</ul>
     ${ind ? '<div>İndirim:</div><ul>' + ind + '</ul>' : ''}${uy ? '<div>Uyarılar:</div><ul>' + uy + '</ul>' : ''}
-    <button id="rc-onayla" class="rc-btn rc-btn-ok">Onayla ve Kaydet</button></div>`;
-  el('#rc-onayla').onclick = kaydet;
+    <button id="t-onayla" class="t-btn yesil">Onayla ve Kaydet</button></div>`;
+  el('#t-onayla').onclick = kaydet;
 }
 async function kaydet() {
-  el('#rc-onayla').disabled = true;
+  el('#t-onayla').disabled = true;
   const g = girdi(false); g.idempotency_key = idemKey || uuid();
   const { ok, kod, govde } = await api('POST', '/tahsilat', g);
-  if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); el('#rc-onayla').disabled = false; return; }
+  if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); el('#t-onayla').disabled = false; return; }
   mesaj('Tahsilat kaydedildi' + (govde.veri?.replay ? ' (zaten işlenmişti)' : '') + '. Tahsilat #' + (govde.veri?.tahsilat_id ?? '-'), 'ok');
-  el('#rc-plan').innerHTML = '';
+  el('#t-plan').innerHTML = '';
   await adisyonYukle();
 }
 
 function iskelet() {
   kok.innerHTML = `
-    <style>
-      #rc-tahsilat{font-family:system-ui,Segoe UI,Roboto,sans-serif;max-width:720px;margin:14px auto;color:#222;padding:0 12px}
-      .rc-head{background:linear-gradient(90deg,#6b1f8f,#5C008E);color:#fff;padding:14px 16px;border-radius:12px;font-weight:700;font-size:16px;margin-bottom:12px}
-      .rc-kutu{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
-      .rc-kutu>div{background:#f4f4f8;border-radius:8px;padding:10px;text-align:center}
-      .rc-kutu span{display:block;font-size:12px;color:#667}
-      .rc-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:#fff;border-radius:10px;overflow:hidden}
-      .rc-tbl th,.rc-tbl td{padding:8px 10px;border-bottom:1px solid #eef;text-align:left}
-      .rc-tbl th{background:#f4f4f8;color:#556;font-weight:600}
-      .rc-tbl td.r,.rc-tbl th.r{text-align:right}
-      .rc-tbl tfoot td{background:#f6fff8;font-weight:600}
-      .rc-adet{padding:5px;border:1px solid #ccd;border-radius:6px}
-      .rc-sil{background:#fde8e8;color:#b00020;border:0;border-radius:6px;padding:4px 9px;cursor:pointer;font-weight:700}
-      .rc-ekle{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#faf8fe;border:1px solid #ece6f6;border-radius:10px;padding:10px;margin:8px 0 16px}
-      .rc-ekle select,.rc-ekle input{padding:8px;border:1px solid #ccd;border-radius:8px}
-      .rc-ekle select#rc-ekle-katalog{flex:1;min-width:180px}
-      .rc-form label{display:block;font-size:13px;margin:8px 0 2px;color:#445}
-      .rc-form input,.rc-form select,.rc-form textarea{width:100%;padding:9px;border:1px solid #ccd;border-radius:8px;box-sizing:border-box}
-      .rc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-      .rc-btn{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
-      .rc-btn-mor{background:#5C008E;color:#fff}.rc-btn-ok{background:#0a7d2c;color:#fff;margin-top:10px}
-      .rc-plan{margin-top:14px;padding:12px;border:1px solid #e0e0ea;border-radius:10px;background:#fbfbfe}
-      .rc-plan h4{margin:0 0 8px;color:#5C008E}.rc-plan ul{margin:4px 0 10px;padding-left:18px}
-      .rc-msg{padding:10px 12px;border-radius:8px;background:#f4f4f8;font-weight:600;margin:8px 0}
-      .rc-sec{font-weight:700;color:#5C008E;margin:14px 0 4px}
-    </style>
-    <div class="rc-head">Satış &amp; Tahsilat Düzenleme — Adisyon #${adisyonId}</div>
-    <div id="rc-ozet"></div>
-    <div class="rc-sec">Kalemler</div>
-    <div id="rc-kalemler"></div>
-    <div class="rc-ekle">
-      <select id="rc-ekle-tip"><option value="hizmet">Hizmet</option><option value="urun">Ürün</option><option value="paket">Paket</option></select>
-      <select id="rc-ekle-katalog"></select>
-      <input id="rc-ekle-adet" type="number" min="1" value="1" style="width:70px;display:none" title="Adet">
-      <button id="rc-ekle-btn" class="rc-btn rc-btn-mor" style="margin:0">+ Ekle</button>
-    </div>
-    <div class="rc-sec">Tahsilat (Ödeme)</div>
-    <div class="rc-form">
-      <div class="rc-grid2">
-        <div><label>Tahsilat tutarı (₺)</label><input id="rc-tutar" type="number" step="0.01" min="0"></div>
-        <div><label>İndirim (₺, opsiyonel)</label><input id="rc-indirim" type="number" step="0.01" min="0" value="0"></div>
-        <div><label>Ödeme yöntemi</label><select id="rc-yontem"><option value="1">Nakit</option><option value="2">Kredi Kartı</option><option value="3">Havale/EFT</option></select></div>
-        <div><label>Tarih</label><input id="rc-tarih" type="date"></div>
+    <div class="t-baslik">
+      <div>
+        <h1>Satış &amp; Tahsilat Düzenleme</h1>
+        <div class="t-alt"><b id="t-musteri">…</b> <span id="t-adisyon-no"></span></div>
       </div>
-      <label>Not (opsiyonel)</label><textarea id="rc-not" rows="2"></textarea>
-      <button id="rc-onizle" class="rc-btn rc-btn-mor">Önizle</button>
+      <span class="t-durum" id="t-durum"></span>
     </div>
-    <div id="rc-mesaj"></div>
-    <div id="rc-plan"></div>`;
-  el('#rc-tarih').value = new Date().toISOString().slice(0, 10);
-  el('#rc-onizle').onclick = onizle;
-  el('#rc-ekle-btn').onclick = kalemEkle;
-  el('#rc-ekle-tip').onchange = katalogSelectDoldur;
+
+    <div class="t-ozet-serit" id="t-ozet-serit"></div>
+
+    <div class="t-kolon">
+      <!-- SOL: kalemler + ekleme -->
+      <section class="t-kart t-sol">
+        <div class="t-kart-bas">
+          <h3>Kalemler</h3>
+          <div class="t-ekle-btns">
+            <button class="t-mini mor"     data-tip="hizmet">+ Hizmet</button>
+            <button class="t-mini kirmizi" data-tip="urun">+ Ürün</button>
+            <button class="t-mini koyu"    data-tip="paket">+ Paket</button>
+          </div>
+        </div>
+        <div class="t-ekle-panel" id="t-ekle-panel" hidden>
+          <label id="t-ekle-baslik">Kalem Ekle</label>
+          <div class="t-ekle-satir">
+            <select id="t-ekle-tip" style="display:none"><option value="hizmet">Hizmet</option><option value="urun">Ürün</option><option value="paket">Paket</option></select>
+            <select id="t-ekle-katalog" class="t-katalog"></select>
+            <span id="t-ekle-adet-kutu"><input id="t-ekle-adet" class="t-adet" type="number" min="1" value="1" title="Adet"></span>
+            <button id="t-ekle-btn" class="t-mini mor">Ekle</button>
+            <button id="t-ekle-iptal" class="t-mini" style="background:#8a90ad">Vazgeç</button>
+          </div>
+        </div>
+        <div class="t-kart-govde" id="t-kalemler"></div>
+      </section>
+
+      <!-- SAĞ: ödeme / özet -->
+      <aside class="t-kart t-sag">
+        <div class="t-odeme-bas">Ödeme</div>
+        <div class="t-alacak"><span>Kalan Alacak (₺)</span><b id="t-kalan-buyuk">—</b></div>
+        <div class="t-ozet-detay" id="t-ozet-detay"></div>
+        <div class="t-form">
+          <div class="grid">
+            <div><label>Tahsilat Tutarı (₺)</label><input id="t-tutar" type="number" step="0.01" min="0"></div>
+            <div><label>İndirim (₺)</label><input id="t-indirim" type="number" step="0.01" min="0" value="0"></div>
+            <div><label>Ödeme Yöntemi</label><select id="t-yontem"><option value="1">Nakit</option><option value="2">Kredi Kartı</option><option value="3">Havale/EFT</option></select></div>
+            <div><label>Tarih</label><input id="t-tarih" type="date"></div>
+          </div>
+          <label>Not (opsiyonel)</label>
+          <textarea id="t-not" rows="2"></textarea>
+          <button id="t-onizle" class="t-btn mor">Tahsil Et (Önizle)</button>
+        </div>
+        <div class="t-mesaj" id="t-mesaj"></div>
+        <div id="t-plan"></div>
+      </aside>
+    </div>
+
+    <!-- ALT: yapılan tahsilatlar -->
+    <section class="t-kart t-gecmis">
+      <div class="t-kart-bas"><h3>Yapılan Tahsilatlar</h3></div>
+      <div class="t-kart-govde" id="t-gecmis"></div>
+    </section>`;
+
+  el('#t-tarih').value = new Date().toISOString().slice(0, 10);
+  el('#t-onizle').onclick = onizle;
+  el('#t-ekle-btn').onclick = kalemEkle;
+  el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };
+  document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
 }
 
 iskelet();

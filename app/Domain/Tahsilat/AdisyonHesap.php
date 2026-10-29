@@ -37,10 +37,13 @@ class AdisyonHesap
      */
     public static function ozet(array $kalemler, array $tahsilatTutarlari): array
     {
-        $netKurus = 0;
+        $brutKurus = 0;
+        $indirimKurus = 0;
         foreach ($kalemler as $k) {
-            $netKurus += self::tlToKurus($k['fiyat'] ?? 0) - self::tlToKurus($k['indirim'] ?? 0);
+            $brutKurus += self::tlToKurus($k['fiyat'] ?? 0);
+            $indirimKurus += self::tlToKurus($k['indirim'] ?? 0);
         }
+        $netKurus = $brutKurus - $indirimKurus;
 
         $odenenKurus = 0;
         foreach ($tahsilatTutarlari as $t) {
@@ -50,9 +53,13 @@ class AdisyonHesap
         $kalanKurus = $netKurus - $odenenKurus;
 
         return [
+            'brut_kurus'    => $brutKurus,
+            'indirim_kurus' => $indirimKurus,
             'net_kurus'    => $netKurus,
             'odenen_kurus' => $odenenKurus,
             'kalan_kurus'  => $kalanKurus,
+            'brut'         => self::kurusToTl($brutKurus),
+            'indirim'      => self::kurusToTl($indirimKurus),
             'net'          => self::kurusToTl($netKurus),
             'odenen'       => self::kurusToTl($odenenKurus),
             'kalan'        => self::kurusToTl($kalanKurus),

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AdisyonController;
+use App\Http\Controllers\Api\V2\KabukController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
@@ -53,6 +54,8 @@ Route::prefix('v2')->group(function () {
      | Kapsam + yetki her controller'da GuvenlikKapisi ile uygulanir.
      */
     Route::middleware('auth:isletmeyonetim-api')->group(function () {
+        // Panel kabugu (sol menu + header verisi) — v2 ekranlarinin ortak shell'i.
+        Route::get('/kabuk', [KabukController::class, 'goster']);
         Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');
         Route::get('/satislar', [SatisController::class, 'index']);
         Route::get('/katalog', [KatalogController::class, 'index']);
