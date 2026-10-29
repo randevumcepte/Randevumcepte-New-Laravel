@@ -1,0 +1,91 @@
+/* Satış Takibi (v2) — ekran stili. Açık/koyu temaya uyumlu, panel.css ile uyumlu. */
+
+.s-kabuk { padding: 8px 4px 32px; }
+
+.s-baslik h1 { font-size: 20px; font-weight: 700; margin: 0 0 14px; color: #5C008E; }
+@media (prefers-color-scheme: dark) { .s-baslik h1 { color: #d9a7ff; } }
+
+/* ── Özet kutuları ── */
+.s-ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.s-kutu {
+  background: #fff; border: 1px solid #e6e6ef; border-radius: 12px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.s-k-ad { font-size: 12px; color: #8a8a9a; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.s-k-deger { font-size: 20px; font-weight: 700; color: #26263a; }
+.s-kutu.s-acik { border-left: 4px solid #e08a00; }
+.s-kutu.s-kapali { border-left: 4px solid #2faa5e; }
+@media (prefers-color-scheme: dark) {
+  .s-kutu { background: #22222e; border-color: #33334a; }
+  .s-k-deger { color: #ededf5; }
+}
+
+/* ── Sekmeler ── */
+.s-sekmeler { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.s-sekme {
+  border: 1px solid #e0e0ec; background: #fff; color: #555; border-radius: 999px;
+  padding: 7px 18px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .15s;
+}
+.s-sekme:hover { border-color: #b98fe0; }
+.s-sekme.aktif { background: #5C008E; border-color: #5C008E; color: #fff; }
+@media (prefers-color-scheme: dark) {
+  .s-sekme { background: #22222e; border-color: #33334a; color: #cfcfe0; }
+  .s-sekme.aktif { background: #7a12b8; border-color: #7a12b8; color: #fff; }
+}
+
+/* ── Filtreler ── */
+.s-filtre { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+.s-f-grup { display: flex; flex-direction: column; gap: 4px; }
+.s-f-grup label { font-size: 12px; color: #8a8a9a; font-weight: 600; }
+.s-f-grup input, .s-f-grup select {
+  border: 1px solid #d8d8e4; border-radius: 8px; padding: 7px 10px; font-size: 14px; background: #fff; color: #26263a;
+}
+.s-f-grup input { max-width: 130px; }
+.s-f-ara { align-self: center; color: #aaa; padding-bottom: 7px; }
+@media (prefers-color-scheme: dark) {
+  .s-f-grup input, .s-f-grup select { background: #1c1c27; border-color: #33334a; color: #ededf5; }
+}
+
+/* ── Tablo ── */
+.s-tablo-sar { overflow-x: auto; border: 1px solid #e6e6ef; border-radius: 12px; background: #fff; }
+.s-tablo { width: 100%; border-collapse: collapse; min-width: 720px; }
+.s-tablo thead th {
+  text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .4px;
+  color: #8a8a9a; background: #f7f7fb; padding: 11px 14px; border-bottom: 1px solid #ececf4; white-space: nowrap;
+}
+.s-tablo tbody td { padding: 11px 14px; border-bottom: 1px solid #f1f1f7; font-size: 14px; color: #26263a; vertical-align: top; }
+.s-tablo tbody tr:last-child td { border-bottom: none; }
+.s-sag { text-align: right; white-space: nowrap; }
+.s-kalan { font-weight: 700; }
+.s-icerik { font-size: 13px; color: #555; line-height: 1.5; max-width: 340px; }
+.s-bos { text-align: center; color: #999; padding: 26px 14px; }
+.s-hata { color: #c0392b; }
+@media (prefers-color-scheme: dark) {
+  .s-tablo-sar { background: #22222e; border-color: #33334a; }
+  .s-tablo thead th { background: #1c1c27; color: #9a9ab0; border-color: #33334a; }
+  .s-tablo tbody td { color: #ededf5; border-color: #2a2a3a; }
+  .s-icerik { color: #b4b4c6; }
+}
+
+/* ── Rozet ── */
+.s-rozet { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.s-r-acik { background: #fff2e0; color: #b96c00; }
+.s-r-kapali { background: #e4f6ec; color: #1e7a45; }
+@media (prefers-color-scheme: dark) {
+  .s-r-acik { background: #4a3410; color: #ffc77a; }
+  .s-r-kapali { background: #153925; color: #7ad9a4; }
+}
+
+/* ── Sayfalama ── */
+.s-sayfalama { display: flex; gap: 6px; margin-top: 16px; justify-content: center; flex-wrap: wrap; }
+.s-sayfa {
+  border: 1px solid #e0e0ec; background: #fff; color: #555; border-radius: 8px;
+  min-width: 36px; height: 36px; padding: 0 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.s-sayfa:hover:not(.pasif):not(.aktif) { border-color: #b98fe0; }
+.s-sayfa.aktif { background: #5C008E; border-color: #5C008E; color: #fff; }
+.s-sayfa.pasif { opacity: .4; cursor: default; }
+@media (prefers-color-scheme: dark) {
+  .s-sayfa { background: #22222e; border-color: #33334a; color: #cfcfe0; }
+  .s-sayfa.aktif { background: #7a12b8; border-color: #7a12b8; }
+}

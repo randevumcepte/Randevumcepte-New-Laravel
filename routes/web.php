@@ -14,3 +14,12 @@ Route::get('/', function () {
 Route::get('/v2/tahsilat/{adisyon}', function ($adisyon) {
     return view('v2.tahsilat', ['adisyonId' => (int) $adisyon]);
 })->whereNumber('adisyon');
+
+/*
+ | Satis Takibi v2 — adisyon/satis listesi host sayfasi (ayni island deseni).
+ | Veri /api/v2/satislar (Bearer) ile yuklenir; salon_id ?sube= query'sinden
+ | gelir (kabuk sube secimiyle de uyumlu). Eski panel "Satis Takibi" karsiligi.
+ */
+Route::get('/v2/satislar', function () {
+    return view('v2.satislar', ['salonId' => (int) request('sube', 0)]);
+});

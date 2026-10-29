@@ -30,4 +30,16 @@ class Adisyonlar extends Model
     {
         return $this->hasMany(Tahsilat::class, 'adisyon_id');
     }
+
+    /** Adisyon sahibi musteri (users.name). */
+    public function musteri()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Adisyonun ait oldugu salon/sube (salon_adi + studyo_modu etiketi icin). */
+    public function salon()
+    {
+        return $this->belongsTo(Salonlar::class, 'salon_id');
+    }
 }
