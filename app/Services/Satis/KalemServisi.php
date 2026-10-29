@@ -40,7 +40,9 @@ class KalemServisi
             $saat = date('H:i:s');
 
             if ($tip === 'hizmet') {
-                $kat = DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $katalogId)->first();
+                // Aynı hizmet_id için birden fazla offering olabilir → katalogdaki
+                // temsilciyle (en yüksek fiyat) tutarlı seç.
+                $kat = DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $katalogId)->orderByDesc('baslangic_fiyat')->first();
                 if (! $kat) {
                     throw new BulunamadiException('Hizmet bu salonun katalogunda yok');
                 }

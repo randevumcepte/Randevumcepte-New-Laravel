@@ -16,12 +16,15 @@ class KatalogServisi
 {
     public function listele(int $salonId): array
     {
+        // Hizmet başına TEK kayıt (aynı hizmet_id için birden fazla salon offering
+        // olabilir → dropdown'da tekrar oluyordu). Temsilci: en yüksek fiyat/süre.
         $hizmetler = DB::table('salon_sunulan_hizmetler as sh')
             ->join('hizmetler as h', 'h.id', '=', 'sh.hizmet_id')
             ->where('sh.salon_id', $salonId)
             ->where('sh.aktif', 1)
+            ->groupBy('sh.hizmet_id', 'h.hizmet_adi')
             ->orderBy('h.hizmet_adi')
-            ->get(['sh.hizmet_id', 'h.hizmet_adi as ad', 'sh.baslangic_fiyat as fiyat', 'sh.sure_dk as sure'])
+            ->get(['sh.hizmet_id', 'h.hizmet_adi as ad', DB::raw('MAX(sh.baslangic_fiyat) as fiyat'), DB::raw('MAX(sh.sure_dk) as sure')])
             ->map(fn ($r) => [
                 'hizmet_id' => (int) $r->hizmet_id,
                 'ad'        => trim((string) $r->ad),
