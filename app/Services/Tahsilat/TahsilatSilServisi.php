@@ -3,34 +3,32 @@
 namespace App\Services\Tahsilat;
 
 use App\Exceptions\BulunamadiException;
-use App\Exceptions\YetkisizErisimException;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
+use App\Models\SenetVadeleri;
 use App\Models\Tahsilat;
 use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
+use App\Models\TaksitVadeleri;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Tahsilat İADE / SİLME — v2-yazılmış BASİT tahsilatlar için.
+ * Tahsilat İADE / SİLME — basit ve VADE (taksit/senet) tahsilatları için.
  *
- * Transaction içinde: kalem tahsilatları (tahsilat_hizmetler/urunler/paketler)
- * + komisyon gelir satırı + parent tahsilatlar silinir. Böylece eski mobil
- * (kalem) ve eski web (parent) ödeneni azalır → dual-write tutarlı kalır.
+ * Transaction içinde: kalem tahsilatları + komisyon gelir satırı + parent silinir;
+ * VADE ödemesiyse etkilenen taksit/senet vadeleri 'odendi=0'a döndürülür (eski
+ * tahsilatkaldir sezgiselinin aynası: ödenen tutar kadar vade geri alınır).
  *
- * GÜVENLİK/KAPSAM kararları (eski tahsilatkaldir'dan bilinçli FARKLAR):
- *   - adisyon kalem indirim_tutari/hediye SIFIRLANMAZ (eski blind null'lama
- *     standing indirimi bozuyordu; v2 yazma indirim uygulamadığı için gereksiz).
- *   - taksit/senet bağlantılı kalem varsa İADE REDDEDİLİR (o akış v2'de henüz yok;
- *     yanlış kısmi geri-alma yapmaktansa 422 döneriz).
- *   - komisyon masraf (Masraflar) satırı silinmez (eski de silmiyordu) → uyarı.
+ * SINIR (v1): Bölünmüş vade (kısmi ödeme sonrası replicate) tam geri birleştirilmez
+ * — böyle bir durum varsa uyarı döner, elle kontrol gerekir. Standing indirim'e
+ * dokunulmaz (v2 yazma indirim uygulamıyor).
  */
 class TahsilatSilServisi
 {
     /**
-     * @throws BulunamadiException|YetkisizErisimException
+     * @throws BulunamadiException
      */
     public function sil(int $tahsilatId, array $meta): array
     {
@@ -40,16 +38,35 @@ class TahsilatSilServisi
                 throw new BulunamadiException('Tahsilat bulunamadı');
             }
             $adisyonId = (int) $t->adisyon_id;
+            $tahsilatTutar = (float) $t->tutar;
 
             $hizmetTah = TahsilatHizmetler::where('tahsilat_id', $tahsilatId)->get();
             $urunTah   = TahsilatUrunler::where('tahsilat_id', $tahsilatId)->get();
             $paketTah  = TahsilatPaketler::where('tahsilat_id', $tahsilatId)->get();
 
-            // Taksit/senet bağlantılı mı? Varsa v2 iadesi desteklenmiyor → reddet (rollback).
-            $this->taksitSenetGuard($hizmetTah->pluck('adisyon_hizmet_id'), AdisyonHizmetler::class);
-            $this->taksitSenetGuard($urunTah->pluck('adisyon_urun_id'), AdisyonUrunler::class);
-            $this->taksitSenetGuard($paketTah->pluck('adisyon_paket_id'), AdisyonPaketler::class);
+            // Etkilenen taksit/senet planları (SİLMEDEN ÖNCE kalemlerden topla).
+            $taksitPlan = [];
+            $senetPlan = [];
+            foreach ([
+                [AdisyonHizmetler::class, $hizmetTah, 'adisyon_hizmet_id'],
+                [AdisyonUrunler::class, $urunTah, 'adisyon_urun_id'],
+                [AdisyonPaketler::class, $paketTah, 'adisyon_paket_id'],
+            ] as [$model, $tah, $fk]) {
+                $ids = $tah->pluck($fk)->filter()->all();
+                if (empty($ids)) {
+                    continue;
+                }
+                foreach ($model::whereIn('id', $ids)->get(['taksitli_tahsilat_id', 'senet_id']) as $k) {
+                    if ($k->taksitli_tahsilat_id) {
+                        $taksitPlan[] = $k->taksitli_tahsilat_id;
+                    }
+                    if ($k->senet_id) {
+                        $senetPlan[] = $k->senet_id;
+                    }
+                }
+            }
 
+            // Kalem tahsilatlarını sil.
             $silinenKalem = 0;
             foreach ([$hizmetTah, $urunTah, $paketTah] as $koleksiyon) {
                 foreach ($koleksiyon as $satir) {
@@ -64,38 +81,58 @@ class TahsilatSilServisi
                 ->where('notlar', 'Komisyon Geliri (tahsilat #'.$tahsilatId.')')
                 ->delete();
 
-            // Parent tahsilat
+            // Parent tahsilat.
             $t->delete();
+
+            // VADE geri alma (ödenen tutar kadar vade → odendi=0).
+            $vadeReset = $this->vadeleriGeriAl(TaksitVadeleri::class, 'taksitli_tahsilat_id', array_values(array_unique($taksitPlan)), $tahsilatTutar)
+                + $this->vadeleriGeriAl(SenetVadeleri::class, 'senet_id', array_values(array_unique($senetPlan)), $tahsilatTutar);
 
             $uyarilar = [];
             if ($komSilindi > 0) {
                 $uyarilar[] = 'Komisyon gelir satırı silindi; ilgili Masraf (Banka Ödemeleri) kaydı elle kontrol edilmeli.';
             }
+            if ($vadeReset > 0) {
+                $uyarilar[] = $vadeReset.' vade geri alındı (odendi=0). Kısmi ödemede bölünmüş vade varsa elle kontrol edilmeli.';
+            }
 
             return [
-                'silindi'       => true,
-                'tahsilat_id'   => $tahsilatId,
-                'adisyon_id'    => $adisyonId,
-                'silinen_kalem' => $silinenKalem,
-                'uyarilar'      => $uyarilar,
+                'silindi'          => true,
+                'tahsilat_id'      => $tahsilatId,
+                'adisyon_id'       => $adisyonId,
+                'silinen_kalem'    => $silinenKalem,
+                'vade_geri_alindi' => $vadeReset,
+                'uyarilar'         => $uyarilar,
             ];
         });
     }
 
-    /** İlgili kalemlerden herhangi biri taksit/senet bağlıysa → 422 (reddet). */
-    private function taksitSenetGuard($kalemIds, string $model): void
+    /**
+     * İlgili planların ÖDENMİŞ vadelerini, geri alınan tutara ulaşana kadar
+     * (sıralı) odendi=0 yapar. Eski tahsilatkaldir sezgiselinin aynası.
+     */
+    private function vadeleriGeriAl(string $model, string $fk, array $planIds, float $tutar): int
     {
-        $ids = collect($kalemIds)->filter()->all();
-        if (empty($ids)) {
-            return;
+        if (empty($planIds) || $tutar <= 0) {
+            return 0;
         }
-        $bagli = $model::whereIn('id', $ids)
-            ->where(function ($q) {
-                $q->whereNotNull('taksitli_tahsilat_id')->orWhereNotNull('senet_id');
-            })
-            ->exists();
-        if ($bagli) {
-            throw new \App\Exceptions\CakismaException('Taksit/senet bağlantılı tahsilat iadesi v2\'de henüz desteklenmiyor');
+
+        $sum = 0.0;
+        $ids = [];
+        foreach ($planIds as $pid) {
+            foreach ($model::where($fk, $pid)->where('odendi', 1)->orderBy('id')->get() as $v) {
+                $sum += (float) $v->tutar;
+                $ids[] = $v->id;
+                if (round($sum, 2) >= round($tutar, 2)) {
+                    break 2;
+                }
+            }
         }
+
+        if (! empty($ids)) {
+            $model::whereIn('id', $ids)->update(['odendi' => 0]);
+        }
+
+        return count($ids);
     }
 }
