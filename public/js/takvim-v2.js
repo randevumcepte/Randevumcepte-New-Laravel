@@ -239,7 +239,8 @@ function takvimKur() {
     slotHeight: 22,
     slotLabelInterval: '00:30',
     height: 'calc(100vh - 280px)',
-    columnWidth: window.matchMedia('(max-width: 860px)').matches ? '150px' : undefined,
+    // Sutun en az 100px; genis ekranda esit yayilir, dar ekranda yatay kaydirma.
+    columnWidth: 'minmax(100px, 1fr)',
     datesAboveResources: true,
     resources: [],
     eventTimeFormat: { hour: '2-digit', minute: '2-digit' },

@@ -76,6 +76,9 @@
 #tTakvim .ec-event { border-radius: 10px; box-shadow: none; padding: 0; overflow: hidden; }
 #tTakvim .ec-event.t-kapali { background: repeating-linear-gradient(45deg, #e3e5ee 0 6px, #f1f2f7 6px 12px) !important; }
 #tTakvim .ec-now-indicator { border-color: var(--rc-kirmizi); }
+/* Gunluk gorunumde tek tarihlik ust baslik satiri gereksiz (tarih ust cubukta) → gizle.
+   Haftalikta gunleri ayirdigi icin kalir. */
+#tTakvim .ec-resource.ec-day-view .ec-header .ec-col-group { display: none; }
 
 /* Kaynak (personel/oda/cihaz) başlığı — avatar + sayaç rozeti */
 .t-kaynak { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px 6px; min-width: 0; }
