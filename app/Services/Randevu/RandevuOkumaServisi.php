@@ -64,7 +64,9 @@ class RandevuOkumaServisi
         $tarih1 = $tarih1 ?: date('Y-m-d');
         $tarih2 = $tarih2 ?: date('Y-m-d');
 
-        $takvimTuru = ($takvimTuru !== null && $takvimTuru !== '')
+        // Ekrandan secilen tur (0 kategori / 1 personel / 2 cihaz / 3 oda); gecersiz
+        // ya da bossa salonun varsayilan takvim turu.
+        $takvimTuru = in_array((string) $takvimTuru, ['0', '1', '2', '3'], true)
             ? (int) $takvimTuru
             : (int) (DB::table('salonlar')->where('id', $salonId)->value('randevu_takvim_turu') ?? 1);
 

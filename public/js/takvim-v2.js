@@ -80,7 +80,20 @@ const VIEWLER = [
   { ad: 'Liste', view: 'listDay' },
 ];
 
+// Takvim turu (kaynak tipi) — eski sistemdeki randevu_takvim_turu degerleri.
+const TURLER = [
+  { deger: '1', ad: 'Personel' },
+  { deger: '0', ad: 'Hizmet Kategorisi' },
+  { deger: '2', ad: 'Cihaz' },
+  { deger: '3', ad: 'Oda' },
+];
+const turAnahtar = () => 'rc_takvim_turu_' + salonId;
+function kayitliTur() {
+  try { return localStorage.getItem(turAnahtar()) || ''; } catch { return ''; }
+}
+
 const durum = {
+  takvimTuru: kayitliTur(), // '' = salonun varsayilani (sunucu cozer)
   kaynaklar: [],      // sunucudan gelen tum kaynaklar
   secili: '',         // personel/kaynak filtresi ('' = tumu)
   sonVeri: null,
@@ -104,6 +117,9 @@ function iskeletCiz() {
       </div>
 
       <div class="t-arac">
+        <select id="tTur" class="t-sec t-sec-tur" title="Takvim türü">
+          ${TURLER.map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}
+        </select>
         <select id="tKaynak" class="t-sec" title="Personel / kaynak"><option value="">Tümü</option></select>
         <div class="t-segment" id="tView">
           ${VIEWLER.map((v, i) => `<button data-view="${v.view}" class="${i === 0 ? 'aktif' : ''}">${v.ad}</button>`).join('')}
@@ -137,7 +153,7 @@ function iskeletCiz() {
 async function olaylariGetir(info) {
   const bitis = new Date(info.end.getTime() - 1); // end haric
   const r = await api('GET', '/randevu/takvim', {
-    params: { salon_id: salonId, tarih1: tarihStr(info.start), tarih2: tarihStr(bitis) },
+    params: { salon_id: salonId, tarih1: tarihStr(info.start), tarih2: tarihStr(bitis), takvim_turu: durum.takvimTuru },
   });
   if (!r.ok || !r.govde?.basarili) {
     panel().toast(r.govde?.mesaj || `Takvim yüklenemedi (${r.kod})`, 'hata');
@@ -145,6 +161,8 @@ async function olaylariGetir(info) {
   }
   const v = r.govde.veri;
   durum.sonVeri = v;
+  // Sunucunun cozdugu tur (varsayilan dahil) seciciye yansisin.
+  if (v.takvim_turu !== undefined) el('#tTur').value = String(v.takvim_turu);
   kaynaklariAyarla(v.resources || []);
 
   return (v.randevular || []).map((e, i) => {
@@ -284,6 +302,14 @@ function aracBagla() {
   el('#tBugun').onclick = () => durum.ec.setOption('date', new Date());
   el('#tYenile').onclick = () => durum.ec.refetchEvents();
   el('#tKaynak').onchange = (e) => { durum.secili = e.target.value; kaynakFiltresiUygula(); };
+  el('#tTur').onchange = (e) => {
+    durum.takvimTuru = e.target.value;
+    try { localStorage.setItem(turAnahtar(), durum.takvimTuru); } catch { /* ozel mod */ }
+    durum.secili = '';
+    durum.kaynaklar = [];
+    durum.ec.setOption('resources', []); // eski turun sutunlari kalmasin
+    durum.ec.refetchEvents();
+  };
   el('#tView').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-view]');
     if (!b) return;

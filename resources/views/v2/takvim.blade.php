@@ -6,7 +6,7 @@
 @push('stil')
     {{-- EventCalendar (vkurko/calendar) — MIT lisansli, ucretsiz; surum SABIT. --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.16.0/dist/event-calendar.min.css">
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=3">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=4">
 @endpush
 
 @section('icerik')
@@ -15,5 +15,5 @@
 
 @push('betik')
     <script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.16.0/dist/event-calendar.min.js"></script>
-    <script type="module" src="/js/takvim-v2.js?v=5"></script>
+    <script type="module" src="/js/takvim-v2.js?v=6"></script>
 @endpush
