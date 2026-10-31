@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V2\PersonelController;
 use App\Http\Controllers\Api\V2\PersonelYetkiController;
 use App\Http\Controllers\Api\V2\RandevuController;
 use App\Http\Controllers\Api\V2\RandevuDurumController;
+use App\Http\Controllers\Api\V2\RandevuTelafiController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
@@ -72,7 +73,12 @@ Route::prefix('v2')->group(function () {
         Route::post('/randevu/{id}/geldi', [RandevuDurumController::class, 'geldi'])->whereNumber('id');
         Route::post('/randevu/{id}/gelmedi', [RandevuDurumController::class, 'gelmedi'])->whereNumber('id');
         Route::delete('/randevu/{id}/geldi-isareti', [RandevuDurumController::class, 'isaretKaldir'])->whereNumber('id');
+        Route::post('/randevu/{id}/telafi', [RandevuDurumController::class, 'telafi'])->whereNumber('id');
         Route::post('/randevu/{id}/iptal', [RandevuDurumController::class, 'iptal'])->whereNumber('id');
+
+        // TELAFI RANDEVUSU (A tipi: ucretsiz duzeltme + prim devri) — ayni kill-switch.
+        Route::get('/randevu/telafi-secenekler', [RandevuTelafiController::class, 'secenekler']);
+        Route::post('/randevu/kalem/{rh}/telafi-randevusu', [RandevuTelafiController::class, 'olustur'])->whereNumber('rh');
         Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
 
         Route::get('/satislar', [SatisController::class, 'index']);

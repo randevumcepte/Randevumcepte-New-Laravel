@@ -451,6 +451,9 @@ class RandevuOkumaServisi
                 'hizmet_adi'   => $hizmetAdlari[$h->hizmet_id] ?? null,
                 'personel_id'  => $h->personel_id !== null ? (int) $h->personel_id : null,
                 'personel_adi' => $personelAdlari[$h->personel_id] ?? null,
+                // Telafi: bu kalem bir telafi randevusu mu / bunun icin telafi verildi mi
+                'telafi_kaynak_rh_id'  => $h->telafi_kaynak_rh_id ? (int) $h->telafi_kaynak_rh_id : null,
+                'telafi_devir_yapildi' => (bool) $h->telafi_devir_yapildi,
                 'oda_id'       => $h->oda_id !== null ? (int) $h->oda_id : null,
                 'cihaz_id'     => $h->cihaz_id !== null ? (int) $h->cihaz_id : null,
                 'saat'         => $h->saat,

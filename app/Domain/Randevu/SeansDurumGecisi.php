@@ -61,6 +61,20 @@ final class SeansDurumGecisi
         return ['guncelle' => $guncelle, 'sil' => $sil];
     }
 
+    /**
+     * TELAFI ISARETLE: randevudaki TUM seanslar telafi slotuna (geldi=2) alinir;
+     * bir sonraki randevuda bekleyen telafi olarak baglanir (yeni seans dusmez).
+     */
+    public static function telafi(array $seanslar): array
+    {
+        $guncelle = [];
+        foreach ($seanslar as $s) {
+            $guncelle[(int) $s['id']] = ['geldi' => self::TELAFI];
+        }
+
+        return ['guncelle' => $guncelle, 'sil' => []];
+    }
+
     /** GELMEDI (seans dusumu onaylandiysa): telafi-disi seanslar geldi=0. */
     public static function gelmedi(array $seanslar): array
     {

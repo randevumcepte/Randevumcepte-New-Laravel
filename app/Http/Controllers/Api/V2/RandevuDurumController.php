@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
  * Her uc 'dry_run' alir (VARSAYILAN true): plan doner, hicbir sey yazmaz.
  * dry_run=false ancak config('randevu.yazma_aktif') aciksa yazar; kapaliysa 409.
  *
- * Yetki: geldi/gelmedi/isaret-kaldir/iptal → randevu.duzenle_iptal,
+ * Yetki: geldi/gelmedi/isaret-kaldir/telafi/iptal → randevu.duzenle_iptal,
  *        onayla → randevu.onayla.
  */
 class RandevuDurumController extends Controller
@@ -51,6 +51,12 @@ class RandevuDurumController extends Controller
     public function isaretKaldir(Request $request, int $id)
     {
         return $this->calistir($request, $id, 'randevu.duzenle_iptal', fn ($uid, $yaz) => $this->servis->isaretKaldir($id, $uid, $yaz));
+    }
+
+    /** POST /api/v2/randevu/{id}/telafi  (seanslari telafi slotuna al) */
+    public function telafi(Request $request, int $id)
+    {
+        return $this->calistir($request, $id, 'randevu.duzenle_iptal', fn ($uid, $yaz) => $this->servis->telafiIsaretle($id, $uid, $yaz));
     }
 
     /** POST /api/v2/randevu/{id}/iptal */

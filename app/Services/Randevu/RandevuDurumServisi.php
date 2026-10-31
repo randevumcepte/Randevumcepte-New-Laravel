@@ -5,6 +5,7 @@ namespace App\Services\Randevu;
 use App\Domain\Randevu\SeansDurumGecisi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
+use App\Exceptions\GecersizIslemException;
 use App\Models\AdisyonPaketSeanslar;
 use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
@@ -215,6 +216,40 @@ class RandevuDurumServisi
             $this->musteriAdi($randevu), 'Randevu geldi/gelmedi isareti kaldirildi');
 
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true);
+    }
+
+    /**
+     * TELAFI ISARETLE — eski randevuTelafiIsaretle ile ayni: tum seanslar geldi=2,
+     * randevuya_geldi=0, kalemler seansa_geldi=0. Yalnizca paket/seans randevusunda.
+     */
+    public function telafiIsaretle(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    {
+        $randevu = $this->randevu($randevuId);
+        if ((int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
+            throw new GecersizIslemException('İptal edilmiş randevu telafi işaretlenemez.');
+        }
+        $seanslar = $this->seanslar($randevuId);
+        if (! $seanslar) {
+            throw new GecersizIslemException('Bu randevu paket/seans randevusu değil, telafi işaretlenemez.');
+        }
+        $salonId = (int) $randevu->salon_id;
+        $seansPlan = SeansDurumGecisi::telafi($seanslar);
+        $plan = ['randevu' => ['randevuya_geldi' => 0], 'kalem_seansa_geldi' => 0, 'seans' => $seansPlan];
+
+        if (! $yaz) {
+            return $this->sonuc(['telafi' => true, 'mesaj' => 'DRY-RUN'], $plan, false);
+        }
+
+        DB::transaction(function () use ($randevuId, $seansPlan) {
+            Randevular::where('id', $randevuId)->update(['randevuya_geldi' => 0]);
+            RandevuHizmetler::where('randevu_id', $randevuId)->update(['seansa_geldi' => 0]);
+            $this->seansPlaniUygula($randevuId, $seansPlan);
+        });
+
+        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi', 'randevu', $randevuId,
+            $this->musteriAdi($randevu), 'Randevu telafi olarak işaretlendi (seans telafi slotuna alındı)');
+
+        return $this->sonuc(['telafi' => true, 'mesaj' => 'Telafi olarak işaretlendi'], $plan, true);
     }
 
     /**

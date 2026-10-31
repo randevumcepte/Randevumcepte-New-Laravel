@@ -21,7 +21,7 @@ use Illuminate\Console\Command;
 class RandevuDurumPlan extends Command
 {
     protected $signature = 'randevu:durum-plan {randevu : randevu id}
-        {islem : geldi|gelmedi|kaldir|iptal|onayla}
+        {islem : geldi|gelmedi|kaldir|telafi|iptal|onayla}
         {--secilen= : geldi icin secilen seans id listesi (virgullu)}
         {--seans-secim : geldi icin yeni istemci seans secim destegi}
         {--dogrulama= : geldi dogrulama kodu}
@@ -46,13 +46,14 @@ class RandevuDurumPlan extends Command
             ], null, false),
             'gelmedi' => $servis->gelmedi($id, $this->option('seans-dusumu') === null ? null : (bool) (int) $this->option('seans-dusumu'), null, false),
             'kaldir'  => $servis->isaretKaldir($id, null, false),
+            'telafi'  => $servis->telafiIsaretle($id, null, false),
             'iptal'   => $servis->iptal($id, null, false),
             'onayla'  => $servis->onayla($id, null, false),
             default   => null,
         };
 
         if ($sonuc === null) {
-            $this->error('Gecersiz islem: geldi|gelmedi|kaldir|iptal|onayla');
+            $this->error('Gecersiz islem: geldi|gelmedi|kaldir|telafi|iptal|onayla');
 
             return self::FAILURE;
         }

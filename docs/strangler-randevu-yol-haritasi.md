@@ -122,6 +122,21 @@ işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
   KVKK SMS'i → `kvkkOnayKoduGonder`. v1 uçları ve işleyici AYNI metodları çağırır.
   Tek fark: `$hemen=true` (CLI) WA/SMS'i shutdown'a atmadan hemen gönderir.
 
+### Faz 2c — Telafi (YAPILDI, aynı kill-switch)
+- **Telafi işaretle:** `POST /randevu/{id}/telafi` — tüm seanslar `geldi=2`
+  (telafi slotu), `randevuya_geldi=0`, kalemler `seansa_geldi=0`. Yalnızca
+  paket/seans randevusunda (yoksa 422). Eski `randevuTelafiIsaretle` ile aynı.
+- **Telafi randevusu (A tipi):** `GET /randevu/telafi-secenekler`,
+  `POST /randevu/kalem/{rh}/telafi-randevusu` (yetki `randevu.olustur`).
+  Servis `TelafiRandevuServisi` (v2), para kuralı saf `Domain\Randevu\TelafiPrim`
+  (+ `tests/Unit/TelafiPrimTest`). Eski `App\Services\TelafiRandevuServisi` ile
+  aynı kayıt seçimi (satış kalemi → fallback A/B; paket seansı) ve geri devir kuralı.
+  Farklar: orijinal kalem kilitli + bayrak yeniden denetimi (çift telafi yok),
+  personel/oda/cihaz salon doğrulaması, DRY-RUN prim planı, aktivite logu.
+  Geçiş dönemi: eski web/v1 kendi kopyasını kullanır; Faz 4'te tek kaynak v2.
+- Doğrulama: `php artisan randevu:telafi-plan {rh} {Y-m-d} {H:i} --personel=`,
+  `php artisan randevu:durum-plan {randevu} telafi`.
+
 ### Kill-switch açma kontrol listesi
 1. Eski klasörde migration uygulandı mı (`v2_bildirim_kuyrugu` var mı)?
 2. `php artisan v2:bildirim-isle --tek` hatasız mı?

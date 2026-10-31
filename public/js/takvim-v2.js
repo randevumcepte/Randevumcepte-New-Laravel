@@ -96,6 +96,7 @@ const durum = {
   takvimTuru: kayitliTur(), // '' = salonun varsayilani (sunucu cozer)
   kaynaklar: [],      // sunucudan gelen tum kaynaklar
   secili: '',         // personel/kaynak filtresi ('' = tumu)
+  seciliRandevu: null, // cekmecede acik randevu (vurgu)
   sonVeri: null,
   ec: null,
 };
@@ -144,8 +145,7 @@ function iskeletCiz() {
 
       <div class="t-kart"><div id="tTakvim"></div><div class="t-yukleniyor" id="tYuk"><i class="bi bi-arrow-repeat"></i></div></div>
     </div>
-    <aside class="t-cekmece" id="tCekmece" aria-hidden="true"></aside>
-    <div class="t-cekmece-ov" id="tCekmeceOv"></div>`;
+    <aside class="t-cekmece" id="tCekmece" aria-hidden="true"></aside>`;
 }
 
 /* ───────────────────────── Veri ───────────────────────── */
@@ -324,7 +324,6 @@ function aracBagla() {
     });
     el('#tTarih').onclick = () => fp.open();
   }
-  el('#tCekmeceOv').onclick = cekmeceKapat;
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cekmeceKapat(); });
 }
 
@@ -332,16 +331,25 @@ function aracBagla() {
 
 const DURUM_ETIKET = { 0: ['Onay bekliyor', 'turuncu'], 1: ['Onaylı', 'mavi'], 2: ['İptal', 'kirmizi'], 3: ['Reddedildi', 'kirmizi'] };
 
+// (2) Secili randevu vurgusu — cekmece acikken takvimde belirgin.
+function seciliAyarla(randevuId) {
+  durum.seciliRandevu = randevuId ? String(randevuId) : null;
+  durum.ec?.setOption('eventClassNames', (info) => (
+    durum.seciliRandevu && String(info.event.extendedProps?.randevu_id ?? info.event.extendedProps?.id) === durum.seciliRandevu
+      ? ['t-secili'] : []
+  ));
+}
+
 function cekmeceKapat() {
   el('#tCekmece').classList.remove('acik');
-  el('#tCekmeceOv').classList.remove('acik');
+  seciliAyarla(null);
 }
 
 async function cekmeceAc(randevuId) {
   const c = el('#tCekmece');
   c.innerHTML = '<div class="t-ck-yuk"><i class="bi bi-arrow-repeat"></i></div>';
   c.classList.add('acik');
-  el('#tCekmeceOv').classList.add('acik');
+  seciliAyarla(randevuId);
 
   const r = await api('GET', `/randevu/${randevuId}`);
   if (!r.ok || !r.govde?.basarili) {
@@ -357,13 +365,16 @@ function cekmeceCiz(v) {
     ? ['Beklemede', 'gri'] : (String(v.randevuya_geldi) === '1' ? ['Geldi', 'yesil'] : ['Gelmedi', 'kirmizi']);
   const aktif = v.durum < 2;
   const isaretli = v.randevuya_geldi !== null && v.randevuya_geldi !== undefined;
+  const geldiMi = isaretli && String(v.randevuya_geldi) === '1';
+  const gelmediMi = isaretli && String(v.randevuya_geldi) === '0';
 
   const btn = (islem, ikon, etiket, sinif = '') => `<button class="t-aks ${sinif}" data-islem="${islem}"><i class="bi ${ikon}"></i> ${etiket}</button>`;
   const butonlar = [
     v.durum === 0 ? btn('onayla', 'bi-check2-all', 'Onayla', 'mavi') : '',
-    aktif ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
-    aktif ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
+    aktif && !geldiMi ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
+    aktif && !gelmediMi ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
     aktif && isaretli ? btn('kaldir', 'bi-eraser', 'İşareti Kaldır') : '',
+    aktif && v.seans_var ? btn('telafi', 'bi-arrow-repeat', 'Telafi İşaretle', 'mor') : '',
     aktif ? btn('iptal', 'bi-slash-circle', v.durum === 0 ? 'Reddet' : 'İptal Et', 'kirmizi-cizgi') : '',
   ].join('');
 
@@ -384,8 +395,13 @@ function cekmeceCiz(v) {
     <div class="t-ck-kalemler">
       ${(v.hizmetler || []).map((h) => `
         <div class="t-ck-kalem">
-          <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b><span>${esc(h.personel_adi || '—')}</span></div>
-          <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${Number(h.fiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</b>` : ''}</div>
+          <div class="t-ck-kalem-ust">
+            <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b><span>${esc(h.personel_adi || '—')}</span></div>
+            <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${Number(h.fiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</b>` : ''}</div>
+          </div>
+          ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-arrow-repeat"></i> Telafi randevusu (ücretsiz)</span>'
+            : h.telafi_devir_yapildi ? '<span class="t-rozet gri"><i class="bi bi-check2"></i> Telafi randevusu verildi</span>'
+            : (aktif ? `<button class="t-kalem-telafi" data-telafi-rh="${h.id}"><i class="bi bi-calendar-plus"></i> Telafi randevusu oluştur</button>` : '')}
         </div>`).join('')}
     </div>
     ${v.personel_notu ? `<div class="t-ck-not"><i class="bi bi-sticky"></i> ${esc(v.personel_notu)}</div>` : ''}
@@ -397,14 +413,23 @@ function cekmeceCiz(v) {
   el('#tCekmece').querySelectorAll('[data-islem]').forEach((b) => {
     b.onclick = () => islemYap(v, b.dataset.islem, {});
   });
+  el('#tCekmece').querySelectorAll('[data-telafi-rh]').forEach((b) => {
+    const h = (v.hizmetler || []).find((x) => String(x.id) === b.dataset.telafiRh);
+    b.onclick = () => telafiFormu(v, h);
+  });
 }
 
 const ISLEM_UC = {
   geldi: ['POST', 'geldi'], gelmedi: ['POST', 'gelmedi'], kaldir: ['DELETE', 'geldi-isareti'],
-  iptal: ['POST', 'iptal'], onayla: ['POST', 'onayla'],
+  iptal: ['POST', 'iptal'], onayla: ['POST', 'onayla'], telafi: ['POST', 'telafi'],
 };
 
 async function islemYap(v, islem, ek, dryRun = false) {
+  if (!dryRun && islem === 'telafi') {
+    const tamam = await panel().onay('Bu randevunun seansları telafi slotuna alınsın mı? Seans düşmez; telafi bir sonraki randevuya bağlanır.',
+      { baslik: 'Telafi işaretle', tamam: 'Evet', tehlike: false });
+    if (!tamam) return;
+  }
   if (!dryRun && islem === 'iptal') {
     const tamam = await panel().onay(`${v.musteri_ad || 'Bu'} randevusu ${v.durum === 0 ? 'reddedilsin' : 'iptal edilsin'} mi? Paket seansları bakiyeye geri döner.`,
       { baslik: v.durum === 0 ? 'Talebi reddet' : 'Randevuyu iptal et', tamam: 'Evet' });
@@ -446,6 +471,7 @@ async function islemYap(v, islem, ek, dryRun = false) {
   }
 
   if (dryRun) return onizlemeCiz(islem, s);
+  if (s.hata) return panel().toast(s.mesaj || 'İşlem yapılamadı', 'hata');
 
   panel().toast(s.mesaj || 'İşlem tamamlandı', 'ok');
   durum.ec.refetchEvents();
@@ -470,6 +496,96 @@ function onizlemeCiz(islem, s) {
       <div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — <b>${esc(islem)}</b> (hiçbir şey yazılmadı)</div>
       <ul>${satirlar.map((x) => `<li>${esc(x)}</li>`).join('') || '<li>Değişiklik yok</li>'}</ul>
     </div>`;
+}
+
+/* ───────────────────────── Telafi randevusu (A tipi) ───────────────────────── */
+
+let _telafiSecenek = null;
+async function telafiSecenekleri() {
+  if (_telafiSecenek) return _telafiSecenek;
+  const r = await api('GET', '/randevu/telafi-secenekler', { params: { salon_id: salonId } });
+  if (!r.ok || !r.govde?.basarili) throw new Error(r.govde?.mesaj || 'Seçenekler yüklenemedi');
+  return (_telafiSecenek = r.govde.veri);
+}
+
+async function telafiFormu(v, h) {
+  if (!h) return;
+  let sec;
+  try { sec = await telafiSecenekleri(); } catch (e) { return panel().toast(e.message, 'hata'); }
+  const opt = (liste, secili, bos) => (bos ? `<option value="">${bos}</option>` : '')
+    + (liste || []).map((x) => `<option value="${x.id}" ${String(x.id) === String(secili ?? '') ? 'selected' : ''}>${esc(x.ad)}</option>`).join('');
+
+  const { ov, kapat } = modal(`
+    <div class="rc-onay-ikon"><i class="bi bi-calendar-plus"></i></div>
+    <h3>Telafi randevusu</h3>
+    <p>${esc(h.hizmet_adi || 'Hizmet')} · ücretsiz düzeltme randevusu. Personel değişirse prim yeni personele devredilir.</p>
+    <div class="t-form">
+      <label>Tarih<input id="tfTarih" placeholder="Tarih seçin" readonly></label>
+      <label>Saat<input id="tfSaat" placeholder="Saat" readonly></label>
+      <label class="t-form-gen">Personel<select id="tfPersonel">${opt(sec.personeller, h.personel_id)}</select></label>
+      <label>Oda<select id="tfOda">${opt(sec.odalar, h.oda_id, '—')}</select></label>
+      <label>Cihaz<select id="tfCihaz">${opt(sec.cihazlar, h.cihaz_id, '—')}</select></label>
+      <label>Süre (dk)<input id="tfSure" type="number" min="5" step="5" value="${esc(h.sure_dk || 30)}"></label>
+      <label class="t-form-gen">Not<input id="tfNot" maxlength="200" placeholder="İsteğe bağlı"></label>
+    </div>
+    <div id="tfOnizleme"></div>
+    <div class="rc-onay-btns"><button class="rc-onay-iptal">Vazgeç</button><button class="rc-onay-tamam">Oluştur</button></div>`);
+  ov.querySelector('.rc-onay-kart').classList.add('t-modal-genis');
+
+  if (window.flatpickr) {
+    window.flatpickr(el('#tfTarih', ov), { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l', minDate: 'today' });
+    window.flatpickr(el('#tfSaat', ov), { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5 });
+  }
+  el('.rc-onay-iptal', ov).onclick = kapat;
+  el('.rc-onay-tamam', ov).onclick = async () => {
+    const govde = {
+      tarih: el('#tfTarih', ov).value, saat: el('#tfSaat', ov).value,
+      personel_id: el('#tfPersonel', ov).value, oda_id: el('#tfOda', ov).value || null,
+      cihaz_id: el('#tfCihaz', ov).value || null, sure_dk: el('#tfSure', ov).value, not: el('#tfNot', ov).value,
+    };
+    if (!govde.tarih || !govde.saat) return panel().toast('Tarih ve saat seçin.', 'hata');
+    const sonuc = await telafiGonder(h.id, govde);
+    if (!sonuc) return;
+    if (sonuc.yazildi) {
+      kapat();
+      panel().toast(sonuc.mesaj || 'Telafi randevusu oluşturuldu', 'ok');
+      if (sonuc.prim?.uyari) panel().toast(sonuc.prim.uyari, 'bilgi', 5000);
+      durum.ec.refetchEvents();
+      cekmeceAc(v.id);
+    } else {
+      el('#tfOnizleme', ov).innerHTML = telafiOnizleme(sonuc, sec);
+    }
+  };
+}
+
+async function telafiGonder(rhId, govde, dryRun = false) {
+  const r = await api('POST', `/randevu/kalem/${rhId}/telafi-randevusu`, { govde: { ...govde, dry_run: dryRun } });
+  if (r.kod === 409 && !dryRun && /kapal/i.test(r.govde?.mesaj || '')) {
+    panel().toast('Sunucu yazması henüz kapalı — telafi önizleme olarak gösteriliyor.', 'bilgi', 4200);
+    return telafiGonder(rhId, govde, true);
+  }
+  if (!r.ok || !r.govde?.basarili) {
+    panel().toast(r.govde?.mesaj || `İşlem başarısız (${r.kod})`, 'hata');
+    return null;
+  }
+  return r.govde.veri;
+}
+
+function telafiOnizleme(s, sec) {
+  const y = s.plan?.yeni_randevu || {};
+  const p = s.plan?.prim || {};
+  const ad = (liste, id) => (liste || []).find((x) => String(x.id) === String(id))?.ad || '—';
+  const para = (t) => `${Math.abs(Number(t)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+  const satirlar = [
+    `Yeni randevu: ${y.tarih} ${y.saat}–${y.saat_bitis} · ${ad(sec.personeller, y.personel_id)} · ücretsiz`,
+    p.satis_devri?.length ? `Satış kalemi yeni personele devredilir: ${p.satis_devri.length} kalem` : '',
+    p.paket_devri?.length ? `Paket seansı yeni personele devredilir: ${p.paket_devri.length} seans` : '',
+    ...(p.geri_devir || []).map((g) => `Ödenmiş prim geri devri: ${ad(sec.personeller, g.personel_id)} −${para(g.tutar)}`),
+    !p.satis_devri?.length && !p.paket_devri?.length && !p.ozet?.uyari ? 'Personel aynı — prim devri yok' : '',
+    p.ozet?.uyari || '',
+  ].filter(Boolean);
+  return `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — hiçbir şey yazılmadı</div>
+    <ul>${satirlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
 }
 
 /* ───────────────────────── Küçük modallar ───────────────────────── */
