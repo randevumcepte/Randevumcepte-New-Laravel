@@ -245,7 +245,8 @@ function takvimKur() {
     eventTimeFormat: { hour: '2-digit', minute: '2-digit' },
     slotLabelFormat: { hour: '2-digit', minute: '2-digit' },
     dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'short' },
-    events: (info) => olaylariGetir(info),
+    // v5: 'events' yalnizca DIZI kabul eder; fonksiyonla cekim eventSources ile.
+    eventSources: [{ events: (info) => olaylariGetir(info) }],
     resourceLabelContent: kaynakEtiketi,
     eventContent: olayIcerik,
     eventClick: (info) => {
