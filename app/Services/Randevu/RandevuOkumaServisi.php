@@ -347,7 +347,7 @@ class RandevuOkumaServisi
      * subquery'si yogun salonlarda CPU yukuydu (bkz. cde3ca42).
      *
      * @param  array<int,array<string,mixed>>  $satirlar  pre-merge satirlar
-     * @return array<int,array{id:int,name:string,bgcolor:?string,avatar:?string,sayi:int}>
+     * @return array<int,array{id:int,name:string,bgcolor:?string,avatar:?string,sayi:int,tur:string}>
      */
     private function kaynaklar(int $salonId, ?int $personelId, int $takvimTuru, int $personelRolu, array $satirlar): array
     {
@@ -360,6 +360,7 @@ class RandevuOkumaServisi
         }
 
         if ($takvimTuru === 1 || $personelRolu === 5) {
+            $tur = 'personel';
             $q = DB::table('salon_personelleri as sp')
                 ->join('renk_duzenleri as rd', 'sp.renk', '=', 'rd.id')
                 ->join('isletmeyetkilileri as iy', 'sp.yetkili_id', '=', 'iy.id')
@@ -373,6 +374,7 @@ class RandevuOkumaServisi
             }
             $rows = $q->get(['sp.id as id', 'sp.personel_adi as ad', 'rd.renk as renk', 'iy.profil_resim as avatar']);
         } elseif ($takvimTuru === 2 || $takvimTuru === 3) {
+            $tur = $takvimTuru === 2 ? 'cihaz' : 'oda';
             [$tablo, $renkTablo, $fk, $adKolon] = $takvimTuru === 2
                 ? ['cihazlar', 'salon_cihaz_renkleri', 'cihaz_id', 'cihaz_adi']
                 : ['odalar', 'salon_oda_renkleri', 'oda_id', 'oda_adi'];
@@ -384,6 +386,7 @@ class RandevuOkumaServisi
                 ->orderBy('k.takvim_sirasi', 'asc')
                 ->get(['k.id as id', 'k.'.$adKolon.' as ad', 'rd.renk as renk', DB::raw('NULL as avatar')]);
         } else {
+            $tur = 'kategori';
             $rows = DB::table('hizmet_kategorisi as hk')
                 ->join('salon_sunulan_hizmetler as ssh', function ($j) use ($salonId) {
                     $j->on('ssh.hizmet_kategori_id', '=', 'hk.id')->where('ssh.salon_id', '=', $salonId)->where('ssh.aktif', true);
@@ -402,6 +405,7 @@ class RandevuOkumaServisi
             'bgcolor' => $r->renk ? str_replace('#', '0xFF', $r->renk) : null,
             'avatar'  => $r->avatar ?: null,
             'sayi'    => $sayilar[(string) $r->id] ?? 0,
+            'tur'     => $tur, // personel | kategori | cihaz | oda (ekran ikonu icin)
         ])->values()->all();
     }
 

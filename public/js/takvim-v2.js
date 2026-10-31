@@ -186,14 +186,25 @@ function kaynakFiltresiUygula() {
 
 /* ───────────────────────── Takvim ───────────────────────── */
 
+// Takvim turune gore kaynak ikonu (personel → resim/harf). Bootstrap Icons 1.11.
+const KAYNAK_IKON = {
+  kategori: 'bi-scissors',   // hizmet kategorisi (Satis Takibi'ndeki Hizmet ikonu ile ayni)
+  cihaz: 'bi-cpu',
+  oda: 'bi-door-open',
+};
+
 function kaynakEtiketi(info) {
   const k = info.resource.extendedProps || {};
   const ad = String(k.name || info.resource.title || '');
   const r = renk(k.bgcolor);
-  // Harf her zaman altta; resim varsa ustune biner, yuklenemezse gizlenir.
-  const src = k.avatar ? (/^https?:/.test(k.avatar) ? k.avatar : ESKI_PANEL + '/' + String(k.avatar).replace(/^\/+/, '')) : '';
-  const avatar = `<span class="t-av-harf">${esc(ad.charAt(0) || '?')}</span>`
-    + (src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : '');
+  // Personel: harf altta, profil resmi varsa ustune biner (yuklenemezse gizlenir).
+  // Kategori / cihaz / oda: ture uygun ikon (bu kaynaklarin resmi yok).
+  const ikon = KAYNAK_IKON[k.tur];
+  const src = !ikon && k.avatar ? (/^https?:/.test(k.avatar) ? k.avatar : ESKI_PANEL + '/' + String(k.avatar).replace(/^\/+/, '')) : '';
+  const avatar = ikon
+    ? `<span class="t-av-harf t-av-ikon"><i class="bi ${ikon}"></i></span>`
+    : `<span class="t-av-harf">${esc(ad.charAt(0) || '?')}</span>`
+      + (src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">` : '');
   return {
     html: `<div class="t-kaynak" title="${esc(ad)}">
       <div class="t-av" style="--k:${r}">${avatar}<b class="t-sayi">${k.sayi ?? 0}</b></div>
