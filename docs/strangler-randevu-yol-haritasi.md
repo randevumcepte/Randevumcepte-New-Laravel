@@ -105,13 +105,29 @@ senaryolarında **PARİTE TAM** (satır kümesi + start/end + resourceId).
 4. iptal yalnızca aktif (durum<2), onayla yalnızca bekleyen (durum=0) randevuda (409).
 5. Yetim seans temizliği yalnızca gerçek yazmada (eski: kod kapısında dönse bile siliyordu).
 
-### Faz 2b — Bildirim köprüsü (SIRADA; bitmeden kill-switch AÇILMAZ)
-v2 şu an şu yan etkileri ÜRETMEZ (yanıtta `bekleyen_yan_etkiler` olarak raporlanır):
-müşteri/personel SMS-WA (WA-first, SMS fallback; `salon_sms_ayarlari` 2/3),
-FCM push (`NotificationService` tipleri), uygulama-içi bildirim (`bildirimekle`),
-doğrulama (ayar 16) / KVKK (ayar 22) kodu GÖNDERİMİ, seans kullanım push'u
-(`SeansBildirimService`). Karar: bu altyapıyı New-Laravel'e taşımak mı, yoksa
-paylaşılan DB'de bir giden-kutusu (outbox) tablosu + eski monolitte işleyici mi.
+### Faz 2b — Bildirim köprüsü (YAPILDI — outbox)
+Karar: bildirim altyapısı TAŞINMADI; paylaşılan DB'de **outbox** + eski monolitte
+işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
+- Tablo: `v2_bildirim_kuyrugu` (migration ESKİ klasörde:
+  `2026_10_31_120000_create_v2_bildirim_kuyrugu`).
+- v2 (`RandevuDurumServisi::kuyruga`) yan etkiyi DURUM DEĞİŞİKLİĞİYLE AYNI
+  transaction'da yazar → durum yazıldıysa bildirim kaybolmaz, yazılmadıysa
+  hayalet bildirim gitmez. Türler: `randevu_iptal` (payload.red), `randevu_onay`,
+  `dogrulama_kodu`, `kvkk_kodu`, `seans_kullanim`.
+- Eski monolit: `php artisan v2:bildirim-isle` (Kernel everyMinute +
+  withoutOverlapping; ~55 sn 2 sn aralıkla yoklar). Atomik talep (durum 0→3),
+  3 deneme sonra kalıcı hata (2), 5 dk takılı kalan geri alınır.
+- Monolitte TAŞIMA refactor'ü (mantık aynı): `randevuiptalet`/`randevuonayla`
+  bildirim blokları → `randevuIptalBildirimleri` / `randevuOnayBildirimleri`,
+  KVKK SMS'i → `kvkkOnayKoduGonder`. v1 uçları ve işleyici AYNI metodları çağırır.
+  Tek fark: `$hemen=true` (CLI) WA/SMS'i shutdown'a atmadan hemen gönderir.
+
+### Kill-switch açma kontrol listesi
+1. Eski klasörde migration uygulandı mı (`v2_bildirim_kuyrugu` var mı)?
+2. `php artisan v2:bildirim-isle --tek` hatasız mı?
+3. Test salonunda `randevu:durum-plan` planları eski davranışla tutarlı mı?
+4. New-Laravel `.env` → `RANDEVU_V2_YAZMA_AKTIF=true`; test salonunda
+   iptal/onay/geldi(kod) akışlarında SMS/push geldiğini doğrula.
 
 ### Faz 3 — Oluştur/güncelle + çakışma + telafi + saat kapama
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,

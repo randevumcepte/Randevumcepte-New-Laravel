@@ -33,10 +33,11 @@ use Illuminate\Support\Facades\DB;
  *   - gelmedi eski kodda yetkisizdi; v2'de randevu.duzenle_iptal (controller).
  *   - iptal yalnizca aktif (durum<2), onayla yalnizca bekleyen (durum=0) randevuda.
  *
- * FAZ 2b'YE KALAN YAN ETKILER (henuz URETILMEZ — 'bekleyen_yan_etkiler'de raporlanir):
- *   musteri/personel SMS-WA, FCM push, uygulama-ici bildirim, dogrulama/KVKK
- *   kodu GONDERIMI, seans kullanim push'u. Bu yuzden config('randevu.yazma_aktif')
- *   Faz 2b bitene kadar KAPALI kalmali.
+ * YAN ETKILER (Faz 2b — outbox): SMS/WA, FCM, uygulama-ici bildirim, dogrulama/
+ * KVKK kodu ve seans kullanim push'u v2'de URETILMEZ; 'v2_bildirim_kuyrugu'na
+ * DURUM DEGISIKLIGIYLE AYNI TRANSACTION'da yazilir, eski monolitin
+ * `v2:bildirim-isle` komutu MEVCUT bildirim koduyla gonderir (kod tekrari yok).
+ * Yanittaki 'bildirimler' alani kuyruga yazilan/yazilacak turleri listeler.
  */
 class RandevuDurumServisi
 {
@@ -63,10 +64,16 @@ class RandevuDurumServisi
         if ($seansVar && $this->smsAyari($salonId, 16)) {
             $kod = $g['dogrulama_kodu'] ?? null;
             if ($randevu->dogrulama === null || (string) $randevu->dogrulama !== (string) $kod) {
+                // Eski davranis: her kod istendiginde YENI kod uretilip gonderilir
+                // (monolit dogrulama_kodu_gonder — kuyruk uzerinden).
+                if ($yaz) {
+                    $this->kuyruga($salonId, 'dogrulama_kodu', $randevuId, $yetkiliId);
+                }
+
                 return [
-                    'hatali'        => '2',
-                    'mesaj'         => 'Lütfen müşteri/danışanın telefon numarasına gönderilen doğrulama kodunu giriniz!',
-                    'kod_gonderildi'=> false, // GONDERIM Faz 2b
+                    'hatali'         => '2',
+                    'mesaj'          => 'Lütfen müşteri/danışanın telefon numarasına gönderilen doğrulama kodunu giriniz!',
+                    'kod_gonderildi' => $yaz,
                 ];
             }
         }
@@ -77,10 +84,14 @@ class RandevuDurumServisi
             ->first(['id', 'onay_kodu', 'kvkk_onay_alindi']);
         if ($portfoy && $this->smsAyari($salonId, 22) && ! $portfoy->kvkk_onay_alindi
             && (string) ($g['kvkk_kodu'] ?? '') !== (string) $portfoy->onay_kodu) {
+            if ($yaz) {
+                $this->kuyruga($salonId, 'kvkk_kodu', $randevuId, $yetkiliId);
+            }
+
             return [
-                'hatali'        => '3',
-                'mesaj'         => 'Lütfen müşteri/danışanın telefon numarasına gönderilen kvkk onay kodunu giriniz!',
-                'kod_gonderildi'=> false, // GONDERIM Faz 2b
+                'hatali'         => '3',
+                'mesaj'          => 'Lütfen müşteri/danışanın telefon numarasına gönderilen kvkk onay kodunu giriniz!',
+                'kod_gonderildi' => $yaz,
             ];
         }
 
@@ -108,13 +119,13 @@ class RandevuDurumServisi
             'seans'        => $seansPlan,
             'dakika_dusum' => $dakikaPlan,
         ];
-        $bekleyen = $seansVar ? ['seans_kullanim_push'] : [];
+        $bildirimler = $seansVar ? ['seans_kullanim'] : [];
 
         if (! $yaz) {
-            return $this->sonuc(['hatali' => '0', 'mesaj' => 'DRY-RUN'], $plan, false, $bekleyen);
+            return $this->sonuc(['hatali' => '0', 'mesaj' => 'DRY-RUN'], $plan, false, $bildirimler);
         }
 
-        $dakikaSonuc = DB::transaction(function () use ($randevu, $randevuId, $portfoy, $yetimIdler, $seansPlan, $dakikaPlan, $yetkiliId, $salonId) {
+        $dakikaSonuc = DB::transaction(function () use ($randevuId, $portfoy, $yetimIdler, $seansPlan, $dakikaPlan, $yetkiliId, $salonId, $seansVar) {
             if ($yetimIdler) {
                 AdisyonPaketSeanslar::whereIn('id', $yetimIdler)->delete();
             }
@@ -123,6 +134,9 @@ class RandevuDurumServisi
                 DB::table('musteri_portfoy')->where('id', $portfoy->id)->update(['kvkk_onay_alindi' => 1]);
             }
             $this->seansPlaniUygula($randevuId, $seansPlan);
+            if ($seansVar) {
+                $this->kuyruga($salonId, 'seans_kullanim', $randevuId, $yetkiliId);
+            }
 
             return $this->dakika->dusumUygula($randevuId, $dakikaPlan, $this->personelId($salonId, $yetkiliId));
         });
@@ -132,7 +146,7 @@ class RandevuDurumServisi
 
         $plan['dakika_dusum'] = $dakikaSonuc;
 
-        return $this->sonuc(['hatali' => '0', 'mesaj' => 'Başarılı'], $plan, true, $bekleyen);
+        return $this->sonuc(['hatali' => '0', 'mesaj' => 'Başarılı'], $plan, true, $bildirimler);
     }
 
     /**
@@ -217,21 +231,22 @@ class RandevuDurumServisi
         $red = (int) $randevu->durum === Randevular::BEKLENIYOR;
         $seansPlan = SeansDurumGecisi::iptal($this->seanslar($randevuId));
         $plan = ['randevu' => ['durum' => Randevular::IPTAL_EDILDI], 'red' => $red, 'seans' => $seansPlan];
-        $bekleyen = ['musteri_sms_wa', 'personel_sms_wa', 'uygulama_ici_bildirim', 'personel_push'];
+        $bildirimler = ['randevu_iptal'];
 
         if (! $yaz) {
-            return $this->sonuc(['mesaj' => 'DRY-RUN'], $plan, false, $bekleyen);
+            return $this->sonuc(['mesaj' => 'DRY-RUN'], $plan, false, $bildirimler);
         }
 
-        DB::transaction(function () use ($randevuId, $seansPlan) {
+        DB::transaction(function () use ($randevuId, $seansPlan, $salonId, $yetkiliId, $red) {
             Randevular::where('id', $randevuId)->update(['durum' => Randevular::IPTAL_EDILDI]);
             $this->seansPlaniUygula($randevuId, $seansPlan);
+            $this->kuyruga($salonId, 'randevu_iptal', $randevuId, $yetkiliId, ['red' => $red]);
         });
 
         AktiviteLog::yaz($salonId, $yetkiliId, $red ? 'randevu_red' : 'randevu_iptal', 'randevu', $randevuId,
             $this->musteriAdi($randevu), $red ? 'Randevu talebi reddedildi' : 'Randevu iptal edildi');
 
-        return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bekleyen);
+        return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bildirimler);
     }
 
     /** ONAYLA (bekleyen online talep → onaylandi). */
@@ -243,18 +258,21 @@ class RandevuDurumServisi
         }
         $salonId = (int) $randevu->salon_id;
         $plan = ['randevu' => ['durum' => Randevular::ONAYLANDI]];
-        $bekleyen = ['musteri_sms_wa', 'personel_sms_wa', 'uygulama_ici_bildirim', 'personel_push'];
+        $bildirimler = ['randevu_onay'];
 
         if (! $yaz) {
-            return $this->sonuc(['mesaj' => 'DRY-RUN'], $plan, false, $bekleyen);
+            return $this->sonuc(['mesaj' => 'DRY-RUN'], $plan, false, $bildirimler);
         }
 
-        Randevular::where('id', $randevuId)->update(['durum' => Randevular::ONAYLANDI]);
+        DB::transaction(function () use ($randevuId, $salonId, $yetkiliId) {
+            Randevular::where('id', $randevuId)->update(['durum' => Randevular::ONAYLANDI]);
+            $this->kuyruga($salonId, 'randevu_onay', $randevuId, $yetkiliId);
+        });
 
         AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_onayla', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu talebi onaylandı');
 
-        return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bekleyen);
+        return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bildirimler);
     }
 
     // ------------------------------------------------------------------
@@ -376,12 +394,31 @@ class RandevuDurumServisi
         return $r->user_id ? DB::table('users')->where('id', $r->user_id)->value('name') : null;
     }
 
-    private function sonuc(array $kodlar, array $plan, bool $yazildi, array $bekleyen = []): array
+    private function sonuc(array $kodlar, array $plan, bool $yazildi, array $bildirimler = []): array
     {
         return $kodlar + [
-            'yazildi'              => $yazildi,
-            'plan'                 => $plan,
-            'bekleyen_yan_etkiler' => $bekleyen, // Faz 2b: bildirim koprusu
+            'yazildi'     => $yazildi,
+            'plan'        => $plan,
+            'bildirimler' => $bildirimler, // kuyruga yazilan (yazildi=true) / yazilacak (DRY-RUN)
         ];
+    }
+
+    /**
+     * Yan etkiyi outbox'a yaz ('v2_bildirim_kuyrugu' — sema eski klasorde).
+     * Cagiran transaction icindeyse onunla birlikte commit/rollback olur.
+     */
+    private function kuyruga(int $salonId, string $tur, int $randevuId, ?int $yetkiliId, array $payload = []): void
+    {
+        DB::table('v2_bildirim_kuyrugu')->insert([
+            'salon_id'   => $salonId,
+            'tur'        => $tur,
+            'randevu_id' => $randevuId,
+            'yetkili_id' => $yetkiliId,
+            'payload'    => $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null,
+            'durum'      => 0,
+            'deneme'     => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

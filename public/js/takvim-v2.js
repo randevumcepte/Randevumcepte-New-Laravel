@@ -392,7 +392,7 @@ async function islemYap(v, islem, ek, dryRun = false) {
   if (s.hatali === '2' || s.hatali === '3') {
     const alan = s.hatali === '2' ? 'dogrulama_kodu' : 'kvkk_kodu';
     const kod = await kodSor(s.mesaj, s.kod_gonderildi === false
-      ? 'Not: v2 henüz SMS göndermez (Faz 2b). Kod daha önce gönderildiyse girebilirsiniz.' : '');
+      ? 'Önizleme modunda kod gönderilmez; daha önce gönderilmiş bir kod varsa girebilirsiniz.' : '');
     if (kod) return islemYap(v, islem, { ...ek, [alan]: kod }, dryRun);
     return;
   }
@@ -424,7 +424,7 @@ function onizlemeCiz(islem, s) {
     p.yetim_sil?.length ? `Yetim seans temizliği: ${p.yetim_sil.map((x) => '#' + x).join(', ')}` : '',
     p.dakika_dusum?.length ? `Dakika paketi düşümü: ${p.dakika_dusum.map((x) => `${x.dakika} dk`).join(', ')}` : '',
     p.dakika_iade?.length ? `Dakika paketi iadesi: ${p.dakika_iade.map((x) => `${x.dakika} dk`).join(', ')}` : '',
-    s.bekleyen_yan_etkiler?.length ? `Bildirimler (Faz 2b): ${s.bekleyen_yan_etkiler.join(', ')}` : '',
+    s.bildirimler?.length ? `Kuyruğa yazılacak bildirim: ${s.bildirimler.join(', ')}` : '',
   ].filter(Boolean);
   el('#tOnizleme').innerHTML = `
     <div class="t-onizleme">
