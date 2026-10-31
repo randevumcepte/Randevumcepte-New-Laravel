@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\PersonelController;
 use App\Http\Controllers\Api\V2\PersonelYetkiController;
 use App\Http\Controllers\Api\V2\RandevuController;
+use App\Http\Controllers\Api\V2\RandevuDurumController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
@@ -65,6 +66,14 @@ Route::prefix('v2')->group(function () {
         // RANDEVU (Faz 1 — SALT OKUMA). Yazma yollari sonraki fazlarda.
         Route::get('/randevu/takvim', [RandevuController::class, 'takvim']);
         Route::get('/randevu/{id}', [RandevuController::class, 'goster'])->whereNumber('id');
+
+        // RANDEVU DURUM (Faz 2) — varsayilan dry_run; gercek yazma
+        // config('randevu.yazma_aktif') kill-switch arkasinda (kapaliyken 409).
+        Route::post('/randevu/{id}/geldi', [RandevuDurumController::class, 'geldi'])->whereNumber('id');
+        Route::post('/randevu/{id}/gelmedi', [RandevuDurumController::class, 'gelmedi'])->whereNumber('id');
+        Route::delete('/randevu/{id}/geldi-isareti', [RandevuDurumController::class, 'isaretKaldir'])->whereNumber('id');
+        Route::post('/randevu/{id}/iptal', [RandevuDurumController::class, 'iptal'])->whereNumber('id');
+        Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
 
         Route::get('/satislar', [SatisController::class, 'index']);
         Route::get('/katalog', [KatalogController::class, 'index']);

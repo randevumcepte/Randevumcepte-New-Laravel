@@ -79,10 +79,39 @@ tek-renk ince ayarı, "(PAKET)/(KARMA)" etiketleri, `notes` serbest-metin bloku
 (KVKK), resource sayaç rozetleri, kategori/cihaz/oda modu `resources` listesi,
 `start/end` string formatının Flutter ile birebir karşılaştırması.
 
-### Faz 2 — Durum yazma (geldi/gelmedi/iptal/onay)
-APS seans düşümü (`geldi` + telafi `geldi=2` koruması), dakika-paketi
-düşüm/iade, bildirim (WA-first + FCM) yan etkileri. Yük-taşıyan dönüş kodları
-korunur: `hatali` 0/2/3/4, `seansDusmeOnayi`.
+### Faz 1 sonucu
+`randevu:shadow-takvim` salon 20: tüm kişiler (rol 0/1) ve rol-5 (personel=34)
+senaryolarında **PARİTE TAM** (satır kümesi + start/end + resourceId).
+
+### Faz 2a — Durum yazma çekirdeği (YAPILDI, kill-switch KAPALI)
+- Saf kural: `App\Domain\Randevu\SeansDurumGecisi` (+ `tests/Unit/SeansDurumGecisiTest`).
+- Servis: `RandevuDurumServisi` — geldi / gelmedi / isaretKaldir / iptal / onayla.
+  Her biri DRY-RUN `plan` döner; yazma tek transaction + `AktiviteLog`
+  (eski `salon_aktivite_log`, meta.kaynak=v2).
+- `DakikaPaketServisi` — dakika paketi düşüm/iade (aynı tablolar/hareket türleri).
+- Uçlar (`RandevuDurumController`, varsayılan `dry_run=true`):
+  `POST /randevu/{id}/geldi|gelmedi|iptal|onayla`, `DELETE /randevu/{id}/geldi-isareti`.
+  Yetki: `randevu.duzenle_iptal` (onayla: `randevu.onayla`).
+- `config/randevu.php` → `RANDEVU_V2_YAZMA_AKTIF` (varsayılan false → 409).
+- Doğrulama: `php artisan randevu:durum-plan {randevu} {geldi|gelmedi|kaldir|iptal|onayla}`.
+- Yük-taşıyan kodlar korunur: `hatali` 0/2/3/4 (+ `seanslar` listesi), `seansDusmeOnayi`.
+
+**Eski davranıştan bilinçli farklar (v2 düzeltmeleri):**
+1. Telafi slotu (APS `geldi=2`) gelmedi / işaret-kaldır / iptal'de korunur
+   (eski: kaldır null'luyor, iptal siliyordu → bekleyen telafi hakkı kayboluyordu).
+2. Dakika paketi NET hesap (kullanım − iade): eski kodda geldi→gelmedi→geldi
+   zincirinde ikinci geldi hiç düşmüyordu.
+3. `gelmedi` eski uçta yetki kontrolü yoktu; v2'de `randevu.duzenle_iptal`.
+4. iptal yalnızca aktif (durum<2), onayla yalnızca bekleyen (durum=0) randevuda (409).
+5. Yetim seans temizliği yalnızca gerçek yazmada (eski: kod kapısında dönse bile siliyordu).
+
+### Faz 2b — Bildirim köprüsü (SIRADA; bitmeden kill-switch AÇILMAZ)
+v2 şu an şu yan etkileri ÜRETMEZ (yanıtta `bekleyen_yan_etkiler` olarak raporlanır):
+müşteri/personel SMS-WA (WA-first, SMS fallback; `salon_sms_ayarlari` 2/3),
+FCM push (`NotificationService` tipleri), uygulama-içi bildirim (`bildirimekle`),
+doğrulama (ayar 16) / KVKK (ayar 22) kodu GÖNDERİMİ, seans kullanım push'u
+(`SeansBildirimService`). Karar: bu altyapıyı New-Laravel'e taşımak mı, yoksa
+paylaşılan DB'de bir giden-kutusu (outbox) tablosu + eski monolitte işleyici mi.
 
 ### Faz 3 — Oluştur/güncelle + çakışma + telafi + saat kapama
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,
