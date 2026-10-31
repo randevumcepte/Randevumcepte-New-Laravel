@@ -68,6 +68,18 @@ class RandevuOkumaServisi
             ? (int) $takvimTuru
             : (int) (DB::table('salonlar')->where('id', $salonId)->value('randevu_takvim_turu') ?? 1);
 
+        // GUVENLIK: rol-5 kisiti istekten DEGIL oturum sahibinden zorunlu kilinir.
+        // Eski uc kisiti istemcinin gonderdigi personel_id'ye dayandiriyordu
+        // (gondermeyen personel tum salonu gorurdu). Yetkisiz personel her zaman
+        // yalnizca kendi kaydina sabitlenir; istekteki personel_id yok sayilir.
+        if ($callerYetkiliId) {
+            $kendi = Personeller::where('salon_id', $salonId)->where('yetkili_id', $callerYetkiliId)->first(['id', 'role_id']);
+            if ($kendi && (int) $kendi->role_id === 5
+                && ! $this->yetki->yetkiliYetkiVar($callerYetkiliId, $salonId, 'randevu.tum_personel_gor')) {
+                $personelId = (int) $kendi->id;
+            }
+        }
+
         $personelRolu = $this->personelRolunuCoz($salonId, $personelId, $callerYetkiliId);
 
         $satirlar = $this->hamSatirlar($salonId, $tarih1, $tarih2, $personelId, $takvimTuru, $personelRolu);
@@ -75,7 +87,8 @@ class RandevuOkumaServisi
 
         return [
             'randevular' => array_values(array_map(fn ($r) => $this->disaSatir($r), $merged)),
-            'resources'  => $this->kaynaklar($salonId, $tarih1, $tarih2, $personelId, $takvimTuru, $personelRolu),
+            'resources'  => $this->kaynaklar($salonId, $personelId, $takvimTuru, $personelRolu, $satirlar),
+            'takvim_turu'=> $takvimTuru,
             'baslangic'  => $tarih1,
             'bitis'      => $tarih2,
         ];
@@ -161,6 +174,11 @@ class RandevuOkumaServisi
             ->get(['randevu_id', 'adisyon_paket_id', 'adisyon_hizmet_id', 'hizmet_id', 'geldi']);
         $seanslarByRandevu = $seanslar->groupBy('randevu_id');
 
+        // Ekranda olay basligi icin hizmet adlari (tek sorgu).
+        $hizmetAdlari = DB::table('hizmetler')
+            ->whereIn('id', $rhler->pluck('hizmet_id')->filter()->unique()->all())
+            ->pluck('hizmet_adi', 'id');
+
         $cikti = [];
         foreach ($rhler as $rh) {
             $randevu = $rh->randevu;
@@ -236,6 +254,8 @@ class RandevuOkumaServisi
                 'personelId'   => $rh->personel_id !== null ? (int) $rh->personel_id : null,
                 'odaId'        => $rh->oda_id !== null ? (int) $rh->oda_id : null,
                 'musteri'      => $kapali ? 'Kapalı Saat' : ($randevu->users->name ?? null),
+                'hizmet'       => $kapali ? null : ($hizmetAdlari[$rh->hizmet_id] ?? null),
+                'kapali'       => $kapali,
                 'ongorusmeid'  => $randevu->on_gorusme_id,
                 'satis_olustu' => $satisOlustu,
                 'durum'        => $durumStr,
@@ -319,40 +339,70 @@ class RandevuOkumaServisi
     }
 
     /**
-     * Resources (takvim kaynak kolonlari). Faz 1: personel modu (takvim_turu==1
-     * veya rol-5) tam; diger modlar (kategori/cihaz/oda) cutover fazina birakildi.
+     * Resources (takvim kaynak kolonlari) — eski randevular() ile ayni kaynak
+     * kumeleri: personel (takvim_turu 1 veya rol-5) / kategori (0) / cihaz (2) / oda (3).
      *
-     * @return array<int,array<string,mixed>>
+     * Sayac (eski "Ad (N)") burada AYRI 'sayi' alani olarak, zaten cekilmis
+     * satirlardan PHP'de hesaplanir — eski kodun kaynak basina correlated
+     * subquery'si yogun salonlarda CPU yukuydu (bkz. cde3ca42).
+     *
+     * @param  array<int,array<string,mixed>>  $satirlar  pre-merge satirlar
+     * @return array<int,array{id:int,name:string,bgcolor:?string,avatar:?string,sayi:int}>
      */
-    private function kaynaklar(int $salonId, string $tarih1, string $tarih2, ?int $personelId, int $takvimTuru, int $personelRolu): array
+    private function kaynaklar(int $salonId, ?int $personelId, int $takvimTuru, int $personelRolu, array $satirlar): array
     {
-        if ($takvimTuru !== 1 && $personelRolu !== 5) {
-            return []; // kategori/cihaz/oda modu — cutover fazinda
+        $sayilar = [];
+        foreach ($satirlar as $s) {
+            if (! $s['kapali']) {
+                $k = (string) $s['resourceId'];
+                $sayilar[$k] = ($sayilar[$k] ?? 0) + 1;
+            }
         }
 
-        $q = DB::table('salon_personelleri as sp')
-            ->join('renk_duzenleri as rd', 'sp.renk', '=', 'rd.id')
-            ->where('sp.aktif', true)
-            ->where('sp.takvimde_gorunsun', true)
-            ->orderBy('sp.takvim_sirasi', 'asc');
-
-        if ($personelRolu === 5 && $personelId) {
-            $q->where('sp.id', $personelId);
+        if ($takvimTuru === 1 || $personelRolu === 5) {
+            $q = DB::table('salon_personelleri as sp')
+                ->join('renk_duzenleri as rd', 'sp.renk', '=', 'rd.id')
+                ->join('isletmeyetkilileri as iy', 'sp.yetkili_id', '=', 'iy.id')
+                ->where('sp.aktif', true)
+                ->where('sp.takvimde_gorunsun', true)
+                ->orderBy('sp.takvim_sirasi', 'asc');
+            if ($personelRolu === 5 && $personelId) {
+                $q->where('sp.id', $personelId);
+            } else {
+                $q->where(fn ($w) => $w->where('sp.salon_id', $salonId)->orWhere('sp.id', 0));
+            }
+            $rows = $q->get(['sp.id as id', 'sp.personel_adi as ad', 'rd.renk as renk', 'iy.profil_resim as avatar']);
+        } elseif ($takvimTuru === 2 || $takvimTuru === 3) {
+            [$tablo, $renkTablo, $fk, $adKolon] = $takvimTuru === 2
+                ? ['cihazlar', 'salon_cihaz_renkleri', 'cihaz_id', 'cihaz_adi']
+                : ['odalar', 'salon_oda_renkleri', 'oda_id', 'oda_adi'];
+            $rows = DB::table($tablo.' as k')
+                ->join($renkTablo.' as kr', 'kr.'.$fk, '=', 'k.id')
+                ->join('renk_duzenleri as rd', 'kr.renk_id', '=', 'rd.id')
+                ->where('k.salon_id', $salonId)
+                ->where('k.aktifmi', true)
+                ->orderBy('k.takvim_sirasi', 'asc')
+                ->get(['k.id as id', 'k.'.$adKolon.' as ad', 'rd.renk as renk', DB::raw('NULL as avatar')]);
         } else {
-            $q->where(function ($w) use ($salonId) {
-                $w->where('sp.salon_id', $salonId)->orWhere('sp.id', 0);
-            });
+            $rows = DB::table('hizmet_kategorisi as hk')
+                ->join('salon_sunulan_hizmetler as ssh', function ($j) use ($salonId) {
+                    $j->on('ssh.hizmet_kategori_id', '=', 'hk.id')->where('ssh.salon_id', '=', $salonId)->where('ssh.aktif', true);
+                })
+                ->leftJoin('salon_hizmet_kategori_renkleri as shk', function ($j) use ($salonId) {
+                    $j->on('shk.hizmet_kategori_id', '=', 'hk.id')->where('shk.salon_id', '=', $salonId);
+                })
+                ->leftJoin('renk_duzenleri as rd', 'shk.renk_id', '=', 'rd.id')
+                ->groupBy('hk.id', 'hk.hizmet_kategorisi_adi', 'rd.renk')
+                ->get(['hk.id as id', 'hk.hizmet_kategorisi_adi as ad', DB::raw("COALESCE(rd.renk, '#999999') as renk"), DB::raw('NULL as avatar')]);
         }
 
-        return $q->get([
-            'sp.id as id',
-            'sp.personel_adi as name',
-            DB::raw('REPLACE(rd.renk,"#","0xFF") as bgcolor'),
-        ])->map(fn ($r) => [
+        return $rows->map(fn ($r) => [
             'id'      => (int) $r->id,
-            'name'    => $r->name,
-            'bgcolor' => $r->bgcolor,
-        ])->all();
+            'name'    => $r->ad,
+            'bgcolor' => $r->renk ? str_replace('#', '0xFF', $r->renk) : null,
+            'avatar'  => $r->avatar ?: null,
+            'sayi'    => $sayilar[(string) $r->id] ?? 0,
+        ])->values()->all();
     }
 
     /**
@@ -371,6 +421,9 @@ class RandevuOkumaServisi
         $telRaw = (string) ($randevu->users->cep_telefon ?? '');
 
         $hizmetler = RandevuHizmetler::where('randevu_id', $randevuId)->get();
+        $hizmetAdlari  = DB::table('hizmetler')->whereIn('id', $hizmetler->pluck('hizmet_id')->filter()->unique()->all())->pluck('hizmet_adi', 'id');
+        $personelAdlari = DB::table('salon_personelleri')->whereIn('id', $hizmetler->pluck('personel_id')->filter()->unique()->all())->pluck('personel_adi', 'id');
+        $seansSayisi = DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)->count();
 
         return [
             'id'            => (int) $randevu->id,
@@ -384,10 +437,14 @@ class RandevuOkumaServisi
             'randevuya_geldi' => $randevu->randevuya_geldi,
             'on_gorusme_id' => $randevu->on_gorusme_id,
             'personel_notu' => $randevu->personel_notu,
+            'kapali'        => (int) $randevu->user_id === Randevular::KAPALI_SAAT_USER_ID,
+            'seans_var'     => $seansSayisi > 0,
             'hizmetler'     => $hizmetler->map(fn ($h) => [
                 'id'           => (int) $h->id,
                 'hizmet_id'    => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,
+                'hizmet_adi'   => $hizmetAdlari[$h->hizmet_id] ?? null,
                 'personel_id'  => $h->personel_id !== null ? (int) $h->personel_id : null,
+                'personel_adi' => $personelAdlari[$h->personel_id] ?? null,
                 'oda_id'       => $h->oda_id !== null ? (int) $h->oda_id : null,
                 'cihaz_id'     => $h->cihaz_id !== null ? (int) $h->cihaz_id : null,
                 'saat'         => $h->saat,

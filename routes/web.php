@@ -37,3 +37,15 @@ Route::get('/v2/personel/{sube?}', function ($sube = null) {
 
     return view('v2.personel', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Randevu Takvimi v2 — personel/oda/cihaz/kategori sutunlu gunluk takvim host
+ | sayfasi (ayni island deseni). Takvim motoru EventCalendar (MIT, ucretsiz).
+ | Veri /api/v2/randevu/takvim; durum aksiyonlari /api/v2/randevu/{id}/* —
+ | RANDEVU_V2_YAZMA_AKTIF kapaliyken 409 (UI onizleme/DRY-RUN plani gosterir).
+ */
+Route::get('/v2/takvim/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.takvim', ['salonId' => $salonId]);
+})->whereNumber('sube');
