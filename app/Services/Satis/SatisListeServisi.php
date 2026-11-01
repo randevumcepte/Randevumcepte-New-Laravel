@@ -3,6 +3,7 @@
 namespace App\Services\Satis;
 
 use App\Domain\Satis\AdisyonSatir;
+use App\Domain\Satis\SatirAksiyon;
 use App\Models\Adisyonlar;
 use App\Models\Alacaklar;
 use App\Models\PersonelPrimOrani;
@@ -193,7 +194,10 @@ class SatisListeServisi
         // Kalem bazli prim haritasi: [personel_id][tur][kalem_id] => yuzde.
         $primHarita = $this->primHaritasi($salonId);
 
-        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi) {
+        // Satir aksiyonlari icin cagiranin (controller) yetki ozeti; verilmezse hic yazma butonu yok.
+        $yetkiler = (array) ($o['yetkiler'] ?? []);
+
+        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, $yetkiler, $studyoModu) {
             $s = AdisyonSatir::hesapla($this->kalemleri($a, $primHarita));
 
             $alacak = $alacaklar[$a->user_id] ?? null;
@@ -244,7 +248,11 @@ class SatisListeServisi
                 'fatura_kesildi'        => (int) ($a->fatura_kesildi ?? 0),
                 'odendi'                => (int) ($a->odendi ?? 0),
                 'odendi_tarihi'         => $a->odendi_tarihi ? date('d.m.Y H:i', strtotime($a->odendi_tarihi)) : '',
-            ];
+            ] + SatirAksiyon::hesapla(   // + kapali (gosterim durumu) + aksiyonlar (izinli butonlar)
+                ['kalan_tutar_numeric' => $s['kalan_tutar_numeric'], 'odendi' => $a->odendi ?? 0],
+                $yetkiler,
+                $studyoModu
+            );
         })->values();
 
         return [

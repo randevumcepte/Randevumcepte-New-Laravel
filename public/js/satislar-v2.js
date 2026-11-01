@@ -11,38 +11,10 @@
  * Eski panele yönlendirme YOK.
  */
 
-const BASE = '/api/v2';
-const _qp = new URLSearchParams(location.search);
-if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
-const token = () => localStorage.getItem('rc_access_token') || '';
-
-async function api(yol, { method = 'GET', params = null, body = null } = {}) {
-  let url = BASE + yol;
-  if (params) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''))
-    ).toString();
-    if (qs) url += (url.includes('?') ? '&' : '?') + qs;
-  }
-  const r = await fetch(url, {
-    method,
-    cache: 'no-store',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const t = await r.text();
-  let govde = null;
-  try { govde = t ? JSON.parse(t) : null; } catch (_) { govde = null; }
-  return { ok: r.ok, kod: r.status, govde };
-}
-
-const el = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const toast = (m, tip) => (window.rcPanel && window.rcPanel.toast ? window.rcPanel.toast(m, tip) : alert(m));
-const onay = (m, o) => (window.rcPanel && window.rcPanel.onay ? window.rcPanel.onay(m, o) : Promise.resolve(confirm(m)));
+import { qp, api, el, esc, mesaj as toast, onay, pad, tarihStr as ts, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
 
 const kok = document.getElementById('rc-satislar');
-const salonId = parseInt(kok.dataset.salon, 10) || parseInt(_qp.get('sube'), 10) || 0;
+const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 const durum = { tur: 0, satisDurumu: '', personelId: '', musteriId: '', tarih1: '', tarih2: '', page: 1 };
@@ -56,9 +28,6 @@ const SEKMELER = [
   { tur: 2, ad: 'Paketler', ikon: 'bi-archive' },
 ];
 
-const pad = (n) => String(n).padStart(2, '0');
-const ts = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
 // Eski paneldeki "Zaman Aralığı" seçenekleri birebir.
 function aralik(deger) {
   const b = new Date(), y = b.getFullYear(), m = b.getMonth();
@@ -70,17 +39,6 @@ function aralik(deger) {
     case 'bu_yil':    return [`${y}-01-01`, `${y}-12-31`];
     case 'gecen_yil': return [`${y - 1}-01-01`, `${y - 1}-12-31`];
     default:          return [durum.tarih1, durum.tarih2];
-  }
-}
-
-// Satış Durumu select'i: açık/kapalı + faturalı/faturasız (eski panelde tek select).
-function durumParam() {
-  switch (durum.satisDurumu) {
-    case 'acik': return { acik_kapali: '1' };
-    case 'kapali': return { acik_kapali: '0' };
-    case 'faturali': return { fatura: '1' };
-    case 'faturasiz': return { fatura: '0' };
-    default: return {};
   }
 }
 
@@ -153,7 +111,7 @@ function iskeletCiz() {
         </table>
       </div>
 
-      <div class="s-sayfalama" id="sSayfalama"></div>
+      <div class="rc-sayfalama" id="sSayfalama"></div>
     </div>`;
 
   sekmeCiz();
@@ -219,7 +177,7 @@ function tarihSet(sel, val) {
 
 // Personel dropdown (eski: stüdyo modunda yok). personel.liste_gor yoksa 403 → gizli kalır.
 async function personelleriYukle() {
-  const { ok, govde } = await api('/personel', { params: { salon_id: salonId, per_page: 100 } });
+  const { ok, govde } = await api('GET', '/personel', { params: { salon_id: salonId, per_page: 100 } });
   if (!ok || !govde || !govde.basarili) return;
   const list = (govde.veri && govde.veri.data) || [];
   if (!list.length) return;
@@ -264,37 +222,27 @@ function baslikCiz() {
 }
 const kolonSayisi = () => (studyo ? 7 : 10);
 
-// Stüdyo: açık/kapalı 'odendi' bayrağından (eski web listesi), diğerlerinde kalan.
-const kapaliMi = (a) => (studyo ? Number(a.odendi) === 1 : a.durum !== 'acik');
-
+// Satır durumu (a.kapali) ve izinli işlemler (a.aksiyonlar) API'den hazır gelir —
+// burada yalnızca ÇİZİLİR, iş kuralı hesaplanmaz (Flutter ile aynı sözleşme).
 function islemlerCiz(a) {
-  const y = (sonVeri && sonVeri.yetkiler) || {};
-  const tahsilatUrl = `/v2/tahsilat/${a.id}`;
+  const x = a.aksiyonlar || {};
+  const url = `/v2/tahsilat/${a.id}`;
   const b = [];
-  if (studyo) {
-    if (y.tahsilat_al) {
-      b.push(kapaliMi(a)
-        ? `<button class="s-ib s-ib-uyari" data-islem="odeme-geri" data-id="${a.id}" title="Ödemeyi Geri Al"><i class="bi bi-arrow-counterclockwise"></i></button>`
-        : `<button class="s-ib s-ib-yesil" data-islem="odeme-al" data-id="${a.id}" title="Ödeme Alındı"><i class="bi bi-check-lg"></i></button>`);
-    }
-  } else if (kapaliMi(a)) {
-    b.push(`<a class="s-ib s-ib-mor" href="${tahsilatUrl}" title="Ödeme Bilgileri"><i class="bi bi-eye"></i></a>`);
-  } else {
-    b.push(`<a class="s-ib-metin" href="${tahsilatUrl}" title="Tahsil Et"><i class="bi bi-cash-coin"></i> Tahsil Et</a>`);
-  }
-  b.push(`<a class="s-ib s-ib-gri" href="${tahsilatUrl}" title="Düzenle"><i class="bi bi-pencil-square"></i></a>`);
-  if (y.fatura_isaretle) {
+  if (x.odeme_al) b.push(`<button class="s-ib s-ib-yesil" data-islem="odeme-al" data-id="${a.id}" title="Ödeme Alındı"><i class="bi bi-check-lg"></i></button>`);
+  if (x.odeme_geri_al) b.push(`<button class="s-ib s-ib-uyari" data-islem="odeme-geri" data-id="${a.id}" title="Ödemeyi Geri Al"><i class="bi bi-arrow-counterclockwise"></i></button>`);
+  if (x.tahsil_et) b.push(`<a class="s-ib-metin" href="${url}" title="Tahsil Et"><i class="bi bi-cash-coin"></i> Tahsil Et</a>`);
+  if (x.odeme_bilgisi) b.push(`<a class="s-ib s-ib-mor" href="${url}" title="Ödeme Bilgileri"><i class="bi bi-eye"></i></a>`);
+  if (x.duzenle) b.push(`<a class="s-ib s-ib-gri" href="${url}" title="Düzenle"><i class="bi bi-pencil-square"></i></a>`);
+  if (x.fatura) {
     const fk = Number(a.fatura_kesildi) === 1;
     b.push(`<button class="s-ib ${fk ? 's-ib-yesil' : 's-ib-soluk'}" data-islem="fatura" data-id="${a.id}" title="${fk ? 'Faturalı (kaldırmak için tıkla)' : 'Faturasız (işaretlemek için tıkla)'}"><i class="bi bi-file-earmark-text"></i></button>`);
   }
-  if (y.adisyon_sil) {
-    b.push(`<button class="s-ib s-ib-kirmizi" data-islem="sil" data-id="${a.id}" data-musteri="${esc(a.musteri)}" title="Adisyonu Sil"><i class="bi bi-trash3"></i></button>`);
-  }
+  if (x.sil) b.push(`<button class="s-ib s-ib-kirmizi" data-islem="sil" data-id="${a.id}" data-musteri="${esc(a.musteri)}" title="Adisyonu Sil"><i class="bi bi-trash3"></i></button>`);
   return `<div class="s-islemler">${b.join('')}</div>`;
 }
 
 function satirCiz(a) {
-  const rozet = kapaliMi(a)
+  const rozet = a.kapali
     ? '<span class="s-rozet s-r-kapali">Kapalı</span>'
     : '<span class="s-rozet s-r-acik">Açık</span>';
   const icerik = esc(a.icerikKisaltilmis || a.icerik || '').trim().replace(/\r?\n/g, '<br>');
@@ -302,7 +250,7 @@ function satirCiz(a) {
     <td class="s-sag">${esc(a.indirim || '0,00')} ₺</td>
     <td class="s-sag">${esc(a.toplam)} ₺</td>
     <td class="s-sag">${esc(a.odenen)} ₺</td>
-    <td class="s-sag s-kalan${kapaliMi(a) ? ' s-sifir' : ''}">${esc(a.kalan_tutar)} ₺</td>`;
+    <td class="s-sag s-kalan${a.kapali ? ' s-sifir' : ''}">${esc(a.kalan_tutar)} ₺</td>`;
   const st = studyo ? `<td class="s-nowrap">${esc(a.odendi_tarihi || '-')}</td>` : '';
   return `<tr>
     <td>${rozet}</td>
@@ -326,15 +274,15 @@ async function satirIslem(e) {
       { baslik: 'Adisyonu sil', tamam: 'Sil', tehlike: true });
     if (!evet) return;
     b.disabled = true;
-    sonuc = await api(`/adisyon/${id}`, { method: 'DELETE' });
+    sonuc = await api('DELETE', `/adisyon/${id}`);
   } else if (islem === 'fatura') {
     b.disabled = true;
-    sonuc = await api(`/adisyon/${id}/fatura`, { method: 'PATCH' });
+    sonuc = await api('PATCH', `/adisyon/${id}/fatura`);
   } else if (islem === 'odeme-al' || islem === 'odeme-geri') {
     const al = islem === 'odeme-al';
     if (!al && !(await onay('Bu adisyonun tüm tahsilatları kaldırılacak ve adisyon tekrar açık olacak.', { baslik: 'Ödemeyi geri al', tamam: 'Geri Al' }))) return;
     b.disabled = true;
-    sonuc = await api(`/adisyon/${id}/odeme`, { method: 'PATCH', body: { alindi: al } });
+    sonuc = await api('PATCH', `/adisyon/${id}/odeme`, { body: { alindi: al } });
   } else {
     return;
   }
@@ -350,7 +298,7 @@ async function satirIslem(e) {
 async function faturasizGizleTikla() {
   const b = el('#sFaturaGizle');
   b.disabled = true;
-  const r = await api('/satislar/faturasiz-gizle', { method: 'PATCH', params: { salon_id: salonId } });
+  const r = await api('PATCH', '/satislar/faturasiz-gizle', { params: { salon_id: salonId } });
   b.disabled = false;
   if (!r.ok || !r.govde || !r.govde.basarili) {
     toast((r.govde && r.govde.mesaj) || `İşlem başarısız (${r.kod})`, 'hata');
@@ -369,23 +317,6 @@ function ekKontrollerCiz(v) {
   btn.querySelector('span').textContent = v.faturasiz_gizle_aktif ? 'Faturasızlar gizli' : 'Faturasızları gizle';
 }
 
-function sayfalamaCiz(v) {
-  const son = v.last_page || 1, su = v.current_page || 1;
-  const bilgi = `<div class="s-sayfa-bilgi">${v.total ?? 0} kayıt</div>`;
-  if (son <= 1) { el('#sSayfalama').innerHTML = bilgi; return; }
-  const btn = (p, ad, pasif) => `<button class="s-sayfa${pasif ? ' pasif' : ''}${p === su ? ' aktif' : ''}" data-p="${p}" ${pasif ? 'disabled' : ''}>${ad}</button>`;
-  let h = btn(su - 1, '‹', su <= 1);
-  const bas = Math.max(1, Math.min(su - 2, son - 4)), bit = Math.min(son, bas + 4);
-  for (let p = bas; p <= bit; p++) h += btn(p, p, false);
-  h += btn(su + 1, '›', su >= son);
-  el('#sSayfalama').innerHTML = `<div class="s-sayfa-bilgi">Sayfa ${su} / ${son} · ${v.total ?? 0} kayıt</div>` + h;
-  el('#sSayfalama').onclick = (e) => {
-    const b = e.target.closest('.s-sayfa');
-    if (!b || b.disabled) return;
-    durum.page = parseInt(b.dataset.p, 10); yukle();
-  };
-}
-
 let istekNo = 0;
 async function yukle() {
   if (!salonId) {
@@ -393,11 +324,11 @@ async function yukle() {
     return;
   }
   const no = ++istekNo;
-  el('#sGovde').innerHTML = `<tr><td colspan="${kolonSayisi()}" class="s-bos"><span class="s-yukleniyor"></span> Yükleniyor…</td></tr>`;
-  const r = await api('/satislar', {
+  el('#sGovde').innerHTML = `<tr><td colspan="${kolonSayisi()}" class="s-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</td></tr>`;
+  const r = await api('GET', '/satislar', {
     params: {
       salon_id: salonId, tarih1: durum.tarih1, tarih2: durum.tarih2, tur: durum.tur,
-      personel_id: durum.personelId, musteri_id: durum.musteriId, page: durum.page, ...durumParam(),
+      personel_id: durum.personelId, musteri_id: durum.musteriId, page: durum.page, satis_durumu: durum.satisDurumu,
     },
   });
   if (no !== istekNo) return; // daha yeni bir istek var — eski cevabı çizme
@@ -422,7 +353,7 @@ async function yukle() {
   const list = v.data || [];
   el('#sGovde').innerHTML = list.length ? list.map(satirCiz).join('')
     : `<tr><td colspan="${kolonSayisi()}" class="s-bos">Kayıt bulunamadı.</td></tr>`;
-  sayfalamaCiz(v);
+  sayfalamaCiz(el('#sSayfalama'), v, (no) => { durum.page = no; yukle(); });
 }
 
 iskeletCiz();

@@ -3,6 +3,7 @@
 namespace App\Services\Satis;
 
 use App\Exceptions\BulunamadiException;
+use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,16 +19,16 @@ use Illuminate\Support\Facades\Schema;
  *   5) Kalem bağlantılı parent tahsilatlar + adisyon_id'li ÖKSÜZ tahsilatlar
  *   6) Alacaklar (adisyon_id) + komisyon masrafları (masraflar.adisyon_id)
  *   7) Adisyon
- * Sonra salon_aktivite_log'a audit yazılır (eski SalonAudit ile aynı alanlar).
+ * Sonra ortak AktiviteLog ile salon_aktivite_log'a audit yazılır.
  * Not: eski kod adisyon_paket_seanslar'a dokunmaz; parite için burada da dokunulmaz.
  */
 class AdisyonSilServisi
 {
     /**
-     * @param array{yetkili_id:int,yetkili_ad:?string,ip:?string,user_agent:?string} $kim
+     * @param int|null $yetkiliId  İşlemi yapan yetkili (audit için)
      * @throws BulunamadiException
      */
-    public function sil(int $adisyonId, array $kim): array
+    public function sil(int $adisyonId, ?int $yetkiliId): array
     {
         $adisyon = DB::table('adisyonlar')->where('id', $adisyonId)->first(['id', 'salon_id', 'user_id']);
         if (! $adisyon) {
@@ -111,40 +112,11 @@ class AdisyonSilServisi
             DB::table('adisyonlar')->where('id', $adisyonId)->delete();
         });
 
-        $this->audit($adisyon, $kim);
+        $musteri = DB::table('users')->where('id', $adisyon->user_id)->value('name') ?? 'Müşteri #'.$adisyon->user_id;
+        AktiviteLog::yaz((int) $adisyon->salon_id, $yetkiliId, 'adisyon_sil', 'adisyon', (int) $adisyon->id,
+            $musteri.' — Adisyon #'.$adisyon->id, 'Adisyon ve tüm kalemleri silindi', ['user_id' => $adisyon->user_id]);
 
         return ['adisyon_id' => $adisyonId, 'salon_id' => (int) $adisyon->salon_id];
-    }
-
-    /** Eski SalonAudit::log('adisyon_sil', ...) ile aynı kayıt; hata akışı kırmaz. */
-    private function audit(object $adisyon, array $kim): void
-    {
-        try {
-            $musteri = DB::table('users')->where('id', $adisyon->user_id)->value('name') ?? 'Müşteri #'.$adisyon->user_id;
-            $rolId = DB::table('model_has_roles')->where('model_id', $kim['yetkili_id'])
-                ->where('salon_id', $adisyon->salon_id)->value('role_id');
-            $rolMap = [1 => 'Hesap Sahibi', 2 => 'Süpervizör', 3 => 'Yönetici', 4 => 'Yönetici', 5 => 'Personel'];
-
-            DB::table('salon_aktivite_log')->insert([
-                'salon_id'     => $adisyon->salon_id,
-                'user_id'      => $kim['yetkili_id'],
-                'user_type'    => (int) $rolId === 5 ? 'personel' : 'yetkili',
-                'user_name'    => $kim['yetkili_ad'] ?? null,
-                'user_rol'     => $rolMap[$rolId] ?? ($rolId ? 'Rol#'.$rolId : 'Yetkili'),
-                'action'       => 'adisyon_sil',
-                'target_type'  => 'adisyon',
-                'target_id'    => $adisyon->id,
-                'target_label' => mb_substr($musteri.' — Adisyon #'.$adisyon->id, 0, 200),
-                'aciklama'     => 'Adisyon ve tüm kalemleri silindi',
-                'meta'         => json_encode(['user_id' => $adisyon->user_id, 'kaynak' => 'v2'], JSON_UNESCAPED_UNICODE),
-                'ip'           => $kim['ip'] ?? null,
-                'user_agent'   => mb_substr((string) ($kim['user_agent'] ?? ''), 0, 255),
-                'created_at'   => now(),
-                'updated_at'   => now(),
-            ]);
-        } catch (\Throwable $e) {
-            // audit yazımı iş akışını kırmaz (eskiyle aynı)
-        }
     }
 
     private static function temiz(array $idler): array

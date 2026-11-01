@@ -105,19 +105,6 @@
 .s-islem-detay:hover { background: #e7defa; }
 @media (prefers-color-scheme: dark) { .s-islem-detay { background: #2d2340; color: #c9a7f0; border-color: #403059; } }
 
-/* ── Sayfalama ── */
-.s-sayfalama { display: flex; gap: 6px; margin-top: 18px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.s-sayfa-bilgi { font-size: 13px; color: #9191a3; margin-right: 10px; }
-.s-sayfa { border: 1px solid #e2e2ee; background: #fff; color: #555; border-radius: 9px; min-width: 38px; height: 38px; padding: 0 11px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .15s; }
-.s-sayfa:hover:not(.pasif):not(.aktif) { border-color: #b98fe0; color: #5C008E; }
-.s-sayfa.aktif { background: var(--rc-t-mor, #f2ecfb); border-color: transparent; color: var(--rc-mor, #5C008E); }
-.s-sayfa.pasif { opacity: .4; cursor: default; }
-@media (prefers-color-scheme: dark) { .s-sayfa { background: #22222e; border-color: #34344c; color: #cfcfe0; } }
-
-/* ── Yükleniyor spinner ── */
-.s-yukleniyor { display: inline-block; width: 15px; height: 15px; border: 2px solid #d9d2ec; border-top-color: #7b2ff7; border-radius: 50%; animation: s-spin .7s linear infinite; vertical-align: -2px; }
-@keyframes s-spin { to { transform: rotate(360deg); } }
-
 /* ── Hizalama düzeltmesi: başlık hizası hücreyle aynı (thead th genel 'left' kuralını ezer) ── */
 .s-tablo th.s-sag, .s-tablo td.s-sag { text-align: right; }
 .s-tablo th.s-orta, .s-tablo td.s-orta { text-align: center; }

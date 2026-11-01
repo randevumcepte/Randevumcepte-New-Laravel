@@ -194,6 +194,27 @@ class YetkiServisi
             ->exists();
     }
 
+    /**
+     * Hesap sahibi ISLEM kurali (eski adisyonFaturaIsaretle / faturasizGizleToggle):
+     * yetkilinin bu salondaki personel kaydinin role_id'si 1.
+     */
+    public function yetkiliHesapSahibiIslem($yetkiliId, $salonId): bool
+    {
+        return (int) Personeller::where('salon_id', $salonId)
+            ->where('yetkili_id', $yetkiliId)->value('role_id') === 1;
+    }
+
+    /**
+     * Hesap sahibi GORUNURLUK kurali (eski satis listesi fatura butonu):
+     * personel role_id 1 VEYA model_has_roles role_id 1.
+     */
+    public function yetkiliHesapSahibiGorunur($yetkiliId, $salonId): bool
+    {
+        return $this->yetkiliHesapSahibiIslem($yetkiliId, $salonId)
+            || DB::table('model_has_roles')->where('role_id', 1)
+                ->where('model_id', $yetkiliId)->where('salon_id', $salonId)->exists();
+    }
+
     /** Personel rolunde mi? (model_has_roles.role_id=5) */
     public function personelRolundeMi($personelId, $salonId): bool
     {

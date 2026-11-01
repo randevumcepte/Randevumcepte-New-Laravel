@@ -11,7 +11,6 @@ use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Satis Takibi API v2 — ince controller. KVKK: kimlik + kapsam + yetki.
@@ -43,8 +42,11 @@ class SatisController extends V2Controller
      * veya gövdeden (input) okunur; eski v1 isimleri de kabul edilir (parite).
      *   salon_id (zorunlu), tarih1, tarih2, tur/adisyonturu (0-3),
      *   musteri_id/musteriid, personel_id, acik_kapali/acikKapali (1 acik/0 kapali),
-     *   fatura (1/0), musteriMi, appBundle, page, per_page.
-     * Cevapta `yetkiler` blogu: ekranlar (web + Flutter) buton gorunurlugunu buradan alir.
+     *   fatura (1/0), satis_durumu (acik|kapali|faturali|faturasiz — eski paneldeki
+     *   tek "Satis Durumu" secimi; verilirse acik_kapali/fatura yerine gecer),
+     *   musteriMi, appBundle, page, per_page.
+     * Cevap: `yetkiler` (sayfa duzeyi) + her satirda `kapali` ve `aksiyonlar` —
+     * web ve Flutter durum/buton kararini YENIDEN HESAPLAMAZ (tek kaynak).
      */
     public function index(Request $request)
     {
@@ -73,11 +75,29 @@ class SatisController extends V2Controller
         // personel.kapali_adisyon_gizle: personel kaydi olan kullanici kapali
         // adisyonlari goremez → yalniz acik + kapali sayisi 0 (eski mobil kural).
         $acikKapali = $request->input('acik_kapali', $request->input('acikKapali'));
+        $fatura = $request->input('fatura');
+        switch ((string) $request->input('satis_durumu')) {
+            case 'acik':      $acikKapali = '1'; break;
+            case 'kapali':    $acikKapali = '0'; break;
+            case 'faturali':  $fatura = '1'; break;
+            case 'faturasiz': $fatura = '0'; break;
+        }
         $kapaliGizle = $personel
             && $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'personel.kapali_adisyon_gizle');
         if ($kapaliGizle) {
             $acikKapali = '1';
         }
+
+        $studyo = $this->islem->studyoModu($salonId);
+        $hesapSahibi = $this->yetki->yetkiliHesapSahibiGorunur($user->id, $salonId);
+        $yetkiler = [
+            'tahsilat_al'     => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.tahsilat_al'),
+            'adisyon_sil'     => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.adisyon_sil'),
+            'fatura_isaretle' => $hesapSahibi && ! $studyo,
+            'faturasiz_gizle' => $hesapSahibi && ! $studyo,
+            'tum_satis_gor'   => $kisit === null,
+            'kapali_gizli'    => (bool) $kapaliGizle,
+        ];
 
         $veri = $this->servis->liste($salonId, [
             'tarih1'            => $request->input('tarih1'),
@@ -86,53 +106,35 @@ class SatisController extends V2Controller
             'musteri_id'        => $musteriId,
             'personel_id'       => $request->input('personel_id'),
             'acik_kapali'       => $acikKapali,
-            'fatura'            => $request->input('fatura'),
+            'fatura'            => $fatura,
             'musteriMi'         => filter_var($request->input('musteriMi'), FILTER_VALIDATE_BOOLEAN),
             'appBundle'         => $request->input('appBundle'),
             'page'              => $request->input('page'),
             'per_page'          => $request->input('per_page'),
             'kisit_personel_id' => $kisit,
+            'yetkiler'          => $yetkiler,
         ]);
         if ($kapaliGizle) {
             $veri['kapali_sayisi'] = 0;
         }
 
-        $studyo = $this->islem->studyoModu($salonId);
-        $hesapSahibi = $this->islem->hesapSahibiGorunur($user->id, $salonId);
         $veri['studyo_modu'] = $studyo;
-        $veri['yetkiler'] = [
-            'tahsilat_al'      => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.tahsilat_al'),
-            'adisyon_sil'      => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.adisyon_sil'),
-            'fatura_isaretle'  => $hesapSahibi && ! $studyo,
-            'faturasiz_gizle'  => $hesapSahibi && ! $studyo,
-            'tum_satis_gor'    => $kisit === null,
-            'kapali_gizli'     => (bool) $kapaliGizle,
-        ];
-        $veri['faturasiz_gizle_aktif'] = (bool) DB::table('salonlar')->where('id', $salonId)->value('faturasiz_gizle');
+        $veri['yetkiler'] = $yetkiler;
+        $veri['faturasiz_gizle_aktif'] = $this->islem->faturasizGizleAktif($salonId);
 
         return ApiCevap::basarili($veri);
     }
 
     /** DELETE /api/v2/adisyon/{id}  (satis.adisyon_sil) — eski adisyon_sil kaskadi. */
-    public function sil(Request $request, int $id)
+    public function sil(int $id)
     {
         $user = $this->kullanici();
         $this->yazmaAcikMi();
 
-        $salonId = $this->islem->adisyonSalonId($id);
-        if (! $salonId) {
-            return ApiCevap::hata('Adisyon bulunamadı', 404);
-        }
+        $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $this->kapi->denetle($user->id, $salonId, ['satis.adisyon_sil']);
 
-        $sonuc = $this->silServisi->sil($id, [
-            'yetkili_id' => (int) $user->id,
-            'yetkili_ad' => $user->name ?? null,
-            'ip'         => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
-        return ApiCevap::basarili($sonuc, 'Adisyon kaydı başarıyla kaldırıldı');
+        return ApiCevap::basarili($this->silServisi->sil($id, (int) $user->id), 'Adisyon kaydı başarıyla kaldırıldı');
     }
 
     /** PATCH /api/v2/adisyon/{id}/fatura — yalniz hesap sahibi (personel role_id=1), studyo degil. */
@@ -141,18 +143,13 @@ class SatisController extends V2Controller
         $user = $this->kullanici();
         $this->yazmaAcikMi();
 
-        $salonId = $this->islem->adisyonSalonId($id);
-        if (! $salonId) {
-            return ApiCevap::hata('Adisyon bulunamadı', 404);
-        }
+        $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
-        if (! $this->islem->hesapSahibiIslem($user->id, $salonId) || $this->islem->studyoModu($salonId)) {
+        if (! $this->yetki->yetkiliHesapSahibiIslem($user->id, $salonId) || $this->islem->studyoModu($salonId)) {
             throw new YetkisizErisimException('Bu işlem için yetkiniz yok.');
         }
 
-        $personelId = $this->islem->personel($user->id, $salonId)->id ?? null;
-
-        return ApiCevap::basarili($this->islem->faturaIsaretle($id, $salonId, $personelId ? (int) $personelId : null));
+        return ApiCevap::basarili($this->islem->faturaIsaretle($id, $salonId, $this->personelId($user->id, $salonId)));
     }
 
     /** PATCH /api/v2/satislar/faturasiz-gizle?salon_id= — salon geneli ayar (hesap sahibi). */
@@ -166,7 +163,7 @@ class SatisController extends V2Controller
             return ApiCevap::hata('salon_id zorunlu', 422);
         }
         $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
-        if (! $this->islem->hesapSahibiIslem($user->id, $salonId)) {
+        if (! $this->yetki->yetkiliHesapSahibiIslem($user->id, $salonId)) {
             throw new YetkisizErisimException('Bu işlem için yetkiniz yok.');
         }
 
@@ -179,20 +176,25 @@ class SatisController extends V2Controller
         $user = $this->kullanici();
         $this->yazmaAcikMi();
 
-        $salonId = $this->islem->adisyonSalonId($id);
-        if (! $salonId) {
-            return ApiCevap::hata('Adisyon bulunamadı', 404);
-        }
+        $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
         if (! $this->islem->studyoModu($salonId)) {
             return ApiCevap::hata('Yalnızca stüdyo modunda kullanılabilir', 422);
         }
 
-        $olusturan = $this->islem->personel($user->id, $salonId)->id ?? null;
         $alindi = filter_var($request->input('alindi'), FILTER_VALIDATE_BOOLEAN);
 
-        return ApiCevap::basarili($this->islem->studyoOdeme($id, $salonId, $alindi, $olusturan ? (int) $olusturan : null));
+        return ApiCevap::basarili($this->islem->studyoOdeme($id, $salonId, $alindi, [
+            'yetkili_id'   => (int) $user->id,
+            'olusturan_id' => $this->personelId($user->id, $salonId),
+        ]));
     }
 
+    /** Yetkilinin bu salondaki personel kaydi (olusturan / fatura kesen). */
+    private function personelId(int $yetkiliId, int $salonId): ?int
+    {
+        $id = Personeller::where('salon_id', $salonId)->where('yetkili_id', $yetkiliId)->value('id');
 
+        return $id ? (int) $id : null;
+    }
 }
