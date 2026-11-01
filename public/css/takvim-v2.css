@@ -200,7 +200,7 @@
 .t-rf-baslik { display: flex; gap: 8px; align-items: center; color: var(--rc-mor); }
 .t-rf { display: flex; flex-direction: column; gap: 12px; margin: 14px 0; }
 .t-rf label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--rc-sol); }
-.t-rf input, .t-rf select {
+.t-rf input, .t-rf select, .t-rf .rs-btn {
   height: 40px; border: 1px solid var(--rc-cizgi); border-radius: 10px; padding: 0 10px;
   font: inherit; font-size: 14px; color: var(--rc-metin); background: #fff; min-width: 0;
 }
@@ -238,7 +238,7 @@
 .t-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; text-align: left; margin-bottom: 16px; }
 .t-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--rc-sol); }
 .t-form .t-form-gen { grid-column: 1 / -1; }
-.t-form input, .t-form select {
+.t-form input, .t-form select, .t-form .rs-btn {
   height: 40px; border: 1px solid var(--rc-cizgi); border-radius: 10px; padding: 0 10px;
   font: inherit; font-size: 14px; color: var(--rc-metin); background: #fff;
 }

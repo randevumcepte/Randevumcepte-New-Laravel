@@ -139,7 +139,7 @@ html, body { margin: 0; padding: 0; }
 }
 .rc-ara input { border: 0; background: transparent; outline: none; width: 100%; font-size: 14px; color: var(--rc-metin); }
 
-.rc-sube-sec select {
+.rc-sube-sec select, .rc-sube-sec .rs-btn {
   height: 42px; border: 1px solid var(--rc-cizgi); border-radius: 12px;
   background: #fff; padding: 0 34px 0 14px; font-size: 14px; color: var(--rc-metin);
   max-width: 220px; cursor: pointer;
@@ -248,3 +248,35 @@ html, body { margin: 0; padding: 0; }
   .rc-ara { width: 100%; max-width: none; }
   .rc-icerik { padding: 14px; }
 }
+
+/* Sube seciciyi butona cevirince arka plan oku cift gorunmesin. */
+.rc-sube-sec .rs-btn { background-image: none; padding-right: 12px; }
+
+/* ───────────── Aranabilir select (arama-select.js) — tum v2 ekranlari ───────────── */
+.rs-gizli { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important;
+  pointer-events: none !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; padding: 0 !important; }
+.rs-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; cursor: pointer;
+  height: 40px; min-width: 0; max-width: 100%; padding: 0 10px 0 12px; border: 1px solid var(--rc-cizgi); border-radius: 10px;
+  background: #fff; color: var(--rc-metin); font: inherit; font-size: 14px; line-height: 1.2;
+}
+.rs-btn:focus { outline: none; border-color: #9b6bd8; box-shadow: 0 0 0 3px rgba(123, 47, 247, .12); }
+.rs-btn:disabled { opacity: .55; cursor: not-allowed; }
+.rs-btn.rs-acik { border-color: #9b6bd8; }
+.rs-etiket { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-btn.rs-bos .rs-etiket { color: var(--rc-sol); }
+.rs-ok { flex: 0 0 auto; font-size: 12px; color: var(--rc-sol); transition: transform .15s; }
+.rs-btn.rs-acik .rs-ok { transform: rotate(180deg); }
+.rs-panel {
+  position: fixed; z-index: 9600; max-width: min(420px, calc(100vw - 16px)); background: #fff; border: 1px solid var(--rc-cizgi);
+  border-radius: 12px; box-shadow: var(--rc-golge-2); display: flex; flex-direction: column; overflow: hidden;
+}
+.rs-ara-kap { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--rc-cizgi); color: var(--rc-sol); }
+.rs-ara { flex: 1; border: 0; outline: none; font: inherit; font-size: 14px; color: var(--rc-metin); background: transparent; min-width: 0; }
+.rs-liste { max-height: 290px; overflow-y: auto; padding: 4px; }
+.rs-sec { padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--rc-metin); }
+.rs-sec.aktif, .rs-sec:hover { background: var(--rc-t-mor); }
+.rs-sec.secili { color: var(--rc-mor); font-weight: 700; }
+.rs-sec.pasif { opacity: .45; cursor: not-allowed; }
+.rs-grup { padding: 8px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--rc-sol); }
+.rs-yok { padding: 12px; color: var(--rc-sol); font-size: 13.5px; text-align: center; }
