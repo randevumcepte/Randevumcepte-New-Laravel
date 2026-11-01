@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=5">
+    <link rel="stylesheet" href="/css/panel.css?v=6">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
@@ -62,9 +62,7 @@
             </div>
 
             <div class="rc-header-sag">
-                <a class="rc-header-ic" id="rcAyarBtn" title="Ayarlar"><i class="bi bi-gear"></i></a>
-                <a class="rc-header-ic rc-geri" href="https://app.randevumcepte.com.tr/isletmeyonetim"
-                   title="Eski panele dön"><i class="bi bi-box-arrow-left"></i><span>Panel</span></a>
+                <a class="rc-header-ic" id="rcAyarBtn" title="Ayarlar" style="display:none"><i class="bi bi-gear"></i></a>
                 <div class="rc-kullanici" id="rcKullanici">
                     <div class="rc-avatar" id="rcAvatar">R</div>
                     <span class="rc-kullanici-ad" id="rcKullaniciAd">…</span>

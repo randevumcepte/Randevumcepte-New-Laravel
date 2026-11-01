@@ -6,15 +6,15 @@ namespace App\Support;
  * Panel sol menü TANIMI — tek kaynak (single source of truth).
  *
  * Eski monolitin (layout_isletmeadmin.blade.php) sidebar menüsüyle BİREBİR öğe
- * sırası / etiket / ikon / rota eşlemesi. Linkler eski panele (app.*) gider;
- * böylece v2 ekranı eski panelle PARALEL kullanılır (geri dönüş + gezinme).
+ * sırası / etiket / ikon eşlemesi. Linkler YALNIZCA aktif v2 sayfalarına
+ * (v2_rota) gider; v2 karşılığı olmayan öğe tıklanamaz "yakında" gösterilir.
  *
  * Her öğe:
  *   etiket      : görünen ad (Müşteriler/Danışanlar gibi salona göre değişenler servis'te çözülür)
  *   ikon        : bootstrap-icons sınıfı (eski menüyle aynı)
  *   slug        : /isletmeyonetim/<slug> (boş => /isletmeyonetim dashboard)
- *   v2_rota     : set ise link ESKİ PANELE değil AYNI host'taki v2 sayfasına gider
- *                 (göreli, örn. /v2/satislar?sube=) — strangler ekranları için
+ *   v2_rota     : öğenin aktif v2 sayfası (göreli, örn. /v2/satislar?sube=); yoksa
+ *                 öğe linksiz/pasif çizilir (eski panele yönlendirme YOK)
  *   ek_sorgu    : sabit ekstra query (örn. ayarlar?p=temelbilgiler)
  *   pageindex   : aktif-vurgu eşleştirme (opsiyonel; v2 sayfası $aktif slug ile de vurgular)
  *   yetki       : gereken menuYetki anahtar(lar)ı (OR-gate; boşsa herkese açık)
@@ -39,9 +39,8 @@ class PanelMenu
             ['etiket' => 'Santral',            'ikon' => 'bi bi-phone',            'slug' => 'santral',           'pageindex' => 43, 'ozellik' => 'santral_aktif',      'rol5_gizle' => true],
 
             // ───────────── Randevu
-            ['etiket' => 'Randevu Takvimi',    'ikon' => 'bi bi-calendar4-week',   'slug' => 'randevular',        'pageindex' => 2,  'yetki' => 'randevu.takvim_gor', 'bolum' => 'Randevu'],
             // v2 onizleme (EventCalendar) — durum yazma RANDEVU_V2_YAZMA_AKTIF acilana kadar DRY-RUN.
-            ['etiket' => 'Takvim v2 (Önizleme)', 'ikon' => 'bi bi-calendar2-range', 'slug' => 'takvim-v2',       'v2_rota' => '/v2/takvim', 'pageindex' => 2, 'yetki' => 'randevu.takvim_gor'],
+            ['etiket' => 'Randevu Takvimi',    'ikon' => 'bi bi-calendar4-week',   'slug' => 'takvim-v2',         'v2_rota' => '/v2/takvim', 'pageindex' => 2,  'yetki' => 'randevu.takvim_gor', 'bolum' => 'Randevu'],
             ['etiket' => 'Ders Programı',      'ikon' => 'bi bi-grid-3x3-gap-fill','slug' => 'ders-programi',     'pageindex' => 205,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Grup Dersi Raporu',  'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'grup-dersi-raporu', 'pageindex' => 206,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Ön Görüşmeler',      'ikon' => 'bi bi-chat-left-text',   'slug' => 'ongorusmeler',      'pageindex' => 12, 'yetki' => 'gorusme.liste_gor', 'studyo_gizle' => true],

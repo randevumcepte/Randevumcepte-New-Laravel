@@ -2,8 +2,9 @@
  * Panel kabuğu (shell) — sol menü + header'ı /api/v2/kabuk ile doldurur.
  *
  * Tüm v2 ekranları bu betiği paylaşır (tek kaynak). Veri Bearer token ile gelir
- * (localStorage['rc_access_token']; pilotta ?token=). Menü/şube linkleri eski
- * panele (app.*) gider → PARALEL kullanım.
+ * (localStorage['rc_access_token']; pilotta ?token=). Menü linkleri YALNIZCA
+ * aktif v2 sayfalarına gider; v2 karşılığı olmayan öğe pasif ("Yakında") çizilir.
+ * Şube değişimi aynı v2 sayfasında ?sube= ile yapılır. Eski panele yönlendirme YOK.
  *
  * Dışa açılan kanca: window.rcPanel.salonAyarla(salonId) — sayfa (örn. tahsilat)
  * adisyondan salon'u öğrenince kabuğu o salona göre tazeler.
@@ -46,6 +47,13 @@ function menuCiz(menu, aktifSlug) {
       html += `<div class="rc-bolum">${esc(m.bolum)}</div>`;
     }
     const aktif = aktifSlug && String(m.slug) === String(aktifSlug) ? ' aktif' : '';
+    if (!m.url) {
+      // v2 sayfası henüz yok → tıklanamaz, eski panele gitmez.
+      html += `<span class="rc-link rc-pasif" title="${esc(m.etiket)} — yakında" aria-disabled="true">
+        <span class="rc-ikon ${esc(m.ikon)}"></span>
+        <span class="rc-menu-etiket">${esc(m.etiket)}</span><span class="rc-yakinda">Yakında</span></span>`;
+      continue;
+    }
     html += `<a class="rc-link${aktif}" href="${esc(m.url)}" title="${esc(m.etiket)}">
       <span class="rc-ikon ${esc(m.ikon)}"></span>
       <span class="rc-menu-etiket">${esc(m.etiket)}</span></a>`;
@@ -72,9 +80,13 @@ function headerCiz(veri) {
     el('#rcLisans').style.display = 'flex';
   }
 
-  // Ayarlar kısayolu (menüdeki Ayarlar url'si)
+  // Ayarlar kısayolu: yalnızca v2 Ayarlar sayfası varsa görünür.
   const ayar = (veri.menu || []).find((m) => m.slug === 'ayarlar');
-  if (ayar) el('#rcAyarBtn').setAttribute('href', ayar.url);
+  const ayarBtn = el('#rcAyarBtn');
+  if (ayarBtn) {
+    if (ayar && ayar.url) { ayarBtn.setAttribute('href', ayar.url); ayarBtn.style.display = ''; }
+    else ayarBtn.style.display = 'none';
+  }
 
   // Şube seçici
   subeCiz(veri.subeler || []);
@@ -89,10 +101,19 @@ function subeCiz(subeler) {
     return;
   }
   const opsiyonlar = subeler
-    .map((s) => `<option value="${esc(s.url)}"${s.aktif ? ' selected' : ''}>${esc(s.ad)}</option>`)
+    .map((s) => `<option value="${esc(s.id)}"${s.aktif ? ' selected' : ''}>${esc(s.ad)}</option>`)
     .join('');
   kutu.innerHTML = `<select id="rcSubeSelect" aria-label="İşletme / Şube">${opsiyonlar}</select>`;
-  el('#rcSubeSelect').addEventListener('change', (e) => { if (e.target.value) location.href = e.target.value; });
+  el('#rcSubeSelect').addEventListener('change', (e) => { if (e.target.value) location.href = subeUrl(e.target.value); });
+}
+
+// Aynı v2 sayfasında şube değiştir: liste sayfalarında (/v2/x/20) path'teki şube atılır,
+// ?sube= ile yeniden açılır. Adisyona bağlı sayfada (tahsilat) şube listesine dönülür.
+function subeUrl(subeId) {
+  const yol = location.pathname.replace(/\/+$/, '');
+  if (/^\/v2\/tahsilat\//.test(yol)) return '/v2/satislar?sube=' + encodeURIComponent(subeId);
+  const temel = yol.replace(/^(\/v2\/[a-z-]+)\/\d+$/, '$1');
+  return temel + '?sube=' + encodeURIComponent(subeId);
 }
 
 async function yukle(salonId) {

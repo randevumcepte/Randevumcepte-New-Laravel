@@ -280,3 +280,12 @@ html, body { margin: 0; padding: 0; }
 .rs-sec.pasif { opacity: .45; cursor: not-allowed; }
 .rs-grup { padding: 8px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--rc-sol); }
 .rs-yok { padding: 12px; color: var(--rc-sol); font-size: 13.5px; text-align: center; }
+
+/* v2 karşılığı olmayan menü öğesi: tıklanamaz, eski panele gitmez. */
+.rc-link.rc-pasif { opacity: .45; cursor: not-allowed; pointer-events: auto; }
+.rc-link.rc-pasif:hover { background: transparent; }
+.rc-yakinda { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; background: rgba(92, 0, 142, .08); color: #7b43b8; white-space: nowrap; }
+.rc-link .rc-yakinda { display: none; }
+.rc-sidebar:hover .rc-yakinda, .rc-sabit .rc-yakinda { display: inline-block; }
+@media (max-width: 860px) { .rc-sidebar .rc-yakinda { display: inline-block; } }

@@ -117,3 +117,45 @@
 /* ── Yükleniyor spinner ── */
 .s-yukleniyor { display: inline-block; width: 15px; height: 15px; border: 2px solid #d9d2ec; border-top-color: #7b2ff7; border-radius: 50%; animation: s-spin .7s linear infinite; vertical-align: -2px; }
 @keyframes s-spin { to { transform: rotate(360deg); } }
+
+/* ── Hizalama düzeltmesi: başlık hizası hücreyle aynı (thead th genel 'left' kuralını ezer) ── */
+.s-tablo th.s-sag, .s-tablo td.s-sag { text-align: right; }
+.s-tablo th.s-orta, .s-tablo td.s-orta { text-align: center; }
+.s-tablo tbody td { vertical-align: middle; }
+.s-tablo th.s-k-durum { width: 90px; }
+.s-tablo th.s-k-islem { width: 1%; }
+.s-kalan.s-sifir { color: #9a9aac; font-weight: 700; }
+
+/* ── Satır işlem butonları (ikon) ── */
+.s-islemler { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap; }
+.s-ib {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; border: 1px solid transparent;
+  font-size: 15px; cursor: pointer; text-decoration: none; transition: .15s; background: #f4f4f8; color: #555;
+}
+.s-ib:hover { transform: translateY(-1px); }
+.s-ib:disabled { opacity: .5; cursor: wait; transform: none; }
+.s-ib-mor { background: var(--rc-t-mor, #f2ecfb); color: var(--rc-mor, #5C008E); }
+.s-ib-gri { background: #f1f2f6; color: #4b4b5c; }
+.s-ib-yesil { background: #e4f6ec; color: #1e7a45; border-color: #c9ead7; }
+.s-ib-soluk { background: #f7f7f9; color: #a7a7b3; border-color: #e6e6ec; }
+.s-ib-uyari { background: #fff2e0; color: #b96c00; }
+.s-ib-kirmizi { background: #fdecec; color: #d03b3b; }
+.s-ib-kirmizi:hover { background: #fbdcdc; }
+.s-ib-metin {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px;
+  background: #2bb673; color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+.s-ib-metin:hover { filter: brightness(.96); }
+@media (prefers-color-scheme: dark) {
+  .s-ib, .s-ib-gri { background: #2a2a3a; color: #cfcfe0; }
+  .s-ib-soluk { background: #24242f; color: #6e6e80; border-color: #34344c; }
+  .s-ib-kirmizi { background: #3a1f24; color: #ff8a8a; }
+}
+
+/* ── Faturasız gizle (hesap sahibi) ── */
+.s-fatura-gizle {
+  display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid #dcdce8; background: #fff; color: #5a5a6a; font-size: 13.5px; font-weight: 600; cursor: pointer;
+}
+.s-fatura-gizle.aktif { background: #fff2e0; border-color: #f3d3a6; color: #b96c00; }
+@media (prefers-color-scheme: dark) { .s-fatura-gizle { background: #1b1b26; border-color: #34344c; color: #cfcfe0; } }

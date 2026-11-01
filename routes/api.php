@@ -98,6 +98,11 @@ Route::prefix('v2')->group(function () {
         Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
 
         Route::get('/satislar', [SatisController::class, 'index']);
+        // SATIS TAKIBI satir islemleri — yazmalar TAHSILAT_V2_YAZMA_AKTIF arkasinda (kapaliyken 409).
+        Route::patch('/satislar/faturasiz-gizle', [SatisController::class, 'faturasizGizle']);
+        Route::delete('/adisyon/{id}', [SatisController::class, 'sil'])->whereNumber('id');
+        Route::patch('/adisyon/{id}/fatura', [SatisController::class, 'fatura'])->whereNumber('id');
+        Route::patch('/adisyon/{id}/odeme', [SatisController::class, 'odeme'])->whereNumber('id');
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);

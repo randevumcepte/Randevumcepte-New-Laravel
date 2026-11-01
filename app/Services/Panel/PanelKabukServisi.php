@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * denetimi controller + GuvenlikKapisi'nde; burada iş mantığı (menü filtreleme,
  * lisans günü, şube listesi, mutlak link üretimi).
  *
- * Linkler eski panele (app.*) gider → v2 ekranı eski panelle PARALEL kullanılır.
+ * Linkler YALNIZCA aktif v2 sayfalarına gider; eski panele yönlendirme yoktur.
  */
 class PanelKabukServisi
 {
@@ -69,7 +69,8 @@ class PanelKabukServisi
         return $satirlar->map(fn ($s) => [
             'id'    => (int) $s->id,
             'ad'    => trim((string) $s->salon_adi),
-            'url'   => $tabanUrl.'/isletmeyonetim?sube='.(int) $s->id,
+            // Şube değişimi aynı v2 sayfasında ?sube= ile yapılır (kabuk JS kurar); eski panele link YOK.
+            'url'   => null,
             'aktif' => (int) $s->id === $aktifSalonId,
         ])->all();
     }
@@ -139,21 +140,18 @@ class PanelKabukServisi
         return $m['etiket'];
     }
 
-    private function menuUrl(array $m, int $salonId, string $tabanUrl): string
+    /**
+     * Menü linki YALNIZCA aktif v2 sayfasına gider (aynı host, göreli). v2 karşılığı
+     * olmayan öğe null döner → kabuk onu tıklanamaz "yakında" olarak çizer.
+     * Eski panele (app.*) yönlendirme YAPILMAZ.
+     */
+    private function menuUrl(array $m, int $salonId, string $tabanUrl): ?string
     {
-        // v2 ekranı: eski panele DEĞİL, aynı host'taki v2 sayfasına (göreli link).
-        if (! empty($m['v2_rota'])) {
-            return $m['v2_rota'].'?'.http_build_query(['sube' => $salonId]);
+        if (empty($m['v2_rota'])) {
+            return null;
         }
 
-        $yol = $m['slug'] === '' ? '/isletmeyonetim' : '/isletmeyonetim/'.$m['slug'];
-        $sorgu = [];
-        if (! empty($m['ek_sorgu'])) {
-            parse_str($m['ek_sorgu'], $sorgu);
-        }
-        $sorgu['sube'] = $salonId;
-
-        return $tabanUrl.$yol.'?'.http_build_query($sorgu);
+        return $m['v2_rota'].'?'.http_build_query(['sube' => $salonId]);
     }
 
     private function lisansGun($salon): ?int

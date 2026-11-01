@@ -116,7 +116,6 @@ function iskeletCiz() {
           </div>
         </div>
         <div class="t-ust-sag">
-          <a class="t-klasik" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}" title="Eski takvime dön"><i class="bi bi-clock-history"></i> Klasik takvim</a>
           <button class="t-yeni-btn" id="tYeni"><i class="bi bi-plus-lg"></i> Randevu Oluştur</button>
         </div>
       </div>
@@ -455,8 +454,7 @@ function cekmeceCiz(v) {
     </div>
     ${v.personel_notu ? `<div class="t-ck-not"><i class="bi bi-sticky"></i> ${esc(v.personel_notu)}</div>` : ''}
     <div class="t-ck-aks">${butonlar || '<div class="t-ck-bos">Bu randevuda yapılabilecek işlem yok.</div>'}</div>
-    <div id="tOnizleme"></div>
-    <a class="t-ck-eski" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Tahsilat (eski panel)</a>`;
+    <div id="tOnizleme"></div>`;
 
   el('.t-ck-kapat').onclick = cekmeceKapat;
   el('#tCekmece').querySelectorAll('[data-islem]').forEach((b) => {
