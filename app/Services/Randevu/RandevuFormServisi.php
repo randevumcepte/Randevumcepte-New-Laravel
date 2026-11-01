@@ -70,6 +70,89 @@ class RandevuFormServisi
             ])->all();
     }
 
+    /**
+     * Musterinin KALAN SEANSLI paket ve tek hizmet satislari (seans takibi) —
+     * eski StoreAdminController@paketVarmiKontrolu'nun bolge-bazli formulu:
+     *   tek hizmet: kalan = seans_sayisi − COUNT(APS adisyon_hizmet_id)
+     *   paket     : bolge basina kalan = seans_sayisi − COUNT(APS adisyon_paket_id + hizmet_id)
+     * (her APS satiri, geldi ne olursa olsun bir seans sayilir — eskiyle ayni).
+     *
+     * Bilincli fark: liste, kayitta GERCEKTEN baglanabilecek satislarla sinirli
+     * (seans_sayisi > 0 ve otomatik_randevu_olusturuldu != 1 — satir bazinda);
+     * eski liste bunlari da gosterip kayitta baglayamiyordu.
+     *
+     * @return array<int,array{tur:string,adi:string,adisyon_paket_id:?int,adisyon_hizmet_id:?int,paket_sure:?int,hizmetler:array}>
+     */
+    public function musteriPaketleri(int $salonId, int $userId): array
+    {
+        if (! DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $userId)->exists()) {
+            throw new GecersizIslemException('Müşteri bu işletmenin portföyünde değil.');
+        }
+        $otoDegil = fn ($q, string $t) => $q->where(fn ($w) => $w->whereNull($t.'.otomatik_randevu_olusturuldu')->orWhere($t.'.otomatik_randevu_olusturuldu', '!=', 1));
+        $salonSure = $this->salonHizmetSureleri($salonId);
+        $sonuc = [];
+
+        // Tek hizmet satislari
+        $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'a.id', '=', 'ah.adisyon_id')->join('hizmetler as h', 'h.id', '=', 'ah.hizmet_id')
+            ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
+        $ahlar = $otoDegil($q, 'ah')->orderBy('a.tarih')->orderBy('ah.id')
+            ->get(['ah.id', 'ah.hizmet_id', 'ah.seans_sayisi', 'ah.sure', 'h.hizmet_adi', 'a.tarih']);
+        $kullanilanAh = DB::table('adisyon_paket_seanslar')->whereIn('adisyon_hizmet_id', $ahlar->pluck('id'))
+            ->groupBy('adisyon_hizmet_id')->selectRaw('adisyon_hizmet_id, COUNT(*) as n')->pluck('n', 'adisyon_hizmet_id');
+        foreach ($ahlar as $ah) {
+            $kalan = max(0, (int) $ah->seans_sayisi - (int) ($kullanilanAh[$ah->id] ?? 0));
+            if ($kalan <= 0) {
+                continue;
+            }
+            $sure = (int) $ah->sure ?: ($salonSure[$ah->hizmet_id] ?? 30);
+            $sonuc[] = [
+                'tur' => 'hizmet', 'adi' => $ah->hizmet_adi, 'adisyon_paket_id' => null, 'adisyon_hizmet_id' => (int) $ah->id,
+                'satis_tarihi' => $ah->tarih, 'paket_sure' => null,
+                'hizmetler' => [['hizmet_id' => (int) $ah->hizmet_id, 'ad' => $ah->hizmet_adi, 'kalan' => $kalan, 'toplam' => (int) $ah->seans_sayisi, 'sure' => $sure]],
+            ];
+        }
+
+        // Paket satislari (bolge = paketteki hizmet)
+        $phSure = Schema::hasColumn('paket_hizmetler', 'sure');
+        $pSure = Schema::hasColumn('paketler', 'sure');
+        $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'a.id', '=', 'ap.adisyon_id')->join('paketler as p', 'p.id', '=', 'ap.paket_id')
+            ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
+        $aplar = $otoDegil($q, 'ap')->orderBy('a.tarih')->orderBy('ap.id')
+            ->get(array_merge(['ap.id', 'ap.paket_id', 'ap.seans_sayisi', 'p.paket_adi', 'a.tarih'], $pSure ? ['p.sure as paket_sure'] : []));
+        foreach ($aplar as $ap) {
+            $bolgeler = DB::table('paket_hizmetler as ph')->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')->where('ph.paket_id', $ap->paket_id)
+                ->get(array_merge(['ph.hizmet_id', 'h.hizmet_adi'], $phSure ? ['ph.sure'] : []));
+            $kullanilan = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)
+                ->groupBy('hizmet_id')->selectRaw('hizmet_id, COUNT(*) as n')->pluck('n', 'hizmet_id');
+            $hizmetler = [];
+            foreach ($bolgeler as $b) {
+                $kalan = max(0, (int) $ap->seans_sayisi - (int) ($kullanilan[$b->hizmet_id] ?? 0));
+                if ($kalan > 0) {
+                    $hizmetler[] = ['hizmet_id' => (int) $b->hizmet_id, 'ad' => $b->hizmet_adi, 'kalan' => $kalan, 'toplam' => (int) $ap->seans_sayisi,
+                        'sure' => (int) ($b->sure ?? 0) ?: ($salonSure[$b->hizmet_id] ?? 30)];
+                }
+            }
+            if ($hizmetler) {
+                $sonuc[] = [
+                    'tur' => 'paket', 'adi' => $ap->paket_adi, 'adisyon_paket_id' => (int) $ap->id, 'adisyon_hizmet_id' => null,
+                    'satis_tarihi' => $ap->tarih, 'paket_sure' => ($ap->paket_sure ?? null) ? (int) $ap->paket_sure : null,
+                    'hizmetler' => $hizmetler,
+                ];
+            }
+        }
+
+        return $sonuc;
+    }
+
+    /** Salonun hizmet sureleri (hizmet basina son kayit) — paket bolgesi suresi yoksa yedek. */
+    private function salonHizmetSureleri(int $salonId): array
+    {
+        $son = DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->groupBy('hizmet_id')->selectRaw('MAX(id) as id')->pluck('id');
+
+        return DB::table('salon_sunulan_hizmetler')->whereIn('id', $son)->whereNotNull('sure_dk')->pluck('sure_dk', 'hizmet_id')
+            ->map(fn ($x) => (int) $x)->all();
+    }
+
     // ─────────────────────────────────────────────────────────────
 
     /** Hizmet basina EN SON salon_sunulan_hizmetler kaydi; santral haric; duzenlemede randevunun pasif hizmetleri dahil. */

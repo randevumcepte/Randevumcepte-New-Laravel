@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
  * Randevu formu veri uclari (Faz 3b-2) — salt okuma.
  *   GET /api/v2/randevu/form-verisi?salon_id=&randevu_id=   (secenekler + duzenleme on doldurmasi)
  *   GET /api/v2/randevu/musteri-ara?salon_id=&q=            (portfoy aramasi, maskeli telefon)
+ *   GET /api/v2/randevu/musteri-paketleri?salon_id=&user_id= (kalan seansli paket/hizmet satislari)
  * Yetki: randevu.olustur VEYA randevu.duzenle_iptal. Telefon: musteri.telefon_gor.
  */
 class RandevuFormController extends Controller
@@ -37,6 +38,14 @@ class RandevuFormController extends Controller
         [$uid, $salonId] = $this->kapsam($request);
 
         return ApiCevap::basarili($this->servis->musteriAra($salonId, (string) $request->input('q', ''), $this->telGor($uid, $salonId)));
+    }
+
+    /** GET /api/v2/randevu/musteri-paketleri?salon_id=&user_id= — kalan seansli paket/hizmet satislari. */
+    public function musteriPaketleri(Request $request)
+    {
+        [, $salonId] = $this->kapsam($request);
+
+        return ApiCevap::basarili($this->servis->musteriPaketleri($salonId, (int) $request->input('user_id')));
     }
 
     /** @return array{0:int,1:int} [yetkili id, salon id] */

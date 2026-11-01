@@ -314,6 +314,38 @@
   background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #c026d3 100%); box-shadow: 0 6px 16px rgba(124,58,237,.28); }
 .rf-kaydet:disabled { opacity: .6; cursor: wait; }
 #rfSonuc .t-onizleme, #rfSonuc .t-rf-cakisma { margin-bottom: 12px; }
+/* Paket randevusu (seans takibi) */
+.rf-paket-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid #e9d5ff;
+  border-radius: 8px; background: #faf5ff; color: #7c3aed; font: inherit; font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; cursor: pointer; }
+.rf-paket-btn:hover { background: #f3e8ff; }
+.rf-bolum::after { order: 1; }
+.rf-bolum .rf-paket-btn { order: 2; margin-left: 0; }
+.rf-paket-secim { border: 1px solid #e9d5ff; border-radius: 12px; background: #fff; margin-bottom: 12px; overflow: hidden; }
+.rf-paket-secim-bas { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #faf5ff; color: #5b21b6; font-size: 13px; font-weight: 700; }
+.rf-x { margin-left: auto; border: 0; background: transparent; color: #9ca3af; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 6px; }
+.rf-x:hover { color: #dc2626; background: #fef2f2; }
+.rf-ps-satis { padding: 8px 12px; border-top: 1px solid #f3f4f6; }
+.rf-ps-ust { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.rf-ps-ust small { color: #9ca3af; font-size: 12px; }
+.rf-ps-hizmet { display: flex; align-items: center; gap: 10px; padding: 5px 0 5px 26px; font-size: 13px; color: #374151; }
+.rf-ps-hizmet label { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.rf-ps-alt { display: flex; gap: 10px; padding: 10px 12px; border-top: 1px solid #f3f4f6; background: #fcfcfd; }
+.rf-ps-alt .rf-vazgec, .rf-ps-alt .rf-kaydet { height: 34px; font-size: 13px; }
+.rf-seans-rozet { font-size: 11.5px; font-weight: 700; color: #047857; background: #ecfdf5; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.rf-adet { display: inline-flex; align-items: center; border: 1px solid #e3e3ea; border-radius: 8px; overflow: hidden; background: #fff; }
+.rf-adet button { width: 24px; height: 24px; border: 0; background: #f9fafb; color: #4b5563; cursor: pointer; font-size: 14px; }
+.rf-adet button:hover { background: #f3e8ff; color: #7c3aed; }
+.rf-adet b { min-width: 24px; text-align: center; font-size: 12.5px; }
+.rf-paket-kart { border-color: #e9d5ff; background: linear-gradient(180deg, #fdfaff, #fff 60%); }
+.rf-paket-kart .rf-no { display: inline-flex; gap: 6px; align-items: center; }
+.rf-odendi { color: #047857; font-weight: 700; }
+.rf-paket-liste { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.rf-paket-kalem { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; background: #fff; border: 1px solid #f3f4f6; font-size: 13px; }
+.rf-paket-kalem > span:first-child { flex: 1; }
+.rf-paket-kalem .rf-x { margin-left: 0; font-size: 16px; }
+.rf-paket-sure { display: flex; align-items: center; gap: 10px; }
+.rf-paket-sure .rf-etiket { margin: 0; }
+.rf-paket-sure .rf-girdi { width: 110px; }
 .rf-uc { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
 .rf-bilgi { display: flex; gap: 8px; padding: 12px; border-radius: 10px; background: #fff7ed; color: #9a3412; font-size: 13px; margin-bottom: 12px; }
 #kpSonuc .t-onizleme { margin-bottom: 12px; }

@@ -118,6 +118,9 @@ class RandevuKayitServisi
                 'fiyat'         => $bos($h['fiyat'] ?? null) ? 0 : (float) $h['fiyat'],
                 'birlestir'     => (string) ($h['birlestir'] ?? '') === '1' || ($h['birlestir'] ?? null) === true ? '1' : '',
                 'dusum_miktari' => $bos($h['dusum_miktari'] ?? null) ? null : max(1, (int) $h['dusum_miktari']),
+                // Paket randevusu: secilen satis (tercih). Gecerliyse seans ONDAN dusulur.
+                'adisyon_paket_id'  => $bos($h['adisyon_paket_id'] ?? null) ? null : (int) $h['adisyon_paket_id'],
+                'adisyon_hizmet_id' => $bos($h['adisyon_hizmet_id'] ?? null) ? null : (int) $h['adisyon_hizmet_id'],
             ];
             if (! $h['hizmet_id'] || ! DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $h['hizmet_id'])->exists()) {
                 throw new GecersizIslemException('Hizmet '.($i + 1).' bu işletmede tanımlı değil.');
@@ -450,7 +453,8 @@ class RandevuKayitServisi
                         $telafiKullanilan[] = $telafi;
                         $seans = ['islem' => 'telafi_bagla', 'aps_id' => $telafi];
                     } else {
-                        $seans = $this->yeniSeansAdayi($salonId, $gi['user_id'], $hz, $rezerve);
+                        $seans = $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve)
+                            ?? $this->yeniSeansAdayi($salonId, $gi['user_id'], $hz, $rezerve);
                     }
                 }
 
@@ -516,6 +520,51 @@ class RandevuKayitServisi
                 ->orderBy('aps.seans_tarih')->value('aps.id');
             if ($id) {
                 return (int) $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Paket randevusu formunda SECILEN satis (adisyon_paket_id / adisyon_hizmet_id)
+     * gecerliyse seansi ONDAN dus. Gecerli = ayni musteri + salon, bu hizmeti iceriyor,
+     * seans_sayisi > 0, otomatik_randevu_olusturuldu != 1 ve kalan seans var.
+     * Gecersizse null → eski otomatik aday secimi (en eski satis).
+     *
+     * Bilincli fark: eski sistem (web + mobil) bu alanlari YOK SAYIP ayni hizmeti
+     * iceren en eski satisi seciyordu; kullanici A paketini secse B'den dusebiliyordu.
+     */
+    private function tercihEdilenSeans(int $salonId, int $userId, array $h, array &$rezerve): ?array
+    {
+        $hz = $h['hizmet_id'];
+        $otoDegil = fn ($q, string $t) => $q->where(fn ($w) => $w->whereNull($t.'.otomatik_randevu_olusturuldu')->orWhere($t.'.otomatik_randevu_olusturuldu', '!=', 1));
+
+        if ($h['adisyon_paket_id']) {
+            $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'ap.adisyon_id', '=', 'a.id')
+                ->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
+                ->where('ap.id', $h['adisyon_paket_id'])->where('ph.hizmet_id', $hz)
+                ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
+            $ap = $otoDegil($q, 'ap')->first(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans']);
+            $anahtar = 'AP:'.($ap->id ?? 0).':'.$hz;
+            if ($ap && DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi) {
+                $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
+
+                return ['islem' => 'yeni_seans', 'adisyon_paket_id' => (int) $ap->id, 'tercih' => true,
+                    'seans_no' => (int) $ap->kullanilan_seans + (int) $ap->kullanilmayan_seans + 1];
+            }
+        }
+        if ($h['adisyon_hizmet_id']) {
+            $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'ah.adisyon_id', '=', 'a.id')
+                ->where('ah.id', $h['adisyon_hizmet_id'])->where('ah.hizmet_id', $hz)
+                ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
+            $ah = $otoDegil($q, 'ah')->first(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans']);
+            $anahtar = 'AH:'.($ah->id ?? 0);
+            if ($ah && DB::table('adisyon_paket_seanslar')->where('adisyon_hizmet_id', $ah->id)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ah->seans_sayisi) {
+                $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
+
+                return ['islem' => 'yeni_seans', 'adisyon_hizmet_id' => (int) $ah->id, 'tercih' => true,
+                    'seans_no' => (int) $ah->kullanilan_seans + (int) $ah->kullanilmayan_seans + 1];
             }
         }
 

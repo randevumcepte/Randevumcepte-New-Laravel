@@ -728,8 +728,13 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
       }))
       : [yeniSatir()],
     yardimcilar: mevcut?.yardimcipersoneller || [],
+    paketler: [], // musterinin kalan seansli satislari (seans takibi)
   };
   const satirToplam = (s) => {
+    if (s.paket) {
+      const v = s.kalemler.reduce((t, k) => t + Number(k.sure || 0), 0);
+      return { sure: s.elleSure ? Number(s.sure || 0) : (s.paketSure || v), fiyat: 0 };
+    }
     const kat = s.hizmetler.map(hizmetBul).filter(Boolean);
     return {
       sure: s.elleSure ? Number(s.sure || 0) : kat.reduce((t, h) => t + Number(h.sure_dk || 0), 0),
@@ -757,7 +762,8 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
           <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="rfTarih" value="${esc(gun)}" readonly></div>
           <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-clock"></i> Saat</label><select class="rf-girdi" id="rfSaat">${saatSecenekleri(saat, 'Saat seçin')}</select></div>
         </div>
-        <div class="rf-bolum"><span>Hizmetler</span></div>
+        <div class="rf-bolum"><span>Hizmetler</span><button type="button" class="rf-paket-btn" id="rfPaketBtn" hidden><i class="bi bi-gift"></i> Paketler <b></b></button></div>
+        <div id="rfPaketSecim"></div>
         <div id="rfSatirlar"></div>
         <button type="button" class="rf-ekle" id="rfEkle"><i class="bi bi-plus-lg"></i> Hizmet ekle</button>
         <div class="rf-ozet" id="rfOzet"></div>
@@ -796,7 +802,13 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
       k.innerHTML = `<div class="rf-musteri-secili"><span class="rf-avatar">${esc((f.musteri.ad || '?').charAt(0))}</span><div><b>${esc(f.musteri.ad)}</b><small>${esc(f.musteri.telefon || '')}</small></div>
         ${mevcut ? '' : '<button type="button" class="rf-degistir">Değiştir</button>'}</div>`;
       const d = el('.rf-degistir', k);
-      if (d) d.onclick = () => { f.musteri = null; musteriCiz(); };
+      if (d) d.onclick = () => {
+        f.musteri = null; f.paketler = [];
+        f.satirlar = f.satirlar.filter((x) => !x.paket);
+        if (!f.satirlar.length) f.satirlar.push(yeniSatir());
+        el('#rfPaketBtn', ov).hidden = true; el('#rfPaketSecim', ov).innerHTML = '';
+        musteriCiz(); satirlariCiz();
+      };
       return;
     }
     k.innerHTML = `<div class="rf-arama"><i class="bi bi-search"></i><input id="rfAra" placeholder="Ad veya telefon ile arayın" autocomplete="off"></div><div class="rf-sonuclar" id="rfSonuclar"></div>`;
@@ -812,7 +824,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
           ? liste.map((m) => `<button type="button" data-id="${m.id}"><span class="rf-avatar">${esc((m.ad || '?').charAt(0))}</span><b>${esc(m.ad)}</b><small>${esc(m.telefon || '')}</small></button>`).join('')
           : '<div class="rf-bos">Sonuç yok</div>';
         el('#rfSonuclar', k).querySelectorAll('[data-id]').forEach((b) => {
-          b.onclick = () => { f.musteri = liste.find((m) => String(m.id) === b.dataset.id); musteriCiz(); };
+          b.onclick = () => { f.musteri = liste.find((m) => String(m.id) === b.dataset.id); musteriCiz(); paketYukle(true); };
         });
       }, 300);
     };
@@ -869,6 +881,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
   function satirlariCiz(odakSatir = null) {
     hzListeKapat();
     el('#rfSatirlar', ov).innerHTML = f.satirlar.map((s, i) => {
+      if (s.paket) return paketKartHTML(s, i);
       const t = satirToplam(s);
       const hz = s.hizmetler.map((id) => `<span class="rf-chip">${esc(hizmetBul(id)?.ad || 'Hizmet')}<button type="button" data-cikar="${id}" title="Çıkar">×</button></span>`).join('');
       return `<div class="rf-satir" data-i="${i}">
@@ -899,9 +912,11 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
           s[sel.dataset.k] = sel.value;
           // Oda personeli daraltir; secili personel listede kalmadiysa temizlenir.
           if (sel.dataset.k === 'oda_id' && s.personel_id && !izinliPersoneller(s).some((p) => String(p.id) === s.personel_id)) s.personel_id = '';
-          // Kaynak hizmeti daraltir; listede kalmayan secili hizmetler duser.
-          const izin = new Set(izinliHizmetler(s).map((h) => String(h.hizmet_id)));
-          s.hizmetler = s.hizmetler.filter((id) => izin.has(id));
+          // Kaynak hizmeti daraltir; listede kalmayan secili hizmetler duser (paket kartinda hizmetler sabit).
+          if (!s.paket) {
+            const izin = new Set(izinliHizmetler(s).map((h) => String(h.hizmet_id)));
+            s.hizmetler = s.hizmetler.filter((id) => izin.has(id));
+          }
           satirlariCiz();
         };
       });
@@ -912,6 +927,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
           s[k === 'sure' ? 'elleSure' : 'elleFiyat'] = inp.value.trim() !== '';
           ozetCiz();
           const t = satirToplam(s);
+          if (s.paket) { sat.querySelector('.rf-meta').firstChild.textContent = `${s.kalemler.length} hizmet · ${t.sure} dk · `; return; }
           sat.querySelector('.rf-meta').textContent = [t.sure ? t.sure + ' dk' : '', t.fiyat ? paraTL(t.fiyat) : ''].filter(Boolean).join(' · ');
         };
       });
@@ -921,8 +937,26 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
         b.onclick = () => { s.hizmetler = s.hizmetler.filter((x) => x !== b.dataset.cikar); satirlariCiz(i); };
       });
       const ara = sat.querySelector('.rf-hz-ara');
-      ara.onfocus = () => hzListeAc(i, ara);
-      sat.querySelector('.rf-hz').onclick = (e) => { if (!e.target.closest('[data-cikar]')) ara.focus(); };
+      if (ara) {
+        ara.onfocus = () => hzListeAc(i, ara);
+        sat.querySelector('.rf-hz').onclick = (e) => { if (!e.target.closest('[data-cikar]')) ara.focus(); };
+      }
+      sat.querySelectorAll('[data-adet]').forEach((b) => {
+        b.onclick = () => {
+          const k = s.kalemler[+b.dataset.k];
+          k.adet = Math.max(1, Math.min(k.kalan, k.adet + Number(b.dataset.adet)));
+          satirlariCiz();
+        };
+      });
+      sat.querySelectorAll('[data-kalem-cikar]').forEach((b) => {
+        b.onclick = () => {
+          s.kalemler.splice(+b.dataset.kalemCikar, 1);
+          s.hizmetler = s.kalemler.map((k) => String(k.hizmet_id));
+          if (!s.kalemler.length) f.satirlar.splice(i, 1);
+          if (!f.satirlar.length) f.satirlar.push(yeniSatir());
+          satirlariCiz();
+        };
+      });
       sat.querySelector('.rf-sil').onclick = () => { f.satirlar.splice(i, 1); f.yardimcilar = []; satirlariCiz(); };
     });
     ozetCiz();
@@ -961,6 +995,16 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
   const kalemler = () => {
     const out = [];
     f.satirlar.forEach((s, i) => {
+      if (s.paket) {
+        const sureler = dagit(satirToplam(s).sure, s.kalemler.map((k) => Number(k.sure || 0)), 0);
+        if (i > 0 && s.ustBirlestir && out.length) out[out.length - 1].birlestir = '1';
+        s.kalemler.forEach((k, j) => out.push({
+          hizmet_id: String(k.hizmet_id), personel_id: s.personel_id || null, oda_id: odaVar ? (s.oda_id || null) : null,
+          cihaz_id: cihazVar ? (s.cihaz_id || null) : null, sure_dk: sureler[j], fiyat: 0, birlestir: '',
+          dusum_miktari: k.adet, adisyon_paket_id: s.adisyon_paket_id, adisyon_hizmet_id: s.adisyon_hizmet_id, paket_adi: s.adi,
+        }));
+        return;
+      }
       const kat = s.hizmetler.map(hizmetBul);
       const sureler = s.elleSure ? dagit(Number(s.sure || 0), kat.map((h) => Number(h?.sure_dk || 0)), 0) : kat.map((h) => Number(h?.sure_dk || 0));
       const fiyatlar = s.elleFiyat ? dagit(Number(String(s.fiyat).replace(',', '.') || 0), kat.map((h) => Number(h?.fiyat || 0)), 2) : kat.map((h) => Number(h?.fiyat || 0));
@@ -1019,6 +1063,110 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
     kutu.innerHTML = randevuOnizleme(sonuc.plan, fv);
     kutu.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
+  // ── Paket randevusu (seans takibi) ──
+  // Eski akis: musteri secilince kalan seansli satislar gelir, varsa secim acilir;
+  // secilenler forma "paket karti" olarak eklenir (fiyat 0 — paket odenmis).
+  async function paketYukle(otomatikAc) {
+    if (!f.musteri) return;
+    const r2 = await api('GET', '/randevu/musteri-paketleri', { params: { salon_id: salonId, user_id: f.musteri.id } });
+    f.paketler = r2.ok && r2.govde?.basarili ? r2.govde.veri : [];
+    const btn = el('#rfPaketBtn', ov);
+    btn.hidden = !f.paketler.length;
+    btn.querySelector('b').textContent = f.paketler.length ? `(${f.paketler.length})` : '';
+    btn.onclick = () => (el('#rfPaketSecim', ov).innerHTML ? (el('#rfPaketSecim', ov).innerHTML = '') : paketSecimCiz());
+    if (otomatikAc && f.paketler.length) paketSecimCiz();
+  }
+  const satisAnahtari = (p) => (p.adisyon_paket_id ? 'AP' + p.adisyon_paket_id : 'AH' + p.adisyon_hizmet_id);
+  function paketSecimCiz() {
+    const kutu = el('#rfPaketSecim', ov);
+    kutu.innerHTML = `<div class="rf-paket-secim">
+      <div class="rf-paket-secim-bas"><i class="bi bi-gift"></i> ${esc(f.musteri.ad)} — kalan seanslı paket / hizmetler<button type="button" class="rf-x" data-ps="kapat" title="Kapat">×</button></div>
+      ${f.paketler.map((p, pi) => `<div class="rf-ps-satis">
+        <label class="rf-ps-ust"><input type="checkbox" data-ps-tumu="${pi}"> <span class="rf-ps-ikon">${p.tur === 'paket' ? '📦' : '✨'}</span> <b>${esc(p.adi)}</b>
+          <small>${p.tur === 'paket' ? 'Paket' : 'Tek hizmet'}${p.satis_tarihi ? ' · ' + esc(new Date(p.satis_tarihi).toLocaleDateString('tr-TR')) : ''}</small></label>
+        ${p.hizmetler.map((h, hi) => `<div class="rf-ps-hizmet">
+          <label><input type="checkbox" data-ps="${pi}:${hi}"> ${esc(h.ad)}</label>
+          <span class="rf-seans-rozet">${h.kalan}/${h.toplam} seans</span>
+          <span class="rf-adet" title="Bu randevuda düşülecek seans"><button type="button" data-ps-adet="${pi}:${hi}:-1">−</button><b id="psAdet${pi}_${hi}">1</b><button type="button" data-ps-adet="${pi}:${hi}:1">+</button></span>
+        </div>`).join('')}
+      </div>`).join('')}
+      <div class="rf-ps-alt"><button type="button" class="rf-vazgec" data-ps="kapat">Kapat</button><button type="button" class="rf-kaydet" data-ps="ekle"><i class="bi bi-plus-lg"></i> Seçilenleri ekle</button></div>
+    </div>`;
+    const adet = {};
+    kutu.querySelectorAll('[data-ps-tumu]').forEach((c) => {
+      c.onchange = () => kutu.querySelectorAll(`[data-ps^="${c.dataset.psTumu}:"]`).forEach((x) => { x.checked = c.checked; });
+    });
+    kutu.querySelectorAll('[data-ps-adet]').forEach((b) => {
+      b.onclick = () => {
+        const [pi, hi, d] = b.dataset.psAdet.split(':').map(Number);
+        const k = `${pi}:${hi}`;
+        adet[k] = Math.max(1, Math.min(f.paketler[pi].hizmetler[hi].kalan, (adet[k] || 1) + d));
+        el(`#psAdet${pi}_${hi}`, kutu).textContent = adet[k];
+        kutu.querySelector(`[data-ps="${k}"]`).checked = true;
+      };
+    });
+    kutu.querySelectorAll('[data-ps="kapat"]').forEach((b) => { b.onclick = () => { kutu.innerHTML = ''; }; });
+    kutu.querySelector('[data-ps="ekle"]').onclick = () => {
+      const secim = [...kutu.querySelectorAll('input[data-ps]:checked')].map((c) => c.dataset.ps.split(':').map(Number));
+      if (!secim.length) return panel().toast('En az bir paket/hizmet seçin.', 'hata');
+      paketleriEkle(secim, adet);
+      kutu.innerHTML = '';
+    };
+  }
+  function paketleriEkle(secim, adet) {
+    // Bos manuel satiri kaldir; kaynaklarini paket kartina aktar (eski: _v2InheritFromRemoved).
+    const bos = f.satirlar.find((x) => !x.paket && !x.hizmetler.length);
+    const miras = bos ? { personel_id: bos.personel_id, oda_id: bos.oda_id, cihaz_id: bos.cihaz_id } : (f.satirlar.find((x) => x.personel_id) || {});
+    f.satirlar = f.satirlar.filter((x) => x.paket || x.hizmetler.length);
+    const gruplar = {};
+    secim.forEach(([pi, hi]) => { (gruplar[pi] = gruplar[pi] || []).push(hi); });
+    Object.entries(gruplar).forEach(([pi, hiler]) => {
+      const p = f.paketler[pi];
+      let kart = f.satirlar.find((x) => x.paket && x.anahtar === satisAnahtari(p)); // ayni satis → tek kart
+      if (!kart) {
+        kart = { paket: true, anahtar: satisAnahtari(p), adi: p.adi, tur: p.tur, adisyon_paket_id: p.adisyon_paket_id, adisyon_hizmet_id: p.adisyon_hizmet_id,
+          kalemler: [], hizmetler: [], personel_id: miras.personel_id || '', oda_id: miras.oda_id || '', cihaz_id: miras.cihaz_id || '',
+          sure: '', elleSure: false, ustBirlestir: false, paketSure: null };
+        f.satirlar.push(kart);
+      }
+      hiler.forEach((hi) => {
+        const h = p.hizmetler[hi];
+        if (kart.kalemler.some((k) => k.hizmet_id === h.hizmet_id)) return;
+        kart.kalemler.push({ hizmet_id: h.hizmet_id, ad: h.ad, kalan: h.kalan, toplam: h.toplam, sure: h.sure, adet: adet[`${pi}:${hi}`] || 1 });
+      });
+      kart.hizmetler = kart.kalemler.map((k) => String(k.hizmet_id));
+      // Paketin TUM bolgeleri secildiyse paket suresi (Flutter: paket_sure), yoksa toplam.
+      kart.paketSure = p.paket_sure && kart.kalemler.length === p.hizmetler.length ? p.paket_sure : null;
+    });
+    if (!f.satirlar.length) f.satirlar.push(yeniSatir());
+    satirlariCiz();
+  }
+  function paketKartHTML(s, i) {
+    const t = satirToplam(s);
+    return `<div class="rf-satir rf-paket-kart" data-i="${i}">
+      <div class="rf-satir-bas">
+        <span class="rf-no"><i class="bi bi-gift"></i> ${esc(s.adi)}</span>
+        <span class="rf-meta">${s.kalemler.length} hizmet · ${t.sure} dk · <span class="rf-odendi">Paketten (ödendi)</span></span>
+        ${i > 0 ? `<label class="rf-birlestir"><input type="checkbox" data-k="ustBirlestir" ${s.ustBirlestir ? 'checked' : ''}> Üsttekiyle birleştir</label>` : '<span class="rf-bosluk"></span>'}
+        <button type="button" class="rf-sil" title="Paketi çıkar"><i class="bi bi-trash"></i></button>
+      </div>
+      <div class="rf-paket-liste">${s.kalemler.map((k, j) => `<div class="rf-paket-kalem">
+        <span>${esc(k.ad)}</span><span class="rf-seans-rozet">kalan ${k.kalan}/${k.toplam}</span>
+        <span class="rf-adet" title="Düşülecek seans"><button type="button" data-adet="-1" data-k="${j}">−</button><b>${k.adet}</b><button type="button" data-adet="1" data-k="${j}">+</button></span>
+        <button type="button" class="rf-x" data-kalem-cikar="${j}" title="Çıkar">×</button></div>`).join('')}</div>
+      <div class="rf-satir-1 rf-paket-sure">
+        <label class="rf-etiket">Toplam süre (dk)</label>
+        <input class="rf-girdi" type="number" min="5" step="5" data-k="sure" value="${esc(s.elleSure ? s.sure : t.sure)}">
+      </div>
+      <div class="rf-satir-2">
+        <select class="rf-girdi" data-k="personel_id">${secenek(izinliPersoneller(s), s.personel_id, 'Personel…')}</select>
+        ${cihazVar ? `<select class="rf-girdi" data-k="cihaz_id">${secenek(fv.cihazlar, s.cihaz_id, 'Cihaz…')}</select>` : ''}
+        ${odaVar ? `<select class="rf-girdi" data-k="oda_id">${secenek(fv.odalar, s.oda_id, 'Oda… (otomatik)')}</select>` : ''}
+      </div>
+    </div>`;
+  }
+  if (mevcut && f.musteri) paketYukle(false);
+
   // ── Saat kapama sekmesi ──
   function kapamaPaneli() {
     const kaynaklar = durum.kaynaklar.filter((k) => TUR_KOLON[k.tur]);

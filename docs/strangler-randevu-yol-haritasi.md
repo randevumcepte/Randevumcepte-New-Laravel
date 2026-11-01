@@ -200,6 +200,17 @@ Kapsam: İŞLETME akışı (kaynak `salon`). Müşteri uygulaması / online rand
   anda", tekrar (yalnız yeni), not; çakışmada "Yine de kaydet" (oda doluysa yok);
   yazma kapalıyken plan önizlemesi (oda otomatik, seans kararı, adisyon fiyatı).
 
+### Faz 3c — Paket randevusu (seans takibi) (YAPILDI)
+- `GET /randevu/musteri-paketleri?salon_id=&user_id=` — eski `paketVarmiKontrolu`'nun
+  bölge-bazlı kalan formülü (her APS bir seans). Bilinçli fark: liste yalnızca kayıtta
+  BAĞLANABİLECEK satışlar (seans_sayisi>0, otomatik_randevu_olusturuldu≠1 satır bazında).
+- Form: müşteri seçilince "Paketler (n)" + seçim paneli otomatik açılır (web); paket
+  bazında tümü ya da hizmet bazında seçim + ADET (Flutter); seçilenler "paket kartı"
+  (fiyat 0 — ödenmiş, toplam süre; tüm bölgeler seçiliyse paket süresi).
+- Kayıt: hizmet satırındaki `adisyon_paket_id` / `adisyon_hizmet_id` TERCİHİ geçerliyse
+  seans o satıştan düşülür (eski web+mobil bu alanları yok sayıp en eski satışı seçiyordu);
+  bekleyen seans telafisi önceliği korunur; `dusum_miktari` = adet.
+
 ### Faz 4a — Web pilot kesmesi (YAPILDI — karar: önce web, Flutter sonra)
 Flutter randevu çağrıları çoğunlukla token göndermediği için v1 adreslerini nginx
 ile v2'ye yönlendirmek güvenlik açığı yaratmadan mümkün değil; Flutter dondurulmuş

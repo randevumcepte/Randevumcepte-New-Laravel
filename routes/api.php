@@ -92,6 +92,7 @@ Route::prefix('v2')->group(function () {
         // RANDEVU OLUSTUR / GUNCELLE (Faz 3b, isletme) — cakisma + seans havuzu; ayni kill-switch.
         Route::get('/randevu/form-verisi', [RandevuFormController::class, 'formVerisi']);
         Route::get('/randevu/musteri-ara', [RandevuFormController::class, 'musteriAra']);
+        Route::get('/randevu/musteri-paketleri', [RandevuFormController::class, 'musteriPaketleri']);
         Route::post('/randevu', [RandevuKayitController::class, 'olustur']);
         Route::patch('/randevu/{id}', [RandevuKayitController::class, 'guncelle'])->whereNumber('id');
         Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
