@@ -200,7 +200,31 @@ Kapsam: İŞLETME akışı (kaynak `salon`). Müşteri uygulaması / online rand
   anda", tekrar (yalnız yeni), not; çakışmada "Yine de kaydet" (oda doluysa yok);
   yazma kapalıyken plan önizlemesi (oda otomatik, seans kararı, adisyon fiyatı).
 
-### Faz 4 — Kesme (cutover) + Google Takvim doğrulaması (EN SON)
+### Faz 4a — Web pilot kesmesi (YAPILDI — karar: önce web, Flutter sonra)
+Flutter randevu çağrıları çoğunlukla token göndermediği için v1 adreslerini nginx
+ile v2'ye yönlendirmek güvenlik açığı yaratmadan mümkün değil; Flutter dondurulmuş
+olduğundan v1/monolitte kalır (aynı DB + ortak bildirim kodu → tutarlı).
+- **Salon bazlı yazma:** `RANDEVU_V2_YAZMA_SALONLARI=20,236` (pilot) veya
+  `RANDEVU_V2_YAZMA_AKTIF=true` (genel). Tek kapı `App\Support\RandevuYazma`.
+- **Web köprüsü (monolit):** `GET /isletmeyonetim/v2-gecis?hedef=takvim&sube=` →
+  oturumdaki yetkili için Passport token (`v2-web`), v2'ye `#token=` fragment ile
+  yönlendirme; 12 saatten eski `v2-web` tokenları iptal; hedef beyaz liste; şube bağı
+  denetimi. v2 kabuğu fragment token'ı saklar ve adresten siler.
+- **Menü:** `V2_TAKVIM_SALONLARI=20` (veya `*`) olan salonlarda eski paneldeki
+  "Randevu Takvimi" v2 takvimini açar; v2 takvimde "Klasik takvim" ile geri dönüş.
+- v2'de henüz OLMAYAN (klasik takvimde kalan): grup dersi blokları, salon renk sırası /
+  tek renk, PAKET/KARMA etiketi, müşteri uygulaması kaynaklı özel akışlar.
+
+### Pilot açılış adımları (test salonu)
+1. Eski sunucu `.env`: `V2_TAKVIM_SALONLARI=<salon>` (+ gerekirse `V2_PANEL_URL`);
+   config cache kullanılıyorsa `config:clear`.
+2. v2 sunucu `.env`: `RANDEVU_V2_YAZMA_SALONLARI=<salon>`; `php artisan config:clear`.
+3. Eski sunucu: `v2_bildirim_kuyrugu` tablosu var, `v2:bildirim-isle --tek` hatasız.
+4. Test: geldi (kod/KVKK/seans seçimi), gelmedi, iptal/red, onay, seans telafisi,
+   telafi randevusu, saat kapama, sürükle-bırak, oluştur/düzenle (+çakışma).
+   Her işlemde SMS/WA/push'un geldiğini ve `v2_bildirim_kuyrugu.durum=1` olduğunu kontrol et.
+
+### Faz 4b — Flutter v2'ye geçiş (Flutter dondurması bitince) + Google Takvim doğrulaması (EN SON)
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,
 APS havuz uzlaştırma, çakışma (`kaynak_cakisma_kontrol`), telafi (A-tipi),
 saat kapama sentinelleri. Dönüş: `cakismavar` + `cakisanunsurlar`.

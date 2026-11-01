@@ -79,7 +79,7 @@
     </div>
 
     {{-- Ortak kabuk JS (menü/header'ı /api/v2/kabuk ile doldurur) --}}
-    <script type="module" src="/js/panel-kabuk.js?v=3"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=4"></script>
     @stack('betik')
 </body>
 </html>

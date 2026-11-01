@@ -12,6 +12,14 @@
 const BASE = '/api/v2';
 const _qp = new URLSearchParams(location.search);
 if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
+// Eski panel koprusu (/isletmeyonetim/v2-gecis): token URL FRAGMENT'inda gelir
+// (#token=...) — sunucu loglarina ve Referer'a dusmez. Sakla, adres cubugundan sil.
+// Kabuk diger v2 modullerinden ONCE yuklendigi icin sayfa istekleri tokeni bulur.
+const _hash = new URLSearchParams(location.hash.slice(1));
+if (_hash.get('token')) {
+  localStorage.setItem('rc_access_token', _hash.get('token'));
+  history.replaceState(null, '', location.pathname + location.search);
+}
 const token = () => localStorage.getItem('rc_access_token') || '';
 
 const el = (s) => document.querySelector(s);

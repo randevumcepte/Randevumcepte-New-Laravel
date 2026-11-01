@@ -8,6 +8,7 @@ use App\Services\Randevu\RandevuKayitServisi;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\RandevuYazma;
 use Illuminate\Http\Request;
 
 /**
@@ -16,7 +17,7 @@ use Illuminate\Http\Request;
  *   POST  /api/v2/randevu        → randevu.olustur      (salon_id govdede)
  *   PATCH /api/v2/randevu/{id}   → randevu.duzenle_iptal
  * Cakisma bir HATA degil, is sonucudur: basarili zarf + veri.cakismavar='1'.
- * 'dry_run' varsayilan true; gercek yazma config('randevu.yazma_aktif').
+ * 'dry_run' varsayilan true; gercek yazma RandevuYazma (config/randevu.php).
  */
 class RandevuKayitController extends Controller
 {
@@ -58,7 +59,7 @@ class RandevuKayitController extends Controller
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! config('randevu.yazma_aktif')) {
+        if ($yaz && ! RandevuYazma::acik($salonId)) {
             return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
         }
 

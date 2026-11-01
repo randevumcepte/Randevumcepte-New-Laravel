@@ -8,13 +8,14 @@ use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Randevu\RandevuTakvimYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\RandevuYazma;
 use Illuminate\Http\Request;
 
 /**
  * Takvim uzerinden yazma uclari (Faz 3a) — ince controller.
  *   saat kapama ekle/sil → randevu.kapanis_blok_ekle
  *   surukle-birak/boyut  → randevu.duzenle_iptal
- * Hepsi 'dry_run' alir (varsayilan true); gercek yazma config('randevu.yazma_aktif').
+ * Hepsi 'dry_run' alir (varsayilan true); gercek yazma RandevuYazma (config/randevu.php).
  */
 class RandevuTakvimController extends Controller
 {
@@ -77,7 +78,7 @@ class RandevuTakvimController extends Controller
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! config('randevu.yazma_aktif')) {
+        if ($yaz && ! RandevuYazma::acik($salonId)) {
             return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
         }
 

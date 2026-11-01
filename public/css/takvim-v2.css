@@ -17,6 +17,9 @@
   padding: 11px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(43, 182, 115, .22); transition: .15s;
 }
 .t-yeni-btn:hover { transform: translateY(-1px); }
+.t-ust-sag { display: flex; align-items: center; gap: 14px; }
+.t-klasik { color: var(--rc-sol); font-size: 13.5px; font-weight: 600; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+.t-klasik:hover { color: var(--rc-mor); }
 
 /* ── Araç çubuğu ── */
 .t-arac {

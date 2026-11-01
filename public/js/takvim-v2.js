@@ -112,7 +112,10 @@ function iskeletCiz() {
             <div class="t-alt">Önizleme (v2) · durum işlemleri sunucu yazması açılana kadar plan olarak gösterilir</div>
           </div>
         </div>
-        <button class="t-yeni-btn" id="tYeni"><i class="bi bi-plus-lg"></i> Randevu Oluştur</button>
+        <div class="t-ust-sag">
+          <a class="t-klasik" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}" title="Eski takvime dön"><i class="bi bi-clock-history"></i> Klasik takvim</a>
+          <button class="t-yeni-btn" id="tYeni"><i class="bi bi-plus-lg"></i> Randevu Oluştur</button>
+        </div>
       </div>
 
       <div class="t-arac">

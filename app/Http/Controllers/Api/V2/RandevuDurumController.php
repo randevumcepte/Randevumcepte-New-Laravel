@@ -8,13 +8,14 @@ use App\Services\Randevu\RandevuDurumServisi;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\RandevuYazma;
 use Illuminate\Http\Request;
 
 /**
  * Randevu DURUM uclari (Faz 2) — ince controller.
  *
  * Her uc 'dry_run' alir (VARSAYILAN true): plan doner, hicbir sey yazmaz.
- * dry_run=false ancak config('randevu.yazma_aktif') aciksa yazar; kapaliysa 409.
+ * dry_run=false ancak RandevuYazma (config/randevu.php) aciksa yazar; kapaliysa 409.
  *
  * Yetki: geldi/gelmedi/isaret-kaldir/seans-telafisi/iptal → randevu.duzenle_iptal,
  *        onayla → randevu.onayla.
@@ -87,7 +88,7 @@ class RandevuDurumController extends Controller
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! config('randevu.yazma_aktif')) {
+        if ($yaz && ! RandevuYazma::acik($salonId)) {
             return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
         }
 

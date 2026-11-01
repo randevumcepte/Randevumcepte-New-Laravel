@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Randevu\TelafiRandevuServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\RandevuYazma;
 use Illuminate\Http\Request;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Http\Request;
  * (eski telafiRandevuOlusturApi ile ayni anahtar).
  *
  * Olustur 'dry_run' alir (VARSAYILAN true → prim devri dahil plan). Gercek yazma
- * config('randevu.yazma_aktif') arkasinda; kapaliyken 409.
+ * RandevuYazma (config/randevu.php) arkasinda; kapaliyken 409.
  */
 class RandevuTelafiController extends Controller
 {
@@ -50,7 +51,7 @@ class RandevuTelafiController extends Controller
         $this->kapi->denetle($user->id, $salonId, ['randevu.olustur']);
 
         $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! config('randevu.yazma_aktif')) {
+        if ($yaz && ! RandevuYazma::acik($salonId)) {
             return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
         }
 
