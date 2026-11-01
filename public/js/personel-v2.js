@@ -14,9 +14,11 @@
  */
 
 import { qp, api, el, esc, mesaj, onay, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 
-const ROLLER = { 1: 'Hesap Sahibi', 2: 'Süpervizör', 3: 'Yönetici', 4: 'Sekreter', 5: 'Personel', 7: 'Sanat Yönetmeni', 8: 'Sosyal Medya Uzmanı' };
-const CINSIYETLER = { 0: 'Kadın', 1: 'Erkek' };
+// Hesap turleri + cinsiyetler API'den (GET /personel/form-verisi) — UI'da sabit liste yok.
+let formVeri = { hesap_turleri: [], cinsiyetler: [] };
+const rolAd = (id) => (formVeri.hesap_turleri.find((r) => String(r.id) === String(id)) || {}).ad || ('#' + id);
 const GUNLER = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const CAP = { hizmet: 'Hizmet', urun: 'Urun', paket: 'Paket' };
 
@@ -51,6 +53,8 @@ function iskeletCiz() {
         </div>
         ${yeniBtn}
       </div>
+
+      <div class="rc-ozet" id="pOzet"></div>
 
       <div class="p-filtre-kart">
         <div class="p-ara">
@@ -94,7 +98,7 @@ function satirCiz(p, idx, toplam) {
   const avatar = p.profil_resmi
     ? `<img class="p-avatar" src="${esc(p.profil_resmi)}" alt="" onerror="this.style.visibility='hidden'">`
     : `<span class="p-avatar"></span>`;
-  const rol = p.hesap_turu ? `<span class="p-rol">${esc(ROLLER[p.hesap_turu] || ('#' + p.hesap_turu))}</span>` : '<span class="p-rol">—</span>';
+  const rol = p.hesap_turu ? `<span class="p-rol">${esc(rolAd(p.hesap_turu))}</span>` : '<span class="p-rol">—</span>';
   const maas = p.maas === null || p.maas === undefined ? '<span style="color:#b0b0c0">••••</span>' : esc(p.maas) + ' ₺';
   const duzenleY = yetkiVar('personel.ekle_duzenle');
   const yetkiY = yetkiVar('personel.yetki_yonet');
@@ -116,6 +120,7 @@ function satirCiz(p, idx, toplam) {
 
   const islemler =
     (duzenleY ? `<button class="p-islem p-islem-duzenle" data-aksiyon="duzenle" data-id="${p.id}"><i class="bi bi-pencil"></i> Düzenle</button>` : '') +
+    (duzenleY ? `<button class="p-islem p-islem-yetki" data-aksiyon="sifre" data-id="${p.id}" title="Yeni giriş şifresi gönder"><i class="bi bi-key"></i> Şifre</button>` : '') +
     (yetkiY ? `<button class="p-islem p-islem-yetki" data-aksiyon="yetki" data-id="${p.id}"><i class="bi bi-shield-lock"></i> Yetki</button>` : '') +
     (silY ? `<button class="p-islem p-islem-arsiv" data-aksiyon="arsiv" data-id="${p.id}"><i class="bi bi-archive"></i> Arşivle</button>` : '');
 
@@ -144,6 +149,11 @@ async function yukle() {
   }
   const v = govde.veri;
   sonListe = v.data || [];
+  const o = v.ozet || {};
+  el('#pOzet').innerHTML =
+    ozetKart('bi-people-fill', 'Toplam Personel', o.toplam ?? 0, 'mor') +
+    ozetKart('bi-check2-circle', 'Aktif', o.aktif ?? 0, 'yesil') +
+    ozetKart('bi-calendar-check', 'Takvimde', o.takvimde ?? 0, 'mavi');
   el('#pGovde').innerHTML = sonListe.length
     ? sonListe.map((p, i) => satirCiz(p, i, sonListe.length)).join('')
     : `<tr><td colspan="7" class="p-bos">Personel bulunamadı.</td></tr>`;
@@ -163,6 +173,12 @@ async function satirTiklama(e) {
   if (aksiyon === 'duzenle') return formAc(personelBul(id));
   if (aksiyon === 'yetki') return yetkiAc(personelBul(id));
   if (aksiyon === 'arsiv') return arsivleAkis(personelBul(id));
+  if (aksiyon === 'sifre') {
+    const p = personelBul(id);
+    if (!(await onay(`${p?.personel_adi || 'Personel'} için yeni giriş şifresi oluşturulup WhatsApp/SMS ile gönderilsin mi?`, { baslik: 'Şifre Gönder', tamam: 'Gönder', iptal: 'Vazgeç' }))) return;
+    yazSonuc(await api('POST', `/personel/${id}/sifre-gonder`), 'Yeni şifre personele gönderiliyor.');
+    return;
+  }
   if (aksiyon === 'yukari' || aksiyon === 'asagi') {
     btn.disabled = true;
     const r = await api('PATCH', `/personel/${id}/siralama`, { body: { delta: aksiyon === 'yukari' ? -1 : 1 } });
@@ -245,8 +261,9 @@ function primToggleSatiri(tur, baslik) {
 async function formAc(p) {
   const duzenleme = !!p;
   formDuzenleme = duzenleme;
-  const rolOpt = Object.entries(ROLLER).map(([id, ad]) => `<option value="${id}" ${p && String(p.hesap_turu) === id ? 'selected' : ''}>${ad}</option>`).join('');
-  const cinsOpt = Object.entries(CINSIYETLER).map(([id, ad]) => `<option value="${id}" ${p && String(p.cinsiyet) === id ? 'selected' : ''}>${ad}</option>`).join('');
+  const secenek = (liste, secili) => liste.map((x) => `<option value="${esc(x.id)}" ${secili != null && String(secili) === String(x.id) ? 'selected' : ''}>${esc(x.ad)}</option>`).join('');
+  const rolOpt = secenek(formVeri.hesap_turleri, p?.hesap_turu);
+  const cinsOpt = secenek(formVeri.cinsiyetler, p?.cinsiyet);
 
   // Düzenlemede saatler + kaleme göre prim verisi sunucudan paralel yüklenir.
   let calisma = {}, mola = {}, primVeri = null;
@@ -431,9 +448,8 @@ async function formKaydet(p) {
     : await api('POST', '/personel', { body });
 
   if (yazSonuc(r, p ? 'Personel güncellendi.' : 'Personel eklendi.')) {
-    const sifre = r.govde.veri && r.govde.veri.olusturulan_sifre;
     modalKapat();
-    if (sifre) mesaj('Oluşturulan giriş şifresi: ' + sifre + ' (personele iletiniz)', 'bilgi');
+    if (r.govde.veri && r.govde.veri.sifre_gonderiliyor) mesaj('Giriş şifresi personele WhatsApp/SMS ile gönderiliyor.', 'bilgi');
     yukle();
   } else {
     kaydetBtn.disabled = false;
@@ -568,8 +584,14 @@ async function benimYukle() {
   if (ok && govde && govde.basarili) benim = govde.veri;
 }
 
+async function formVerisiYukle() {
+  if (!salonId) return;
+  const { ok, govde } = await api('GET', '/personel/form-verisi', { params: { salon_id: salonId } });
+  if (ok && govde && govde.basarili) formVeri = govde.veri;
+}
+
 (async function boot() {
-  await benimYukle();
+  await Promise.all([benimYukle(), formVerisiYukle()]);
   iskeletCiz();
   yukle();
 })();

@@ -32,7 +32,13 @@ class PersonelController extends V2Controller
         private YetkiServisi $yetki,
     ) {}
 
-    /** GET /api/v2/personel?salon_id=&baslik=&per_page=  (personel.liste_gor) */
+    /**
+     * GET /api/v2/personel?salon_id=&baslik=&per_page=&tumu=
+     *  - sayfali yonetim listesi            → personel.liste_gor
+     *  - tumu=1 secici (randevu/satis/kasa) → salonun her uyesi (eski /personeller/{salon}
+     *    yetkisizdi); liste_gor yoksa telefon/maas alanlari bos doner.
+     * Her cevapta 'ozet' (toplam/aktif/takvimde) vardir.
+     */
     public function liste(Request $request)
     {
         $user = $this->kullanici();
@@ -41,17 +47,36 @@ class PersonelController extends V2Controller
             return ApiCevap::hata('salon_id zorunlu', 422);
         }
 
-        $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
+        $tumu = $request->boolean('tumu');
+        $listeGor = $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'personel.liste_gor');
+        if ($tumu && ! $listeGor) {
+            $this->kapi->kapsamDenetle($user->id, $salonId);
+        } else {
+            $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
+        }
 
-        $perPage = (int) $request->input('per_page', 10);
-        $perPage = max(1, min(100, $perPage));
+        $perPage = max(1, min(100, (int) $request->input('per_page', 10)));
 
         return ApiCevap::basarili($this->liste->listele(
             $salonId,
             $request->input('baslik'),
-            $this->maasGor($user->id, $salonId),
+            $this->gorunurluk($user->id, $salonId, $listeGor),
             $perPage,
+            $tumu,
         ));
+    }
+
+    /** GET /api/v2/personel/form-verisi?salon_id= — hesap turleri + cinsiyetler (UI'da sabit liste yok) */
+    public function formVerisi(Request $request)
+    {
+        $user = $this->kullanici();
+        $salonId = (int) $request->input('salon_id');
+        if (! $salonId) {
+            return ApiCevap::hata('salon_id zorunlu', 422);
+        }
+        $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor', 'personel.ekle_duzenle']);
+
+        return ApiCevap::basarili($this->okuma->formVerisi());
     }
 
     /** GET /api/v2/personel/{id}  (personel.liste_gor) */
@@ -62,7 +87,7 @@ class PersonelController extends V2Controller
 
         $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
 
-        return ApiCevap::basarili($this->okuma->getir($id, $this->maasGor($user->id, $salonId)));
+        return ApiCevap::basarili($this->okuma->getir($id, $this->gorunurluk($user->id, $salonId, true)));
     }
 
     /** GET /api/v2/personel/{id}/calisma-saatleri  (personel.liste_gor) */
@@ -127,6 +152,7 @@ class PersonelController extends V2Controller
         $g = [
             'salon_id'          => $salonId,
             'personel_id'       => $id,
+            'yapan_id'          => $user->id,
             'personel_adi'      => $request->input('personel_adi'),
             'unvan'             => $request->input('unvan'),
             'cinsiyet'          => $request->input('cinsiyet'),
@@ -158,7 +184,18 @@ class PersonelController extends V2Controller
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->yaz->durum($id, $request->boolean('aktif')));
+        return ApiCevap::basarili($this->yaz->durum($id, $request->boolean('aktif'), $user->id));
+    }
+
+    /** POST /api/v2/personel/{id}/sifre-gonder — yeni sifre WhatsApp/SMS (kuyruk)  (personel.ekle_duzenle) */
+    public function sifreGonder(int $id)
+    {
+        $user = $this->kullanici();
+        $salonId = $this->okuma->salonIdZorunlu($id);
+        $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
+        $this->yazmaAcikMi();
+
+        return ApiCevap::basarili($this->yaz->sifreGonder($id, $user->id), 'Yeni şifre personele gönderiliyor.');
     }
 
     /** PATCH /api/v2/personel/{id}/siralama  body: {delta:-1|1}  (personel.ekle_duzenle) */
@@ -169,7 +206,7 @@ class PersonelController extends V2Controller
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->yaz->siralama($salonId, $id, (int) $request->input('delta')));
+        return ApiCevap::basarili($this->yaz->siralama($salonId, $id, (int) $request->input('delta'), $user->id));
     }
 
     /** PATCH /api/v2/personel/{id}/takvim-gorunur  (personel.ekle_duzenle) */
@@ -180,7 +217,7 @@ class PersonelController extends V2Controller
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->yaz->takvimToggle($id));
+        return ApiCevap::basarili($this->yaz->takvimToggle($id, $user->id));
     }
 
     /** PATCH /api/v2/personel/{id}/saatler  body: {calisma_saatleri[], mola_saatleri[]}  (personel.ekle_duzenle) */
@@ -206,13 +243,17 @@ class PersonelController extends V2Controller
         $this->kapi->denetle($user->id, $salonId, ['personel.sil']);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->arsiv->arsivle($salonId, $id, $request->input('transferler')));
+        return ApiCevap::basarili($this->arsiv->arsivle($salonId, $id, $request->input('transferler'), $user->id));
     }
 
     // ---------------------------------------------------------------------
 
-    private function maasGor($yetkiliId, int $salonId): bool
+    /** DTO hassas alan gorunurlugu (bkz. PersonelOkumaServisi::donustur). */
+    private function gorunurluk($yetkiliId, int $salonId, bool $listeGor): array
     {
-        return $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'personel.maas_tutar_gor');
+        return [
+            'maas'    => $listeGor && $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'personel.maas_tutar_gor'),
+            'telefon' => $listeGor,
+        ];
     }
 }

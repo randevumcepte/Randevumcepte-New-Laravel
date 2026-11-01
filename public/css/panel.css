@@ -300,3 +300,20 @@ html, body { margin: 0; padding: 0; }
 @media (prefers-color-scheme: dark) { .rc-sayfa { background: #22222e; border-color: #34344c; color: #cfcfe0; } }
 .rc-yukleniyor { display: inline-block; width: 15px; height: 15px; border: 2px solid #d9d2ec; border-top-color: #7b2ff7; border-radius: 50%; animation: rc-spin .7s linear infinite; vertical-align: -2px; }
 @keyframes rc-spin { to { transform: rotate(360deg); } }
+
+/* ── Ortak özet (istatistik) kartları (v2-bilesen.js ozetKart) ── */
+.rc-ozet { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.rc-kutu {
+  position: relative; overflow: hidden; border-radius: 18px; padding: 18px 18px;
+  display: flex; align-items: center; gap: 14px; box-shadow: var(--rc-golge, 0 1px 2px rgba(23,25,45,.05));
+  border: 1px solid rgba(23, 25, 45, .04);
+}
+.rc-k-ikon { width: 44px; height: 44px; border-radius: 13px; background: rgba(255, 255, 255, .6); color: inherit; display: grid; place-items: center; font-size: 20px; flex: 0 0 auto; }
+.rc-k-ic { display: flex; flex-direction: column; min-width: 0; }
+.rc-k-ad { font-size: 12.5px; font-weight: 700; opacity: .75; text-transform: uppercase; letter-spacing: .5px; color: inherit; }
+.rc-k-deger { font-size: 23px; font-weight: 800; line-height: 1.15; margin-top: 3px; white-space: nowrap; color: inherit; }
+.rc-k-mor     { background: var(--rc-t-mor, #f2ecfb);     color: var(--rc-t-mor-ink, #7b43b8); }
+.rc-k-yesil   { background: var(--rc-t-yesil, #e7f6ee);   color: var(--rc-t-yesil-ink, #1f9159); }
+.rc-k-turuncu { background: var(--rc-t-turuncu, #fdefe1); color: var(--rc-t-turuncu-ink, #c9771f); }
+.rc-k-mavi    { background: var(--rc-t-mavi, #eaf1fe);    color: var(--rc-t-mavi-ink, #3a72d6); }
+.rc-k-turkuaz { background: var(--rc-t-turkuaz, #e3f6f3); color: var(--rc-t-turkuaz-ink, #10928a); }

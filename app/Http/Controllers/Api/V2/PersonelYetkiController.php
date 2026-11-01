@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
 use App\Services\Personel\PersonelOkumaServisi;
 use App\Services\Personel\YetkiYonetimServisi;
 use App\Services\Yetki\GuvenlikKapisi;
-use App\Services\Yetki\KapsamServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -24,7 +22,6 @@ class PersonelYetkiController extends V2Controller
         private YetkiYonetimServisi $servis,
         private PersonelOkumaServisi $okuma,
         private GuvenlikKapisi $kapi,
-        private KapsamServisi $kapsam,
     ) {}
 
     /** GET /api/v2/personel-yetki/sema — yetki semasi (public referans; yalnizca kimlik gerekir). */
@@ -45,9 +42,7 @@ class PersonelYetkiController extends V2Controller
         }
 
         // Kapsam: kullanici bu salona bagli degilse kendi yetkisini de goremez (sizinti onleme).
-        if (! $this->kapsam->salonaBagliMi($user->id, $salonId)) {
-            throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
-        }
+        $this->kapi->kapsamDenetle($user->id, $salonId);
 
         return ApiCevap::basarili($this->servis->benimYetkilerim($user->id, $salonId));
     }
@@ -85,7 +80,7 @@ class PersonelYetkiController extends V2Controller
             $ayarlar = [];
         }
 
-        $this->servis->kaydet($id, $salonId, (string) $request->input('sablon', 'ozel'), $ayarlar);
+        $this->servis->kaydet($id, $salonId, (string) $request->input('sablon', 'ozel'), $ayarlar, $user->id);
 
         return ApiCevap::basarili(null, 'Yetkiler kaydedildi.');
     }

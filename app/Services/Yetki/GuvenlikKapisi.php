@@ -30,13 +30,7 @@ class GuvenlikKapisi
      */
     public function denetle($yetkiliId, $salonId, array|string $anahtarlar): void
     {
-        if (! $yetkiliId) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
-
-        if (! $this->kapsam->salonaBagliMi($yetkiliId, $salonId)) {
-            throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
-        }
+        $this->kapsamDenetle($yetkiliId, $salonId);
 
         foreach ((array) $anahtarlar as $anahtar) {
             if ($this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, $anahtar)) {
@@ -45,5 +39,22 @@ class GuvenlikKapisi
         }
 
         throw new YetkisizErisimException('Bu işlem için yetkiniz yok');
+    }
+
+    /**
+     * Yalnizca KIMLIK + KAPSAM (yetki anahtari aranmaz). Salonun her uyesinin gorebilecegi
+     * referans veriler icin (orn. randevu/satis formlarindaki personel secici, kendi yetkilerim).
+     *
+     * @throws YetkisizErisimException
+     */
+    public function kapsamDenetle($yetkiliId, $salonId): void
+    {
+        if (! $yetkiliId) {
+            throw new YetkisizErisimException('Oturum geçersiz');
+        }
+
+        if (! $this->kapsam->salonaBagliMi($yetkiliId, $salonId)) {
+            throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
+        }
     }
 }

@@ -26,8 +26,8 @@ class PersonelShadow extends Command
     {
         $salon = (int) $this->argument('salon');
 
-        // v2: maskesiz (maasGor=true), tek sayfada tumu.
-        $yeni = collect($liste->listele($salon, null, true, 10000)['data'])->keyBy('id');
+        // v2: maskesiz (varsayilan gorunurluk), sayfalamasiz tumu.
+        $yeni = collect($liste->listele($salon, null, [], 10, true)['data'])->keyBy('id');
 
         // Eski personelgetir ile BIREBIR sorgu (arsivli ele + takvim_sirasi sira).
         $eski = DB::table('salon_personelleri as sp')

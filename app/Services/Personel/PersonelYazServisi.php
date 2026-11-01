@@ -10,51 +10,72 @@ use App\Models\Personeller;
 use App\Models\PersonelCalismaSaatleri;
 use App\Models\PersonelMolaSaatleri;
 use App\Models\PersonelPrimOrani;
+use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
- * Personel YAZMA servisi (Faz 2). Controller kill-switch (config personel.yazma_aktif)
- * ile korur; is mantigi burada. Eski ApiController personel yazma uclarindan portlandi.
+ * Personel YAZMA servisi. Controller kill-switch (config personel.yazma_aktif) ile korur;
+ * is mantigi burada. Eski ApiController personel yazma uclarindan portlandi.
  *
- * KOPRU NOTLARI (eski sistemde vardi, yeni projede HENUZ YOK — enable oncesi dikkat):
- *   - pasif alinca token revoke + force_logout push (OturumServisi) YOK.
- *   - yeni personel sifresi SMS/WhatsApp ile gonderilmiyor; olusturulan sifre
- *     yanitta ('olusturulan_sifre') doner, panel gosterir/iletebilir.
- *   - prim (personel_prim_oranlari) kalem bazli kayit Faz 3'e birakildi.
+ * Yan etkiler v2'de URETILMEZ; ayni DB islemi icinde v2_bildirim_kuyrugu'na yazilir ve
+ * eski monolitin `v2:bildirim-isle` komutu MEVCUT kodla gonderir (BildirimKuyrugu):
+ *   - personel_sifre : sifre uret + kaydet + WhatsApp/SMS (yeni hesap dahil)
+ *   - personel_pasif : baska aktif salonu yoksa token revoke + force_logout push
+ * Islemler eski Audit ile ayni tabloya (AktiviteLog, ayni action adlari) loglanir.
  */
 class PersonelYazServisi
 {
-    // ===================== Faz 2a — dusuk riskli =====================
-
-    /** Aktif/pasif bayragi. (NOT: pasifte token revoke koprusu yok — bkz. sinif notu.) */
-    public function durum(int $personelId, bool $aktif): array
+    /** Aktif/pasif. Pasifte oturum sonlandirma eski koda kuyruktan devredilir. */
+    public function durum(int $personelId, bool $aktif, ?int $yapanId = null): array
     {
-        $p = Personeller::find($personelId);
-        if (! $p) {
-            throw new BulunamadiException('Personel bulunamadı');
-        }
-        $p->aktif = $aktif;
-        $p->save();
+        return DB::transaction(function () use ($personelId, $aktif, $yapanId) {
+            $p = $this->bul($personelId);
+            $p->aktif = $aktif;
+            $p->save();
 
-        return ['id' => (int) $p->id, 'aktif' => (int) $p->aktif];
+            if (! $aktif) {
+                BildirimKuyrugu::yaz((int) $p->salon_id, 'personel_pasif', null, $yapanId, ['personel_id' => (int) $p->id]);
+            }
+            AktiviteLog::yaz((int) $p->salon_id, $yapanId, $aktif ? 'personel_aktif' : 'personel_pasif', 'personel',
+                (int) $p->id, $p->personel_adi, $aktif ? 'Personel aktife alındı' : 'Personel pasife alındı');
+
+            return ['id' => (int) $p->id, 'aktif' => (int) $p->aktif];
+        });
     }
 
     /** Takvimde gorunurlugu tersine cevir. */
-    public function takvimToggle(int $personelId): array
+    public function takvimToggle(int $personelId, ?int $yapanId = null): array
     {
-        $p = Personeller::find($personelId);
-        if (! $p) {
-            throw new BulunamadiException('Personel bulunamadı');
-        }
+        $p = $this->bul($personelId);
         $p->takvimde_gorunsun = ! ((bool) $p->takvimde_gorunsun);
         $p->save();
+
+        AktiviteLog::yaz((int) $p->salon_id, $yapanId, 'personel_takvim_toggle', 'personel', (int) $p->id, $p->personel_adi,
+            'Personel takvimde gorunurlugu degistirildi', ['takvimde_gorunsun' => (int) $p->takvimde_gorunsun]);
 
         return ['takvimde_gorunsun' => (int) $p->takvimde_gorunsun];
     }
 
+    /**
+     * Yeni giris sifresi gonder: uretim + kayit + WhatsApp/SMS eski koddadir
+     * (personelSifreUretVeGonder); burada yalnizca kuyruga yazilir. Log'u o metod yazar.
+     */
+    public function sifreGonder(int $personelId, ?int $yapanId = null): array
+    {
+        $p = $this->bul($personelId);
+        if (! $p->yetkili_id) {
+            throw new CakismaException('Personelin giriş hesabı yok; önce kaydedin.');
+        }
+        BildirimKuyrugu::yaz((int) $p->salon_id, 'personel_sifre', null, $yapanId, ['personel_id' => (int) $p->id]);
+
+        return ['kuyruga_alindi' => true];
+    }
+
     /** Aktif personeller arasinda sirayi delta (-1 yukari / +1 asagi) kaydir. */
-    public function siralama(int $salonId, int $personelId, int $delta): array
+    public function siralama(int $salonId, int $personelId, int $delta, ?int $yapanId = null): array
     {
         if ($delta !== 1 && $delta !== -1) {
             return ['sonuc' => 'error', 'mesaj' => 'delta 1 veya -1 olmalı'];
@@ -90,6 +111,9 @@ class PersonelYazServisi
             $a->save();
         }
 
+        AktiviteLog::yaz($salonId, $yapanId, 'personel_sirala', 'personel', $personelId, null,
+            'Personel takvim sirasi degistirildi', ['delta' => $delta]);
+
         return ['sonuc' => 'ok'];
     }
 
@@ -107,7 +131,11 @@ class PersonelYazServisi
      * Personel ekle (personel_id yok) veya duzenle (var). Login (IsletmeYetkilileri)
      * ensure + rol senkron (salon_personelleri.role_id + model_has_roles) + opsiyonel saatler.
      *
-     * @return array{personel_id:int, yeni_mi:bool, yeni_hesap:bool, olusturulan_sifre:?string}
+     * Yeni hesapta gercek sifre v2'de uretilip DONDURULMEZ: hesap guclu rastgele bir
+     * yer tutucu ile acilir, sifre eski koddaki personelSifreUretVeGonder ile
+     * (kuyruk: personel_sifre, yeni_hesap=1) uretilip personele WhatsApp/SMS gider.
+     *
+     * @return array{personel_id:int, yeni_mi:bool, yeni_hesap:bool, sifre_gonderiliyor:bool}
      */
     public function ekleDuzenle(array $g): array
     {
@@ -115,11 +143,11 @@ class PersonelYazServisi
         $personelId = ! empty($g['personel_id']) ? (int) $g['personel_id'] : null;
         $tel = Telefon::normalize($g['cep_telefon'] ?? '');
         $duzenleme = $personelId !== null;
+        $yapanId = isset($g['yapan_id']) ? (int) $g['yapan_id'] : null;
 
-        return DB::transaction(function () use ($g, $salonId, $personelId, $tel, $duzenleme) {
+        return DB::transaction(function () use ($g, $salonId, $personelId, $tel, $duzenleme, $yapanId) {
             $yetkili = null;
             $yeniHesap = false;
-            $olusturulanSifre = null;
             $personel = null;
 
             if ($duzenleme) {
@@ -157,8 +185,8 @@ class PersonelYazServisi
             }
             if ($yeniHesap) {
                 $yetkili->profil_resim = '/public/isletmeyonetim_assets/img/avatar.png';
-                $olusturulanSifre = $this->sifreUret();
-                $yetkili->password = Hash::make($olusturulanSifre);
+                // Yer tutucu (kimse bilmez); gercek sifre kuyruktan uretilip gonderilir.
+                $yetkili->password = Hash::make(Str::random(40));
                 $yetkili->aktif = true;
             }
             $yetkili->save();
@@ -213,11 +241,21 @@ class PersonelYazServisi
             // Kaleme göre prim oranlari (gönderilen tur icin sil-ve-yaz; eski personelekleduzenle ile ayni).
             $this->primOranlariYaz((int) $personel->id, $salonId, $g['prim_kalemleri'] ?? []);
 
+            // Yeni hesabin sifresi: telefon varsa eski koddan uretilip gonderilsin.
+            $sifreGonderiliyor = $yeniHesap && (string) $yetkili->gsm1 !== '';
+            if ($sifreGonderiliyor) {
+                BildirimKuyrugu::yaz($salonId, 'personel_sifre', null, $yapanId,
+                    ['personel_id' => (int) $personel->id, 'yeni_hesap' => 1]);
+            }
+
+            AktiviteLog::yaz($salonId, $yapanId, $duzenleme ? 'personel_guncelle' : 'personel_ekle', 'personel',
+                (int) $personel->id, $personel->personel_adi, $duzenleme ? 'Personel güncellendi' : 'Yeni personel eklendi');
+
             return [
-                'personel_id'       => (int) $personel->id,
-                'yeni_mi'           => ! $duzenleme,
-                'yeni_hesap'        => $yeniHesap,
-                'olusturulan_sifre' => $olusturulanSifre,
+                'personel_id'        => (int) $personel->id,
+                'yeni_mi'            => ! $duzenleme,
+                'yeni_hesap'         => $yeniHesap,
+                'sifre_gonderiliyor' => $sifreGonderiliyor,
             ];
         });
     }
@@ -302,11 +340,8 @@ class PersonelYazServisi
         return ((int) $son->renk === 10) ? 1 : ((int) $son->renk + 1);
     }
 
-    /** 6 haneli sifre (eski charset: karisabilir i/l/0/O atilmis). */
-    private function sifreUret(): string
+    private function bul(int $personelId): Personeller
     {
-        $random = str_shuffle('abcdefghjklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ1234567890');
-
-        return substr($random, 0, 6);
+        return Personeller::find($personelId) ?? throw new BulunamadiException('Personel bulunamadı');
     }
 }

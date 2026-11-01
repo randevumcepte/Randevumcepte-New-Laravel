@@ -128,6 +128,7 @@ Route::prefix('v2')->group(function () {
          | yetki kaydet) Faz 2'de config('personel.yazma_aktif') kill-switch arkasinda.
          */
         Route::get('/personel', [PersonelController::class, 'liste']);
+        Route::get('/personel/form-verisi', [PersonelController::class, 'formVerisi']);
         Route::get('/personel-yetki/sema', [PersonelYetkiController::class, 'sema']);
         Route::get('/personel-yetki/benim', [PersonelYetkiController::class, 'benimYetkilerim']);
         Route::get('/personel/{id}', [PersonelController::class, 'goster'])->whereNumber('id');
@@ -145,6 +146,7 @@ Route::prefix('v2')->group(function () {
         Route::post('/personel', [PersonelController::class, 'ekleDuzenle']);
         Route::patch('/personel/{id}', [PersonelController::class, 'ekleDuzenle'])->whereNumber('id');
         Route::patch('/personel/{id}/durum', [PersonelController::class, 'durum'])->whereNumber('id');
+        Route::post('/personel/{id}/sifre-gonder', [PersonelController::class, 'sifreGonder'])->whereNumber('id');
         Route::patch('/personel/{id}/siralama', [PersonelController::class, 'siralama'])->whereNumber('id');
         Route::patch('/personel/{id}/takvim-gorunur', [PersonelController::class, 'takvimToggle'])->whereNumber('id');
         Route::patch('/personel/{id}/saatler', [PersonelController::class, 'saatKaydet'])->whereNumber('id');

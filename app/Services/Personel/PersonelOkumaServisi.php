@@ -17,6 +17,35 @@ use Illuminate\Support\Facades\DB;
 class PersonelOkumaServisi
 {
     /**
+     * Hesap turu seciminde GOSTERILMEYEN roller. Eski web modali (Role::all() icinden 6.
+     * kayit atlanir) ve Flutter personelekle/personelduzenle sabit listesi (1,2,3,4,5,7,8)
+     * ile ayni.
+     */
+    private const SECILEMEZ_ROLLER = [6];
+
+    private const CINSIYETLER = [0 => 'Kadın', 1 => 'Erkek'];
+
+    /**
+     * Ekle/duzenle formunun secenekleri — UI'da sabit liste YOK (API-first).
+     * hesap_turleri = roles tablosu (tek kaynak); id = personel.hesap_turu / sistem_yetki.
+     */
+    public function formVerisi(): array
+    {
+        return [
+            'hesap_turleri' => DB::table('roles')
+                ->whereNotIn('id', self::SECILEMEZ_ROLLER)
+                ->orderBy('id')
+                ->get(['id', 'name'])
+                ->map(fn ($r) => ['id' => (int) $r->id, 'ad' => $r->name])
+                ->all(),
+            'cinsiyetler' => collect(self::CINSIYETLER)
+                ->map(fn ($ad, $id) => ['id' => $id, 'ad' => $ad])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
      * Personel listesi/tekil icin ortak temel sorgu: salon_personelleri + rol (hesap_turu).
      * hesap_turu = model_has_roles ⋈ roles (salon_id ile scoped, personel satirinin salonu).
      */
@@ -65,20 +94,25 @@ class PersonelOkumaServisi
             ?? throw new BulunamadiException('Personel bulunamadı');
     }
 
-    /** Tekil personel DTO (yoksa null). $maasGor false ise maas/prim alanlari maskelenir. */
-    public function getir(int $personelId, bool $maasGor = true): ?array
+    /** Tekil personel DTO (yoksa null). $gor: bkz. donustur(). */
+    public function getir(int $personelId, array $gor = []): ?array
     {
         $row = $this->temelSorgu()
             ->where('sp.id', $personelId)
             ->groupBy('sp.id')
             ->first();
 
-        return $row ? $this->donustur($row, $maasGor) : null;
+        return $row ? $this->donustur($row, $gor) : null;
     }
 
     /** Ham DB satirini kararli DTO'ya cevir (+ maskeleme). Liste servisi de kullanir. */
-    public function donustur($row, bool $maasGor = true): array
+    public function donustur($row, array $gor = []): array
     {
+        // Gorunurluk (varsayilan acik): maas = maas/prim alanlari (personel.maas_tutar_gor),
+        // telefon = cep_telefon (yonetim listesi yetkisi olmayan secici kullaniminda kapali).
+        $maasGor = $gor['maas'] ?? true;
+        $telefonGor = $gor['telefon'] ?? true;
+
         return [
             'id'                 => (int) $row->id,
             'salon_id'           => (int) $row->salon_id,
@@ -87,7 +121,7 @@ class PersonelOkumaServisi
             'profil_resmi'       => $row->profil_resmi,
             'cinsiyet'           => $row->cinsiyet !== null ? (int) $row->cinsiyet : null,
             'unvan'              => $row->unvan,
-            'cep_telefon'        => $row->cep_telefon,
+            'cep_telefon'        => $telefonGor ? $row->cep_telefon : null,
             'renk'               => $row->renk !== null ? (int) $row->renk : null,
             'dahili_no'          => $row->dahili_no,
             'takvim_sirasi'      => $row->takvim_sirasi !== null ? (int) $row->takvim_sirasi : null,

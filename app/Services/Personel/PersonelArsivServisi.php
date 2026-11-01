@@ -4,6 +4,8 @@ namespace App\Services\Personel;
 
 use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
+use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,9 +59,9 @@ class PersonelArsivServisi
      *
      * @param array|string|null $transferler {rh_id: hedef_personel_id} map
      */
-    public function arsivle(int $salonId, int $personelId, $transferler): array
+    public function arsivle(int $salonId, int $personelId, $transferler, ?int $yapanId = null): array
     {
-        return DB::transaction(function () use ($salonId, $personelId, $transferler) {
+        return DB::transaction(function () use ($salonId, $personelId, $transferler, $yapanId) {
             $personel = Personeller::where('id', $personelId)->where('salon_id', $salonId)->first();
             if (! $personel) {
                 return ['sonuc' => 'notfound'];
@@ -104,6 +106,12 @@ class PersonelArsivServisi
             $personel->aktif = false;
             $personel->takvimde_gorunsun = false;
             $personel->save();
+
+            // Arsiv = pasif: baska aktif salonu yoksa oturumu sonlansin (eski web personelsil
+            // ile ayni guvenlik; eski API personelArsivle bunu atliyordu).
+            BildirimKuyrugu::yaz($salonId, 'personel_pasif', null, $yapanId, ['personel_id' => $personelId]);
+            AktiviteLog::yaz($salonId, $yapanId, 'personel_arsiv', 'personel', $personelId, $personel->personel_adi,
+                $aktarilan > 0 ? ($aktarilan.' gelecek hizmet başka personele aktarıldı, personel arşivlendi') : 'Personel arşivlendi');
 
             return ['sonuc' => 'ok', 'aktarilan' => $aktarilan];
         });

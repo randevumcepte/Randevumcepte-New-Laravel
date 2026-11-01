@@ -5,6 +5,8 @@ namespace App\Services\Personel;
 use App\Models\Personeller;
 use App\Models\PersonelYetkiAyari;
 use App\Services\Yetki\YetkiServisi;
+use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -90,14 +92,17 @@ class YetkiYonetimServisi
     }
 
     /**
-     * Yetki ayarlarini kaydet (Faz 2b — kill-switch arkasinda cagrilir).
-     * NOT: eski sistemdeki YETKI_DEGISTI force_logout FCM push'u bu projede HENUZ YOK;
-     * push koprusu kurulana kadar canli token geçersizlenmez (controller kill-switch
-     * ile korur). Kayit + whitelist motorda.
+     * Yetki ayarlarini kaydet. Kayit + whitelist motorda; personele force_logout push'u
+     * ayni islemde kuyruga yazilir (eski personelYetkiDegistiBildir gonderir).
      */
-    public function kaydet(int $personelId, int $salonId, string $sablon, array $ayarlar): void
+    public function kaydet(int $personelId, int $salonId, string $sablon, array $ayarlar, ?int $yapanId = null): void
     {
-        $this->motor->ayarlariKaydet($personelId, $salonId, $sablon, $ayarlar);
+        DB::transaction(function () use ($personelId, $salonId, $sablon, $ayarlar, $yapanId) {
+            $this->motor->ayarlariKaydet($personelId, $salonId, $sablon, $ayarlar);
+            BildirimKuyrugu::yaz($salonId, 'yetki_degisti', null, $yapanId, ['personel_id' => $personelId]);
+            AktiviteLog::yaz($salonId, $yapanId, 'personel_yetki_kaydet', 'personel', $personelId,
+                Personeller::where('id', $personelId)->value('personel_adi'), 'Personel yetkileri güncellendi', ['sablon' => $sablon]);
+        });
     }
 
     /** Tum anahtarlar true + sablon=tam_yetki (mobilGizli cikarilmis). */

@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\DB;
  * durum yazildiysa bildirim kaybolmaz, yazilmadiysa hayalet bildirim gitmez.
  *
  * Turler: randevu_iptal, randevu_onay, dogrulama_kodu, kvkk_kodu, seans_kullanim,
- *         randevu_tasindi, google_takvim (payload: sync[] / sil[] rh id).
+ *         randevu_tasindi, google_takvim (payload: sync[] / sil[] rh id),
+ *         personel_sifre (payload: personel_id, yeni_hesap), yetki_degisti,
+ *         personel_pasif (payload: personel_id; randevu_id null).
  */
 class BildirimKuyrugu
 {
