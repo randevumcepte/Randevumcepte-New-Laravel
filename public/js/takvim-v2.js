@@ -286,6 +286,12 @@ function takvimKur() {
     selectable: true,
     eventDrop: (info) => tasimaYap(info),
     eventResize: (info) => tasimaYap(info),
+    // Bos slota TEK TIK → randevu formu (tiklanan saat + sutunun kaynagi on dolu).
+    // Surukleyerek aralik secimi (>=5px) → Randevu / Saat kapat secimi.
+    dateClick: (info) => {
+      if (info.allDay) return;
+      randevuFormu({ start: info.date, kaynakId: info.resource?.id });
+    },
     select: (info) => {
       durum.ec.unselect();
       slotSecimi({ start: info.start, end: info.end, kaynakId: info.resource?.id });
