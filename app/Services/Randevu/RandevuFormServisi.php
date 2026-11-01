@@ -26,8 +26,13 @@ class RandevuFormServisi
     public function formVerisi(int $salonId, ?int $randevuId, bool $telGor): array
     {
         $randevu = $randevuId ? $this->randevuOnDoldur($salonId, $randevuId, $telGor) : null;
+        $salon = DB::table('salonlar')->where('id', $salonId)->first(['randevu_takvim_turu', 'salon_turu_id']);
 
         return [
+            // Satir alanlari salonun takvim turune gore (eski web modali ile ayni):
+            // personel HER ZAMAN; oda turu 1/2 DEGILSE; cihaz turu 1/3 DEGILSE.
+            'takvim_turu'    => (int) ($salon->randevu_takvim_turu ?? 0),
+            'musteri_etiket' => in_array((int) ($salon->salon_turu_id ?? 0), [15, 28, 29], true) ? 'Danışan' : 'Müşteri',
             'hizmetler'   => $this->hizmetler($salonId, $randevuId),
             'personeller' => DB::table('salon_personelleri')->where('salon_id', $salonId)->where('aktif', 1)
                 ->orderBy('takvim_sirasi')->get(['id', 'personel_adi as ad'])->map(fn ($p) => ['id' => (int) $p->id, 'ad' => $p->ad])->all(),

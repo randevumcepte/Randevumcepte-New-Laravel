@@ -136,7 +136,9 @@ class RandevuKayitServisi
             $yardimcilar[] = ['hizmet_id' => (int) ($y['randevuhizmetid'] ?? 0), 'index' => (int) ($y['index'] ?? -1), 'personel_id' => $pid];
         }
 
-        $durum = (int) ($g['durum'] ?? Randevular::ONAYLANDI);
+        // Isletme panelinden olusturulan randevu ONAYLIDIR; duzenlemede mevcut durum korunur.
+        // (Flutter editoru durum gonderir; gonderilmezse bu varsayilanlar.)
+        $durum = isset($g['durum']) && $g['durum'] !== '' ? (int) $g['durum'] : ($eski ? (int) $eski->durum : Randevular::ONAYLANDI);
         if (! in_array($durum, [Randevular::BEKLENIYOR, Randevular::ONAYLANDI], true)) {
             throw new GecersizIslemException('Durum yalnızca 0 (bekliyor) ya da 1 (onaylı) olabilir.');
         }

@@ -233,6 +233,93 @@
   .t-rf-satir .t-rf-hizmet { grid-column: 1 / -1; }
 }
 
+/* ───────── Randevu formu v2 (eski web "randevu-ekle-modal-v2" tasarim dili) ───────── */
+.rf-kart {
+  width: 680px; max-width: calc(100vw - 24px); max-height: 92vh; display: flex; flex-direction: column;
+  background: #fbfbfd; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 70px rgba(31, 23, 75, .32);
+  transform: scale(.94); opacity: 0; transition: transform .22s cubic-bezier(.34,1.56,.64,1), opacity .18s;
+}
+.rc-onay-overlay.acik .rf-kart { transform: scale(1); opacity: 1; }
+.rf-ust {
+  position: relative; display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; color: #fff;
+  background: linear-gradient(135deg, #4338ca 0%, #7c3aed 55%, #c026d3 100%);
+}
+.rf-ust::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at top right, rgba(255,255,255,.18), transparent 60%); }
+.rf-ust-sol { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.rf-ust-ikon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.18); font-size: 17px; }
+.rf-ust h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: #fff; }
+.rf-ust small { display: block; margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.8); }
+.rf-kapat { position: relative; z-index: 1; width: 32px; height: 32px; border: 0; border-radius: 8px; background: rgba(255,255,255,.14); color: #fff; cursor: pointer; }
+.rf-kapat:hover { background: rgba(255,255,255,.28); }
+.rf-sekmeler { display: flex; background: #fff; border-bottom: 1px solid #ececf0; }
+.rf-sekme { flex: 1; border: 0; background: transparent; padding: 11px 16px; font: inherit; font-size: 13.5px; font-weight: 600; color: #6b7280;
+  cursor: pointer; display: inline-flex; gap: 7px; justify-content: center; align-items: center; border-bottom: 2px solid transparent; }
+.rf-sekme:hover { color: #4b5563; background: rgba(124,58,237,.04); }
+.rf-sekme.aktif { color: #7c3aed; background: #faf5ff; border-bottom-color: #7c3aed; }
+.rf-govde { padding: 16px 18px 6px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d1c7e6 transparent; }
+.rf-alan { margin-bottom: 12px; position: relative; }
+.rf-iki { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rf-etiket { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: #6b7280; }
+.rf-girdi, .rf-govde .rs-btn {
+  width: 100%; height: 38px; border: 1px solid #e3e3ea; border-radius: 10px; padding: 0 11px; background: #fff;
+  font: inherit; font-size: 13.5px; color: #1f2937; transition: border-color .15s, box-shadow .15s;
+}
+.rf-girdi:focus, .rf-govde .rs-btn:focus { outline: none; border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+.rf-not { height: auto; padding: 9px 11px; resize: vertical; }
+.rf-arama { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 11px; border: 1px solid #e3e3ea; border-radius: 10px; background: #fff; color: #9ca3af; }
+.rf-arama:focus-within { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+.rf-arama input { flex: 1; border: 0; outline: none; font: inherit; font-size: 13.5px; color: #1f2937; background: transparent; }
+.rf-sonuclar { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #ececf0; border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(31,23,75,.14); max-height: 240px; overflow-y: auto; padding: 4px; }
+.rf-sonuclar:empty { display: none; }
+.rf-sonuclar button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; padding: 8px 10px; border-radius: 8px; cursor: pointer; font: inherit; font-size: 13.5px; text-align: left; }
+.rf-sonuclar button:hover { background: #f5f0ff; }
+.rf-sonuclar small { margin-left: auto; color: #9ca3af; }
+.rf-bos { padding: 10px; color: #9ca3af; font-size: 13px; text-align: center; }
+.rf-avatar { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg,#7c3aed,#c026d3); color: #fff; font-size: 12px; font-weight: 700; }
+.rf-musteri-secili { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e9ddff; border-radius: 12px; background: #faf5ff; }
+.rf-musteri-secili b { display: block; font-size: 13.5px; color: #1f2937; }
+.rf-musteri-secili small { color: #6b7280; font-size: 12px; }
+.rf-degistir { margin-left: auto; border: 0; background: transparent; color: #7c3aed; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.rf-bolum { display: flex; align-items: center; gap: 10px; margin: 6px 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #6b7280; }
+.rf-bolum::after { content: ''; flex: 1; height: 1px; background: #ececf0; }
+.rf-satir { background: #fff; border: 1px solid #ececf0; border-radius: 12px; padding: 10px 12px 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(31,23,75,.04); }
+.rf-satir-bas { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.rf-no { font-size: 12px; font-weight: 800; color: #7c3aed; }
+.rf-meta { font-size: 12px; color: #6b7280; }
+.rf-bosluk { margin-left: auto; }
+.rf-birlestir { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; cursor: pointer; user-select: none; }
+.rf-sil { border: 0; background: transparent; color: #dc2626; width: 28px; height: 28px; border-radius: 8px; cursor: pointer; }
+.rf-sil:hover:not(:disabled) { background: #fef2f2; }
+.rf-sil:disabled { color: #d1d5db; cursor: default; }
+.rf-satir-1 { display: grid; grid-template-columns: 1fr 96px 110px; gap: 8px; margin-bottom: 8px; }
+.rf-satir-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.rf-hz { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-height: 38px; padding: 4px 8px; border: 1px solid #e3e3ea; border-radius: 10px; background: #fff; cursor: text; }
+.rf-hz:focus-within { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+.rf-hz-ara { flex: 1; min-width: 110px; border: 0; outline: none; font: inherit; font-size: 13.5px; height: 28px; background: transparent; }
+.rf-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 9px; border-radius: 7px; background: #f3e8ff; color: #6b21a8; font-size: 12.5px; font-weight: 600; }
+.rf-chip button { border: 0; background: transparent; color: #8b5cf6; cursor: pointer; font-size: 15px; line-height: 1; padding: 0 3px; border-radius: 5px; }
+.rf-chip button:hover { background: #e9d5ff; }
+.rf-hz-panel .rs-sec { display: flex; flex-direction: column; gap: 1px; }
+.rf-hz-meta { color: #6b7280; font-size: 11.5px; }
+.rf-ekle { width: 100%; height: 38px; border: 1.5px dashed #c4b5fd; border-radius: 10px; background: #fff; color: #7c3aed; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
+.rf-ekle:hover { background: #faf5ff; }
+.rf-ozet:empty { display: none; }
+.rf-ozet { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px; border-radius: 10px; background: linear-gradient(135deg,#f5f3ff,#fdf4ff); color: #5b21b6; font-size: 13px; }
+.rf-ozet b { margin-left: auto; font-size: 14px; }
+.rf-onay-kutu { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: #374151; cursor: pointer; }
+.rf-alt { display: flex; gap: 10px; padding: 12px 18px; background: #fff; border-top: 1px solid #ececf0; }
+.rf-vazgec { flex: 0 0 auto; padding: 0 18px; height: 40px; border: 1px solid #e3e3ea; border-radius: 10px; background: #fff; color: #4b5563; font: inherit; font-weight: 600; cursor: pointer; }
+.rf-kaydet { flex: 1; height: 40px; border: 0; border-radius: 10px; color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+  background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #c026d3 100%); box-shadow: 0 6px 16px rgba(124,58,237,.28); }
+.rf-kaydet:disabled { opacity: .6; cursor: wait; }
+#rfSonuc .t-onizleme, #rfSonuc .t-rf-cakisma { margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .rf-iki { grid-template-columns: 1fr; }
+  .rf-satir-1 { grid-template-columns: 1fr 1fr; }
+  .rf-satir-1 .rf-hz { grid-column: 1 / -1; }
+}
+
 /* Telafi randevusu formu */
 .t-modal-genis { width: 520px; }
 .t-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; text-align: left; margin-bottom: 16px; }
