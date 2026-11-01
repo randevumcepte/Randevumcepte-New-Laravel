@@ -98,6 +98,8 @@ const durum = {
   kaynaklar: [],      // sunucudan gelen tum kaynaklar
   secili: '',         // personel/kaynak filtresi ('' = tumu)
   seciliRandevu: null, // cekmecede acik randevu (vurgu)
+  etkilesim: false,    // surukle/boyutlandir suruyor (otomatik yenileme beklesin)
+  sessiz: false,       // otomatik yenileme: yukleniyor gostergesi yanip sonmesin
   sonVeri: null,
   ec: null,
 };
@@ -305,7 +307,11 @@ function takvimKur() {
       if (e.kapali) return kapaliSaatPenceresi(e);
       cekmeceAc(e.randevu_id || e.id);
     },
-    loading: (y) => el('#tYuk').classList.toggle('acik', y),
+    loading: (y) => { if (!durum.sessiz) el('#tYuk').classList.toggle('acik', y); if (!y) durum.sessiz = false; },
+    eventDragStart: () => { durum.etkilesim = true; },
+    eventDragStop: () => { durum.etkilesim = false; },
+    eventResizeStart: () => { durum.etkilesim = true; },
+    eventResizeStop: () => { durum.etkilesim = false; },
     datesSet: (info) => {
       const d = info.start;
       const v = info.view.type;
@@ -315,6 +321,24 @@ function takvimKur() {
         : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
     },
   });
+}
+
+/**
+ * Otomatik yenileme — 15 sn'de bir (diger kullanicilarin / Flutter'in yaptigi
+ * degisiklikler gorunsun). Sekme arka plandayken, surukleme/boyutlandirma
+ * surerken ya da bir form/pencere aciktayken ATLANIR (kullanicinin isini bozmasin).
+ * Sekmeye donulunce hemen yenilenir. Gosterge yanip sonmez (sessiz).
+ */
+const OTOMATIK_YENILEME_MS = 15000;
+function sessizYenile() {
+  if (!durum.ec || document.hidden || durum.etkilesim) return;
+  if (document.querySelector('.rc-onay-overlay, .rs-panel, .flatpickr-calendar.open')) return;
+  durum.sessiz = true;
+  durum.ec.refetchEvents();
+}
+function otomatikYenilemeKur() {
+  setInterval(sessizYenile, OTOMATIK_YENILEME_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sessizYenile(); });
 }
 
 function aracBagla() {
@@ -1230,6 +1254,7 @@ function baslat() {
   iskeletCiz();
   takvimKur();
   aracBagla();
+  otomatikYenilemeKur();
 }
 
 baslat();
