@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\RandevuDurumServisi;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -20,7 +18,7 @@ use Illuminate\Http\Request;
  * Yetki: geldi/gelmedi/isaret-kaldir/seans-telafisi/iptal → randevu.duzenle_iptal,
  *        onayla → randevu.onayla.
  */
-class RandevuDurumController extends Controller
+class RandevuDurumController extends V2Controller
 {
     public function __construct(
         private RandevuDurumServisi $servis,
@@ -75,10 +73,7 @@ class RandevuDurumController extends Controller
     /** Ortak iskelet: kimlik → kapsam/yetki → dry-run/kill-switch → servis → zarf. */
     private function calistir(Request $request, int $id, string $yetki, callable $islem)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonId = $this->okuma->salonIdGetir($id);
         if (! $salonId) {

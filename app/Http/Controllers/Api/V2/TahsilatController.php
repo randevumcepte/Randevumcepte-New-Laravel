@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
@@ -19,8 +18,10 @@ use Illuminate\Support\Facades\DB;
  * KVKK: kimlik + kapsam (adisyon bu işletmeye mi ait) + satis.tahsilat_al.
  * Gerçek yazma KAPALI (dry_run=1 zorunlu); kullanıcı onayıyla açılacak.
  */
-class TahsilatController extends Controller
+class TahsilatController extends V2Controller
 {
+    protected ?string $yazmaAlani = 'tahsilat';
+
     public function __construct(
         private TahsilatYazServisi $servis,
         private TahsilatSilServisi $silServisi,
@@ -31,10 +32,7 @@ class TahsilatController extends Controller
     /** POST /api/v2/tahsilat */
     public function ekle(Request $request)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonId = (int) $request->input('salon_id');
         if (! $salonId) {
@@ -61,9 +59,7 @@ class TahsilatController extends Controller
         // GERÇEK YAZMA yolu — yalnızca dry_run=false iken.
         if (! $request->boolean('dry_run')) {
             // Çift güvenlik: config bayrağı kapalıysa asla yazma.
-            if (! config('tahsilat.yazma_aktif')) {
-                return ApiCevap::hata('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).', 409);
-            }
+            $this->yazmaAcikMi('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).');
             // Harici indirim varsa ek yetki: satis.indirim_uygula.
             if ((float) $request->input('indirim', 0) > 0) {
                 $this->kapi->denetle($user->id, $salonId, ['satis.indirim_uygula']);
@@ -104,13 +100,8 @@ class TahsilatController extends Controller
      */
     public function guncelle(Request $request, int $id)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
-        if (! config('tahsilat.yazma_aktif')) {
-            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
-        }
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
 
         $t = Tahsilat::find($id);
         if (! $t) {
@@ -153,15 +144,10 @@ class TahsilatController extends Controller
      */
     public function sil(int $id)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         // Gerçek yazma/iade flag'i (yazma ile aynı kapı).
-        if (! config('tahsilat.yazma_aktif')) {
-            return ApiCevap::hata('Gerçek iade/silme henüz etkin değil', 409);
-        }
+        $this->yazmaAcikMi('Gerçek iade/silme henüz etkin değil');
 
         $t = Tahsilat::find($id);
         if (! $t) {

@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\CakismaException;
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Satis\KalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -15,8 +12,12 @@ use Illuminate\Http\Request;
  * Satış kalem yönetimi (Satış & Tahsilat Düzenleme). Flag + KVKK (kimlik+kapsam+yetki).
  * Gerçek yazma TAHSILAT_V2_YAZMA_AKTIF arkasında (tüm v2 yazmalar birlikte kontrol).
  */
-class SatisKalemController extends Controller
+class SatisKalemController extends V2Controller
 {
+    protected ?string $yazmaAlani = 'tahsilat';
+
+    protected string $yazmaKapaliMesaj = 'Düzenleme henüz etkin değil';
+
     private const DUZENLEME_YETKI = ['satis.adisyon_olustur'];
 
     public function __construct(
@@ -97,20 +98,5 @@ class SatisKalemController extends Controller
         return ApiCevap::basarili($sonuc, 'Kalem silindi.');
     }
 
-    private function kullanici()
-    {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
 
-        return $user;
-    }
-
-    private function yazmaAcikMi(): void
-    {
-        if (! config('tahsilat.yazma_aktif')) {
-            throw new CakismaException('Düzenleme henüz etkin değil');
-        }
-    }
 }

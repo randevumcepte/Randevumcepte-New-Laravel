@@ -23,15 +23,9 @@ class PersonelArsivServisi
             return ['sonuc' => 'notfound'];
         }
 
-        $bugun = date('Y-m-d');
-        $hizmetler = DB::table('randevu_hizmetler')
-            ->join('randevular', 'randevu_hizmetler.randevu_id', '=', 'randevular.id')
+        $hizmetler = $this->gelecekHizmetSorgusu($salonId, $personelId)
             ->leftJoin('users', 'randevular.user_id', '=', 'users.id')
             ->leftJoin('hizmetler', 'randevu_hizmetler.hizmet_id', '=', 'hizmetler.id')
-            ->where('randevu_hizmetler.personel_id', $personelId)
-            ->where('randevular.salon_id', $salonId)
-            ->whereIn('randevular.durum', [0, 1])
-            ->where('randevular.tarih', '>=', $bugun)
             ->select(
                 'randevu_hizmetler.id as rh_id',
                 'randevular.id as randevu_id',
@@ -44,9 +38,7 @@ class PersonelArsivServisi
             ->orderBy('saat')
             ->get();
 
-        $personeller = Personeller::where('salon_id', $salonId)
-            ->where('id', '!=', $personelId)
-            ->where('aktif', 1)
+        $personeller = $this->devralabilecekler($salonId, $personelId)
             ->orderBy('personel_adi')
             ->get(['id', 'personel_adi']);
 
@@ -73,13 +65,7 @@ class PersonelArsivServisi
                 return ['sonuc' => 'notfound'];
             }
 
-            $bugun = date('Y-m-d');
-            $gelecekIdler = DB::table('randevu_hizmetler')
-                ->join('randevular', 'randevu_hizmetler.randevu_id', '=', 'randevular.id')
-                ->where('randevu_hizmetler.personel_id', $personelId)
-                ->where('randevular.salon_id', $salonId)
-                ->whereIn('randevular.durum', [0, 1])
-                ->where('randevular.tarih', '>=', $bugun)
+            $gelecekIdler = $this->gelecekHizmetSorgusu($salonId, $personelId)
                 ->pluck('randevu_hizmetler.id')
                 ->toArray();
 
@@ -92,9 +78,7 @@ class PersonelArsivServisi
                     $transferler = [];
                 }
 
-                $gecerliHedefler = Personeller::where('salon_id', $salonId)
-                    ->where('id', '!=', $personelId)
-                    ->where('aktif', 1)
+                $gecerliHedefler = $this->devralabilecekler($salonId, $personelId)
                     ->pluck('id')
                     ->map(fn ($v) => (int) $v)
                     ->toArray();
@@ -123,5 +107,24 @@ class PersonelArsivServisi
 
             return ['sonuc' => 'ok', 'aktarilan' => $aktarilan];
         });
+    }
+
+    /** Personelin bugunden itibaren bekleyen/onayli randevu hizmet kalemleri (tek tanim). */
+    private function gelecekHizmetSorgusu(int $salonId, int $personelId)
+    {
+        return DB::table('randevu_hizmetler')
+            ->join('randevular', 'randevu_hizmetler.randevu_id', '=', 'randevular.id')
+            ->where('randevu_hizmetler.personel_id', $personelId)
+            ->where('randevular.salon_id', $salonId)
+            ->whereIn('randevular.durum', [0, 1])
+            ->where('randevular.tarih', '>=', date('Y-m-d'));
+    }
+
+    /** Hizmetleri devralabilecek diger aktif personeller (tek tanim). */
+    private function devralabilecekler(int $salonId, int $personelId)
+    {
+        return Personeller::where('salon_id', $salonId)
+            ->where('id', '!=', $personelId)
+            ->where('aktif', 1);
     }
 }

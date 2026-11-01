@@ -3,6 +3,7 @@
 namespace App\Services\Personel;
 
 use App\Domain\Personel\Telefon;
+use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Models\IsletmeYetkilileri;
 use App\Models\Personeller;
@@ -31,7 +32,7 @@ class PersonelYazServisi
     {
         $p = Personeller::find($personelId);
         if (! $p) {
-            abort(404, 'Personel bulunamadı');
+            throw new BulunamadiException('Personel bulunamadı');
         }
         $p->aktif = $aktif;
         $p->save();
@@ -44,7 +45,7 @@ class PersonelYazServisi
     {
         $p = Personeller::find($personelId);
         if (! $p) {
-            abort(404, 'Personel bulunamadı');
+            throw new BulunamadiException('Personel bulunamadı');
         }
         $p->takvimde_gorunsun = ! ((bool) $p->takvimde_gorunsun);
         $p->save();
@@ -124,7 +125,7 @@ class PersonelYazServisi
             if ($duzenleme) {
                 $personel = Personeller::where('id', $personelId)->where('salon_id', $salonId)->first();
                 if (! $personel) {
-                    abort(404, 'Güncellenecek personel bulunamadı');
+                    throw new BulunamadiException('Güncellenecek personel bulunamadı');
                 }
                 // Duzenlemede yetkili DAIMA personelin yetkili_id'si uzerinden (telefonla arama bug'i).
                 if ($personel->yetkili_id) {

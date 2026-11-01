@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\TelafiRandevuServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
@@ -17,7 +15,7 @@ use Illuminate\Http\Request;
  * Olustur 'dry_run' alir (VARSAYILAN true → prim devri dahil plan). Gercek yazma
  * RandevuYazma (config/randevu.php) arkasinda; kapaliyken 409.
  */
-class RandevuTelafiController extends Controller
+class RandevuTelafiController extends V2Controller
 {
     public function __construct(
         private TelafiRandevuServisi $servis,
@@ -62,10 +60,7 @@ class RandevuTelafiController extends Controller
 
     private function kimlik()
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         return $user;
     }

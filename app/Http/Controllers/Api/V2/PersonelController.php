@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Personel\PersonelArsivServisi;
 use App\Services\Personel\PersonelListeServisi;
 use App\Services\Personel\PersonelOkumaServisi;
@@ -21,8 +19,10 @@ use Illuminate\Http\Request;
  * Faz 2 — YAZMA (ekle/duzenle, durum, siralama, takvim, saat, arsivle) config
  *         personel.yazma_aktif kill-switch arkasinda; kapaliyken 409.
  */
-class PersonelController extends Controller
+class PersonelController extends V2Controller
 {
+    protected ?string $yazmaAlani = 'personel';
+
     public function __construct(
         private PersonelListeServisi $liste,
         private PersonelOkumaServisi $okuma,
@@ -58,7 +58,7 @@ class PersonelController extends Controller
     public function goster(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
 
         $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
 
@@ -69,7 +69,7 @@ class PersonelController extends Controller
     public function calismaSaatleri(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
 
         return ApiCevap::basarili($this->okuma->calismaSaatleri($id));
@@ -79,7 +79,7 @@ class PersonelController extends Controller
     public function molaSaatleri(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
 
         return ApiCevap::basarili($this->okuma->molaSaatleri($id));
@@ -89,7 +89,7 @@ class PersonelController extends Controller
     public function primKalemleri(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
 
         return ApiCevap::basarili($this->okuma->primKalemleri($id, $salonId));
@@ -99,7 +99,7 @@ class PersonelController extends Controller
     public function gelecekHizmetler(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.sil']);
 
         return ApiCevap::basarili($this->arsiv->gelecekHizmetler($salonId, $id));
@@ -113,7 +113,7 @@ class PersonelController extends Controller
         $user = $this->kullanici();
 
         if ($id !== null) {
-            $salonId = $this->salonVeyaBulunamadi($id);
+            $salonId = $this->okuma->salonIdZorunlu($id);
         } else {
             $salonId = (int) $request->input('salon_id');
             if (! $salonId) {
@@ -122,9 +122,7 @@ class PersonelController extends Controller
         }
 
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         $g = [
             'salon_id'          => $salonId,
@@ -156,11 +154,9 @@ class PersonelController extends Controller
     public function durum(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->durum($id, $request->boolean('aktif')));
     }
@@ -169,11 +165,9 @@ class PersonelController extends Controller
     public function siralama(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->siralama($salonId, $id, (int) $request->input('delta')));
     }
@@ -182,11 +176,9 @@ class PersonelController extends Controller
     public function takvimToggle(int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->takvimToggle($id));
     }
@@ -195,11 +187,9 @@ class PersonelController extends Controller
     public function saatKaydet(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->saatKaydet(
             $id,
@@ -212,50 +202,17 @@ class PersonelController extends Controller
     public function arsivle(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $salonId = $this->salonVeyaBulunamadi($id);
+        $salonId = $this->okuma->salonIdZorunlu($id);
         $this->kapi->denetle($user->id, $salonId, ['personel.sil']);
-        if ($kapali = $this->yazmaKapali()) {
-            return $kapali;
-        }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->arsiv->arsivle($salonId, $id, $request->input('transferler')));
     }
 
     // ---------------------------------------------------------------------
 
-    private function kullanici()
-    {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
-
-        return $user;
-    }
-
-    /** Personelin salonunu coz; kayit yoksa kapsam sizintisini onlemek icin 404. */
-    private function salonVeyaBulunamadi(int $id): int
-    {
-        $salonId = $this->okuma->salonIdGetir($id);
-        if (! $salonId) {
-            abort(404, 'Personel bulunamadı');
-        }
-
-        return $salonId;
-    }
-
     private function maasGor($yetkiliId, int $salonId): bool
     {
         return $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'personel.maas_tutar_gor');
-    }
-
-    /** Yazma kill-switch kapaliysa 409 ApiCevap doner, aciksa null. */
-    private function yazmaKapali()
-    {
-        if (! config('personel.yazma_aktif')) {
-            return ApiCevap::hata('Personel yazma henüz etkin değil (PERSONEL_V2_YAZMA_AKTIF).', 409);
-        }
-
-        return null;
     }
 }

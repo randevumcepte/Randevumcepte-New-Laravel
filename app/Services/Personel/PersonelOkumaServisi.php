@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Exceptions\BulunamadiException;
 use App\Models\PersonelCalismaSaatleri;
 use App\Models\PersonelMolaSaatleri;
 use App\Models\PersonelPrimOrani;
@@ -55,6 +56,13 @@ class PersonelOkumaServisi
         $salonId = DB::table('salon_personelleri')->where('id', $personelId)->value('salon_id');
 
         return $salonId ? (int) $salonId : null;
+    }
+
+    /** salonIdGetir'in zorunlu hali — kayit yoksa 404 (kapsam sizintisi yok). */
+    public function salonIdZorunlu(int $personelId): int
+    {
+        return $this->salonIdGetir($personelId)
+            ?? throw new BulunamadiException('Personel bulunamadı');
     }
 
     /** Tekil personel DTO (yoksa null). $maasGor false ise maas/prim alanlari maskelenir. */

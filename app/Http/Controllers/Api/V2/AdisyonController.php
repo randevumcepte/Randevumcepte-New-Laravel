@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
@@ -12,7 +10,7 @@ use App\Support\ApiCevap;
  * Adisyon API v2 controller (ince). Is mantigi servislerde; burada yalnizca
  * kimlik/kapsam/yetki denetimi + servis cagrisi + standart zarf.
  */
-class AdisyonController extends Controller
+class AdisyonController extends V2Controller
 {
     public function __construct(
         private AdisyonOkumaServisi $servis,
@@ -26,10 +24,7 @@ class AdisyonController extends Controller
     public function goster(int $id)
     {
         // Kimlik: legacy-passport guard'indan isletme yetkilisi.
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         // Adisyon hangi salona ait? (kapsam denetimi icin — kayit yoksa 404)
         $salonId = $this->servis->salonIdGetir($id);

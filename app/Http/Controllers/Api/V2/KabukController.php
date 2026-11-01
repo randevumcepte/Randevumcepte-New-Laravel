@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Panel\PanelKabukServisi;
 use App\Services\Yetki\KapsamServisi;
 use App\Support\ApiCevap;
@@ -18,7 +17,7 @@ use Illuminate\Http\Request;
  *   Yetki: menü ZATEN kullanıcının yetkilerine göre filtrelenir; ayrı anahtar
  *   gerekmez (kabuk herkese açık ama yalnızca kendi kapsamındaki salon için).
  */
-class KabukController extends Controller
+class KabukController extends V2Controller
 {
     public function __construct(
         private PanelKabukServisi $servis,
@@ -27,10 +26,7 @@ class KabukController extends Controller
 
     public function goster(Request $request)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonlar = $this->kapsam->kullaniciSalonlari($user->id);
         if (! $salonlar) {

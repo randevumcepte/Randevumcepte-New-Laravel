@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\CakismaException;
 use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Models\Personeller;
 use App\Services\Satis\AdisyonIslemServisi;
 use App\Services\Satis\AdisyonSilServisi;
@@ -24,8 +22,12 @@ use Illuminate\Support\Facades\DB;
  *   odeme   : satis.tahsilat_al (yalniz studyo modu)
  * Yazmalar TAHSILAT_V2_YAZMA_AKTIF kill-switch arkasinda (kapaliyken 409).
  */
-class SatisController extends Controller
+class SatisController extends V2Controller
 {
+    protected ?string $yazmaAlani = 'tahsilat';
+
+    protected string $yazmaKapaliMesaj = 'Düzenleme henüz etkin değil';
+
     private const LISTE_YETKI = ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al'];
 
     public function __construct(
@@ -192,20 +194,5 @@ class SatisController extends Controller
         return ApiCevap::basarili($this->islem->studyoOdeme($id, $salonId, $alindi, $olusturan ? (int) $olusturan : null));
     }
 
-    private function kullanici()
-    {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
 
-        return $user;
-    }
-
-    private function yazmaAcikMi(): void
-    {
-        if (! config('tahsilat.yazma_aktif')) {
-            throw new CakismaException('Düzenleme henüz etkin değil');
-        }
-    }
 }

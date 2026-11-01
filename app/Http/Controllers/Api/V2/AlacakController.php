@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Models\Personeller;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\AlacakServisi;
@@ -16,8 +15,10 @@ use Illuminate\Http\Request;
  * KVKK: kimlik + kapsam (adisyon bu işletmeye mi ait) + finans.alacak_yonet.
  * Yazma flag korumalı (tahsilat.yazma_aktif ile aynı kapı).
  */
-class AlacakController extends Controller
+class AlacakController extends V2Controller
 {
+    protected ?string $yazmaAlani = 'tahsilat';
+
     public function __construct(
         private AlacakServisi $servis,
         private AdisyonOkumaServisi $adisyonServisi,
@@ -27,10 +28,7 @@ class AlacakController extends Controller
     /** POST /api/v2/alacak  { salon_id, adisyon_id, tutar, planlanan_odeme_tarihi?, aciklama? } */
     public function ekle(Request $request)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonId = (int) $request->input('salon_id');
         $adisyonId = (int) $request->input('adisyon_id');
@@ -55,9 +53,7 @@ class AlacakController extends Controller
         $this->kapi->denetle($user->id, $salonId, ['finans.alacak_yonet']);
 
         // Yazma flag'i (tahsilat ile aynı kapı).
-        if (! config('tahsilat.yazma_aktif')) {
-            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
-        }
+        $this->yazmaAcikMi();
 
         $olusturanId = Personeller::where('salon_id', $salonId)
             ->where('yetkili_id', $user->id)->value('id');
@@ -76,13 +72,8 @@ class AlacakController extends Controller
     /** PATCH /api/v2/alacak/{id} — planlanan alacağı düzenle. */
     public function guncelle(Request $request, int $id)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
-        if (! config('tahsilat.yazma_aktif')) {
-            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
-        }
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
         $salonId = $this->servis->alacakSalonId($id);
         if (! $salonId) {
             return ApiCevap::hata('Alacak bulunamadı', 404);
@@ -105,13 +96,8 @@ class AlacakController extends Controller
     /** DELETE /api/v2/alacak/{id} — planlanan alacağı iptal et. */
     public function sil(int $id)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
-        if (! config('tahsilat.yazma_aktif')) {
-            return ApiCevap::hata('Gerçek yazma henüz etkin değil', 409);
-        }
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
 
         $salonId = $this->servis->alacakSalonId($id);
         if (! $salonId) {

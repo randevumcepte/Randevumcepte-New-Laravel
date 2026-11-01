@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
@@ -17,7 +15,7 @@ use Illuminate\Http\Request;
  * Faz 1 — SALT OKUMA: takvim yuku + tek randevu detayi. Yazma yollari
  * (ekle/guncelle/geldi/gelmedi/iptal/telafi) sonraki fazlarda.
  */
-class RandevuController extends Controller
+class RandevuController extends V2Controller
 {
     public function __construct(
         private RandevuOkumaServisi $servis,
@@ -32,10 +30,7 @@ class RandevuController extends Controller
      */
     public function takvim(Request $request)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonId = (int) $request->input('salon_id');
         if (! $salonId) {
@@ -69,10 +64,7 @@ class RandevuController extends Controller
      */
     public function goster(int $id)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
 
         $salonId = $this->servis->salonIdGetir($id);
         if (! $salonId) {

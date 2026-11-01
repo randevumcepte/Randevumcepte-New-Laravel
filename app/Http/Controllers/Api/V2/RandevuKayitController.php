@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\RandevuKayitServisi;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -19,7 +17,7 @@ use Illuminate\Http\Request;
  * Cakisma bir HATA degil, is sonucudur: basarili zarf + veri.cakismavar='1'.
  * 'dry_run' varsayilan true; gercek yazma RandevuYazma (config/randevu.php).
  */
-class RandevuKayitController extends Controller
+class RandevuKayitController extends V2Controller
 {
     private const ALANLAR = ['user_id', 'randevu_tarihi', 'randevu_saati', 'hizmetler', 'yardimcipersoneller',
         'tekrarlayan', 'tekrar_sayisi', 'tekrar_sikligi', 'notlar', 'durum', 'cakisanrandevuekle'];
@@ -52,10 +50,7 @@ class RandevuKayitController extends Controller
 
     private function calistir(Request $request, int $salonId, string $yetki, array $girdi)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = ! $request->boolean('dry_run', true);

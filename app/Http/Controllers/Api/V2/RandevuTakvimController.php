@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Randevu\RandevuTakvimYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -17,7 +15,7 @@ use Illuminate\Http\Request;
  *   surukle-birak/boyut  → randevu.duzenle_iptal
  * Hepsi 'dry_run' alir (varsayilan true); gercek yazma RandevuYazma (config/randevu.php).
  */
-class RandevuTakvimController extends Controller
+class RandevuTakvimController extends V2Controller
 {
     public function __construct(
         private RandevuTakvimYazServisi $servis,
@@ -71,10 +69,7 @@ class RandevuTakvimController extends Controller
     /** Ortak iskelet: kimlik → kapsam/yetki → dry-run/kill-switch → servis → zarf. */
     private function calistir(Request $request, int $salonId, string $yetki, callable $islem)
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = ! $request->boolean('dry_run', true);

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\Randevu\RandevuFormServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
@@ -17,7 +16,7 @@ use Illuminate\Http\Request;
  *   GET /api/v2/randevu/musteri-paketleri?salon_id=&user_id= (kalan seansli paket/hizmet satislari)
  * Yetki: randevu.olustur VEYA randevu.duzenle_iptal. Telefon: musteri.telefon_gor.
  */
-class RandevuFormController extends Controller
+class RandevuFormController extends V2Controller
 {
     public function __construct(
         private RandevuFormServisi $servis,
@@ -51,10 +50,7 @@ class RandevuFormController extends Controller
     /** @return array{0:int,1:int} [yetkili id, salon id] */
     private function kapsam(Request $request): array
     {
-        $user = auth('isletmeyonetim-api')->user();
-        if (! $user) {
-            throw new YetkisizErisimException('Oturum geçersiz');
-        }
+        $user = $this->kullanici();
         $salonId = (int) $request->input('salon_id');
         if (! $salonId) {
             throw new YetkisizErisimException('salon_id zorunlu');
