@@ -165,7 +165,28 @@ işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
 - Ekran: sürükle/boyutlandır (birleşik paket barı taşınamaz), boş alan seçip saat
   kapat, "Saat Kapat" butonu, kapalı saate tıklayıp kaldır.
 
-### Faz 3b — Oluştur/güncelle + çakışma (SIRADA)
+### Faz 3b-1 — Oluştur/güncelle çekirdeği (YAPILDI, aynı kill-switch)
+Kapsam: İŞLETME akışı (kaynak `salon`). Müşteri uygulaması / online randevu
+(sert çakışma, hizmet sırası optimizasyonu) ve sesli asistan monolitte kalır.
+- Uçlar: `POST /randevu` (`randevu.olustur`), `PATCH /randevu/{id}`
+  (`randevu.duzenle_iptal`). Gövde Flutter editörüyle aynı alanlar; dönüş
+  `cakismavar` / `cakisanunsurlar` korunur (çakışma = başarılı zarf + cakismavar=1).
+- Servis `RandevuKayitServisi`; saf kurallar `Domain\Randevu\HizmetZinciri`
+  (ardışık/paralel saat zinciri) ve `Cakisma` (eski formüller birebir) + test.
+- Çakışma (salon `cakisma_uyarisi_aktif` açıksa): oda (SERT), kaynak (yumuşak),
+  eski kontrol: aynı başlangıç + personel/cihaz/salon çalışma-mola (yumuşak).
+- Plan: oda otomatik atama, seans havuzu (güncelleme) → bekleyen seans telafisi
+  → yeni seans adayı (tek satış / paket, erken adisyon), adisyon fiyat senkronu,
+  yardımcı personel, ön görüşme senkronu.
+- Bildirimler outbox `randevu_kayit` → monolit `randevuKayitBildirimHazirla` +
+  `randevuKayitBildirimGonder` (randevuekleguncelle'den TAŞINDI; v1 + işleyici aynı).
+- Farklar: güncellemede tekrar yok sayılır; karşılığı kalmayan işaretlenmemiş
+  seans serbest; süre zorunlu; müşteri portföy/hizmet/kaynak salon doğrulaması;
+  kaynaksız satırda eski kontrol atlanır; güncellenen randevu kendisiyle çakışmaz;
+  güncelleme oluşturanı ezmez.
+- Doğrulama: `php artisan randevu:kayit-plan {salon} '{json}'` (veya `@dosya`).
+
+### Faz 3b-2 — Randevu formu ekranı + form veri ucu (SIRADA)
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,
 APS havuz uzlaştırma, çakışma (`kaynak_cakisma_kontrol`), telafi (A-tipi),
 saat kapama sentinelleri. Dönüş: `cakismavar` + `cakisanunsurlar`.
