@@ -618,7 +618,24 @@ function telafiOnizleme(s, sec) {
 
 // Bos slot: tek tik VE surukleyerek secim ayni formu acar (Randevu / Saat Kapama sekmeli,
 // eski web modali ile ayni). Secimde bitis saati kapama sekmesine tasinir.
-function slotSecimi(secim) { randevuFormu(secim); }
+function slotSecimi(secim) { return randevuFormu(secim); }
+
+// Saat secimi eski web modali gibi 15 dk adimli LISTE (07:00–23:45); listede olmayan
+// (surukle-sec ile gelen) saat de eklenir. Liste arama-select ile aranabilir olur.
+function saatSecenekleri(secili, bos = '') {
+  const l = [];
+  for (let t = 7 * 60; t < 24 * 60; t += 15) l.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+  if (secili && !l.includes(secili)) { l.push(secili); l.sort(); }
+  return (bos ? `<option value="">${bos}</option>` : '') + l.map((x) => `<option value="${x}" ${x === secili ? 'selected' : ''}>${x}</option>`).join('');
+}
+function tarihSecici(girdi) {
+  if (!window.flatpickr) return;
+  window.flatpickr(girdi, {
+    locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l', altInputClass: girdi.className,
+    monthSelectorType: 'static', disableMobile: true, position: 'auto left',
+  });
+}
+const dkEkle = (saat, dk) => { const [h, m] = saat.split(':').map(Number); const t = Math.min(h * 60 + m + dk, 23 * 60 + 59); return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`; };
 
 const paraTL = (n) => `${Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
 
@@ -633,7 +650,7 @@ const paraTL = (n) => `${Number(n || 0).toLocaleString('tr-TR', { minimumFractio
  *  - Elle girilen sure/fiyat satir TOPLAMIDIR; hizmetlere katalog oraninda dagitilir.
  *  - Isletme panelinden olusan randevu ONAYLIDIR (durum alani yok).
  */
-async function randevuFormu({ randevuId, start, end, kaynakId }) {
+async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu' }) {
   const r = await api('GET', '/randevu/form-verisi', { params: { salon_id: salonId, randevu_id: randevuId } });
   if (!r.ok || !r.govde?.basarili) return panel().toast(r.govde?.mesaj || 'Form yüklenemedi', 'hata');
   const fv = r.govde.veri;
@@ -708,13 +725,13 @@ async function randevuFormu({ randevuId, start, end, kaynakId }) {
         <button class="rf-kapat" title="Kapat"><i class="bi bi-x-lg"></i></button>
       </div>
       ${mevcut ? '' : `<div class="rf-sekmeler">
-        <button class="rf-sekme aktif" data-sekme="randevu"><i class="bi bi-calendar-check"></i> Randevu</button>
+        <button class="rf-sekme" data-sekme="randevu"><i class="bi bi-calendar-check"></i> Randevu</button>
         <button class="rf-sekme" data-sekme="kapama"><i class="bi bi-lock"></i> Saat Kapama</button></div>`}
-      <div class="rf-govde">
+      <div class="rf-govde" data-pane="randevu">
         <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-person"></i> ${esc(fv.musteri_etiket)}</label><div id="rfMusteri"></div></div>
         <div class="rf-iki">
           <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="rfTarih" value="${esc(gun)}" readonly></div>
-          <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-clock"></i> Saat</label><input class="rf-girdi" id="rfSaat" value="${esc(saat)}" placeholder="Saat seçin" readonly></div>
+          <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-clock"></i> Saat</label><select class="rf-girdi" id="rfSaat">${saatSecenekleri(saat, 'Saat seçin')}</select></div>
         </div>
         <div class="rf-bolum"><span>Hizmetler</span></div>
         <div id="rfSatirlar"></div>
@@ -728,20 +745,23 @@ async function randevuFormu({ randevuId, start, end, kaynakId }) {
         <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-sticky"></i> Not</label><textarea class="rf-girdi rf-not" id="rfNot" rows="2" maxlength="500" placeholder="Personel notu (isteğe bağlı)">${esc(mevcut?.notlar || '')}</textarea></div>
         <div id="rfSonuc"></div>
       </div>
-      <div class="rf-alt"><button class="rf-vazgec">Vazgeç</button><button class="rf-kaydet" id="rfKaydet"><i class="bi bi-check2"></i> ${mevcut ? 'Kaydet' : 'Randevu Oluştur'}</button></div>
+      ${mevcut ? '' : kapamaPaneli()}
+      <div class="rf-alt"><button class="rf-vazgec">Vazgeç</button><button class="rf-kaydet" id="rfKaydet"></button></div>
     </div>`;
   document.body.appendChild(ov);
   requestAnimationFrame(() => ov.classList.add('acik'));
   const kapat = () => { hzListeKapat(); ov.classList.remove('acik'); setTimeout(() => ov.remove(), 220); };
   ov.querySelector('.rf-kapat').onclick = kapat;
   ov.querySelector('.rf-vazgec').onclick = kapat;
-  ov.querySelectorAll('.rf-sekme').forEach((b) => {
-    b.onclick = () => { if (b.dataset.sekme === 'kapama') { kapat(); saatKapamaFormu({ start, end, kaynakId }); } };
-  });
-  if (window.flatpickr) {
-    window.flatpickr(el('#rfTarih', ov), { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l', altInputClass: 'rf-girdi' });
-    window.flatpickr(el('#rfSaat', ov), { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5 });
-  }
+  const sekmeAc = (ad) => {
+    ov.querySelectorAll('.rf-sekme').forEach((b) => b.classList.toggle('aktif', b.dataset.sekme === ad));
+    ov.querySelectorAll('[data-pane]').forEach((p) => { p.hidden = p.dataset.pane !== ad; });
+    ov.querySelector('.rf-kart').classList.toggle('rf-kapama-modu', ad === 'kapama');
+    el('#rfKaydet', ov).innerHTML = ad === 'kapama' ? '<i class="bi bi-lock"></i> Saati Kapat' : `<i class="bi bi-check2"></i> ${mevcut ? 'Kaydet' : 'Randevu Oluştur'}`;
+    el('#rfKaydet', ov).dataset.sekme = ad;
+  };
+  ov.querySelectorAll('.rf-sekme').forEach((b) => { b.onclick = () => sekmeAc(b.dataset.sekme); });
+  tarihSecici(el('#rfTarih', ov));
   const tekrar = el('#rfTekrar', ov);
   if (tekrar) tekrar.onchange = () => { el('#rfTekrarAlan', ov).hidden = !tekrar.checked; };
 
@@ -975,7 +995,67 @@ async function randevuFormu({ randevuId, start, end, kaynakId }) {
     kutu.innerHTML = randevuOnizleme(sonuc.plan, fv);
     kutu.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
-  el('#rfKaydet', ov).onclick = () => kaydet(false);
+  // ── Saat kapama sekmesi ──
+  function kapamaPaneli() {
+    const kaynaklar = durum.kaynaklar.filter((k) => TUR_KOLON[k.tur]);
+    if (!kaynaklar.length) {
+      return '<div class="rf-govde" data-pane="kapama" hidden><div class="rf-bilgi"><i class="bi bi-info-circle"></i> Hizmet kategorisi görünümünde saat kapatılamaz; personel, oda veya cihaz görünümüne geçin.</div></div>';
+    }
+    const kBas = start ? saatStr(start) : '';
+    const kBit = end ? saatStr(end) : (kBas ? dkEkle(kBas, 60) : '');
+    return `<div class="rf-govde" data-pane="kapama" hidden>
+      <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-person-badge"></i> Kaynak</label>
+        <select class="rf-girdi" id="kpKaynak">${kaynaklar.map((k) => `<option value="${k.id}" ${String(k.id) === String(kaynakId ?? '') ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>
+      <div class="rf-uc">
+        <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="kpTarih" value="${esc(gun)}" readonly></div>
+        <div class="rf-alan"><label class="rf-etiket">Başlangıç</label><select class="rf-girdi" id="kpBas">${saatSecenekleri(kBas, 'Seçin')}</select></div>
+        <div class="rf-alan"><label class="rf-etiket">Bitiş</label><select class="rf-girdi" id="kpBit">${saatSecenekleri(kBit, 'Seçin')}</select></div>
+      </div>
+      <label class="rf-anahtar"><span><i class="bi bi-sun"></i> Tüm gün <small>(çalışma saatleri boyunca)</small></span><input type="checkbox" id="kpTumGun"><i class="rf-anahtar-top"></i></label>
+      <label class="rf-onay-kutu"><input type="checkbox" id="kpTekrar"> Tekrarla</label>
+      <div class="rf-iki" id="kpTekrarAlan" hidden>
+        <div class="rf-alan"><label class="rf-etiket">Sıklık</label><select class="rf-girdi" id="kpSiklik">${TEKRARLAR.filter((t) => t.deger).map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}</select></div>
+        <div class="rf-alan"><label class="rf-etiket">Tekrar sayısı</label><input class="rf-girdi" id="kpSayi" type="number" min="2" max="52" value="4"></div>
+      </div>
+      <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-sticky"></i> Not</label><textarea class="rf-girdi rf-not" id="kpNot" rows="2" maxlength="200" placeholder="Örn. izin, eğitim"></textarea></div>
+      <div id="kpSonuc"></div>
+    </div>`;
+  }
+  if (el('#kpTarih', ov)) {
+    tarihSecici(el('#kpTarih', ov));
+    const tumGun = el('#kpTumGun', ov);
+    tumGun.onchange = () => { ['#kpBas', '#kpBit'].forEach((x) => { el(x, ov).disabled = tumGun.checked; }); };
+    el('#kpTekrar', ov).onchange = (e) => { el('#kpTekrarAlan', ov).hidden = !e.target.checked; };
+    el('#kpBas', ov).addEventListener('change', (e) => {
+      const b = el('#kpBit', ov);
+      if (e.target.value && (!b.value || b.value <= e.target.value)) { b.innerHTML = saatSecenekleri(dkEkle(e.target.value, 60), 'Seçin'); }
+    });
+  }
+  const kapamaKaydet = async () => {
+    const kaynak = kaynakBul(el('#kpKaynak', ov)?.value);
+    if (!kaynak) return panel().toast('Kaynak seçin.', 'hata');
+    const tum = el('#kpTumGun', ov).checked;
+    const bas = el('#kpBas', ov).value; const bit = el('#kpBit', ov).value;
+    if (!tum && (!bas || !bit)) return panel().toast('Başlangıç ve bitiş saati seçin ya da "Tüm gün"ü açın.', 'hata');
+    if (!tum && bit <= bas) return panel().toast('Bitiş saati başlangıçtan sonra olmalı.', 'hata');
+    const tekrarla = el('#kpTekrar', ov).checked;
+    const govde = {
+      salon_id: salonId, tarih: el('#kpTarih', ov).value, saat: tum ? null : bas, saat_bitis: tum ? null : bit,
+      [TUR_KOLON[kaynak.tur]]: kaynak.id, not: el('#kpNot', ov).value,
+      tekrar_sikligi: tekrarla ? el('#kpSiklik', ov).value : null, tekrar_sayisi: tekrarla ? (parseInt(el('#kpSayi', ov).value, 10) || 2) : 1,
+    };
+    const btn = el('#rfKaydet', ov); btn.disabled = true;
+    const sn = await yazVeyaOnizle('POST', '/randevu/saat-kapama', govde);
+    btn.disabled = false;
+    if (!sn) return;
+    if (sn.yazildi) { kapat(); panel().toast(sn.mesaj || 'Saat kapatıldı', 'ok'); durum.ec.refetchEvents(); return; }
+    const b = sn.plan?.bloklar || [];
+    el('#kpSonuc', ov).innerHTML = `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — ${b.length} blok (yazılmadı)</div>
+      <ul>${b.slice(0, 8).map((x) => `<li>${esc(x.tarih)} · ${esc(x.saat.slice(0, 5))}–${esc(x.saat_bitis.slice(0, 5))}</li>`).join('')}${b.length > 8 ? `<li>… +${b.length - 8}</li>` : ''}</ul></div>`;
+  };
+
+  el('#rfKaydet', ov).onclick = () => (el('#rfKaydet', ov).dataset.sekme === 'kapama' ? kapamaKaydet() : kaydet(false));
+  sekmeAc(mevcut ? 'randevu' : sekme);
 }
 
 function randevuOnizleme(plan, fv) {
@@ -1042,55 +1122,8 @@ const TEKRARLAR = [
 ];
 const TUR_KOLON = { personel: 'personel_id', cihaz: 'cihaz_id', oda: 'oda_id' };
 
-function saatKapamaFormu({ start, end, kaynakId }) {
-  const kaynaklar = durum.kaynaklar.filter((k) => TUR_KOLON[k.tur]);
-  if (!kaynaklar.length) {
-    return panel().toast('Hizmet kategorisi görünümünde saat kapatılamaz; personel, oda veya cihaz görünümüne geçin.', 'bilgi', 4500);
-  }
-  const gun = start ? tarihStr(start) : tarihStr(durum.ec.getView().currentStart || new Date());
-  const { ov, kapat } = modal(`
-    <div class="rc-onay-ikon"><i class="bi bi-lock"></i></div>
-    <h3>Saat kapat</h3>
-    <p>Seçilen kaynak bu aralıkta randevuya kapatılır.</p>
-    <div class="t-form">
-      <label class="t-form-gen">Kaynak<select id="skKaynak">${kaynaklar.map((k) => `<option value="${k.id}" ${String(k.id) === String(kaynakId ?? '') ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
-      <label class="t-form-gen">Tarih<input id="skTarih" value="${gun}" readonly></label>
-      <label>Başlangıç<input id="skBas" value="${start ? saatStr(start) : ''}" placeholder="Çalışma başı" readonly></label>
-      <label>Bitiş<input id="skBit" value="${end ? saatStr(end) : ''}" placeholder="Çalışma sonu" readonly></label>
-      <label>Tekrar<select id="skSiklik">${TEKRARLAR.map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}</select></label>
-      <label>Tekrar sayısı<input id="skSayi" type="number" min="1" max="52" value="1"></label>
-      <label class="t-form-gen">Not<input id="skNot" maxlength="200" placeholder="İsteğe bağlı (örn. izin, eğitim)"></label>
-    </div>
-    <div id="skOnizleme"></div>
-    <div class="rc-onay-btns"><button class="rc-onay-iptal">Vazgeç</button><button class="rc-onay-tamam">Kapat</button></div>`);
-  ov.querySelector('.rc-onay-kart').classList.add('t-modal-genis');
-  if (window.flatpickr) {
-    window.flatpickr(el('#skTarih', ov), { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l' });
-    ['#skBas', '#skBit'].forEach((s) => window.flatpickr(el(s, ov), { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5 }));
-  }
-  el('.rc-onay-iptal', ov).onclick = kapat;
-  el('.rc-onay-tamam', ov).onclick = async () => {
-    const kaynak = kaynakBul(el('#skKaynak', ov).value);
-    const siklik = el('#skSiklik', ov).value;
-    const govde = {
-      salon_id: salonId, tarih: el('#skTarih', ov).value,
-      saat: el('#skBas', ov).value || null, saat_bitis: el('#skBit', ov).value || null,
-      [TUR_KOLON[kaynak.tur]]: kaynak.id, not: el('#skNot', ov).value,
-      tekrar_sikligi: siklik || null, tekrar_sayisi: siklik ? parseInt(el('#skSayi', ov).value, 10) || 1 : 1,
-    };
-    const s = await yazVeyaOnizle('POST', '/randevu/saat-kapama', govde);
-    if (!s) return;
-    if (s.yazildi) {
-      kapat();
-      panel().toast(s.mesaj || 'Saat kapatıldı', 'ok');
-      durum.ec.refetchEvents();
-    } else {
-      const b = s.plan?.bloklar || [];
-      el('#skOnizleme', ov).innerHTML = `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — ${b.length} blok (yazılmadı)</div>
-        <ul>${b.slice(0, 8).map((x) => `<li>${esc(x.tarih)} · ${esc(x.saat.slice(0, 5))}–${esc(x.saat_bitis.slice(0, 5))}</li>`).join('')}${b.length > 8 ? `<li>… +${b.length - 8}</li>` : ''}</ul></div>`;
-    }
-  };
-}
+// Saat kapama: randevu formunun "Saat Kapama" sekmesi (eski web modali gibi tek modal).
+function saatKapamaFormu(secim) { return randevuFormu({ ...secim, sekme: 'kapama' }); }
 
 function kapaliSaatPenceresi(e) {
   const { ov, kapat } = modal(`

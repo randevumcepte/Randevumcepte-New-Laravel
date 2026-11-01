@@ -314,6 +314,34 @@
   background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #c026d3 100%); box-shadow: 0 6px 16px rgba(124,58,237,.28); }
 .rf-kaydet:disabled { opacity: .6; cursor: wait; }
 #rfSonuc .t-onizleme, #rfSonuc .t-rf-cakisma { margin-bottom: 12px; }
+.rf-uc { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
+.rf-bilgi { display: flex; gap: 8px; padding: 12px; border-radius: 10px; background: #fff7ed; color: #9a3412; font-size: 13px; margin-bottom: 12px; }
+#kpSonuc .t-onizleme { margin-bottom: 12px; }
+/* Sekme: Saat Kapama aktifken turuncu (eski modal) */
+.rf-sekme[data-sekme="kapama"].aktif { color: #d97706; background: #fffbeb; border-bottom-color: #f59e0b; }
+.rf-kapama-modu .rf-kaydet { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 6px 16px rgba(217,119,6,.28); }
+/* Tum gun anahtari */
+.rf-anahtar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; margin-bottom: 12px;
+  border: 1px solid #ececf0; border-radius: 10px; background: #fff; cursor: pointer; font-size: 13.5px; color: #374151; position: relative; }
+.rf-anahtar small { color: #9ca3af; font-weight: 400; }
+.rf-anahtar input { position: absolute; opacity: 0; pointer-events: none; }
+.rf-anahtar-top { width: 38px; height: 22px; border-radius: 11px; background: #e5e7eb; position: relative; transition: background .15s; flex: 0 0 38px; }
+.rf-anahtar-top::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .15s; }
+.rf-anahtar input:checked + .rf-anahtar-top { background: #f59e0b; }
+.rf-anahtar input:checked + .rf-anahtar-top::after { transform: translateX(16px); }
+.rf-govde .rs-btn:disabled { background: #f9fafb; }
+@media (max-width: 640px) { .rf-uc { grid-template-columns: 1fr 1fr; } .rf-uc .rf-alan:first-child { grid-column: 1 / -1; } }
+
+/* flatpickr: marka renkleri + duzgun yil alani + modallarin ustunde */
+.flatpickr-calendar { z-index: 9700 !important; border-radius: 14px; box-shadow: 0 16px 40px rgba(31,23,75,.18); border: 1px solid #ececf0; font-family: inherit; }
+.flatpickr-current-month { font-size: 15px; padding-top: 6px; }
+.flatpickr-current-month .numInputWrapper { width: 6.2ch; }
+.flatpickr-current-month input.cur-year { font-size: inherit; font-weight: 700; padding: 0 0 0 2px; height: auto; line-height: inherit; box-shadow: none; border: 0; }
+.flatpickr-current-month .cur-month { font-weight: 700; }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: #7c3aed; border-color: #7c3aed; }
+.flatpickr-day.today { border-color: #c4b5fd; }
+.flatpickr-day:hover { background: #f5f3ff; border-color: #f5f3ff; }
+.flatpickr-months .flatpickr-prev-month:hover svg, .flatpickr-months .flatpickr-next-month:hover svg { fill: #7c3aed; }
 @media (max-width: 640px) {
   .rf-iki { grid-template-columns: 1fr; }
   .rf-satir-1 { grid-template-columns: 1fr 1fr; }
