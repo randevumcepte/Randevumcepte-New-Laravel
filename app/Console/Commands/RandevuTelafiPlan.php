@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Randevu\TelafiRandevuServisi;
+use App\Exceptions\ApiException;
 use Illuminate\Console\Command;
 
 /**
@@ -24,14 +25,21 @@ class RandevuTelafiPlan extends Command
 
     public function handle(TelafiRandevuServisi $servis): int
     {
-        $sonuc = $servis->olustur((int) $this->argument('rh'), [
+        try {
+            $sonuc = $servis->olustur((int) $this->argument('rh'), [
             'tarih'       => $this->argument('tarih'),
             'saat'        => $this->argument('saat'),
             'personel_id' => $this->option('personel'),
             'oda_id'      => $this->option('oda'),
             'cihaz_id'    => $this->option('cihaz'),
             'sure_dk'     => $this->option('sure'),
-        ], null, false);
+            ], null, false);
+        } catch (ApiException $e) {
+            // Is kurali ihlali (orn. zaten telafi olusturulmus) — hata degil, sonuc.
+            $this->warn("Telafi olusturulamaz ({$e->durumKodu}): ".$e->getMessage());
+
+            return self::SUCCESS;
+        }
 
         $this->line(json_encode($sonuc, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 

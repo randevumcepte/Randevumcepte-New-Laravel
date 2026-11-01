@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Randevu\RandevuDurumServisi;
+use App\Exceptions\ApiException;
 use Illuminate\Console\Command;
 
 /**
@@ -35,7 +36,29 @@ class RandevuDurumPlan extends Command
         $id = (int) $this->argument('randevu');
         $islem = $this->argument('islem');
 
-        $sonuc = match ($islem) {
+        try {
+            $sonuc = $this->planla($servis, $id, $islem);
+        } catch (ApiException $e) {
+            // Is kurali ihlali (orn. paket randevusu degil) — hata degil, sonuc.
+            $this->warn("Islem yapilamaz ({$e->durumKodu}): ".$e->getMessage());
+
+            return self::SUCCESS;
+        }
+
+        if ($sonuc === null) {
+            $this->error('Gecersiz islem: geldi|gelmedi|kaldir|telafi|iptal|onayla');
+
+            return self::FAILURE;
+        }
+
+        $this->line(json_encode($sonuc, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return self::SUCCESS;
+    }
+
+    private function planla(RandevuDurumServisi $servis, int $id, string $islem): ?array
+    {
+        return match ($islem) {
             'geldi' => $servis->geldi($id, [
                 'dogrulama_kodu'      => $this->option('dogrulama'),
                 'kvkk_kodu'           => $this->option('kvkk'),
@@ -51,15 +74,5 @@ class RandevuDurumPlan extends Command
             'onayla'  => $servis->onayla($id, null, false),
             default   => null,
         };
-
-        if ($sonuc === null) {
-            $this->error('Gecersiz islem: geldi|gelmedi|kaldir|telafi|iptal|onayla');
-
-            return self::FAILURE;
-        }
-
-        $this->line(json_encode($sonuc, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-
-        return self::SUCCESS;
     }
 }
