@@ -36,6 +36,15 @@ class RandevuDurumPlan extends Command
         $id = (int) $this->argument('randevu');
         $islem = $this->argument('islem');
 
+        // 'telafi' belirsiz: iki AYRI islem var — dogru komutu goster.
+        if ($islem === 'telafi') {
+            $this->warn('"telafi" belirsiz — iki ayri islem var:');
+            $this->line("  Seans telafisi (paket seansi → hak saklanir): php artisan randevu:durum-plan $id seans-telafisi");
+            $this->line('  Telafi randevusu (ucretsiz duzeltme + prim devri): php artisan randevu:telafi-plan {randevu_hizmet_id} {Y-m-d} {H:i} --personel=');
+
+            return self::SUCCESS;
+        }
+
         try {
             $sonuc = $this->planla($servis, $id, $islem);
         } catch (ApiException $e) {
