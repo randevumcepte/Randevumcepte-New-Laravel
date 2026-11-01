@@ -14,25 +14,8 @@
  * (panel-kabuk.js); bu betik yalnızca içerik alanını yönetir.
  */
 
-const BASE = '/api/v2';
-const _qp = new URLSearchParams(location.search);
-if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
-const token = () => localStorage.getItem('rc_access_token') || '';
+import { api, el, esc, TL, mesaj, onay } from '/js/lib/v2-ortak.js?v=1';
 
-async function api(method, yol, body) {
-  const r = await fetch(BASE + yol, {
-    method,
-    cache: 'no-store',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const t = await r.text();
-  return { ok: r.ok, kod: r.status, govde: t ? JSON.parse(t) : null };
-}
-
-const TL = (n) => (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-const el = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 
 // Ödeme yöntemi id → ad (Yapılan Tahsilatlar "Tür" sütunu)
@@ -47,11 +30,6 @@ let salonId = null;
 let tutarManuel = false;        // kullanıcı Tahsilat Tutarı'na elle yazdı mı?
 let duzenlenenTahsilat = null;  // düzenlenen tahsilat id (null = yeni tahsilat)
 let duzenlenenAlacak = null;    // düzenlenen alacak id (null = yeni alacak)
-
-function mesaj(metin, tip = 'bilgi') {
-  if (window.rcPanel && window.rcPanel.toast) { window.rcPanel.toast(metin, tip); return; }
-  el('#t-mesaj').innerHTML = metin ? `<div class="t-msg ${tip}">${esc(metin)}</div>` : '';
-}
 
 /* ───────────── Datepicker (flatpickr, TR) ───────────── */
 function datepickerBagla() {
@@ -222,7 +200,7 @@ async function kalemEkle() {
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
-  const { ok, kod, govde } = await api('POST', '/adisyon/' + adisyonId + '/kalem', body);
+  const { ok, kod, govde } = await api('POST', '/adisyon/' + adisyonId + '/kalem', { body });
   if (!ok) { mesaj(`Kalem eklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Kalem eklendi.', 'ok');
   el('#t-ekle-panel').hidden = true;
@@ -230,16 +208,14 @@ async function kalemEkle() {
 }
 
 async function adetDegistir(kalemId, adet) {
-  const { ok, kod, govde } = await api('PATCH', '/kalem/urun/' + kalemId, { adet: parseInt(adet, 10) });
+  const { ok, kod, govde } = await api('PATCH', '/kalem/urun/' + kalemId, { body: { adet: parseInt(adet, 10) } });
   if (!ok) { mesaj(`Adet güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Adet güncellendi.', 'ok');
   await adisyonYukle();
 }
 
 async function kalemSil(tip, kalemId) {
-  const onaylandi = window.rcPanel && window.rcPanel.onay
-    ? await window.rcPanel.onay('Bu kalemi adisyondan silmek istediğinize emin misiniz?', { baslik: 'Kalemi Sil', tamam: 'Sil', iptal: 'Vazgeç' })
-    : confirm('Kalemi silmek istediğinize emin misiniz?');
+  const onaylandi = await onay('Bu kalemi adisyondan silmek istediğinize emin misiniz?', { baslik: 'Kalemi Sil', tamam: 'Sil', iptal: 'Vazgeç' });
   if (!onaylandi) return;
   const { ok, kod, govde } = await api('DELETE', '/kalem/' + tip + '/' + kalemId);
   if (!ok) { mesaj(`Kalem silinemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
@@ -270,7 +246,7 @@ let idemKey = null;
 async function onizle() {
   el('#t-plan').innerHTML = '';
   idemKey = uuid();
-  const { ok, kod, govde } = await api('POST', '/tahsilat', girdi(true));
+  const { ok, kod, govde } = await api('POST', '/tahsilat', { body: girdi(true) });
   if (!ok) { mesaj(`Önizleme hatası (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Önizleme hazır — kontrol edip onaylayın.', 'bilgi');
   const p = govde.veri;
@@ -287,7 +263,7 @@ async function onizle() {
 async function kaydet() {
   el('#t-onayla').disabled = true;
   const g = girdi(false); g.idempotency_key = idemKey || uuid();
-  const { ok, kod, govde } = await api('POST', '/tahsilat', g);
+  const { ok, kod, govde } = await api('POST', '/tahsilat', { body: g });
   if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); el('#t-onayla').disabled = false; return; }
   mesaj('Tahsilat kaydedildi' + (govde.veri?.replay ? ' (zaten işlenmişti)' : '') + '. Tahsilat #' + (govde.veri?.tahsilat_id ?? '-'), 'ok');
   el('#t-plan').innerHTML = '';
@@ -322,7 +298,7 @@ function tahsilatDuzenVazgec() {
 async function tahsilatGuncelleKaydet() {
   const g = girdi(false); g.idempotency_key = uuid();
   const id = duzenlenenTahsilat;
-  const { ok, kod, govde } = await api('PATCH', '/tahsilat/' + id, g);
+  const { ok, kod, govde } = await api('PATCH', '/tahsilat/' + id, { body: g });
   if (!ok) { mesaj(`Güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Tahsilat güncellendi.', 'ok');
   tahsilatDuzenVazgec();
@@ -330,9 +306,7 @@ async function tahsilatGuncelleKaydet() {
 }
 
 async function tahsilatSil(id) {
-  const onaylandi = window.rcPanel && window.rcPanel.onay
-    ? await window.rcPanel.onay('Bu tahsilatı iade edip silmek istediğinize emin misiniz?', { baslik: 'Tahsilatı İade Et', tamam: 'İade Et', iptal: 'Vazgeç' })
-    : confirm('Tahsilatı iade etmek istediğinize emin misiniz?');
+  const onaylandi = await onay('Bu tahsilatı iade edip silmek istediğinize emin misiniz?', { baslik: 'Tahsilatı İade Et', tamam: 'İade Et', iptal: 'Vazgeç' });
   if (!onaylandi) return;
   const { ok, kod, govde } = await api('DELETE', '/tahsilat/' + id);
   if (!ok) { mesaj(`İade edilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
@@ -378,17 +352,15 @@ async function alacakKaydet() {
     aciklama: el('#t-alacak-not').value || null,
   };
   const { ok, kod, govde } = duzenlenenAlacak
-    ? await api('PATCH', '/alacak/' + duzenlenenAlacak, body)
-    : await api('POST', '/alacak', body);
+    ? await api('PATCH', '/alacak/' + duzenlenenAlacak, { body })
+    : await api('POST', '/alacak', { body });
   if (!ok) { mesaj(`Alacak kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj(duzenlenenAlacak ? 'Alacak güncellendi.' : 'Alacak oluşturuldu.', 'ok');
   alacakFormKapat();
   await adisyonYukle();
 }
 async function alacakSil(alacakId) {
-  const onaylandi = window.rcPanel && window.rcPanel.onay
-    ? await window.rcPanel.onay('Bu planlanan alacağı iptal etmek istediğinize emin misiniz?', { baslik: 'Alacağı İptal Et', tamam: 'İptal Et', iptal: 'Vazgeç' })
-    : confirm('Alacağı iptal etmek istediğinize emin misiniz?');
+  const onaylandi = await onay('Bu planlanan alacağı iptal etmek istediğinize emin misiniz?', { baslik: 'Alacağı İptal Et', tamam: 'İptal Et', iptal: 'Vazgeç' });
   if (!onaylandi) return;
   const { ok, kod, govde } = await api('DELETE', '/alacak/' + alacakId);
   if (!ok) { mesaj(`Alacak iptal edilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }

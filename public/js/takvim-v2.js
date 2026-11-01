@@ -16,42 +16,10 @@
  * Token: localStorage['rc_access_token'] (pilotta ?token=). salon: data-salon / ?sube=.
  */
 
-const BASE = '/api/v2';
+import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
+
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
-const _qp = new URLSearchParams(location.search);
-if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
-const token = () => localStorage.getItem('rc_access_token') || '';
-
-const panel = () => window.rcPanel || { toast: (m) => alert(m), onay: async (m) => confirm(m) };
-const el = (s, k = document) => k.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const pad = (n) => String(n).padStart(2, '0');
 const normalTR = (x) => String(x ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const tarihStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-async function api(yontem, yol, { params, govde } = {}) {
-  let url = BASE + yol;
-  if (params) {
-    const qs = new URLSearchParams(Object.fromEntries(
-      Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''),
-    )).toString();
-    if (qs) url += '?' + qs;
-  }
-  const r = await fetch(url, {
-    method: yontem,
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-      Authorization: 'Bearer ' + token(),
-      ...(govde ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: govde ? JSON.stringify(govde) : undefined,
-  });
-  const t = await r.text();
-  let j = null;
-  try { j = t ? JSON.parse(t) : null; } catch { /* HTML hata sayfasi */ }
-  return { ok: r.ok, kod: r.status, govde: j };
-}
 
 // 0xFFRRGGBB (mobil format) → #RRGGBB
 function renk(v, varsayilan = '#8a8fb0') {
@@ -73,7 +41,7 @@ function durumCoz(s) {
 }
 
 const kok = document.getElementById('rc-takvim');
-let salonId = parseInt(kok.dataset.salon, 10) || parseInt(_qp.get('sube'), 10) || 0;
+let salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 
 const VIEWLER = [
   { ad: 'Günlük', view: 'resourceTimeGridDay' },
@@ -445,7 +413,7 @@ function cekmeceCiz(v) {
         <div class="t-ck-kalem">
           <div class="t-ck-kalem-ust">
             <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b><span>${esc(h.personel_adi || '—')}</span></div>
-            <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${Number(h.fiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</b>` : ''}</div>
+            <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${TL(h.fiyat)}</b>` : ''}</div>
           </div>
           ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-bandaid"></i> Telafi randevusu (ücretsiz)</span>'
             : h.telafi_devir_yapildi ? '<span class="t-rozet gri"><i class="bi bi-check2"></i> Telafi randevusu verildi</span>'
@@ -485,7 +453,7 @@ async function islemYap(v, islem, ek, dryRun = false) {
 
   const [yontem, yol] = ISLEM_UC[islem];
   const govde = { dry_run: dryRun, ...(islem === 'geldi' ? { seans_secim_destek: true } : {}), ...ek };
-  const r = await api(yontem, `/randevu/${v.id}/${yol}`, { govde });
+  const r = await api(yontem, `/randevu/${v.id}/${yol}`, { body: govde });
   const g = r.govde;
 
   // Sunucu yazmasi kapali → ayni ucun DRY-RUN planini onizleme olarak goster.
@@ -607,7 +575,7 @@ async function telafiFormu(v, h) {
 }
 
 async function telafiGonder(rhId, govde, dryRun = false) {
-  const r = await api('POST', `/randevu/kalem/${rhId}/telafi-randevusu`, { govde: { ...govde, dry_run: dryRun } });
+  const r = await api('POST', `/randevu/kalem/${rhId}/telafi-randevusu`, { body: { ...govde, dry_run: dryRun } });
   if (r.kod === 409 && !dryRun && /kapal/i.test(r.govde?.mesaj || '')) {
     panel().toast('Sunucu yazması henüz kapalı — telafi önizleme olarak gösteriliyor.', 'bilgi', 4200);
     return telafiGonder(rhId, govde, true);
@@ -623,7 +591,7 @@ function telafiOnizleme(s, sec) {
   const y = s.plan?.yeni_randevu || {};
   const p = s.plan?.prim || {};
   const ad = (liste, id) => (liste || []).find((x) => String(x.id) === String(id))?.ad || '—';
-  const para = (t) => `${Math.abs(Number(t)).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺`;
+  const para = (t) => TL(Math.abs(Number(t)));
   const satirlar = [
     `Yeni randevu: ${y.tarih} ${y.saat}–${y.saat_bitis} · ${ad(sec.personeller, y.personel_id)} · ücretsiz`,
     p.satis_devri?.length ? `Satış kalemi yeni personele devredilir: ${p.satis_devri.length} kalem` : '',
@@ -659,7 +627,6 @@ function tarihSecici(girdi) {
 }
 const dkEkle = (saat, dk) => { const [h, m] = saat.split(':').map(Number); const t = Math.min(h * 60 + m + dk, 23 * 60 + 59); return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`; };
 
-const paraTL = (n) => `${Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
 
 /**
  * Randevu formu — eski web "randevu-ekle-modal-v2" akisinin birebir karsiligi:
@@ -843,7 +810,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
     const ciz = () => {
       const q = normalTR(girdi.value.trim());
       const liste = izinliHizmetler(s).filter((h) => !s.hizmetler.includes(String(h.hizmet_id)) && (!q || normalTR(h.ad).includes(q)));
-      hzListe.innerHTML = `<div class="rs-liste">${liste.length ? liste.map((h, k) => `<div class="rs-sec${k === 0 ? ' aktif' : ''}" data-id="${h.hizmet_id}"><div>${esc(h.ad)}${h.aktif ? '' : ' <small>(pasif)</small>'}</div><small class="rf-hz-meta">${[h.sure_dk ? h.sure_dk + ' dk' : '', h.fiyat ? paraTL(h.fiyat) : ''].filter(Boolean).join(' · ')}</small></div>`).join('') : '<div class="rs-yok">Hizmet bulunamadı</div>'}</div>`;
+      hzListe.innerHTML = `<div class="rs-liste">${liste.length ? liste.map((h, k) => `<div class="rs-sec${k === 0 ? ' aktif' : ''}" data-id="${h.hizmet_id}"><div>${esc(h.ad)}${h.aktif ? '' : ' <small>(pasif)</small>'}</div><small class="rf-hz-meta">${[h.sure_dk ? h.sure_dk + ' dk' : '', h.fiyat ? TL(h.fiyat) : ''].filter(Boolean).join(' · ')}</small></div>`).join('') : '<div class="rs-yok">Hizmet bulunamadı</div>'}</div>`;
       const r2 = girdi.getBoundingClientRect();
       Object.assign(hzListe.style, { left: r2.left + 'px', top: (r2.bottom + 4) + 'px', minWidth: Math.max(r2.width, 260) + 'px' });
     };
@@ -885,7 +852,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
       return `<div class="rf-satir" data-i="${i}">
         <div class="rf-satir-bas">
           <span class="rf-no">Hizmet #${i + 1}</span>
-          <span class="rf-meta">${t.sure ? t.sure + ' dk' : ''}${t.sure && t.fiyat ? ' · ' : ''}${t.fiyat ? paraTL(t.fiyat) : ''}</span>
+          <span class="rf-meta">${t.sure ? t.sure + ' dk' : ''}${t.sure && t.fiyat ? ' · ' : ''}${t.fiyat ? TL(t.fiyat) : ''}</span>
           ${i > 0 ? `<label class="rf-birlestir" title="Bu hizmet üstteki ile aynı saatte (paralel) başlasın"><input type="checkbox" data-k="ustBirlestir" ${s.ustBirlestir ? 'checked' : ''}> Üsttekiyle birleştir</label>` : '<span class="rf-bosluk"></span>'}
           <button type="button" class="rf-sil" title="Satırı sil" ${f.satirlar.length > 1 ? '' : 'disabled'}><i class="bi bi-trash"></i></button>
         </div>
@@ -926,7 +893,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
           ozetCiz();
           const t = satirToplam(s);
           if (s.paket) { sat.querySelector('.rf-meta').firstChild.textContent = `${s.kalemler.length} hizmet · ${t.sure} dk · `; return; }
-          sat.querySelector('.rf-meta').textContent = [t.sure ? t.sure + ' dk' : '', t.fiyat ? paraTL(t.fiyat) : ''].filter(Boolean).join(' · ');
+          sat.querySelector('.rf-meta').textContent = [t.sure ? t.sure + ' dk' : '', t.fiyat ? TL(t.fiyat) : ''].filter(Boolean).join(' · ');
         };
       });
       const bir = sat.querySelector('[data-k="ustBirlestir"]');
@@ -972,7 +939,7 @@ async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu'
     const s0 = el('#rfSaat', ov).value;
     let aralik = '';
     if (s0 && bitis) { const [h, m] = s0.split(':').map(Number); const t2 = h * 60 + m + bitis; aralik = ` · ${s0}–${pad(Math.floor(t2 / 60) % 24)}:${pad(t2 % 60)}`; }
-    el('#rfOzet', ov).innerHTML = adet ? `<i class="bi bi-receipt"></i> ${adet} hizmet · ${bitis} dk${aralik}<b>${paraTL(fiyat)}</b>` : '';
+    el('#rfOzet', ov).innerHTML = adet ? `<i class="bi bi-receipt"></i> ${adet} hizmet · ${bitis} dk${aralik}<b>${TL(fiyat)}</b>` : '';
   }
   el('#rfSaat', ov).addEventListener('change', ozetCiz);
   satirlariCiz();
@@ -1269,9 +1236,9 @@ async function tasimaYap(info) {
   };
   const ozet = `${e.musteri || 'Kayıt'} → ${saatStr(ev.start)}–${saatStr(ev.end)}${info.newResource ? ' · ' + (kaynak?.name || '') : ''}`;
 
-  let r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { govde: { ...govde, dry_run: false } });
+  let r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { body: { ...govde, dry_run: false } });
   if (r.kod === 409 && /kapal/i.test(r.govde?.mesaj || '')) {
-    r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { govde: { ...govde, dry_run: true } });
+    r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { body: { ...govde, dry_run: true } });
     info.revert();
     if (r.ok && r.govde?.basarili) return panel().toast(`Önizleme (yazılmadı): ${ozet}`, 'bilgi', 4500);
     return panel().toast(r.govde?.mesaj || `Taşınamadı (${r.kod})`, 'hata');
@@ -1318,10 +1285,10 @@ function kapaliSaatPenceresi(e) {
 
 /** Yazmayi dene; sunucu yazmasi kapaliysa (409) ayni ucun DRY-RUN sonucunu don. */
 async function yazVeyaOnizle(yontem, yol, govde) {
-  let r = await api(yontem, yol, { govde: { ...govde, dry_run: false } });
+  let r = await api(yontem, yol, { body: { ...govde, dry_run: false } });
   if (r.kod === 409 && /kapal/i.test(r.govde?.mesaj || '')) {
     panel().toast('Sunucu yazması henüz kapalı — önizleme gösteriliyor.', 'bilgi', 3500);
-    r = await api(yontem, yol, { govde: { ...govde, dry_run: true } });
+    r = await api(yontem, yol, { body: { ...govde, dry_run: true } });
   }
   if (!r.ok || !r.govde?.basarili) {
     panel().toast(r.govde?.mesaj || `İşlem başarısız (${r.kod})`, 'hata');

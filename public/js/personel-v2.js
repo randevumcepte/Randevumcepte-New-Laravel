@@ -13,43 +13,7 @@
  * data-salon (blade) ya da ?sube= query'sinden.
  */
 
-const BASE = '/api/v2';
-const _qp = new URLSearchParams(location.search);
-if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
-const token = () => localStorage.getItem('rc_access_token') || '';
-
-async function api(method, yol, { params, body } = {}) {
-  let url = BASE + yol;
-  if (params) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''))
-    ).toString();
-    if (qs) url += (url.includes('?') ? '&' : '?') + qs;
-  }
-  const opt = { method, cache: 'no-store', headers: { Accept: 'application/json', Authorization: 'Bearer ' + token() } };
-  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-  const r = await fetch(url, opt);
-  const t = await r.text();
-  return { ok: r.ok, kod: r.status, govde: t ? JSON.parse(t) : null };
-}
-
-const el = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-function mesaj(metin, tip = 'bilgi') {
-  if (window.rcPanel && window.rcPanel.toast) window.rcPanel.toast(metin, tip);
-  else if (tip === 'hata') alert(metin);
-}
-async function onay(metin, opt) {
-  if (window.rcPanel && window.rcPanel.onay) return window.rcPanel.onay(metin, opt);
-  return confirm(metin);
-}
-/** Yazma cevabını değerlendir: başarılıysa true, değilse toast + false (409 kill-switch dahil). */
-function yazSonuc({ ok, kod, govde }, basariMsg) {
-  if (ok && govde && govde.basarili) { if (basariMsg) mesaj(basariMsg, 'ok'); return true; }
-  mesaj((govde && govde.mesaj) || `Hata (${kod})`, 'hata');
-  return false;
-}
+import { qp, api, el, esc, mesaj, onay, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
 
 const ROLLER = { 1: 'Hesap Sahibi', 2: 'Süpervizör', 3: 'Yönetici', 4: 'Sekreter', 5: 'Personel', 7: 'Sanat Yönetmeni', 8: 'Sosyal Medya Uzmanı' };
 const CINSIYETLER = { 0: 'Kadın', 1: 'Erkek' };
@@ -57,7 +21,7 @@ const GUNLER = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cu
 const CAP = { hizmet: 'Hizmet', urun: 'Urun', paket: 'Paket' };
 
 const kok = document.getElementById('rc-personel');
-let salonId = parseInt(kok.dataset.salon, 10) || parseInt(_qp.get('sube'), 10) || 0;
+let salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 
 const durum = { baslik: '', page: 1 };
 let benim = null;   // giriş yapanın kendi yetkileri (buton gate'i için)
@@ -108,7 +72,7 @@ function iskeletCiz() {
         </table>
       </div>
 
-      <div class="p-sayfalama" id="pSayfalama"></div>
+      <div class="rc-sayfalama" id="pSayfalama"></div>
     </div>`;
 
   if (el('#pYeni')) el('#pYeni').addEventListener('click', () => formAc(null));
@@ -166,29 +130,13 @@ function satirCiz(p, idx, toplam) {
   </tr>`;
 }
 
-function sayfalamaCiz(v) {
-  const son = v.last_page || 1, su = v.current_page || 1;
-  if (son <= 1) { el('#pSayfalama').innerHTML = ''; return; }
-  const btn = (p, ad, pasif) => `<button class="p-sayfa${pasif ? ' pasif' : ''}${p === su ? ' aktif' : ''}" data-p="${p}" ${pasif ? 'disabled' : ''}>${ad}</button>`;
-  let h = btn(su - 1, '‹', su <= 1);
-  const bas = Math.max(1, su - 2), bit = Math.min(son, bas + 4);
-  for (let p = bas; p <= bit; p++) h += btn(p, p, false);
-  h += btn(su + 1, '›', su >= son);
-  el('#pSayfalama').innerHTML = `<div class="p-sayfa-bilgi">Sayfa ${su} / ${son} · ${v.total ?? 0} personel</div>` + h;
-  el('#pSayfalama').onclick = (e) => {
-    const b = e.target.closest('.p-sayfa');
-    if (!b || b.disabled) return;
-    durum.page = parseInt(b.dataset.p, 10); yukle();
-  };
-}
-
 let sonListe = [];
 async function yukle() {
   if (!salonId) {
     el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos">Şube seçili değil (?sube=... bekleniyor).</td></tr>`;
     return;
   }
-  el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos"><span class="p-yukleniyor"></span> Yükleniyor…</td></tr>`;
+  el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</td></tr>`;
   const { ok, kod, govde } = await api('GET', '/personel', { params: { salon_id: salonId, baslik: durum.baslik, page: durum.page } });
   if (!ok || !govde || !govde.basarili) {
     el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos p-hata">${esc((govde && govde.mesaj) || `Hata (${kod})`)}</td></tr>`;
@@ -199,7 +147,7 @@ async function yukle() {
   el('#pGovde').innerHTML = sonListe.length
     ? sonListe.map((p, i) => satirCiz(p, i, sonListe.length)).join('')
     : `<tr><td colspan="7" class="p-bos">Personel bulunamadı.</td></tr>`;
-  sayfalamaCiz(v);
+  sayfalamaCiz(el('#pSayfalama'), v, (no) => { durum.page = no; yukle(); }, 'personel');
 }
 
 function personelBul(id) { return sonListe.find((p) => String(p.id) === String(id)); }

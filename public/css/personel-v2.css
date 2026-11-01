@@ -94,18 +94,7 @@
 .p-switch input:checked + .p-kaydir { background: #2bb673; }
 .p-switch input:checked + .p-kaydir::before { transform: translateX(18px); }
 
-/* ── Sayfalama (satislar ile aynı) ── */
-.p-sayfalama { display: flex; gap: 6px; margin-top: 18px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.p-sayfa-bilgi { font-size: 13px; color: #9191a3; margin-right: 10px; }
-.p-sayfa { border: 1px solid #e2e2ee; background: #fff; color: #555; border-radius: 9px; min-width: 38px; height: 38px; padding: 0 11px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .15s; }
-.p-sayfa:hover:not(.pasif):not(.aktif) { border-color: #b98fe0; color: #5C008E; }
-.p-sayfa.aktif { background: var(--rc-t-mor, #f2ecfb); border-color: transparent; color: var(--rc-mor, #5C008E); }
-.p-sayfa.pasif { opacity: .4; cursor: default; }
-@media (prefers-color-scheme: dark) { .p-sayfa { background: #22222e; border-color: #34344c; color: #cfcfe0; } }
-
-/* ── Yükleniyor spinner ── */
-.p-yukleniyor { display: inline-block; width: 15px; height: 15px; border: 2px solid #d9d2ec; border-top-color: #7b2ff7; border-radius: 50%; animation: p-spin .7s linear infinite; vertical-align: -2px; }
-@keyframes p-spin { to { transform: rotate(360deg); } }
+/* Sayfalama + yükleniyor spinner'ı ortak: panel.css .rc-sayfa* / .rc-yukleniyor */
 
 /* ── Modal ── */
 .p-modal-overlay { position: fixed; inset: 0; background: rgba(20, 12, 35, .5); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 9000; overflow-y: auto; }

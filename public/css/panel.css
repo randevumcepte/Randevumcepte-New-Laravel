@@ -289,3 +289,14 @@ html, body { margin: 0; padding: 0; }
 .rc-link .rc-yakinda { display: none; }
 .rc-sidebar:hover .rc-yakinda, .rc-sabit .rc-yakinda { display: inline-block; }
 @media (max-width: 860px) { .rc-sidebar .rc-yakinda { display: inline-block; } }
+
+/* ── Ortak sayfalama + yükleniyor (v2-ortak.js sayfalamaCiz) — ekran CSS'lerinde kopyalanmaz ── */
+.rc-sayfalama { display: flex; gap: 6px; margin-top: 18px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.rc-sayfa-bilgi { font-size: 13px; color: #9191a3; margin-right: 10px; }
+.rc-sayfa { border: 1px solid #e2e2ee; background: #fff; color: #555; border-radius: 9px; min-width: 38px; height: 38px; padding: 0 11px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .15s; }
+.rc-sayfa:hover:not(.pasif):not(.aktif) { border-color: #b98fe0; color: #5C008E; }
+.rc-sayfa.aktif { background: var(--rc-t-mor, #f2ecfb); border-color: transparent; color: var(--rc-mor, #5C008E); }
+.rc-sayfa.pasif { opacity: .4; cursor: default; }
+@media (prefers-color-scheme: dark) { .rc-sayfa { background: #22222e; border-color: #34344c; color: #cfcfe0; } }
+.rc-yukleniyor { display: inline-block; width: 15px; height: 15px; border: 2px solid #d9d2ec; border-top-color: #7b2ff7; border-radius: 50%; animation: rc-spin .7s linear infinite; vertical-align: -2px; }
+@keyframes rc-spin { to { transform: rotate(360deg); } }

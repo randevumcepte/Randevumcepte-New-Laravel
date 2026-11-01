@@ -10,31 +10,12 @@
  * adisyondan salon'u öğrenince kabuğu o salona göre tazeler.
  */
 
-const BASE = '/api/v2';
-const _qp = new URLSearchParams(location.search);
-if (_qp.get('token')) localStorage.setItem('rc_access_token', _qp.get('token'));
-// Eski panel koprusu (/isletmeyonetim/v2-gecis): token URL FRAGMENT'inda gelir
-// (#token=...) — sunucu loglarina ve Referer'a dusmez. Sakla, adres cubugundan sil.
-// Kabuk diger v2 modullerinden ONCE yuklendigi icin sayfa istekleri tokeni bulur.
-const _hash = new URLSearchParams(location.hash.slice(1));
-if (_hash.get('token')) {
-  localStorage.setItem('rc_access_token', _hash.get('token'));
-  history.replaceState(null, '', location.pathname + location.search);
-}
-const token = () => localStorage.getItem('rc_access_token') || '';
+// Token tohumlama (?token= ve eski panel koprusunun #token= fragment'i) ortak modulde
+// tek yerde yapilir; modul tekil oldugu icin hangi ekran once yuklenirse yuklensin
+// tum istekler tokeni bulur.
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=1';
 
-const el = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-async function kabukGetir(salonId) {
-  const yol = BASE + '/kabuk' + (salonId ? '?salon_id=' + salonId : '');
-  const r = await fetch(yol, {
-    cache: 'no-store',
-    headers: { Accept: 'application/json', Authorization: 'Bearer ' + token() },
-  });
-  const t = await r.text();
-  return { ok: r.ok, kod: r.status, govde: t ? JSON.parse(t) : null };
-}
+const kabukGetir = (salonId) => api('GET', '/kabuk', { params: { salon_id: salonId } });
 
 function menuCiz(menu, aktifSlug) {
   const kutu = el('#rcMenu');
