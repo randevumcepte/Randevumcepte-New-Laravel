@@ -62,9 +62,9 @@ class SeansDurumGecisiTest extends TestCase
         $this->assertNull($p['guncelle'][10]['geldi']);
     }
 
-    public function test_telafi_isaretle_tum_seanslar_telafi_slotuna(): void
+    public function test_seans_telafisi_tum_seanslar_telafi_slotuna(): void
     {
-        $p = SeansDurumGecisi::telafi($this->seanslar());
+        $p = SeansDurumGecisi::seansTelafisi($this->seanslar());
         $this->assertSame([10, 11, 12, 13], array_keys($p['guncelle']));
         $this->assertSame(['geldi' => 2], $p['guncelle'][10]);
         $this->assertSame([], $p['sil']);

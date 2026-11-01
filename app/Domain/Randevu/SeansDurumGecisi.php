@@ -62,10 +62,12 @@ final class SeansDurumGecisi
     }
 
     /**
-     * TELAFI ISARETLE: randevudaki TUM seanslar telafi slotuna (geldi=2) alinir;
+     * SEANS TELAFISI: randevudaki TUM seanslar telafi slotuna (geldi=2) alinir;
      * bir sonraki randevuda bekleyen telafi olarak baglanir (yeni seans dusmez).
+     * (TELAFI RANDEVUSU ile karistirma — o, ucretsiz duzeltme randevusudur:
+     *  bkz. Services\Randevu\TelafiRandevuServisi.)
      */
-    public static function telafi(array $seanslar): array
+    public static function seansTelafisi(array $seanslar): array
     {
         $guncelle = [];
         foreach ($seanslar as $s) {

@@ -430,6 +430,7 @@ class RandevuOkumaServisi
         $hizmetAdlari  = DB::table('hizmetler')->whereIn('id', $hizmetler->pluck('hizmet_id')->filter()->unique()->all())->pluck('hizmet_adi', 'id');
         $personelAdlari = DB::table('salon_personelleri')->whereIn('id', $hizmetler->pluck('personel_id')->filter()->unique()->all())->pluck('personel_adi', 'id');
         $seansSayisi = DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)->count();
+        $seansTelafisi = $seansSayisi > 0 && DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)->where('geldi', 2)->exists();
 
         return [
             'id'            => (int) $randevu->id,
@@ -445,6 +446,7 @@ class RandevuOkumaServisi
             'personel_notu' => $randevu->personel_notu,
             'kapali'        => (int) $randevu->user_id === Randevular::KAPALI_SAAT_USER_ID,
             'seans_var'     => $seansSayisi > 0,
+            'seans_telafisi'=> $seansTelafisi, // seanslardan biri telafi hakkinda (geldi=2)
             'hizmetler'     => $hizmetler->map(fn ($h) => [
                 'id'           => (int) $h->id,
                 'hizmet_id'    => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,

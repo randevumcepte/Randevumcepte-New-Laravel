@@ -219,21 +219,23 @@ class RandevuDurumServisi
     }
 
     /**
-     * TELAFI ISARETLE — eski randevuTelafiIsaretle ile ayni: tum seanslar geldi=2,
-     * randevuya_geldi=0, kalemler seansa_geldi=0. Yalnizca paket/seans randevusunda.
+     * SEANS TELAFISI — eski randevuTelafiIsaretle ile ayni: tum seanslar geldi=2
+     * (telafi hakki), randevuya_geldi=0, kalemler seansa_geldi=0. Yalnizca
+     * paket/seans randevusunda. TELAFI RANDEVUSU (ucretsiz duzeltme, prim devri)
+     * AYRI islemdir → TelafiRandevuServisi.
      */
-    public function telafiIsaretle(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    public function seansTelafisi(int $randevuId, ?int $yetkiliId, bool $yaz): array
     {
         $randevu = $this->randevu($randevuId);
         if ((int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
-            throw new GecersizIslemException('İptal edilmiş randevu telafi işaretlenemez.');
+            throw new GecersizIslemException('İptal edilmiş randevuda seans telafisi yapılamaz.');
         }
         $seanslar = $this->seanslar($randevuId);
         if (! $seanslar) {
-            throw new GecersizIslemException('Bu randevu paket/seans randevusu değil, telafi işaretlenemez.');
+            throw new GecersizIslemException('Bu randevu paket/seans randevusu değil; seans telafisi yapılamaz. (Ücretsiz düzeltme için "Telafi randevusu" kullanın.)');
         }
         $salonId = (int) $randevu->salon_id;
-        $seansPlan = SeansDurumGecisi::telafi($seanslar);
+        $seansPlan = SeansDurumGecisi::seansTelafisi($seanslar);
         $plan = ['randevu' => ['randevuya_geldi' => 0], 'kalem_seansa_geldi' => 0, 'seans' => $seansPlan];
 
         if (! $yaz) {
@@ -247,9 +249,9 @@ class RandevuDurumServisi
         });
 
         AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi', 'randevu', $randevuId,
-            $this->musteriAdi($randevu), 'Randevu telafi olarak işaretlendi (seans telafi slotuna alındı)');
+            $this->musteriAdi($randevu), 'Seans telafisi: randevunun seansları telafi hakkına alındı');
 
-        return $this->sonuc(['telafi' => true, 'mesaj' => 'Telafi olarak işaretlendi'], $plan, true);
+        return $this->sonuc(['telafi' => true, 'mesaj' => 'Seans telafisi kaydedildi'], $plan, true);
     }
 
     /**

@@ -123,9 +123,14 @@ işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
   Tek fark: `$hemen=true` (CLI) WA/SMS'i shutdown'a atmadan hemen gönderir.
 
 ### Faz 2c — Telafi (YAPILDI, aynı kill-switch)
-- **Telafi işaretle:** `POST /randevu/{id}/telafi` — tüm seanslar `geldi=2`
-  (telafi slotu), `randevuya_geldi=0`, kalemler `seansa_geldi=0`. Yalnızca
-  paket/seans randevusunda (yoksa 422). Eski `randevuTelafiIsaretle` ile aynı.
+> İki AYRI işlem — karıştırma:
+> **Seans telafisi** = paket seansı gelmedi, hak saklanır (`APS.geldi=2`), sonraki
+> randevuya bağlanır; yalnız paket randevusunda. **Telafi randevusu** = yapılmış
+> hizmet için ücretsiz düzeltme/garanti randevusu (fiyat 0, prim devri); her randevuda.
+
+- **Seans telafisi:** `POST /randevu/{id}/seans-telafisi` — tüm seanslar `geldi=2`,
+  `randevuya_geldi=0`, kalemler `seansa_geldi=0`. Yalnızca paket/seans
+  randevusunda (yoksa 422). Eski `randevuTelafiIsaretle` ile aynı.
 - **Telafi randevusu (A tipi):** `GET /randevu/telafi-secenekler`,
   `POST /randevu/kalem/{rh}/telafi-randevusu` (yetki `randevu.olustur`).
   Servis `TelafiRandevuServisi` (v2), para kuralı saf `Domain\Randevu\TelafiPrim`
@@ -135,7 +140,7 @@ işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
   personel/oda/cihaz salon doğrulaması, DRY-RUN prim planı, aktivite logu.
   Geçiş dönemi: eski web/v1 kendi kopyasını kullanır; Faz 4'te tek kaynak v2.
 - Doğrulama: `php artisan randevu:telafi-plan {rh} {Y-m-d} {H:i} --personel=`,
-  `php artisan randevu:durum-plan {randevu} telafi`.
+  `php artisan randevu:durum-plan {randevu} seans-telafisi`.
 
 ### Kill-switch açma kontrol listesi
 1. Eski klasörde migration uygulandı mı (`v2_bildirim_kuyrugu` var mı)?

@@ -140,7 +140,8 @@ function iskeletCiz() {
         <span><i class="t-nokta" style="background:#ffc107"></i> Onay bekliyor</span>
         <span><i class="t-nokta t-cizgili"></i> Kapalı saat</span>
         <span><i class="bi bi-cash-coin"></i> Ödendi</span>
-        <span><i class="bi bi-arrow-repeat"></i> Telafi</span>
+        <span><i class="bi bi-arrow-repeat"></i> Seans telafisi</span>
+        <span><i class="bi bi-bandaid"></i> Telafi randevusu</span>
       </div>
 
       <div class="t-kart"><div id="tTakvim"></div><div class="t-yukleniyor" id="tYuk"><i class="bi bi-arrow-repeat"></i></div></div>
@@ -242,7 +243,8 @@ function olayIcerik(info) {
     d.geldi === '0' ? '<i class="bi bi-x-circle-fill" title="Gelmedi"></i>' : '',
     d.durum === '0' ? '<i class="bi bi-hourglass-split" title="Onay bekliyor"></i>' : '',
     d.odendi ? '<i class="bi bi-cash-coin" title="Ödendi"></i>' : (d.satis ? '<i class="bi bi-receipt" title="Satış oluştu"></i>' : ''),
-    d.telafi || d.telafiRandevusu ? '<i class="bi bi-arrow-repeat" title="Telafi"></i>' : '',
+    d.telafi ? '<i class="bi bi-arrow-repeat" title="Seans telafisi (hak saklandı)"></i>' : '',
+    d.telafiRandevusu ? '<i class="bi bi-bandaid" title="Telafi randevusu (ücretsiz düzeltme)"></i>' : '',
   ].join('');
   return {
     html: `<div class="t-olay" style="--a:${e.ana}">
@@ -374,7 +376,7 @@ function cekmeceCiz(v) {
     aktif && !geldiMi ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
     aktif && !gelmediMi ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
     aktif && isaretli ? btn('kaldir', 'bi-eraser', 'İşareti Kaldır') : '',
-    aktif && v.seans_var ? btn('telafi', 'bi-arrow-repeat', 'Telafi İşaretle', 'mor') : '',
+    aktif && v.seans_var && !v.seans_telafisi ? btn('seans-telafisi', 'bi-arrow-repeat', 'Seans Telafisi', 'mor') : '',
     aktif ? btn('iptal', 'bi-slash-circle', v.durum === 0 ? 'Reddet' : 'İptal Et', 'kirmizi-cizgi') : '',
   ].join('');
 
@@ -390,6 +392,7 @@ function cekmeceCiz(v) {
       <span class="t-rozet ${dRenk}">${dEt}</span>
       <span class="t-rozet ${geldi[1]}">${geldi[0]}</span>
       ${v.seans_var ? '<span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket seansı</span>' : ''}
+      ${v.seans_telafisi ? '<span class="t-rozet turuncu"><i class="bi bi-arrow-repeat"></i> Seans telafisi (hak saklı)</span>' : ''}
     </div>
     <div class="t-ck-zaman"><i class="bi bi-clock"></i> ${esc(new Date(v.tarih + 'T00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }))} · ${esc(String(v.saat || '').slice(0, 5))}</div>
     <div class="t-ck-kalemler">
@@ -399,7 +402,7 @@ function cekmeceCiz(v) {
             <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b><span>${esc(h.personel_adi || '—')}</span></div>
             <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${Number(h.fiyat).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</b>` : ''}</div>
           </div>
-          ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-arrow-repeat"></i> Telafi randevusu (ücretsiz)</span>'
+          ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-bandaid"></i> Telafi randevusu (ücretsiz)</span>'
             : h.telafi_devir_yapildi ? '<span class="t-rozet gri"><i class="bi bi-check2"></i> Telafi randevusu verildi</span>'
             : (aktif ? `<button class="t-kalem-telafi" data-telafi-rh="${h.id}"><i class="bi bi-calendar-plus"></i> Telafi randevusu oluştur</button>` : '')}
         </div>`).join('')}
@@ -421,13 +424,13 @@ function cekmeceCiz(v) {
 
 const ISLEM_UC = {
   geldi: ['POST', 'geldi'], gelmedi: ['POST', 'gelmedi'], kaldir: ['DELETE', 'geldi-isareti'],
-  iptal: ['POST', 'iptal'], onayla: ['POST', 'onayla'], telafi: ['POST', 'telafi'],
+  iptal: ['POST', 'iptal'], onayla: ['POST', 'onayla'], 'seans-telafisi': ['POST', 'seans-telafisi'],
 };
 
 async function islemYap(v, islem, ek, dryRun = false) {
-  if (!dryRun && islem === 'telafi') {
-    const tamam = await panel().onay('Bu randevunun seansları telafi slotuna alınsın mı? Seans düşmez; telafi bir sonraki randevuya bağlanır.',
-      { baslik: 'Telafi işaretle', tamam: 'Evet', tehlike: false });
+  if (!dryRun && islem === 'seans-telafisi') {
+    const tamam = await panel().onay('Bu randevunun paket seansları telafi hakkına alınsın mı? Seans düşmez; hak bir sonraki randevuya bağlanır. (Ücretsiz düzeltme randevusu için hizmetin altındaki "Telafi randevusu oluştur"u kullanın.)',
+      { baslik: 'Seans telafisi', tamam: 'Evet', tehlike: false });
     if (!tamam) return;
   }
   if (!dryRun && islem === 'iptal') {
@@ -498,7 +501,8 @@ function onizlemeCiz(islem, s) {
     </div>`;
 }
 
-/* ───────────────────────── Telafi randevusu (A tipi) ───────────────────────── */
+/* ─────────── Telafi RANDEVUSU (A tipi: ucretsiz duzeltme + prim devri) ───────────
+   Seans telafisinden (paket seansini telafi hakkina alma) AYRI bir islemdir. */
 
 let _telafiSecenek = null;
 async function telafiSecenekleri() {
@@ -518,7 +522,7 @@ async function telafiFormu(v, h) {
   const { ov, kapat } = modal(`
     <div class="rc-onay-ikon"><i class="bi bi-calendar-plus"></i></div>
     <h3>Telafi randevusu</h3>
-    <p>${esc(h.hizmet_adi || 'Hizmet')} · ücretsiz düzeltme randevusu. Personel değişirse prim yeni personele devredilir.</p>
+    <p>${esc(h.hizmet_adi || 'Hizmet')} için <b>ücretsiz düzeltme/garanti</b> randevusu. Personel değişirse prim yeni personele devredilir. (Paket seansı telafisi değildir.)</p>
     <div class="t-form">
       <label>Tarih<input id="tfTarih" placeholder="Tarih seçin" readonly></label>
       <label>Saat<input id="tfSaat" placeholder="Saat" readonly></label>
