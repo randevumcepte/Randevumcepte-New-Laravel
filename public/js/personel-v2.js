@@ -4,12 +4,13 @@
  * Eski panel "Personeller" ekranının v2 karşılığı. Veri /api/v2/personel* ve
  * /api/v2/personel-yetki/* uçlarından Bearer token ile çekilir (web + Flutter AYNI
  * uç → TEK KAYNAK). Liste (arama + sayfalama), satır aksiyonları (aktif/pasif,
- * sıralama, takvim görünürlüğü, arşivle), ekle/düzenle modalı (çalışma + mola
- * saatleri dahil) ve yetki editörü modalı (şema + şablon + anahtarlar).
+ * sıralama, takvim görünürlüğü, arşivle), ekle/düzenle modalı (eski "Personel
+ * Bilgileri" modalının tasarımıyla: bölüm kartları, Çalışma|Mola iki kolon, Prim &
+ * Hak Ediş + kaleme göre prim) ve yetki editörü modalı.
  *
- * Yazma uçları PERSONEL_V2_YAZMA_AKTIF kapalıyken 409 döner; UI bunu yakalayıp
- * toast gösterir (iş kaybı yok). Token: localStorage['rc_access_token'] (pilotta
- * ?token=). salon_id data-salon (blade) ya da ?sube= query'sinden.
+ * Yazma uçları PERSONEL_V2_YAZMA_AKTIF kapalıyken 409 döner; UI bunu yakalayıp toast
+ * gösterir. Token: localStorage['rc_access_token'] (pilotta ?token=). salon_id
+ * data-salon (blade) ya da ?sube= query'sinden.
  */
 
 const BASE = '/api/v2';
@@ -53,6 +54,7 @@ function yazSonuc({ ok, kod, govde }, basariMsg) {
 const ROLLER = { 1: 'Hesap Sahibi', 2: 'Süpervizör', 3: 'Yönetici', 4: 'Sekreter', 5: 'Personel', 7: 'Sanat Yönetmeni', 8: 'Sosyal Medya Uzmanı' };
 const CINSIYETLER = { 0: 'Kadın', 1: 'Erkek' };
 const GUNLER = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const CAP = { hizmet: 'Hizmet', urun: 'Urun', paket: 'Paket' };
 
 const kok = document.getElementById('rc-personel');
 let salonId = parseInt(kok.dataset.salon, 10) || parseInt(_qp.get('sube'), 10) || 0;
@@ -60,8 +62,8 @@ let salonId = parseInt(kok.dataset.salon, 10) || parseInt(_qp.get('sube'), 10) |
 const durum = { baslik: '', page: 1 };
 let benim = null;   // giriş yapanın kendi yetkileri (buton gate'i için)
 let sema = null;    // yetki şeması (tanimlar + kategoriler + sablonlar) — bir kez yüklenir
+let formDuzenleme = false; // prim kalem boş-durum mesajı için
 
-/** Giriş yapanın bir yetkisi var mı? (yüklenmediyse defensive true; backend zaten gate'ler.) */
 function yetkiVar(key) {
   if (!benim || !benim.ayarlar) return true;
   return benim.ayarlar[key] === true;
@@ -111,14 +113,13 @@ function iskeletCiz() {
 
   if (el('#pYeni')) el('#pYeni').addEventListener('click', () => formAc(null));
 
-  let ekardzaman;
+  let aramaZaman;
   el('#pAra').addEventListener('input', (e) => {
-    clearTimeout(ekardzaman);
+    clearTimeout(aramaZaman);
     const v = e.target.value.trim();
-    ekardzaman = setTimeout(() => { durum.baslik = v; durum.page = 1; yukle(); }, 350);
+    aramaZaman = setTimeout(() => { durum.baslik = v; durum.page = 1; yukle(); }, 350);
   });
 
-  // Satır aksiyonları — event delegation.
   el('#pGovde').addEventListener('click', satirTiklama);
   el('#pGovde').addEventListener('change', satirDegisim);
 }
@@ -237,14 +238,21 @@ async function satirDegisim(e) {
 
 // ─────────────────────────── MODAL ───────────────────────────
 
-function modalAc(baslik, govdeHtml, altHtml, dar) {
+function modalAc(baslik, govdeHtml, altHtml, opt = {}) {
   modalKapat();
   const ov = document.createElement('div');
   ov.className = 'p-modal-overlay';
   ov.id = 'pModal';
+  const altb = opt.altbaslik ? `<div class="p-modal-altbaslik">${esc(opt.altbaslik)}</div>` : '';
   ov.innerHTML = `
-    <div class="p-modal${dar ? ' p-dar' : ''}" role="dialog">
-      <div class="p-modal-bas"><h2>${esc(baslik)}</h2><button class="p-kapat" id="pModalKapat">&times;</button></div>
+    <div class="p-modal${opt.dar ? ' p-dar' : ''}" role="dialog">
+      <div class="p-modal-bas">
+        <div class="p-modal-bas-ic">
+          <span class="p-modal-ikon"><i class="bi bi-${esc(opt.ikon || 'person')}"></i></span>
+          <div><h2>${esc(baslik)}</h2>${altb}</div>
+        </div>
+        <button class="p-kapat" id="pModalKapat" aria-label="Kapat">&times;</button>
+      </div>
       <div class="p-modal-govde">${govdeHtml}</div>
       ${altHtml ? `<div class="p-modal-alt">${altHtml}</div>` : ''}
     </div>`;
@@ -258,67 +266,166 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modalKapat
 
 // ─────────────────────────── EKLE / DÜZENLE ───────────────────────────
 
-function saatSatirlari(onek, saatler, etiket) {
-  // saatler: {haftanin_gunu: {calisiyor/mola_var, baslangic_saati, bitis_saati}}
-  let h = `<div class="p-bolum-bas">${etiket}</div>`;
+function saatSatirlari(onek, saatler) {
+  let h = '';
   for (let g = 1; g <= 7; g++) {
     const s = saatler[g] || {};
     const acik = s.acik ?? (onek === 'calisma'); // çalışma default açık, mola default kapalı
     h += `
-      <div class="p-saat-sat">
-        <span class="p-saat-gun">${GUNLER[g]}</span>
+      <div class="p-saat-row${acik ? ' p-dolu' : ''}" data-row="${onek}-${g}">
         <label class="p-switch"><input type="checkbox" class="p-${onek}-acik" data-gun="${g}" ${acik ? 'checked' : ''}><span class="p-kaydir"></span></label>
+        <span class="p-saat-gun">${GUNLER[g]}</span>
         <input type="time" class="p-${onek}-bas" data-gun="${g}" value="${esc((s.baslangic_saati || (onek === 'calisma' ? '09:00' : '13:00')).slice(0, 5))}">
-        <span>–</span>
         <input type="time" class="p-${onek}-bit" data-gun="${g}" value="${esc((s.bitis_saati || (onek === 'calisma' ? '18:00' : '14:00')).slice(0, 5))}">
       </div>`;
   }
   return h;
 }
 
+function primToggleSatiri(tur, baslik) {
+  return `
+    <div class="p-detay-toggle" data-tur="${tur}">
+      <div class="p-detay-bilgi">
+        <div class="p-detay-baslik"><i class="bi bi-list-ul"></i> ${baslik}</div>
+        <div class="p-detay-hint">Açıksa genel "${baslik.replace('Primini Kaleme Göre Belirle', 'Primi %')}" pasif olur; her kaleme ayrı yüzde girersiniz.</div>
+      </div>
+      <label class="p-switch"><input type="checkbox" id="f${CAP[tur]}Detayli"><span class="p-kaydir"></span></label>
+    </div>
+    <div class="p-kalem-list" id="${tur}KalemList" style="display:none"></div>`;
+}
+
 async function formAc(p) {
   const duzenleme = !!p;
+  formDuzenleme = duzenleme;
   const rolOpt = Object.entries(ROLLER).map(([id, ad]) => `<option value="${id}" ${p && String(p.hesap_turu) === id ? 'selected' : ''}>${ad}</option>`).join('');
   const cinsOpt = Object.entries(CINSIYETLER).map(([id, ad]) => `<option value="${id}" ${p && String(p.cinsiyet) === id ? 'selected' : ''}>${ad}</option>`).join('');
 
-  // Saatler düzenlemede sunucudan, eklemede varsayılan.
-  let calisma = {}, mola = {};
+  // Düzenlemede saatler + kaleme göre prim verisi sunucudan paralel yüklenir.
+  let calisma = {}, mola = {}, primVeri = null;
   if (duzenleme) {
-    const [c, m] = await Promise.all([
+    const [c, m, pk] = await Promise.all([
       api('GET', `/personel/${p.id}/calisma-saatleri`),
       api('GET', `/personel/${p.id}/mola-saatleri`),
+      api('GET', `/personel/${p.id}/prim-kalemleri`),
     ]);
     (c.govde?.veri || []).forEach((x) => { calisma[x.haftanin_gunu] = { acik: !!x.calisiyor, baslangic_saati: x.baslangic_saati, bitis_saati: x.bitis_saati }; });
     (m.govde?.veri || []).forEach((x) => { mola[x.haftanin_gunu] = { acik: !!x.mola_var, baslangic_saati: x.baslangic_saati, bitis_saati: x.bitis_saati }; });
+    if (pk.ok && pk.govde?.basarili) primVeri = pk.govde.veri;
   }
 
   const govde = `
-    <div class="p-form-izgara">
-      <div class="p-alan"><label>Ad Soyad *</label><input id="fAd" value="${esc(p?.personel_adi || '')}"></div>
-      <div class="p-alan"><label>Ünvan</label><input id="fUnvan" value="${esc(p?.unvan || '')}"></div>
-      <div class="p-alan"><label>Cep Telefonu</label><input id="fTel" value="${esc(p?.cep_telefon || '')}" placeholder="05XX XXX XX XX"></div>
-      <div class="p-alan"><label>Cinsiyet</label><select id="fCinsiyet"><option value="">Seçiniz</option>${cinsOpt}</select></div>
-      <div class="p-alan"><label>Hesap Türü *</label><select id="fRol"><option value="">Seçiniz</option>${rolOpt}</select></div>
-      <div class="p-alan"><label>Maaş (₺)</label><input id="fMaas" type="number" step="0.01" value="${esc(p?.maas ?? '')}"></div>
+    <div class="p-sec">
+      <div class="p-sec-bas"><span class="p-sec-ikon p-sec-info"><i class="bi bi-person-badge"></i></span>
+        <div><h3>Temel Bilgiler</h3></div></div>
+      <div class="p-form-izgara">
+        <div class="p-alan"><label>Ad Soyad *</label><input id="fAd" value="${esc(p?.personel_adi || '')}"></div>
+        <div class="p-alan"><label>Ünvan</label><input id="fUnvan" value="${esc(p?.unvan || '')}"></div>
+        <div class="p-alan"><label>Cep Telefonu</label><input id="fTel" value="${esc(p?.cep_telefon || '')}" placeholder="05XX XXX XX XX"></div>
+        <div class="p-alan"><label>Cinsiyet</label><select id="fCinsiyet"><option value="">Seçiniz</option>${cinsOpt}</select></div>
+        <div class="p-alan"><label>Hesap Türü *</label><select id="fRol"><option value="">Seçiniz</option>${rolOpt}</select></div>
+      </div>
     </div>
-    <div class="p-bolum-bas">Prim Yüzdeleri (%)</div>
-    <div class="p-form-izgara">
-      <div class="p-alan"><label>Hizmet Primi</label><input id="fHizmetPrim" type="number" step="0.01" value="${esc(p?.hizmet_prim_yuzde ?? '')}"></div>
-      <div class="p-alan"><label>Ürün Primi</label><input id="fUrunPrim" type="number" step="0.01" value="${esc(p?.urun_prim_yuzde ?? '')}"></div>
-      <div class="p-alan"><label>Paket Primi</label><input id="fPaketPrim" type="number" step="0.01" value="${esc(p?.paket_prim_yuzde ?? '')}"></div>
+
+    <div class="p-sec">
+      <div class="p-sec-bas"><span class="p-sec-ikon p-sec-saat"><i class="bi bi-clock-fill"></i></span>
+        <div><h3>Çalışma &amp; Mola Saatleri</h3><div class="p-sec-alt">Hangi gün, hangi saatler arası çalıştığını ve mola saatlerini belirleyin</div></div></div>
+      <div class="p-saat-grid">
+        <div>
+          <div class="p-saat-kolbas p-kol-yesil"><i class="bi bi-check-circle-fill"></i> Çalışma Saatleri</div>
+          ${saatSatirlari('calisma', calisma)}
+        </div>
+        <div>
+          <div class="p-saat-kolbas p-kol-turuncu"><i class="bi bi-cup-hot-fill"></i> Mola Saatleri</div>
+          ${saatSatirlari('mola', mola)}
+        </div>
+      </div>
     </div>
-    <div class="p-saatler-izgara">
-      <div>${saatSatirlari('calisma', calisma, 'Çalışma Saatleri')}</div>
-      <div>${saatSatirlari('mola', mola, 'Mola (Öğle Arası) Saatleri')}</div>
+
+    <div class="p-sec">
+      <div class="p-sec-bas"><span class="p-sec-ikon p-sec-prim"><i class="bi bi-cash-coin"></i></span>
+        <div><h3>Prim &amp; Hak Ediş Ayarları</h3><div class="p-sec-alt">Aylık maaş ve tahsilat üzerinden prim yüzdeleri (Hak Ediş raporunda hesaplanır)</div></div></div>
+      <div class="p-prim-grid">
+        <div class="p-alan"><label>Sabit Maaş (₺)</label><input id="fMaas" type="number" step="0.01" value="${esc(p?.maas ?? '')}"></div>
+        <div class="p-alan"><label>Hizmet Primi (%)</label><input id="fHizmetPrim" type="number" step="0.01" value="${esc(p?.hizmet_prim_yuzde ?? '')}"></div>
+        <div class="p-alan"><label>Ürün Primi (%)</label><input id="fUrunPrim" type="number" step="0.01" value="${esc(p?.urun_prim_yuzde ?? '')}"></div>
+        <div class="p-alan"><label>Paket Primi (%)</label><input id="fPaketPrim" type="number" step="0.01" value="${esc(p?.paket_prim_yuzde ?? '')}"></div>
+      </div>
+      ${primToggleSatiri('hizmet', 'Hizmet Primini Kaleme Göre Belirle')}
+      ${primToggleSatiri('urun', 'Ürün Primini Kaleme Göre Belirle')}
+      ${primToggleSatiri('paket', 'Paket Primini Kaleme Göre Belirle')}
     </div>`;
 
   const alt = `
     <button class="p-btn p-btn-ikincil" id="fIptal">Vazgeç</button>
     <button class="p-btn p-btn-birincil" id="fKaydet"><i class="bi bi-check-lg"></i> Kaydet</button>`;
 
-  modalAc(duzenleme ? 'Personel Düzenle' : 'Yeni Personel', govde, alt);
+  modalAc(duzenleme ? 'Personel Düzenle' : 'Yeni Personel', govde, alt, {
+    ikon: 'person-lines-fill',
+    altbaslik: 'Personel bilgilerini, çalışma saatlerini ve hak ediş ayarlarını düzenleyin',
+  });
+
+  // Çalışma/mola satır vurgusu toggle ile senkron.
+  el('.p-modal-govde').addEventListener('change', (e) => {
+    const sw = e.target.closest('.p-calisma-acik, .p-mola-acik');
+    if (sw) sw.closest('.p-saat-row').classList.toggle('p-dolu', sw.checked);
+  });
+
+  // Kaleme göre prim toggle'ları.
+  ['hizmet', 'urun', 'paket'].forEach((tur) => {
+    const cb = el('#f' + CAP[tur] + 'Detayli');
+    cb.addEventListener('change', () => primDetayUygula(tur, cb.checked));
+  });
+
+  if (duzenleme && primVeri) {
+    primKalemRender('hizmet', primVeri.hizmetler);
+    primKalemRender('urun', primVeri.urunler);
+    primKalemRender('paket', primVeri.paketler);
+    ['hizmet', 'urun', 'paket'].forEach((tur) => {
+      const on = !!Number((primVeri.flags || {})[tur] || 0);
+      el('#f' + CAP[tur] + 'Detayli').checked = on;
+      primDetayUygula(tur, on);
+    });
+  }
+
   el('#fIptal').addEventListener('click', modalKapat);
   el('#fKaydet').addEventListener('click', () => formKaydet(p));
+}
+
+/** Kaleme göre liste satırlarını çiz (boşsa duruma göre mesaj). */
+function primKalemRender(tur, items) {
+  const list = el('#' + tur + 'KalemList');
+  if (!list) return;
+  if (!items || !items.length) {
+    const msg = !formDuzenleme
+      ? 'Personeli kaydedip "Düzenle" ile kaleme göre giriş yapabilirsiniz.'
+      : (tur === 'hizmet'
+        ? 'Bu personele atanmış hizmet yok. Önce hizmet atayın.'
+        : 'Kayıtlı ' + (tur === 'urun' ? 'ürün' : 'paket') + ' bulunamadı.');
+    list.innerHTML = `<div class="p-kalem-bos">${msg}</div>`;
+    return;
+  }
+  list.innerHTML = items.map((it) => `
+    <div class="p-kalem-row">
+      <span class="p-kalem-ad">${esc(it.ad)}</span>
+      <input type="number" step="0.01" min="0" max="100" class="p-kalem-yuzde" data-tur="${tur}" data-id="${it.id}" value="${it.yuzde == null ? '' : esc(it.yuzde)}" placeholder="%">
+    </div>`).join('');
+}
+
+/** Toggle açık → genel % pasif + liste görünür. */
+function primDetayUygula(tur, on) {
+  const list = el('#' + tur + 'KalemList');
+  if (list) {
+    list.style.display = on ? '' : 'none';
+    if (on && !list.innerHTML.trim()) primKalemRender(tur, null); // add modunda boş → mesaj
+  }
+  const genel = el('#f' + CAP[tur] + 'Prim');
+  if (genel) {
+    genel.disabled = on;
+    const alan = genel.closest('.p-alan');
+    if (alan) alan.classList.toggle('p-genel-pasif', on);
+  }
+  const satir = document.querySelector(`.p-detay-toggle[data-tur="${tur}"]`);
+  if (satir) satir.classList.toggle('p-acik', on);
 }
 
 function saatToplaForm(onek, varAlan) {
@@ -333,6 +440,15 @@ function saatToplaForm(onek, varAlan) {
     });
   });
   return rows;
+}
+
+function primKalemToplaForm() {
+  const pk = { hizmet: {}, urun: {}, paket: {} };
+  document.querySelectorAll('.p-kalem-yuzde').forEach((inp) => {
+    const v = inp.value.trim();
+    if (v !== '') pk[inp.dataset.tur][inp.dataset.id] = v;
+  });
+  return pk;
 }
 
 async function formKaydet(p) {
@@ -351,6 +467,10 @@ async function formKaydet(p) {
     hizmet_prim_yuzde: el('#fHizmetPrim').value === '' ? null : el('#fHizmetPrim').value,
     urun_prim_yuzde: el('#fUrunPrim').value === '' ? null : el('#fUrunPrim').value,
     paket_prim_yuzde: el('#fPaketPrim').value === '' ? null : el('#fPaketPrim').value,
+    hizmet_prim_detayli: el('#fHizmetDetayli').checked,
+    urun_prim_detayli: el('#fUrunDetayli').checked,
+    paket_prim_detayli: el('#fPaketDetayli').checked,
+    prim_kalemleri: primKalemToplaForm(),
     sistem_yetki: parseInt(rol, 10),
     calisma_saatleri: saatToplaForm('calisma', 'calisiyor'),
     mola_saatleri: saatToplaForm('mola', 'mola_var'),
@@ -376,7 +496,6 @@ async function formKaydet(p) {
 
 async function yetkiAc(p) {
   if (!p) return;
-  // Şema (bir kez) + bu personelin mevcut ayarları.
   const istekler = [api('GET', `/personel/${p.id}/yetki`)];
   if (!sema) istekler.unshift(api('GET', '/personel-yetki/sema'));
   const sonuclar = await Promise.all(istekler);
@@ -384,7 +503,7 @@ async function yetkiAc(p) {
   const cur = sonuclar[0];
   if (!sema || !cur.ok || !cur.govde?.basarili) { mesaj('Yetki bilgisi alınamadı.', 'hata'); return; }
 
-  const mevcut = cur.govde.veri; // {personel_rolunde, kayit_var, sablon, ayarlar}
+  const mevcut = cur.govde.veri;
   const ayarlar = { ...mevcut.ayarlar };
   let seciliSablon = mevcut.kayit_var ? mevcut.sablon : '';
 
@@ -415,9 +534,8 @@ async function yetkiAc(p) {
     <button class="p-btn p-btn-ikincil" id="ykIptal">Vazgeç</button>
     <button class="p-btn p-btn-birincil" id="ykKaydet"><i class="bi bi-shield-check"></i> Yetkileri Kaydet</button>`;
 
-  modalAc('Yetki Yönetimi', govde, alt);
+  modalAc('Yetki Yönetimi', govde, alt, { ikon: 'shield-lock', altbaslik: esc(p.personel_adi) + ' için erişim yetkileri' });
 
-  // Şablon seçimi → tüm toggle'ları şablonun ayarlarına çek.
   el('#ykSablonlar').addEventListener('click', (e) => {
     const kart = e.target.closest('.p-sablon');
     if (!kart) return;
@@ -426,7 +544,6 @@ async function yetkiAc(p) {
     const s = sema.sablonlar.find((x) => x.key === seciliSablon);
     if (s) document.querySelectorAll('.p-yk').forEach((inp) => { inp.checked = s.ayarlar[inp.dataset.key] === true; });
   });
-  // Elle değişiklik → şablon "özel"e düşer.
   el('#ykKategoriler').addEventListener('change', () => {
     seciliSablon = 'ozel';
     document.querySelectorAll('.p-sablon').forEach((x) => x.classList.remove('aktif'));
@@ -451,7 +568,6 @@ async function arsivleAkis(p) {
   if (!gh.ok || !gh.govde?.basarili) { mesaj((gh.govde && gh.govde.mesaj) || 'Bilgi alınamadı.', 'hata'); return; }
   const v = gh.govde.veri;
 
-  // Gelecek hizmet yoksa → basit onay.
   if (!v || v.sonuc !== 'ok' || !v.count) {
     const ok = await onay(`${p.personel_adi} arşivlensin mi? Pasife alınır ve listeden gizlenir.`, { baslik: 'Personeli Arşivle', tamam: 'Arşivle', iptal: 'Vazgeç' });
     if (!ok) return;
@@ -460,7 +576,6 @@ async function arsivleAkis(p) {
     return;
   }
 
-  // Gelecek hizmet var → her kalem için hedef personel seç (transfer zorunlu).
   const hedefOpt = (v.personeller || []).map((h) => `<option value="${h.id}">${esc(h.personel_adi)}</option>`).join('');
   const satirlar = (v.hizmetler || []).map((h) => `
     <div class="p-transfer-sat">
@@ -475,7 +590,7 @@ async function arsivleAkis(p) {
     <button class="p-btn p-btn-ikincil" id="arIptal">Vazgeç</button>
     <button class="p-btn p-btn-birincil" id="arKaydet"><i class="bi bi-archive"></i> Devret ve Arşivle</button>`;
 
-  modalAc('Personeli Arşivle', govde, alt);
+  modalAc('Personeli Arşivle', govde, alt, { ikon: 'archive', altbaslik: 'Gelecek hizmetleri devret, sonra arşivle' });
   el('#arIptal').addEventListener('click', modalKapat);
   el('#arKaydet').addEventListener('click', async () => {
     const transferler = {};
@@ -506,7 +621,7 @@ async function benimYukle() {
 }
 
 (async function boot() {
-  await benimYukle();   // buton gate'leri için
+  await benimYukle();
   iskeletCiz();
   yukle();
 })();

@@ -85,6 +85,16 @@ class PersonelController extends Controller
         return ApiCevap::basarili($this->okuma->molaSaatleri($id));
     }
 
+    /** GET /api/v2/personel/{id}/prim-kalemleri  (personel.ekle_duzenle — kaleme göre prim form verisi) */
+    public function primKalemleri(int $id)
+    {
+        $user = $this->kullanici();
+        $salonId = $this->salonVeyaBulunamadi($id);
+        $this->kapi->denetle($user->id, $salonId, ['personel.ekle_duzenle']);
+
+        return ApiCevap::basarili($this->okuma->primKalemleri($id, $salonId));
+    }
+
     /** GET /api/v2/personel/{id}/gelecek-hizmetler  (personel.sil — arsiv akisi, salt-okuma) */
     public function gelecekHizmetler(int $id)
     {
@@ -127,6 +137,10 @@ class PersonelController extends Controller
             'hizmet_prim_yuzde' => $request->input('hizmet_prim_yuzde'),
             'urun_prim_yuzde'   => $request->input('urun_prim_yuzde'),
             'paket_prim_yuzde'  => $request->input('paket_prim_yuzde'),
+            'hizmet_prim_detayli' => $request->boolean('hizmet_prim_detayli'),
+            'urun_prim_detayli'   => $request->boolean('urun_prim_detayli'),
+            'paket_prim_detayli'  => $request->boolean('paket_prim_detayli'),
+            'prim_kalemleri'    => (array) $request->input('prim_kalemleri', []),
             'sistem_yetki'      => $request->input('sistem_yetki'),
             'calisma_saatleri'  => (array) $request->input('calisma_saatleri', []),
             'mola_saatleri'     => (array) $request->input('mola_saatleri', []),

@@ -133,6 +133,7 @@ Route::prefix('v2')->group(function () {
         Route::get('/personel/{id}', [PersonelController::class, 'goster'])->whereNumber('id');
         Route::get('/personel/{id}/calisma-saatleri', [PersonelController::class, 'calismaSaatleri'])->whereNumber('id');
         Route::get('/personel/{id}/mola-saatleri', [PersonelController::class, 'molaSaatleri'])->whereNumber('id');
+        Route::get('/personel/{id}/prim-kalemleri', [PersonelController::class, 'primKalemleri'])->whereNumber('id');
         Route::get('/personel/{id}/gelecek-hizmetler', [PersonelController::class, 'gelecekHizmetler'])->whereNumber('id');
         Route::get('/personel/{id}/yetki', [PersonelYetkiController::class, 'getir'])->whereNumber('id');
 

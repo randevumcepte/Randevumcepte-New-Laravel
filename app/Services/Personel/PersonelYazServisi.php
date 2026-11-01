@@ -8,6 +8,7 @@ use App\Models\IsletmeYetkilileri;
 use App\Models\Personeller;
 use App\Models\PersonelCalismaSaatleri;
 use App\Models\PersonelMolaSaatleri;
+use App\Models\PersonelPrimOrani;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -179,6 +180,10 @@ class PersonelYazServisi
             $personel->hizmet_prim_yuzde = $g['hizmet_prim_yuzde'] ?? null;
             $personel->urun_prim_yuzde = $g['urun_prim_yuzde'] ?? null;
             $personel->paket_prim_yuzde = $g['paket_prim_yuzde'] ?? null;
+            // Kaleme göre (detayli) prim mod bayraklari.
+            $personel->hizmet_prim_detayli = empty($g['hizmet_prim_detayli']) ? 0 : 1;
+            $personel->urun_prim_detayli   = empty($g['urun_prim_detayli']) ? 0 : 1;
+            $personel->paket_prim_detayli  = empty($g['paket_prim_detayli']) ? 0 : 1;
             $personel->yetkili_id = $yetkili->id;
             $rol = $g['sistem_yetki'] ?? null;
             if ($rol !== null && $rol !== '') {
@@ -203,6 +208,9 @@ class PersonelYazServisi
 
             // Saatler opsiyonel (bos gelirse dokunma).
             $this->saatleriYaz((int) $personel->id, $g['calisma_saatleri'] ?? [], $g['mola_saatleri'] ?? []);
+
+            // Kaleme göre prim oranlari (gönderilen tur icin sil-ve-yaz; eski personelekleduzenle ile ayni).
+            $this->primOranlariYaz((int) $personel->id, $salonId, $g['prim_kalemleri'] ?? []);
 
             return [
                 'personel_id'       => (int) $personel->id,
@@ -240,6 +248,39 @@ class PersonelYazServisi
                     'mola_var'        => (int) ($gun['mola_var'] ?? 0),
                     'baslangic_saati' => $gun['baslangic_saati'] ?? null,
                     'bitis_saati'     => $gun['bitis_saati'] ?? null,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Kaleme göre prim oranlarini yaz (idempotent upsert). $kalemler:
+     * {hizmet:{kalem_id:yuzde}, urun:{...}, paket:{...}}. Gönderilen tur icin
+     * mevcut satirlar silinip yeniden yazilir (bos map → o turu temizler).
+     */
+    private function primOranlariYaz(int $personelId, int $salonId, $kalemler): void
+    {
+        if (! is_array($kalemler)) {
+            return;
+        }
+        foreach (['hizmet', 'urun', 'paket'] as $tur) {
+            if (! array_key_exists($tur, $kalemler)) {
+                continue; // o tur hic gönderilmediyse dokunma
+            }
+            $map = is_array($kalemler[$tur]) ? $kalemler[$tur] : [];
+            PersonelPrimOrani::where('personel_id', $personelId)->where('tur', $tur)->delete();
+            foreach ($map as $kalemId => $yuzde) {
+                $kalemId = (int) $kalemId;
+                $yuzde = (float) str_replace(',', '.', (string) $yuzde);
+                if ($kalemId <= 0 || $yuzde <= 0) {
+                    continue; // bos/0 satir kaydedilmez
+                }
+                PersonelPrimOrani::create([
+                    'personel_id' => $personelId,
+                    'salon_id'    => $salonId,
+                    'tur'         => $tur,
+                    'kalem_id'    => $kalemId,
+                    'yuzde'       => $yuzde,
                 ]);
             }
         }
