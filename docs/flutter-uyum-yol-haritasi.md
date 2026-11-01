@@ -1,0 +1,101 @@
+# Flutter (işletme paneli) ↔ /api/v2 uyum yol haritası
+
+Kaynak: `/uygulamalar/randevumcepte/lib/yonetici` (297 Dart dosyası) salt-okuma envanteri, 2 Kas 2026.
+Amaç: v2 backend'i, Flutter işletme ekranlarının kullandığı **her alanı ve işlemi** karşılayacak şekilde
+tamamlamak. **Flutter'a geçiş en sona kadar yapılmaz**; Flutter canlıda v1'i kullanmaya devam eder.
+
+## Kurallar
+
+1. **Flutter'a dokunulmaz.** Ekran kodu geçişte de değişmez; yalnızca HTTP katmanı değişir (aşağıda).
+2. **v2 güvenli kalır.** Her uç `auth:isletmeyonetim-api` (Bearer) + `GuvenlikKapisi` (kapsam + yetki).
+   v1'in kimliksiz/`user_id`-gövdeli kalıbı v2'ye taşınmaz.
+3. **Alan adları Flutter modelleriyle birebir** (`lib/Models/*.fromJson`). Tek fark zarf: v2 cevabı
+   `{basarili, veri, mesaj}`; v1'in döndürdüğü gövde `veri` içindedir.
+4. **Sayfalama**: `data[]`, `current_page`, `last_page`, `total` (int — Flutter `int`'e atar).
+5. **İş mantığı tek yerde**: v2 servisleri. Yan etkiler (SMS/WA/push/oturum) v2'de üretilmez;
+   `v2_bildirim_kuyrugu` → eski `v2:bildirim-isle` **mevcut** kodla gönderir (bkz. `BildirimKuyrugu`).
+
+## Geçiş günü Flutter'da değişecek tek katman
+
+Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonlar),
+`lib/Frontend/sfdatatable.dart` (DataSource sınıfları), `lib/network_utils/api_client.dart`,
+`lib/Backend/yetki.dart`, birkaç ekranda satır içi `http.get/post`. Geçişte bu fonksiyonlar:
+
+| Konu | v1 bugün | v2 |
+|---|---|---|
+| Kimlik | ~%97 çağrıda **token yok**; kimlik gövdede `user_id` / `olusturan` / `userId` | `Authorization: Bearer <token>` (prefs `token`) |
+| Taban | `https://app.randevumcepte.com.tr/api/v1` (bazı yerlerde `//api/v1`) | `/api/v2` |
+| Salon parametresi | `sube`, `salon_id`, `salonid`, `salonId`, `Salonid`, `isletme_id`, `id`, path segment | `salon_id` (query/gövde) ya da kaydın kendisinden çözülür |
+| Cevap | çıplak gövde / çıplak liste | `govde.veri` |
+| Hata | çoğunlukla yalnız `statusCode==200` | `basarili=false` + `mesaj`; 401/403/404/409/422 |
+
+## Domain durumu
+
+✅ v2'de var · 🟡 kısmi · ❌ yok (v1 uç sayıları envanterdendir, yaklaşık)
+
+| Domain | v1 uç | v2 | Not |
+|---|---|---|---|
+| Personel (CRUD, saat, yetki) | 15 | ✅ | aşağıda detay; yazma `PERSONEL_V2_YAZMA_AKTIF` arkasında |
+| Personel prim / hak ediş | 7 | ❌ | Faz 3 (`primHakedisToplu`, `personelPrimHesaplaAyYil`, `primOde*`, `primHareket*`) |
+| Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı var; randevu **listesi**, randevu-sonrası not, sesli randevu, grup dersi yok |
+| Satış / adisyon / tahsilat / alacak | ~30 | 🟡 | liste, adisyon, kalem, tahsilat, alacak var; taksit, senet, kupon/kampanya kodu, müşteri indirim türü yok |
+| Katalog (hizmet/ürün/paket listeleri) | ~8 | 🟡 | `GET /katalog` var; sayfalı yönetim listeleri ve CRUD yok |
+| Müşteri | ~15 | ❌ | liste/arama (Bearer'lı tek v1 grubu), ekle/güncelle, detay, kara liste, sağlık, ölçüm |
+| Kasa / masraf / gün sonu | ~8 | ❌ | |
+| Senet | ~5 | ❌ | |
+| Raporlar (satış/personel/müşteri listeleri) | ~8 | ❌ | |
+| Seans takibi | ~4 | ❌ | |
+| Stok | ~20 | ❌ | `/stok/*` (form-urlencoded) |
+| Arşiv / form / sözleşme | ~12 | ❌ | |
+| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | ❌ | |
+| Öngörüşme | ~6 | ❌ | |
+| Ajanda | 3 | ❌ | |
+| Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
+| SMS / WhatsApp | ~20 | ❌ | |
+| Dashboard / e-asistan / hatırlatma / bildirim | ~15 | ❌ | |
+| Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |
+| Çağrı merkezi / santral | ~30 | ❌ | (v1'de Bearer'lı `CagriApi`) |
+
+## Personel — v1 → v2 eşlemesi
+
+| v1 (Flutter) | v2 | Durum |
+|---|---|---|
+| `POST /benimYetkilerim {sube}` | `GET /personel-yetki/benim?salon_id=` | ✅ aynı alanlar (`ayarlar, salon_sahibi, personel_rolunde, sablon`) |
+| `POST /personelgetir/{salon}?page {baslik}` | `GET /personel?salon_id=&baslik=&page=` | ✅ + `takvimde_gorunsun` dahil, + `ozet` |
+| `GET /personeller/{salon}` (10+ ekranda seçici) | `GET /personel?salon_id=&tumu=1` | ✅ salonun her üyesi; `liste_gor` yoksa telefon/maaş boş |
+| `POST /personelekleduzenle` (7 gün `calisiyorN`… alanları) | `POST /personel`, `PATCH /personel/{id}` (`calisma_saatleri[]`, `mola_saatleri[]`) | ✅ HTTP katmanı N-alanlarını diziye çevirir |
+| `GET /personelcalismasaatleri/{id}`, `/personelmolasaatleri/{id}` | `GET /personel/{id}/calisma-saatleri`, `/mola-saatleri` | ✅ |
+| `POST /personelsifregonder {personelid}` | `POST /personel/{id}/sifre-gonder` | ✅ kuyruk → eski `personelSifreUretVeGonder` |
+| `POST /personelaktifyap`, `/personelpasifyap` | `PATCH /personel/{id}/durum {aktif}` | ✅ pasifte oturum sonlandırma kuyruktan |
+| `POST /personelTakvimdeGorunsunToggle` | `PATCH /personel/{id}/takvim-gorunur` | ✅ `takvimde_gorunsun` sayısal |
+| `POST /personelSiralamaKaydir {delta}` | `PATCH /personel/{id}/siralama {delta}` | ✅ |
+| `POST /personelGelecekHizmetler` | `GET /personel/{id}/gelecek-hizmetler` | ✅ |
+| `POST /personelArsivle {transferler}` | `DELETE /personel/{id} {transferler}` | ✅ + oturum sonlandırma |
+| `GET /personelYetkiSema` | `GET /personel-yetki/sema` | ✅ |
+| `POST /personelYetkiGetir` | `GET /personel/{id}/yetki` | ✅ |
+| `POST /personelYetkiKaydet` | `PATCH /personel/{id}/yetki` | ✅ force_logout kuyruktan |
+| `POST /personelPrimKalemleri` | `GET /personel/{id}/prim-kalemleri` | ✅ |
+| (sabit hesap türü listesi 1,2,3,4,5,7,8) | `GET /personel/form-verisi` | ✅ `roles` tablosundan |
+| `POST /satislar?page {personel_id…}` (personelsatislari) | `GET /satislar?personel_id=` | ✅ |
+| `POST /primHakedisToplu/{salon}` | — | ❌ Faz 3 (her satır `Personel.fromJson` alanlarını da taşımalı, id = `id` veya `personel_id`) |
+| `POST /personelPrimHesaplaAyYil` | — | ❌ Faz 3 (`*_toplam(_numeric)`, `*_hakedis(_numeric)`, `adisyonlar[]`) |
+| `POST /primOde`, `/primOdemeListesi`, `/primOdemeSil`, `/primHareketEkle`, `/primHareketSil` | — | ❌ Faz 3 (`odemeler[].id`, `hareketler[].id` JSON sayı) |
+
+## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
+
+- `personelekleduzenle` mola anahtarlarını (`mola1..7`) `calisiyor1..7`'den kopyalıyor → mola açık/kapalı fiilen yok sayılıyor. v2 doğru alanları kullanır.
+- `personeller.dart` sayfalı listede `takvimde_gorunsun` olmadığı için ikinci bir `/personeller` çağrısıyla birleştiriyor. v2 tek liste her alanı döner.
+- `/hizmet-musteri-listes` (sonda "i" eksik), `musterilistegetirSayfali`'nin `&seciliMusteri?{id}` bozuk sorgusu, `paketMusteriListesiGetir`'de `personelId = paketId` hatası.
+- `/tahsilat-*-sil` `basarili: "1"` (string) bekliyor; `tahsilatekle` müşteriyi `ad_soyad` anahtarıyla, `taksitekleguncelle` `tahsilat_musteri_id` ile gönderiyor; `SenetVade/TaksitVade.toJson` `dogurlama_kodu` yazım hatası.
+- `/randevuIcinGerekliVeriler` her liste anahtarını (`musteriler, paketler, urunler, hizmetler, odalar, cihazlar, sehirler, formlar, personeller`) **zorunlu** döndürmeli — Flutter hepsini `List` olarak cast eder.
+- Avatar / ek dosya yolları **göreli** dönmeli (`resources[].avatar`, `img_src`, `arsiv.uzanti`); Flutter başına `https://app.randevumcepte.com.tr/` ekliyor.
+- Para alanları hem TR biçimli metin hem `_numeric` olarak okunuyor (`_parseTrNumber`).
+- Sabit salon id'li ölü kod (114, 182): `ajandaduzenle`, `okunmus`, `okunmamıs`, `bildirimler_services`, `hesapkaldirmaisletme` — geçişte kapsam dışı.
+
+## Sıradaki adımlar (öneri)
+
+1. Personel Faz 3: prim / hak ediş / ödeme (Flutter `prim_hakedis`, `hakedislerim`, `personeldetay`).
+2. Randevu boşlukları: randevu listesi (`/randevular?page`), randevu-sonrası not, grup dersi.
+3. Satış boşlukları: taksit, senet, kupon/kampanya kodu, müşteri indirim türü.
+4. Müşteri → Kasa/Rapor → Ayar → Stok → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
+5. En son: Flutter HTTP katmanı geçişi (kullanıcı "geçiş" dediğinde).
