@@ -112,9 +112,7 @@ function iskeletCiz() {
             <div class="t-alt">Önizleme (v2) · durum işlemleri sunucu yazması açılana kadar plan olarak gösterilir</div>
           </div>
         </div>
-        <a class="t-yeni-btn" id="tYeni" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}">
-          <i class="bi bi-plus-lg"></i> Randevu Oluştur
-        </a>
+        <button class="t-yeni-btn" id="tYeni"><i class="bi bi-plus-lg"></i> Randevu Oluştur</button>
       </div>
 
       <div class="t-arac">
@@ -290,7 +288,7 @@ function takvimKur() {
     eventResize: (info) => tasimaYap(info),
     select: (info) => {
       durum.ec.unselect();
-      saatKapamaFormu({ start: info.start, end: info.end, kaynakId: info.resource?.id });
+      slotSecimi({ start: info.start, end: info.end, kaynakId: info.resource?.id });
     },
     eventClick: (info) => {
       const e = info.event.extendedProps || {};
@@ -315,6 +313,7 @@ function aracBagla() {
   el('#tBugun').onclick = () => durum.ec.setOption('date', new Date());
   el('#tYenile').onclick = () => durum.ec.refetchEvents();
   el('#tSaatKapat').onclick = () => saatKapamaFormu({});
+  el('#tYeni').onclick = () => randevuFormu({});
   el('#tKaynak').onchange = (e) => { durum.secili = e.target.value; kaynakFiltresiUygula(); };
   el('#tTur').onchange = (e) => {
     durum.takvimTuru = e.target.value;
@@ -385,6 +384,7 @@ function cekmeceCiz(v) {
   const btn = (islem, ikon, etiket, sinif = '') => `<button class="t-aks ${sinif}" data-islem="${islem}"><i class="bi ${ikon}"></i> ${etiket}</button>`;
   const butonlar = [
     v.durum === 0 ? btn('onayla', 'bi-check2-all', 'Onayla', 'mavi') : '',
+    aktif ? btn('duzenle', 'bi-pencil-square', 'Düzenle') : '',
     aktif && !geldiMi ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
     aktif && !gelmediMi ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
     aktif && isaretli ? btn('kaldir', 'bi-eraser', 'İşareti Kaldır') : '',
@@ -422,11 +422,11 @@ function cekmeceCiz(v) {
     ${v.personel_notu ? `<div class="t-ck-not"><i class="bi bi-sticky"></i> ${esc(v.personel_notu)}</div>` : ''}
     <div class="t-ck-aks">${butonlar || '<div class="t-ck-bos">Bu randevuda yapılabilecek işlem yok.</div>'}</div>
     <div id="tOnizleme"></div>
-    <a class="t-ck-eski" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Düzenle / Tahsilat (eski panel)</a>`;
+    <a class="t-ck-eski" href="${ESKI_PANEL}/isletmeyonetim/randevular?sube=${salonId}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Tahsilat (eski panel)</a>`;
 
   el('.t-ck-kapat').onclick = cekmeceKapat;
   el('#tCekmece').querySelectorAll('[data-islem]').forEach((b) => {
-    b.onclick = () => islemYap(v, b.dataset.islem, {});
+    b.onclick = () => (b.dataset.islem === 'duzenle' ? randevuFormu({ randevuId: v.id }) : islemYap(v, b.dataset.islem, {}));
   });
   el('#tCekmece').querySelectorAll('[data-telafi-rh]').forEach((b) => {
     const h = (v.hizmetler || []).find((x) => String(x.id) === b.dataset.telafiRh);
@@ -600,6 +600,202 @@ function telafiOnizleme(s, sec) {
     !p.satis_devri?.length && !p.paket_devri?.length && !p.ozet?.uyari ? 'Personel aynı — prim devri yok' : '',
     p.ozet?.uyari || '',
   ].filter(Boolean);
+  return `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — hiçbir şey yazılmadı</div>
+    <ul>${satirlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+}
+
+/* ───────────────────────── Randevu formu (oluştur / düzenle) ───────────────────────── */
+
+function slotSecimi(secim) {
+  const { ov, kapat } = modal(`
+    <div class="rc-onay-ikon"><i class="bi bi-calendar-plus"></i></div>
+    <h3>${esc(saatStr(secim.start))}–${esc(saatStr(secim.end))}</h3>
+    <p>${esc(kaynakBul(secim.kaynakId)?.name || '')}</p>
+    <div class="rc-onay-btns"><button class="rc-onay-iptal" data-s="kapat"><i class="bi bi-lock"></i> Saat kapat</button><button class="rc-onay-tamam" data-s="randevu"><i class="bi bi-plus-lg"></i> Randevu oluştur</button></div>`);
+  ov.querySelectorAll('[data-s]').forEach((b) => {
+    b.onclick = () => { kapat(); (b.dataset.s === 'randevu' ? randevuFormu : saatKapamaFormu)(secim); };
+  });
+}
+
+async function randevuFormu({ randevuId, start, kaynakId }) {
+  const r = await api('GET', '/randevu/form-verisi', { params: { salon_id: salonId, randevu_id: randevuId } });
+  if (!r.ok || !r.govde?.basarili) return panel().toast(r.govde?.mesaj || 'Form yüklenemedi', 'hata');
+  const fv = r.govde.veri;
+  const mevcut = fv.randevu;
+  const harita = fv.haritalar || {};
+  const hizmetBul = (id) => fv.hizmetler.find((h) => String(h.hizmet_id) === String(id));
+  const izinli = (map, anahtar, hizmetId) => (map?.[anahtar] || []).map(String).includes(String(hizmetId));
+
+  // On doldurma: duzenleme → mevcut; secilen slot → tarih/saat + kaynak
+  const kaynak = kaynakBul(kaynakId);
+  const ilkSatir = { hizmet_id: '', personel_id: kaynak?.tur === 'personel' ? kaynak.id : '', oda_id: kaynak?.tur === 'oda' ? kaynak.id : '',
+    cihaz_id: kaynak?.tur === 'cihaz' ? kaynak.id : '', sure_dk: '', fiyat: '', birlestir: '' };
+  const f = {
+    musteri: mevcut ? { id: mevcut.user_id, ad: mevcut.musteri_ad, telefon: mevcut.telefon } : null,
+    tarih: mevcut?.randevu_tarihi || (start ? tarihStr(start) : tarihStr(durum.ec.getView().currentStart || new Date())),
+    saat: mevcut?.randevu_saati || (start ? saatStr(start) : ''),
+    durum: mevcut ? String(mevcut.durum) : '1',
+    notlar: mevcut?.notlar || '',
+    satirlar: mevcut ? mevcut.hizmetler.map((h) => ({ ...h })) : [ilkSatir],
+    yardimcilar: mevcut?.yardimcipersoneller || [],
+  };
+
+  const { ov, kapat } = modal(`
+    <h3 class="t-rf-baslik"><i class="bi bi-calendar-plus"></i> ${mevcut ? 'Randevuyu düzenle' : 'Yeni randevu'}</h3>
+    <div class="t-rf">
+      <label class="t-rf-musteri">Müşteri
+        <div id="rfMusteri"></div>
+      </label>
+      <div class="t-rf-ust">
+        <label>Tarih<input id="rfTarih" value="${esc(f.tarih)}" readonly></label>
+        <label>Saat<input id="rfSaat" value="${esc(f.saat)}" placeholder="Saat" readonly></label>
+        <label>Durum<select id="rfDurum"><option value="1">Onaylı</option><option value="0">Onay bekliyor</option></select></label>
+      </div>
+      <div class="t-rf-satirlar" id="rfSatirlar"></div>
+      <button class="t-kalem-telafi" id="rfEkle"><i class="bi bi-plus-lg"></i> Hizmet ekle</button>
+      ${mevcut ? '' : `<div class="t-rf-ust">
+        <label>Tekrar<select id="rfSiklik">${TEKRARLAR.map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}</select></label>
+        <label>Tekrar sayısı<input id="rfSayi" type="number" min="1" max="52" value="1"></label>
+      </div>`}
+      <label>Not<input id="rfNot" maxlength="500" value="${esc(f.notlar)}" placeholder="Personel notu (isteğe bağlı)"></label>
+    </div>
+    <div id="rfSonuc"></div>
+    <div class="rc-onay-btns"><button class="rc-onay-iptal">Vazgeç</button><button class="rc-onay-tamam" id="rfKaydet">Kaydet</button></div>`);
+  ov.querySelector('.rc-onay-kart').classList.add('t-modal-xl');
+  el('#rfDurum', ov).value = f.durum;
+  if (window.flatpickr) {
+    window.flatpickr(el('#rfTarih', ov), { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l' });
+    window.flatpickr(el('#rfSaat', ov), { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5 });
+  }
+
+  // ── Musteri secimi (arama) ──
+  const musteriCiz = () => {
+    const k = el('#rfMusteri', ov);
+    if (f.musteri) {
+      k.innerHTML = `<div class="t-rf-secili"><i class="bi bi-person-check"></i><b>${esc(f.musteri.ad)}</b><span>${esc(f.musteri.telefon || '')}</span>
+        ${mevcut ? '' : '<button type="button" class="t-rf-degistir">Değiştir</button>'}</div>`;
+      const d = el('.t-rf-degistir', k);
+      if (d) d.onclick = () => { f.musteri = null; musteriCiz(); };
+      return;
+    }
+    k.innerHTML = '<input id="rfAra" placeholder="Ad veya telefon ile arayın (en az 2 karakter)" autocomplete="off"><div class="t-rf-sonuclar" id="rfSonuclar"></div>';
+    let zaman;
+    el('#rfAra', k).oninput = (e) => {
+      clearTimeout(zaman);
+      const q = e.target.value.trim();
+      if (q.length < 2) { el('#rfSonuclar', k).innerHTML = ''; return; }
+      zaman = setTimeout(async () => {
+        const s = await api('GET', '/randevu/musteri-ara', { params: { salon_id: salonId, q } });
+        const liste = s.ok && s.govde?.basarili ? s.govde.veri : [];
+        el('#rfSonuclar', k).innerHTML = liste.length
+          ? liste.map((m) => `<button type="button" data-id="${m.id}"><b>${esc(m.ad)}</b><span>${esc(m.telefon || '')}</span></button>`).join('')
+          : '<div class="t-rf-bos">Sonuç yok</div>';
+        el('#rfSonuclar', k).querySelectorAll('[data-id]').forEach((b) => {
+          b.onclick = () => { f.musteri = liste.find((m) => String(m.id) === b.dataset.id); musteriCiz(); };
+        });
+      }, 300);
+    };
+    setTimeout(() => el('#rfAra', k)?.focus(), 60);
+  };
+  musteriCiz();
+
+  // ── Hizmet satirlari ──
+  const secenek = (liste, secili, bos) => (bos !== undefined ? `<option value="">${bos}</option>` : '')
+    + liste.map((x) => `<option value="${x.id}" ${String(x.id) === String(secili ?? '') ? 'selected' : ''}>${esc(x.ad)}</option>`).join('');
+  const filtrele = (liste, kosul) => { const s = liste.filter(kosul); return s.length ? s : liste; }; // eslesme yoksa hepsi
+
+  const satirlariCiz = () => {
+    el('#rfSatirlar', ov).innerHTML = f.satirlar.map((s, i) => {
+      const hz = s.hizmet_id;
+      const personeller = hz ? filtrele(fv.personeller, (p) => izinli(harita.personel_hizmet_map, p.id, hz)) : fv.personeller;
+      const cihazlar = hz ? filtrele(fv.cihazlar, (c) => izinli(harita.cihaz_hizmet_map, c.id, hz)) : fv.cihazlar;
+      const odalar = hz ? filtrele(fv.odalar, (o) => izinli(harita.oda_hizmet_map, o.id, hz) || String(o.personel_id) === String(s.personel_id)) : fv.odalar;
+      return `<div class="t-rf-satir" data-i="${i}">
+        <label class="t-rf-hizmet">Hizmet<select data-k="hizmet_id"><option value="">Hizmet seçin</option>${fv.hizmetler.map((h) => `<option value="${h.hizmet_id}" ${String(h.hizmet_id) === String(hz) ? 'selected' : ''}>${esc(h.ad)}${h.aktif ? '' : ' (pasif)'}</option>`).join('')}</select></label>
+        <label>Personel<select data-k="personel_id">${secenek(personeller, s.personel_id, '—')}</select></label>
+        ${fv.odalar.length ? `<label>Oda<select data-k="oda_id">${secenek(odalar, s.oda_id, 'Otomatik')}</select></label>` : ''}
+        ${fv.cihazlar.length ? `<label>Cihaz<select data-k="cihaz_id">${secenek(cihazlar, s.cihaz_id, '—')}</select></label>` : ''}
+        <label class="t-rf-kucuk">Süre (dk)<input type="number" min="5" step="5" data-k="sure_dk" value="${esc(s.sure_dk)}"></label>
+        <label class="t-rf-kucuk">Fiyat (₺)<input type="number" min="0" step="0.01" data-k="fiyat" value="${esc(s.fiyat)}"></label>
+        <label class="t-rf-onay" title="Sonraki hizmet bununla aynı anda başlasın"><input type="checkbox" data-k="birlestir" ${s.birlestir === '1' ? 'checked' : ''}> Sonraki ile aynı anda</label>
+        ${f.satirlar.length > 1 ? '<button type="button" class="t-rf-sil" title="Hizmeti çıkar"><i class="bi bi-trash"></i></button>' : ''}
+      </div>`;
+    }).join('');
+    el('#rfSatirlar', ov).querySelectorAll('.t-rf-satir').forEach((sat) => {
+      const i = +sat.dataset.i;
+      sat.querySelectorAll('[data-k]').forEach((inp) => {
+        inp.onchange = () => {
+          const k = inp.dataset.k;
+          f.satirlar[i][k] = inp.type === 'checkbox' ? (inp.checked ? '1' : '') : inp.value;
+          if (k === 'hizmet_id') { // varsayilan sure/fiyat
+            const h = hizmetBul(inp.value);
+            if (h) { f.satirlar[i].sure_dk = h.sure_dk ?? f.satirlar[i].sure_dk; f.satirlar[i].fiyat = h.fiyat ?? f.satirlar[i].fiyat; }
+          }
+          if (k === 'hizmet_id' || k === 'personel_id') satirlariCiz();
+        };
+      });
+      const sil = el('.t-rf-sil', sat);
+      if (sil) sil.onclick = () => { f.satirlar.splice(i, 1); f.yardimcilar = []; satirlariCiz(); };
+    });
+  };
+  satirlariCiz();
+  el('#rfEkle', ov).onclick = () => { f.satirlar.push({ ...ilkSatir, personel_id: f.satirlar.at(-1)?.personel_id || ilkSatir.personel_id }); satirlariCiz(); };
+
+  el('.rc-onay-iptal', ov).onclick = kapat;
+  const kaydet = async (cakismaGec = false) => {
+    if (!f.musteri) return panel().toast('Müşteri seçin.', 'hata');
+    const govde = {
+      salon_id: salonId, user_id: f.musteri.id,
+      randevu_tarihi: el('#rfTarih', ov).value, randevu_saati: el('#rfSaat', ov).value,
+      durum: el('#rfDurum', ov).value, notlar: el('#rfNot', ov).value,
+      hizmetler: f.satirlar.map((s) => ({ ...s, oda_id: s.oda_id || null, cihaz_id: s.cihaz_id || null, personel_id: s.personel_id || null })),
+      yardimcipersoneller: f.yardimcilar,
+      cakisanrandevuekle: cakismaGec ? '1' : '',
+    };
+    if (!mevcut) {
+      const siklik = el('#rfSiklik', ov).value;
+      Object.assign(govde, { tekrarlayan: !!siklik, tekrar_sikligi: siklik || null, tekrar_sayisi: siklik ? parseInt(el('#rfSayi', ov).value, 10) || 1 : 1 });
+    }
+    if (!govde.randevu_saati) return panel().toast('Saat seçin.', 'hata');
+    if (govde.hizmetler.some((s) => !s.hizmet_id || !s.sure_dk)) return panel().toast('Her satırda hizmet ve süre seçin.', 'hata');
+
+    const sonuc = await yazVeyaOnizle(mevcut ? 'PATCH' : 'POST', mevcut ? `/randevu/${mevcut.randevu_id}` : '/randevu', govde);
+    if (!sonuc) return;
+    const kutu = el('#rfSonuc', ov);
+    if (sonuc.cakismavar === '1') {
+      kutu.innerHTML = `<div class="t-rf-cakisma ${sonuc.sert ? 'sert' : ''}"><b><i class="bi bi-exclamation-triangle"></i> ${sonuc.sert ? 'Kaydedilemez — oda dolu' : 'Çakışma uyarısı'}</b>
+        <div>${esc(String(sonuc.cakisanunsurlar)).replace(/\\n/g, '<br>')}</div>
+        ${sonuc.sert ? '' : '<button type="button" class="t-rf-yine">Yine de kaydet</button>'}</div>`;
+      const yine = el('.t-rf-yine', kutu);
+      if (yine) yine.onclick = () => kaydet(true);
+      return;
+    }
+    if (sonuc.yazildi) {
+      kapat();
+      panel().toast(mevcut ? 'Randevu güncellendi' : 'Randevu oluşturuldu', 'ok');
+      durum.ec.refetchEvents();
+      if (mevcut) cekmeceAc(mevcut.randevu_id);
+      return;
+    }
+    kutu.innerHTML = randevuOnizleme(sonuc.plan, fv);
+  };
+  el('#rfKaydet', ov).onclick = () => kaydet(false);
+}
+
+function randevuOnizleme(plan, fv) {
+  const ad = (liste, id, alan = 'id') => (liste || []).find((x) => String(x[alan]) === String(id))?.ad;
+  const seansMetni = (s) => !s ? '' : ({
+    havuz_guncelle: ' · paket seansı yeni saate taşınır',
+    telafi_bagla: ' · bekleyen seans telafisi bağlanır (seans düşmez)',
+    yeni_seans: ` · paket seansı düşülür (seans #${s.seans_no})`,
+  })[s.islem] || '';
+  const satirlar = [];
+  (plan?.gunler || []).forEach((g) => g.kalemler.forEach((k) => satirlar.push(
+    `${g.tarih} ${k.saat}–${k.saat_bitis} · ${ad(fv.hizmetler, k.hizmet_id, 'hizmet_id') || 'Hizmet'} · ${ad(fv.personeller, k.personel_id) || '—'}`
+    + (k.oda_id ? ` · ${ad(fv.odalar, k.oda_id) || 'Oda'}${k.oda_otomatik ? ' (otomatik)' : ''}` : '')
+    + seansMetni(k.seans) + (k.adisyon_fiyat ? ` · adisyon fiyatı ${k.adisyon_fiyat.eski} → ${k.adisyon_fiyat.yeni}` : ''),
+  )));
+  if (plan?.seans_serbest?.length) satirlar.push(`Çıkarılan hizmetin ${plan.seans_serbest.length} seansı serbest bırakılır`);
   return `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — hiçbir şey yazılmadı</div>
     <ul>${satirlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
 }

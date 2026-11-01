@@ -186,11 +186,24 @@ Kapsam: İŞLETME akışı (kaynak `salon`). Müşteri uygulaması / online rand
   güncelleme oluşturanı ezmez.
 - Doğrulama: `php artisan randevu:kayit-plan {salon} '{json}'` (veya `@dosya`).
 
-### Faz 3b-2 — Randevu formu ekranı + form veri ucu (SIRADA)
+### Faz 3b-2 — Randevu formu ekranı + form veri ucu (YAPILDI)
+- `GET /randevu/form-verisi?salon_id=&randevu_id=` — eski `randevuIcinGerekliVeriler`
+  (işletme dalı) ile aynı veri: hizmetler (hizmet başına son kayıt, santral hariç,
+  düzenlemede pasifler dahil), personel/oda/cihaz, 4 filtre haritası (atanmamış
+  hizmet tüm personelde). Düzenlemede gönderilecek gövdeyle aynı şekilde ön doldurma
+  (`birlestir` saat eşitliğinden çıkarılır, yardımcı personel index'li).
+- `GET /randevu/musteri-ara?salon_id=&q=` — KVKK: toplu müşteri listesi YOK (eski uç
+  100 müşteriyi döküyordu); min 2 karakter, aktif portföy, telefon `musteri.telefon_gor`.
+- Ekran: "Randevu Oluştur" butonu, boş slot seçince Randevu/Saat kapat seçimi,
+  çekmecede "Düzenle". Form: müşteri arama, satır başına hizmet/personel/oda
+  (Otomatik)/cihaz (haritalarla filtreli), süre/fiyat varsayılanı, "sonraki ile aynı
+  anda", tekrar (yalnız yeni), not; çakışmada "Yine de kaydet" (oda doluysa yok);
+  yazma kapalıyken plan önizlemesi (oda otomatik, seans kararı, adisyon fiyatı).
+
+### Faz 4 — Kesme (cutover) + Google Takvim doğrulaması (EN SON)
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,
 APS havuz uzlaştırma, çakışma (`kaynak_cakisma_kontrol`), telafi (A-tipi),
 saat kapama sentinelleri. Dönüş: `cakismavar` + `cakisanunsurlar`.
 
-### Faz 4 — Kesme (cutover)
 v1 randevu path'lerini nginx'te yeni app'e yönlendir (sözleşme-koruyan adaptör)
 VEYA Flutter'ı v2'ye taşı. Eski `randevular()` ve kardeşlerini emekliye ayır.

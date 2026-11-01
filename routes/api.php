@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V2\PersonelController;
 use App\Http\Controllers\Api\V2\PersonelYetkiController;
 use App\Http\Controllers\Api\V2\RandevuController;
 use App\Http\Controllers\Api\V2\RandevuDurumController;
+use App\Http\Controllers\Api\V2\RandevuFormController;
 use App\Http\Controllers\Api\V2\RandevuKayitController;
 use App\Http\Controllers\Api\V2\RandevuTakvimController;
 use App\Http\Controllers\Api\V2\RandevuTelafiController;
@@ -89,6 +90,8 @@ Route::prefix('v2')->group(function () {
         Route::patch('/randevu/kalem/{rh}/tasi', [RandevuTakvimController::class, 'tasi'])->whereNumber('rh');
 
         // RANDEVU OLUSTUR / GUNCELLE (Faz 3b, isletme) — cakisma + seans havuzu; ayni kill-switch.
+        Route::get('/randevu/form-verisi', [RandevuFormController::class, 'formVerisi']);
+        Route::get('/randevu/musteri-ara', [RandevuFormController::class, 'musteriAra']);
         Route::post('/randevu', [RandevuKayitController::class, 'olustur']);
         Route::patch('/randevu/{id}', [RandevuKayitController::class, 'guncelle'])->whereNumber('id');
         Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
