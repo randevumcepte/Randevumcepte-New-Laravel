@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V2\PersonelController;
 use App\Http\Controllers\Api\V2\PersonelYetkiController;
 use App\Http\Controllers\Api\V2\RandevuController;
 use App\Http\Controllers\Api\V2\RandevuDurumController;
+use App\Http\Controllers\Api\V2\RandevuTakvimController;
 use App\Http\Controllers\Api\V2\RandevuTelafiController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
@@ -80,6 +81,11 @@ Route::prefix('v2')->group(function () {
         // TELAFI RANDEVUSU (A tipi: ucretsiz duzeltme + prim devri) — ayni kill-switch.
         Route::get('/randevu/telafi-secenekler', [RandevuTelafiController::class, 'secenekler']);
         Route::post('/randevu/kalem/{rh}/telafi-randevusu', [RandevuTelafiController::class, 'olustur'])->whereNumber('rh');
+
+        // TAKVIM YAZMA (Faz 3a) — saat kapama + surukle-birak/boyutlandir; ayni kill-switch.
+        Route::post('/randevu/saat-kapama', [RandevuTakvimController::class, 'saatKapamaEkle']);
+        Route::delete('/randevu/saat-kapama/{id}', [RandevuTakvimController::class, 'saatKapamaSil'])->whereNumber('id');
+        Route::patch('/randevu/kalem/{rh}/tasi', [RandevuTakvimController::class, 'tasi'])->whereNumber('rh');
         Route::post('/randevu/{id}/onayla', [RandevuDurumController::class, 'onayla'])->whereNumber('id');
 
         Route::get('/satislar', [SatisController::class, 'index']);

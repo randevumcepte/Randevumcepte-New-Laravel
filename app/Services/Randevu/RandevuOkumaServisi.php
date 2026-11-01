@@ -323,6 +323,9 @@ class RandevuOkumaServisi
                 usort($olaylar, fn ($a, $b) => strcmp($a['start'], $b['start']));
                 $ilk = $olaylar[0];
                 $ilk['end'] = max(array_column($olaylar, 'end'));
+                // Birden cok kalem tek bara birlesti → surukle-birak tek kaleme
+                // karsilik gelmez; ekran bunu tasinamaz gosterir.
+                $ilk['birlesik'] = count($olaylar);
                 $merged[] = $ilk;
             } else {
                 $merged[] = $olaylar[0];
@@ -332,10 +335,14 @@ class RandevuOkumaServisi
         return $merged;
     }
 
-    /** Dis sozlesme icin satiri temizle (ic merge anahtarlarini dusur). */
+    /**
+     * Dis sozlesme icin satiri temizle (ic merge anahtarini dusur). rh_id KALIR:
+     * surukle-birak/boyutlandirma hangi kalemin tasindigini bilmeli.
+     */
     private function disaSatir(array $r): array
     {
-        unset($r['_paketSource'], $r['rh_id']);
+        unset($r['_paketSource']);
+        $r['birlesik'] = $r['birlesik'] ?? 1;
 
         return $r;
     }

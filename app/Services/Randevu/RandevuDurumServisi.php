@@ -11,6 +11,7 @@ use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
 use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -440,22 +441,9 @@ class RandevuDurumServisi
         ];
     }
 
-    /**
-     * Yan etkiyi outbox'a yaz ('v2_bildirim_kuyrugu' — sema eski klasorde).
-     * Cagiran transaction icindeyse onunla birlikte commit/rollback olur.
-     */
+    /** Yan etkiyi outbox'a yaz (ortak: App\Support\BildirimKuyrugu). */
     private function kuyruga(int $salonId, string $tur, int $randevuId, ?int $yetkiliId, array $payload = []): void
     {
-        DB::table('v2_bildirim_kuyrugu')->insert([
-            'salon_id'   => $salonId,
-            'tur'        => $tur,
-            'randevu_id' => $randevuId,
-            'yetkili_id' => $yetkiliId,
-            'payload'    => $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null,
-            'durum'      => 0,
-            'deneme'     => 0,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        BildirimKuyrugu::yaz($salonId, $tur, $randevuId, $yetkiliId, $payload);
     }
 }

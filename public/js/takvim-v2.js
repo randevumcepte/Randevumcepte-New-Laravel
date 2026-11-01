@@ -132,6 +132,7 @@ function iskeletCiz() {
           <button class="t-bugun" id="tBugun">Bugün</button>
         </div>
         <button class="t-yenile" id="tYenile"><i class="bi bi-arrow-clockwise"></i> Yenile</button>
+        <button class="t-yenile t-kapat-btn" id="tSaatKapat"><i class="bi bi-lock"></i> Saat Kapat</button>
       </div>
 
       <div class="t-lejant">
@@ -179,6 +180,8 @@ async function olaylariGetir(info) {
       backgroundColor: e.kapali ? '#eceef4' : yari(ana, 0.16),
       textColor: '#2b2f45',
       classNames: e.kapali ? ['t-kapali'] : [],
+      // Birlesik paket bari tek kaleme karsilik gelmez → tasinamaz/boyutlanamaz.
+      editable: !(e.birlesik > 1) && d.durum !== '2',
       extendedProps: { ...e, ana, d },
     };
   });
@@ -281,9 +284,17 @@ function takvimKur() {
     eventSources: [{ events: (info) => olaylariGetir(info) }],
     resourceLabelContent: kaynakEtiketi,
     eventContent: olayIcerik,
+    editable: true,
+    selectable: true,
+    eventDrop: (info) => tasimaYap(info),
+    eventResize: (info) => tasimaYap(info),
+    select: (info) => {
+      durum.ec.unselect();
+      saatKapamaFormu({ start: info.start, end: info.end, kaynakId: info.resource?.id });
+    },
     eventClick: (info) => {
       const e = info.event.extendedProps || {};
-      if (e.kapali) return panel().toast('Kapalı saat blokları eski panelden yönetilir (Faz 3).', 'bilgi');
+      if (e.kapali) return kapaliSaatPenceresi(e);
       cekmeceAc(e.randevu_id || e.id);
     },
     loading: (y) => el('#tYuk').classList.toggle('acik', y),
@@ -303,6 +314,7 @@ function aracBagla() {
   el('#tIleri').onclick = () => durum.ec.next();
   el('#tBugun').onclick = () => durum.ec.setOption('date', new Date());
   el('#tYenile').onclick = () => durum.ec.refetchEvents();
+  el('#tSaatKapat').onclick = () => saatKapamaFormu({});
   el('#tKaynak').onchange = (e) => { durum.secili = e.target.value; kaynakFiltresiUygula(); };
   el('#tTur').onchange = (e) => {
     durum.takvimTuru = e.target.value;
@@ -590,6 +602,137 @@ function telafiOnizleme(s, sec) {
   ].filter(Boolean);
   return `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — hiçbir şey yazılmadı</div>
     <ul>${satirlar.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
+}
+
+/* ───────────────────────── Sürükle-bırak / boyutlandırma ───────────────────────── */
+
+const dtStr = (d) => `${tarihStr(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+const saatStr = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const TUR_KOD = { personel: 1, cihaz: 2, oda: 3, kategori: 0 };
+const kaynakBul = (id) => durum.kaynaklar.find((k) => String(k.id) === String(id));
+
+async function tasimaYap(info) {
+  const ev = info.event;
+  const e = ev.extendedProps || {};
+  // Gun degisikligi surukle-birak ile yapilmaz (randevu duzenleme ile).
+  if (tarihStr(ev.start) !== tarihStr(info.oldEvent.start) || tarihStr(new Date(ev.end.getTime() - 1)) !== tarihStr(ev.start)) {
+    info.revert();
+    return panel().toast('Sürükle-bırak ile gün değiştirilemez; günü değiştirmek için randevuyu düzenleyin.', 'bilgi', 4200);
+  }
+  const kaynakId = info.newResource?.id ?? ev.resourceIds?.[0];
+  const kaynak = kaynakBul(kaynakId);
+  const govde = {
+    baslangic: dtStr(ev.start), bitis: dtStr(ev.end),
+    takvim_turu: TUR_KOD[kaynak?.tur] ?? '', resource_id: info.newResource ? kaynakId : '',
+  };
+  const ozet = `${e.musteri || 'Kayıt'} → ${saatStr(ev.start)}–${saatStr(ev.end)}${info.newResource ? ' · ' + (kaynak?.name || '') : ''}`;
+
+  let r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { govde: { ...govde, dry_run: false } });
+  if (r.kod === 409 && /kapal/i.test(r.govde?.mesaj || '')) {
+    r = await api('PATCH', `/randevu/kalem/${e.rh_id}/tasi`, { govde: { ...govde, dry_run: true } });
+    info.revert();
+    if (r.ok && r.govde?.basarili) return panel().toast(`Önizleme (yazılmadı): ${ozet}`, 'bilgi', 4500);
+    return panel().toast(r.govde?.mesaj || `Taşınamadı (${r.kod})`, 'hata');
+  }
+  if (!r.ok || !r.govde?.basarili) {
+    info.revert();
+    return panel().toast(r.govde?.mesaj || `Taşınamadı (${r.kod})`, 'hata');
+  }
+  panel().toast(`Güncellendi: ${ozet}`, 'ok');
+  durum.ec.refetchEvents();
+}
+
+/* ───────────────────────── Saat kapama ───────────────────────── */
+
+const TEKRARLAR = [
+  { deger: '', ad: 'Tekrar yok' }, { deger: '+1 day', ad: 'Her gün' }, { deger: '+1 week', ad: 'Her hafta' },
+  { deger: '+2 weeks', ad: '2 haftada bir' }, { deger: '+1 month', ad: 'Her ay' },
+];
+const TUR_KOLON = { personel: 'personel_id', cihaz: 'cihaz_id', oda: 'oda_id' };
+
+function saatKapamaFormu({ start, end, kaynakId }) {
+  const kaynaklar = durum.kaynaklar.filter((k) => TUR_KOLON[k.tur]);
+  if (!kaynaklar.length) {
+    return panel().toast('Hizmet kategorisi görünümünde saat kapatılamaz; personel, oda veya cihaz görünümüne geçin.', 'bilgi', 4500);
+  }
+  const gun = start ? tarihStr(start) : tarihStr(durum.ec.getView().currentStart || new Date());
+  const { ov, kapat } = modal(`
+    <div class="rc-onay-ikon"><i class="bi bi-lock"></i></div>
+    <h3>Saat kapat</h3>
+    <p>Seçilen kaynak bu aralıkta randevuya kapatılır.</p>
+    <div class="t-form">
+      <label class="t-form-gen">Kaynak<select id="skKaynak">${kaynaklar.map((k) => `<option value="${k.id}" ${String(k.id) === String(kaynakId ?? '') ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
+      <label class="t-form-gen">Tarih<input id="skTarih" value="${gun}" readonly></label>
+      <label>Başlangıç<input id="skBas" value="${start ? saatStr(start) : ''}" placeholder="Çalışma başı" readonly></label>
+      <label>Bitiş<input id="skBit" value="${end ? saatStr(end) : ''}" placeholder="Çalışma sonu" readonly></label>
+      <label>Tekrar<select id="skSiklik">${TEKRARLAR.map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}</select></label>
+      <label>Tekrar sayısı<input id="skSayi" type="number" min="1" max="52" value="1"></label>
+      <label class="t-form-gen">Not<input id="skNot" maxlength="200" placeholder="İsteğe bağlı (örn. izin, eğitim)"></label>
+    </div>
+    <div id="skOnizleme"></div>
+    <div class="rc-onay-btns"><button class="rc-onay-iptal">Vazgeç</button><button class="rc-onay-tamam">Kapat</button></div>`);
+  ov.querySelector('.rc-onay-kart').classList.add('t-modal-genis');
+  if (window.flatpickr) {
+    window.flatpickr(el('#skTarih', ov), { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'j F Y, l' });
+    ['#skBas', '#skBit'].forEach((s) => window.flatpickr(el(s, ov), { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5 }));
+  }
+  el('.rc-onay-iptal', ov).onclick = kapat;
+  el('.rc-onay-tamam', ov).onclick = async () => {
+    const kaynak = kaynakBul(el('#skKaynak', ov).value);
+    const siklik = el('#skSiklik', ov).value;
+    const govde = {
+      salon_id: salonId, tarih: el('#skTarih', ov).value,
+      saat: el('#skBas', ov).value || null, saat_bitis: el('#skBit', ov).value || null,
+      [TUR_KOLON[kaynak.tur]]: kaynak.id, not: el('#skNot', ov).value,
+      tekrar_sikligi: siklik || null, tekrar_sayisi: siklik ? parseInt(el('#skSayi', ov).value, 10) || 1 : 1,
+    };
+    const s = await yazVeyaOnizle('POST', '/randevu/saat-kapama', govde);
+    if (!s) return;
+    if (s.yazildi) {
+      kapat();
+      panel().toast(s.mesaj || 'Saat kapatıldı', 'ok');
+      durum.ec.refetchEvents();
+    } else {
+      const b = s.plan?.bloklar || [];
+      el('#skOnizleme', ov).innerHTML = `<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — ${b.length} blok (yazılmadı)</div>
+        <ul>${b.slice(0, 8).map((x) => `<li>${esc(x.tarih)} · ${esc(x.saat.slice(0, 5))}–${esc(x.saat_bitis.slice(0, 5))}</li>`).join('')}${b.length > 8 ? `<li>… +${b.length - 8}</li>` : ''}</ul></div>`;
+    }
+  };
+}
+
+function kapaliSaatPenceresi(e) {
+  const { ov, kapat } = modal(`
+    <div class="rc-onay-ikon"><i class="bi bi-lock"></i></div>
+    <h3>Kapalı saat</h3>
+    <p>${esc(String(e.start).slice(11, 16))}–${esc(String(e.end).slice(11, 16))}${e.personelId ? ' · ' + esc(kaynakBul(e.resourceId)?.name || '') : ''}</p>
+    <div id="kpOnizleme"></div>
+    <div class="rc-onay-btns"><button class="rc-onay-iptal">Kapat</button><button class="rc-onay-tamam tehlike">Kapamayı kaldır</button></div>`);
+  el('.rc-onay-iptal', ov).onclick = kapat;
+  el('.rc-onay-tamam', ov).onclick = async () => {
+    const s = await yazVeyaOnizle('DELETE', `/randevu/saat-kapama/${e.randevu_id || e.id}`, {});
+    if (!s) return;
+    if (s.yazildi) {
+      kapat();
+      panel().toast('Saat kapama kaldırıldı', 'ok');
+      durum.ec.refetchEvents();
+    } else {
+      el('#kpOnizleme', ov).innerHTML = '<div class="t-onizleme"><div class="t-onizleme-bas"><i class="bi bi-eye"></i> Önizleme — kapama kaldırılacak (yazılmadı)</div></div>';
+    }
+  };
+}
+
+/** Yazmayi dene; sunucu yazmasi kapaliysa (409) ayni ucun DRY-RUN sonucunu don. */
+async function yazVeyaOnizle(yontem, yol, govde) {
+  let r = await api(yontem, yol, { govde: { ...govde, dry_run: false } });
+  if (r.kod === 409 && /kapal/i.test(r.govde?.mesaj || '')) {
+    panel().toast('Sunucu yazması henüz kapalı — önizleme gösteriliyor.', 'bilgi', 3500);
+    r = await api(yontem, yol, { govde: { ...govde, dry_run: true } });
+  }
+  if (!r.ok || !r.govde?.basarili) {
+    panel().toast(r.govde?.mesaj || `İşlem başarısız (${r.kod})`, 'hata');
+    return null;
+  }
+  return r.govde.veri;
 }
 
 /* ───────────────────────── Küçük modallar ───────────────────────── */

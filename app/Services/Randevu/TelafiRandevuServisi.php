@@ -8,6 +8,7 @@ use App\Exceptions\GecersizIslemException;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
 use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -126,6 +127,9 @@ class TelafiRandevuServisi
             $this->primUygula($prim, $orig, $randevuId, $yeniPersonelId, $yetkiliId, $salonId);
 
             DB::table('randevu_hizmetler')->where('id', $orig->id)->update(['telafi_devir_yapildi' => 1, 'updated_at' => now()]);
+
+            // Yeni kalem personelin Google Takvimine (eski model event'i karsiligi).
+            BildirimKuyrugu::googleTakvim($salonId, $randevuId, [$rhId]);
 
             return ['randevu_id' => $randevuId, 'randevu_hizmet_id' => $rhId, 'prim' => $prim];
         });

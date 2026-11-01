@@ -149,7 +149,23 @@ işleyici. Böylece bildirim kodu TEK yerde kalır (kod tekrarı yok).
 4. New-Laravel `.env` → `RANDEVU_V2_YAZMA_AKTIF=true`; test salonunda
    iptal/onay/geldi(kod) akışlarında SMS/push geldiğini doğrula.
 
-### Faz 3 — Oluştur/güncelle + çakışma + telafi + saat kapama
+### Faz 3a — Saat kapama + sürükle-bırak (YAPILDI, aynı kill-switch)
+- Servis `RandevuTakvimYazServisi`, saf kural `Domain\Randevu\SaatKapama` (+ test).
+- Uçlar: `POST /randevu/saat-kapama`, `DELETE /randevu/saat-kapama/{id}`
+  (yetki `randevu.kapanis_blok_ekle`); `PATCH /randevu/kalem/{rh}/tasi`
+  (`randevu.duzenle_iptal`). Hepsi dry_run + kill-switch.
+- Yan etkiler outbox'ta: `randevu_tasindi` → monolit `randevuTasimaBildirimleri`
+  (surukleBirakRandevuGuncelle'den TAŞINDI; v1 + işleyici aynı metod);
+  `google_takvim` (sync/sil rh id) → GoogleCalendarService. Eski RandevuHizmetler
+  model event'inin karşılığı; telafi randevusu da artık Google'a gider.
+- Bilinçli farklar: sürükle-bırak GÜN DEĞİŞTİREMEZ (eski kod tarihi sessizce yok
+  sayıyordu); kapalı saat taşınınca sentinel müşteriye bildirim yok; kaynak salon
+  doğrulaması; kapalı saat silinince Google'dan da kalkar; tekrar sıklığı beyaz
+  liste + max 52; boyutlandırmada `sure_dk` da güncellenir.
+- Ekran: sürükle/boyutlandır (birleşik paket barı taşınamaz), boş alan seçip saat
+  kapat, "Saat Kapat" butonu, kapalı saate tıklayıp kaldır.
+
+### Faz 3b — Oluştur/güncelle + çakışma (SIRADA)
 `randevuekleguncelle` çekirdeği: güncelle = `randevu_hizmetler` sil+yeniden-yaz,
 APS havuz uzlaştırma, çakışma (`kaynak_cakisma_kontrol`), telafi (A-tipi),
 saat kapama sentinelleri. Dönüş: `cakismavar` + `cakisanunsurlar`.

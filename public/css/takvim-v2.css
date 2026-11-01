@@ -50,6 +50,8 @@
   display: inline-flex; align-items: center; gap: 6px;
 }
 .t-yenile { color: var(--rc-mor); }
+.t-kapat-btn { color: #5b5f73; }
+#tTakvim .ec-event.ec-dragging, #tTakvim .ec-event.ec-resizing-y { opacity: .85; box-shadow: var(--rc-golge-2); }
 
 /* ── Lejant ── */
 .t-lejant { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--rc-sol); padding: 0 4px; }
