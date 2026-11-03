@@ -20,40 +20,8 @@
 .p-yeni-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 16px rgba(43, 182, 115, .28); }
 @media (prefers-color-scheme: dark) { .p-baslik h1 { color: #f0ecff; } }
 
-/* ── Arama kartı ── */
-.p-filtre-kart { background: #fff; border: 1px solid #ebebf3; border-radius: 16px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0, 0, 0, .04); }
-.p-ara { position: relative; max-width: 420px; }
-.p-ara i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #9b6bd8; font-size: 16px; }
-.p-ara input {
-  width: 100%; border: 1px solid #dcdce8; border-radius: 10px; padding: 11px 12px 11px 40px; font-size: 14px;
-  background: #fff; color: #2a2140; outline: none; transition: .15s;
-}
-.p-ara input:focus { border-color: #9b6bd8; box-shadow: 0 0 0 3px rgba(123, 47, 247, .12); }
-@media (prefers-color-scheme: dark) {
-  .p-filtre-kart { background: #22222e; border-color: #34344c; }
-  .p-ara input { background: #1b1b26; border-color: #34344c; color: #ededf5; }
-}
-
-/* ── Tablo ── */
-.p-tablo-sar { overflow-x: auto; border: 1px solid #ebebf3; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .04); }
-.p-tablo { width: 100%; border-collapse: collapse; min-width: 900px; }
-.p-tablo thead th {
-  text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
-  color: #8a8a9a; background: #f8f8fc; padding: 13px 16px; border-bottom: 2px solid #eee; white-space: nowrap;
-}
-.p-tablo tbody td { padding: 11px 16px; border-bottom: 1px solid #f2f2f8; font-size: 14px; color: #2a2140; vertical-align: middle; }
-.p-tablo tbody tr:hover td { background: #faf7ff; }
-.p-tablo tbody tr:last-child td { border-bottom: none; }
-.p-sag { text-align: right; white-space: nowrap; }
-.p-orta { text-align: center; }
-.p-bos { text-align: center; color: #999; padding: 30px 16px; }
-.p-hata { color: #c0392b; }
-@media (prefers-color-scheme: dark) {
-  .p-tablo-sar { background: #22222e; border-color: #34344c; }
-  .p-tablo thead th { background: #1b1b26; color: #9a9ab0; border-color: #34344c; }
-  .p-tablo tbody td { color: #ededf5; border-color: #2c2c3c; }
-  .p-tablo tbody tr:hover td { background: #27273a; }
-}
+/* ── Tablo: temel stil + arama/sayfa boyu araç çubuğu panel.css (.rc-tablo, .rc-dt-*) ── */
+.p-tablo { min-width: 900px; }
 
 /* ── Personel hücresi ── */
 .p-kisi { display: flex; align-items: center; gap: 11px; }
@@ -232,16 +200,13 @@
 /* Tablet: tablo yatay kayar, hücreler biraz daralır. */
 @media (max-width: 820px) {
   .p-tablo { min-width: 760px; }
-  .p-tablo-sar { -webkit-overflow-scrolling: touch; }
 }
 /* Telefon: başlık/buton yığılır, modal alt-sayfa (bottom-sheet) olur, hedefler büyür. */
 @media (max-width: 560px) {
   .p-kabuk { padding: 2px 0 28px; }
   .p-ust { flex-direction: column; align-items: stretch; gap: 12px; }
   .p-yeni-btn { justify-content: center; padding: 13px 20px; }
-  .p-ara { max-width: none; }
   .p-tablo { min-width: 680px; }
-  .p-tablo thead th, .p-tablo tbody td { padding: 11px 12px; }
   .p-islem { padding: 9px 12px; }          /* dokunma hedefi ≥ ~40px */
   .p-sira button { width: 28px; height: 22px; font-size: 13px; }
   .p-switch { width: 46px; height: 26px; }

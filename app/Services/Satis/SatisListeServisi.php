@@ -8,6 +8,8 @@ use App\Models\Adisyonlar;
 use App\Models\Alacaklar;
 use App\Models\PersonelPrimOrani;
 use App\Models\Salonlar;
+use App\Models\User;
+use App\Support\ListeIstegi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -130,7 +132,35 @@ class SatisListeServisi
             // Fatura filtresi: acik secim varsa onu uygula; yoksa salon faturasiz_gizle ayari.
             ->when($fatura === '1' || $fatura === '0', fn ($q) => $q->where('fatura_kesildi', (int) $fatura))
             ->when($fatura === null && $faturasizGizle, fn ($q) => $q->where('fatura_kesildi', 1))
-            ->orderBy('tarih', 'desc');
+            // Tablo araması: satırda GÖRÜNEN içerik — adisyon no, müşteri adı,
+            // hizmet/ürün/paket adları ve kalemi yapan personel adı.
+            ->when(ListeIstegi::like($o['ara'] ?? null), function ($q, $like) use ($o) {
+                $q->where(function ($w) use ($like, $o) {
+                    $ara = trim((string) $o['ara']);
+                    if (ctype_digit($ara)) {
+                        $w->orWhere('adisyonlar.id', (int) $ara);
+                    }
+                    $w->orWhereHas('musteri', fn ($m) => $m->where('name', 'like', $like))
+                        ->orWhereHas('hizmetler.hizmet', fn ($k) => $k->where('hizmet_adi', 'like', $like))
+                        ->orWhereHas('urunler.urun', fn ($k) => $k->where('urun_adi', 'like', $like))
+                        ->orWhereHas('paketler.paket', fn ($k) => $k->where('paket_adi', 'like', $like))
+                        ->orWhereHas('hizmetler.personel', fn ($k) => $k->where('personel_adi', 'like', $like))
+                        ->orWhereHas('urunler.personel', fn ($k) => $k->where('personel_adi', 'like', $like))
+                        ->orWhereHas('paketler.personel', fn ($k) => $k->where('personel_adi', 'like', $like));
+                });
+            });
+
+        // Sıralama (beyaz liste controller'da): tarih (varsayılan, yeni→eski) | musteri.
+        $yon = ($o['yon'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        if (($o['sirala'] ?? null) === 'musteri') {
+            $base->orderBy(
+                User::select('name')->whereColumn('users.id', 'adisyonlar.user_id')->limit(1),
+                $yon
+            );
+        } else {
+            $base->orderBy('adisyonlar.tarih', $yon);
+        }
+        $base->orderBy('adisyonlar.id', $yon);
 
         // ───────── Acik/Kapali sayim (acik_kapali filtresi UYGULANMADAN) ─────────
         if ($studyoModu) {
@@ -165,7 +195,6 @@ class SatisListeServisi
 
         $toplamSayisi = $acikKapali === 1 ? $acikSayisi
             : ($acikKapali === 0 ? $kapaliSayisi : $acikSayisi + $kapaliSayisi);
-        $lastPage = (int) max(1, ceil(($toplamSayisi ?: 1) / $perPage));
 
         // ───────── Filtre GENELİ para toplamı (sadece sayfa değil → üst özet kartları) ─────────
         $paraBind = $pid ? array_fill(0, 6, $pid) : [];
@@ -267,10 +296,7 @@ class SatisListeServisi
             'odenen_numeric' => round($odenenTl, 2),
             'kalan'         => AdisyonSatir::trFormat($kalanTl),
             'kalan_numeric' => round($kalanTl, 2),
-            'current_page'  => $page,
-            'last_page'     => $lastPage,
-            'total'         => $toplamSayisi,
-        ];
+        ] + ListeIstegi::meta($page, $perPage, $toplamSayisi);
     }
 
     /** Eager-load edilmis adisyondan AdisyonSatir girdisini (TL kalem dizileri) kurar. */

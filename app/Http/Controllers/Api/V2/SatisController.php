@@ -10,6 +10,7 @@ use App\Services\Satis\SatisListeServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
+use App\Support\ListeIstegi;
 use Illuminate\Http\Request;
 
 /**
@@ -44,7 +45,8 @@ class SatisController extends V2Controller
      *   musteri_id/musteriid, personel_id, acik_kapali/acikKapali (1 acik/0 kapali),
      *   fatura (1/0), satis_durumu (acik|kapali|faturali|faturasiz — eski paneldeki
      *   tek "Satis Durumu" secimi; verilirse acik_kapali/fatura yerine gecer),
-     *   musteriMi, appBundle, page, per_page.
+     *   musteriMi, appBundle + ortak tablo parametreleri (ListeIstegi): page, per_page,
+     *   ara (adisyon no / müşteri / hizmet-ürün-paket / personel adı), sirala (tarih|musteri), yon.
      * Cevap: `yetkiler` (sayfa duzeyi) + her satirda `kapali` ve `aksiyonlar` —
      * web ve Flutter durum/buton kararini YENIDEN HESAPLAMAZ (tek kaynak).
      */
@@ -109,11 +111,10 @@ class SatisController extends V2Controller
             'fatura'            => $fatura,
             'musteriMi'         => filter_var($request->input('musteriMi'), FILTER_VALIDATE_BOOLEAN),
             'appBundle'         => $request->input('appBundle'),
-            'page'              => $request->input('page'),
-            'per_page'          => $request->input('per_page'),
             'kisit_personel_id' => $kisit,
             'yetkiler'          => $yetkiler,
-        ]);
+        // Ortak tablo sözleşmesi: page, per_page (API varsayılanı 20 — eski mobil), ara, sirala/yon.
+        ] + ListeIstegi::istekten($request, 20, ['tarih', 'musteri'], 'tarih', 'desc')->dizi());
         if ($kapaliGizle) {
             $veri['kapali_sayisi'] = 0;
         }

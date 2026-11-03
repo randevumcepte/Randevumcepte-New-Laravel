@@ -15,6 +15,12 @@
  */
 
 import { api, el, esc, TL, mesaj, onay } from '/js/lib/v2-ortak.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
+
+// Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
+const tablolar = {};
+const yerelTablo = (id, opt) => (tablolar[id] ||= veriTablosu(el('#' + id), { anahtar: 'tahsilat-' + id, ...opt }));
+const TUR_AD = { hizmet: 'Hizmet', urun: 'Ürün', paket: 'Paket' };
 
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 
@@ -103,14 +109,23 @@ function ozetGoster() {
 
 function kalemlerGoster() {
   const v = adisyon;
-  const rows = [];
-  (v.hizmetler || []).forEach((h) => rows.push(satir('hizmet', h.id, h.ad || 'Hizmet #' + h.hizmet_id, h.seans_sayisi ? h.seans_sayisi + ' seans' : '', h.fiyat, h.indirim_tutari, null)));
-  (v.paketler || []).forEach((p) => rows.push(satir('paket', p.id, p.ad || 'Paket #' + p.paket_id, '', p.fiyat, p.indirim_tutari, null)));
-  (v.urunler || []).forEach((u) => rows.push(satir('urun', u.id, u.ad || 'Ürün #' + u.urun_id, '', u.fiyat, u.indirim_tutari, u.adet)));
-  el('#t-kalemler').innerHTML = rows.length
-    ? `<table class="t-tbl"><thead><tr><th>Kalem</th><th>Tür</th><th class="r">Fiyat</th><th class="r">İndirim</th><th></th></tr></thead><tbody>${rows.join('')}</tbody></table>`
-    : '<div class="t-bos">Henüz kalem yok. Yukarıdan hizmet, ürün veya paket ekleyin.</div>';
-  kalemOlaylariBagla();
+  const k = [
+    ...(v.hizmetler || []).map((h) => ({ tip: 'hizmet', id: h.id, ad: h.ad || 'Hizmet #' + h.hizmet_id, ek: h.seans_sayisi ? h.seans_sayisi + ' seans' : '', fiyat: h.fiyat, indirim: h.indirim_tutari, adet: null })),
+    ...(v.paketler || []).map((p) => ({ tip: 'paket', id: p.id, ad: p.ad || 'Paket #' + p.paket_id, ek: '', fiyat: p.fiyat, indirim: p.indirim_tutari, adet: null })),
+    ...(v.urunler || []).map((u) => ({ tip: 'urun', id: u.id, ad: u.ad || 'Ürün #' + u.urun_id, ek: '', fiyat: u.fiyat, indirim: u.indirim_tutari, adet: u.adet })),
+  ];
+  yerelTablo('t-kalemler', {
+    birim: 'kalem',
+    bosMesaj: 'Henüz kalem yok. Yukarıdan hizmet, ürün veya paket ekleyin.',
+    kolonlar: [
+      { baslik: 'Kalem', sirala: 'ad', deger: (x) => x.ad }, { baslik: 'Tür', sirala: 'tip', deger: (x) => TUR_AD[x.tip] },
+      { baslik: 'Fiyat', sinif: 'rc-sag', sirala: 'fiyat', deger: (x) => Number(x.fiyat) || 0 },
+      { baslik: 'İndirim', sinif: 'rc-sag' }, { baslik: '' },
+    ],
+    araMetni: (x) => `${x.ad} ${TUR_AD[x.tip]} ${x.ek}`,
+    satir: (x) => satir(x.tip, x.id, x.ad, x.ek, x.fiyat, x.indirim, x.adet),
+    cizildi: kalemOlaylariBagla,
+  }).kayitlarAyarla(k);
 }
 
 function satir(tip, id, ad, ek, fiyat, indirim, adet) {
@@ -121,9 +136,9 @@ function satir(tip, id, ad, ek, fiyat, indirim, adet) {
   return `<tr>
     <td><span class="t-kalem-ad">${esc(ad)}</span></td>
     <td>${tur}</td>
-    <td class="r">${TL(fiyat)}</td>
-    <td class="r">${TL(indirim || 0)}</td>
-    <td class="r"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
+    <td class="rc-sag">${TL(fiyat)}</td>
+    <td class="rc-sag">${TL(indirim || 0)}</td>
+    <td class="rc-sag"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
 }
 
 function kalemOlaylariBagla() {
@@ -140,40 +155,52 @@ function kalemOlaylariBagla() {
 
 /* ───────────── Yapılan tahsilatlar (tür + düzenle/sil) ───────────── */
 function gecmisGoster() {
-  const t = adisyon.tahsilatlar || [];
-  el('#t-gecmis').innerHTML = t.length
-    ? `<table class="t-tbl"><thead><tr><th>Tarih</th><th>Tür</th><th class="r">Tutar</th><th></th></tr></thead><tbody>${
-        t.map((o) => `<tr>
+  yerelTablo('t-gecmis', {
+    birim: 'tahsilat',
+    bosMesaj: 'Henüz tahsilat yapılmamış.',
+    kolonlar: [
+      { baslik: 'Tarih', sirala: 'tarih', deger: (o) => o.odeme_tarihi || '' }, { baslik: 'Tür' },
+      { baslik: 'Tutar', sinif: 'rc-sag', sirala: 'tutar', deger: (o) => Number(o.tutar) || 0 }, { baslik: '' },
+    ],
+    araMetni: (o) => `${o.odeme_tarihi || ''} ${yontemAd(o.odeme_yontemi_id)} ${o.tutar}`,
+    satir: (o) => `<tr>
           <td>${esc(o.odeme_tarihi || '-')}</td>
           <td><span class="t-rozet yontem">${esc(yontemAd(o.odeme_yontemi_id))}</span></td>
-          <td class="r" style="color:#16a34a;font-weight:700">${TL(o.tutar)}</td>
-          <td class="r t-islem">
+          <td class="rc-sag" style="color:#16a34a;font-weight:700">${TL(o.tutar)}</td>
+          <td class="rc-sag t-islem">
             <button class="t-duzen" data-tah="${o.id}" title="Düzenle"><i class="bi bi-pencil"></i></button>
             <button class="t-sil"   data-tah="${o.id}" title="İade / Sil"><i class="bi bi-trash"></i></button>
-          </td></tr>`).join('')
-      }</tbody></table>`
-    : '<div class="t-bos">Henüz tahsilat yapılmamış.</div>';
-  document.querySelectorAll('#t-gecmis .t-duzen[data-tah]').forEach((b) => (b.onclick = () => tahsilatDuzenle(parseInt(b.dataset.tah, 10))));
-  document.querySelectorAll('#t-gecmis .t-sil[data-tah]').forEach((b) => (b.onclick = () => tahsilatSil(parseInt(b.dataset.tah, 10))));
+          </td></tr>`,
+    cizildi: () => {
+      document.querySelectorAll('#t-gecmis .t-duzen[data-tah]').forEach((b) => (b.onclick = () => tahsilatDuzenle(parseInt(b.dataset.tah, 10))));
+      document.querySelectorAll('#t-gecmis .t-sil[data-tah]').forEach((b) => (b.onclick = () => tahsilatSil(parseInt(b.dataset.tah, 10))));
+    },
+  }).kayitlarAyarla(adisyon.tahsilatlar || []);
 }
 
 /* ───────────── Planlanan alacaklar (düzenle/sil) ───────────── */
 function alacakGoster() {
-  const a = adisyon.alacaklar || [];
-  el('#t-alacaklar').innerHTML = a.length
-    ? `<table class="t-tbl"><thead><tr><th>Vade</th><th>Not</th><th class="r">Tutar</th><th></th></tr></thead><tbody>${
-        a.map((x) => `<tr>
+  yerelTablo('t-alacaklar', {
+    birim: 'alacak',
+    bosMesaj: 'Planlanan alacak yok.',
+    kolonlar: [
+      { baslik: 'Vade', sirala: 'vade', deger: (x) => x.planlanan_odeme_tarihi || '' }, { baslik: 'Not' },
+      { baslik: 'Tutar', sinif: 'rc-sag', sirala: 'tutar', deger: (x) => Number(x.tutar) || 0 }, { baslik: '' },
+    ],
+    araMetni: (x) => `${x.planlanan_odeme_tarihi || ''} ${x.aciklama || ''} ${x.tutar}`,
+    satir: (x) => `<tr>
           <td><i class="bi bi-calendar-event" style="color:#6b7194;margin-right:6px"></i>${esc(x.planlanan_odeme_tarihi || '-')}</td>
           <td>${esc(x.aciklama || '')}</td>
-          <td class="r" style="font-weight:700">${TL(x.tutar)}</td>
-          <td class="r t-islem">
+          <td class="rc-sag" style="font-weight:700">${TL(x.tutar)}</td>
+          <td class="rc-sag t-islem">
             <button class="t-duzen" data-ald="${x.id}" title="Düzenle"><i class="bi bi-pencil"></i></button>
             <button class="t-sil"   data-al="${x.id}"  title="İptal"><i class="bi bi-trash"></i></button>
-          </td></tr>`).join('')
-      }</tbody></table>`
-    : '<div class="t-bos">Planlanan alacak yok.</div>';
-  document.querySelectorAll('#t-alacaklar .t-duzen[data-ald]').forEach((b) => (b.onclick = () => alacakDuzenle(parseInt(b.dataset.ald, 10))));
-  document.querySelectorAll('#t-alacaklar .t-sil[data-al]').forEach((b) => (b.onclick = () => alacakSil(b.dataset.al)));
+          </td></tr>`,
+    cizildi: () => {
+      document.querySelectorAll('#t-alacaklar .t-duzen[data-ald]').forEach((b) => (b.onclick = () => alacakDuzenle(parseInt(b.dataset.ald, 10))));
+      document.querySelectorAll('#t-alacaklar .t-sil[data-al]').forEach((b) => (b.onclick = () => alacakSil(b.dataset.al)));
+    },
+  }).kayitlarAyarla(adisyon.alacaklar || []);
 }
 
 /* ───────────── Kalem ekleme / adet / sil ───────────── */

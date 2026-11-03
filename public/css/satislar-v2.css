@@ -64,29 +64,14 @@
   .s-f-grup input, .s-f-grup select, .s-f-grup .rs-btn { background: #1b1b26; border-color: #34344c; color: #ededf5; }
 }
 
-/* ── Tablo ── */
-.s-tablo-sar { overflow-x: auto; border: 1px solid #ebebf3; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .04); }
-.s-tablo { width: 100%; border-collapse: collapse; min-width: 960px; }
-.s-tablo thead th {
-  text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; font-weight: 700;
-  color: #8a8a9a; background: #f8f8fc; padding: 13px 16px; border-bottom: 2px solid #eee; white-space: nowrap; position: sticky; top: 0;
-}
-.s-tablo tbody td { padding: 13px 16px; border-bottom: 1px solid #f2f2f8; font-size: 14px; color: #2a2140; vertical-align: top; }
-.s-tablo tbody tr:hover td { background: #faf7ff; }
-.s-tablo tbody tr:last-child td { border-bottom: none; }
-.s-sag { text-align: right; white-space: nowrap; }
-.s-orta { text-align: center; }
-.s-nowrap { white-space: nowrap; }
-.s-nowrap small { color: #a0a0b0; font-weight: 500; }
+/* ── Tablo: temel stil panel.css .rc-tablo (ortak); burada yalnız bu ekrana özgü hücreler ── */
+.s-tablo { min-width: 960px; }
+.s-tablo th.s-k-durum { width: 90px; }
+.s-tablo th.s-k-islem { width: 1%; }
 .s-kalan { font-weight: 800; color: #e0591f; }
+.s-kalan.s-sifir { color: #9a9aac; font-weight: 700; }
 .s-icerik { font-size: 13px; color: #5a5a6a; line-height: 1.55; max-width: 300px; }
-.s-bos { text-align: center; color: #999; padding: 30px 16px; }
-.s-hata { color: #c0392b; }
 @media (prefers-color-scheme: dark) {
-  .s-tablo-sar { background: #22222e; border-color: #34344c; }
-  .s-tablo thead th { background: #1b1b26; color: #9a9ab0; border-color: #34344c; }
-  .s-tablo tbody td { color: #ededf5; border-color: #2c2c3c; }
-  .s-tablo tbody tr:hover td { background: #27273a; }
   .s-icerik { color: #b4b4c6; }
   .s-kalan { color: #ff9d5c; }
 }
@@ -104,14 +89,6 @@
 .s-islem-detay { background: #f0edfa; color: #5C008E; border: 1px solid #e0d6f2; }
 .s-islem-detay:hover { background: #e7defa; }
 @media (prefers-color-scheme: dark) { .s-islem-detay { background: #2d2340; color: #c9a7f0; border-color: #403059; } }
-
-/* ── Hizalama düzeltmesi: başlık hizası hücreyle aynı (thead th genel 'left' kuralını ezer) ── */
-.s-tablo th.s-sag, .s-tablo td.s-sag { text-align: right; }
-.s-tablo th.s-orta, .s-tablo td.s-orta { text-align: center; }
-.s-tablo tbody td { vertical-align: middle; }
-.s-tablo th.s-k-durum { width: 90px; }
-.s-tablo th.s-k-islem { width: 1%; }
-.s-kalan.s-sifir { color: #9a9aac; font-weight: 700; }
 
 /* ── Satır işlem butonları (ikon) ── */
 .s-islemler { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap; }

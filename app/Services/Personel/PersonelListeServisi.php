@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Support\ListeIstegi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -34,8 +35,11 @@ class PersonelListeServisi
             ->orderBy('sp.takvim_sirasi', 'asc')
             ->orderBy('sp.id', 'asc');
 
-        if ($baslik !== null && $baslik !== '') {
-            $sorgu->where('sp.personel_adi', 'like', '%' . $baslik . '%');
+        // Tablo araması: satırda görünen içerik — ad, unvan, telefon.
+        if ($like = ListeIstegi::like($baslik)) {
+            $sorgu->where(fn ($w) => $w->where('sp.personel_adi', 'like', $like)
+                ->orWhere('sp.unvan', 'like', $like)
+                ->orWhere('sp.cep_telefon', 'like', $like));
         }
 
         $donustur = fn ($row) => $this->okuma->donustur($row, $gor);

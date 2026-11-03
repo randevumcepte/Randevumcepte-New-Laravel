@@ -4,7 +4,7 @@
 @section('aktif', 'personel-yonetimi')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/personel-v2.css?v=6">
+    <link rel="stylesheet" href="/css/personel-v2.css?v=7">
 @endpush
 
 @section('icerik')
@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/personel-v2.js?v=5"></script>
+    <script type="module" src="/js/personel-v2.js?v=6"></script>
 @endpush

@@ -9,6 +9,7 @@ use App\Services\Personel\PersonelYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
+use App\Support\ListeIstegi;
 use Illuminate\Http\Request;
 
 /**
@@ -55,13 +56,14 @@ class PersonelController extends V2Controller
             $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
         }
 
-        $perPage = max(1, min(100, (int) $request->input('per_page', 10)));
+        // Ortak tablo sözleşmesi (ara/baslik, per_page, page) — ListeIstegi.
+        $liste = ListeIstegi::istekten($request, 10);
 
         return ApiCevap::basarili($this->liste->listele(
             $salonId,
-            $request->input('baslik'),
+            $liste->ara,
             $this->gorunurluk($user->id, $salonId, $listeGor),
-            $perPage,
+            $liste->sayfaBoyu,
             $tumu,
         ));
     }

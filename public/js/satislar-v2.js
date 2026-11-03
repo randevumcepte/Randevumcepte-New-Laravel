@@ -11,13 +11,16 @@
  * Eski panele yönlendirme YOK.
  */
 
-import { qp, api, el, esc, mesaj as toast, onay, pad, tarihStr as ts, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 
 const kok = document.getElementById('rc-satislar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
-const durum = { tur: 0, satisDurumu: '', personelId: '', musteriId: '', tarih1: '', tarih2: '', page: 1 };
+// Ekran filtreleri. Arama / sayfa / sayfa boyu / sıralama ortak tablo bileşeninde.
+// musteri_id yalnız URL'den (?musteri=) — müşteri kartından gelen bağlantılar için.
+const durum = { tur: 0, satisDurumu: '', personelId: '', musteriId: qp.get('musteri') || '', tarih1: '', tarih2: '' };
 let sonVeri = null;   // son liste cevabı (yetkiler/studyo için)
 let studyo = false;
 
@@ -91,10 +94,6 @@ function iskeletCiz() {
             <label>Satış Durumu</label>
             <select id="sDurum"></select>
           </div>
-          <div class="s-f-grup">
-            <label>Müşteri ID</label>
-            <input type="search" id="sMusteri" placeholder="Opsiyonel">
-          </div>
           <div class="s-f-grup s-f-ek" id="sFaturaGizleGrup" style="display:none">
             <label>&nbsp;</label>
             <button type="button" class="s-fatura-gizle" id="sFaturaGizle" title="Faturasız işlemleri gizle / göster">
@@ -104,14 +103,7 @@ function iskeletCiz() {
         </div>
       </div>
 
-      <div class="s-tablo-sar">
-        <table class="s-tablo">
-          <thead id="sBaslik"></thead>
-          <tbody id="sGovde"><tr><td colspan="10" class="s-bos">Yükleniyor…</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="rc-sayfalama" id="sSayfalama"></div>
+      <div id="sTablo"></div>
     </div>`;
 
   sekmeCiz();
@@ -121,7 +113,6 @@ function iskeletCiz() {
     const b = e.target.closest('.s-sekme');
     if (!b) return;
     durum.tur = parseInt(b.dataset.tur, 10);
-    durum.page = 1;
     sekmeCiz();
     yukle();
   });
@@ -132,16 +123,15 @@ function iskeletCiz() {
     if (v === 'ozel') return;
     [durum.tarih1, durum.tarih2] = aralik(v);
     tarihSet('#sTarih1', durum.tarih1); tarihSet('#sTarih2', durum.tarih2);
-    durum.page = 1; yukle();
+    yukle();
   });
-  el('#sDurum').addEventListener('change', (e) => { durum.satisDurumu = e.target.value; durum.page = 1; yukle(); });
-  el('#sMusteri').addEventListener('change', (e) => { durum.musteriId = e.target.value.trim(); durum.page = 1; yukle(); });
-  el('#sPersonel').addEventListener('change', (e) => { durum.personelId = e.target.value; durum.page = 1; yukle(); });
+  el('#sDurum').addEventListener('change', (e) => { durum.satisDurumu = e.target.value; yukle(); });
+  el('#sPersonel').addEventListener('change', (e) => { durum.personelId = e.target.value; yukle(); });
   el('#sFaturaGizle').addEventListener('click', faturasizGizleTikla);
 
   ['#sTarih1', '#sTarih2'].forEach((sel, i) => {
     const alan = i === 0 ? 'tarih1' : 'tarih2';
-    const degisti = (str) => { durum[alan] = str; durum.page = 1; yukle(); };
+    const degisti = (str) => { durum[alan] = str; yukle(); };
     if (window.flatpickr) {
       el(sel)._fp = flatpickr(el(sel), { dateFormat: 'Y-m-d', locale: 'tr', allowInput: true, disableMobile: true, onChange: (_d, str) => degisti(str) });
     } else {
@@ -149,9 +139,35 @@ function iskeletCiz() {
     }
   });
 
-  // Satır işlemleri (delegasyon)
-  el('#sGovde').addEventListener('click', satirIslem);
+  // Ortak veri tablosu: sayfa boyu (10/25/50/100), tablo içi arama, sıralama, sayfalama.
+  tablo = veriTablosu(el('#sTablo'), {
+    anahtar: 'satislar',
+    tabloSinif: 's-tablo',
+    kolonlar: kolonlar(),
+    sirala: { alan: 'tarih', yon: 'desc' },
+    araIpucu: 'Müşteri, hizmet/ürün/paket, personel, adisyon no…',
+    bosMesaj: 'Kayıt bulunamadı.',
+    satir: satirCiz,
+    kaynak: async (p) => {
+      if (!salonId) return { ok: false, kod: 422, govde: { mesaj: 'Şube seçili değil (?sube=... bekleniyor).' } };
+      const r = await api('GET', '/satislar', {
+        params: {
+          ...p, salon_id: salonId, tarih1: durum.tarih1, tarih2: durum.tarih2, tur: durum.tur,
+          personel_id: durum.personelId, musteri_id: durum.musteriId, satis_durumu: durum.satisDurumu,
+        },
+      });
+      // Satırlar çizilmeden ÖNCE stüdyo/kolon setini güncelle (satirCiz buna bakar).
+      if (r.ok && r.govde && r.govde.basarili) ekranGuncelle(r.govde.veri);
+      return r;
+    },
+  });
+
+  // Satır işlemleri (delegasyon — tablo kapsayıcısı kalıcı)
+  el('#sTablo').addEventListener('click', satirIslem);
 }
+
+let tablo = null;
+const yukle = () => tablo.yenile();
 
 function sekmeCiz() {
   el('#sSekmeler').innerHTML = SEKMELER
@@ -213,14 +229,23 @@ function ozetCiz(v) {
     (kapaliGizli ? '' : kart('bi-archive', 'Kapalı', (v.kapali_sayisi ?? 0), 'kapali'));
 }
 
-function baslikCiz() {
-  const para = studyo ? '' : '<th class="s-sag">İndirim</th><th class="s-sag">Toplam</th><th class="s-sag">Ödenen</th><th class="s-sag">Kalan</th>';
-  const st = studyo ? '<th>Ödeme Tarihi</th>' : '';
-  el('#sBaslik').innerHTML = `<tr>
-    <th class="s-k-durum">Durum</th><th>Satış Tarihi</th><th>Müşteri</th><th>Yaklaşan Ödeme</th><th>İçerik</th>
-    ${para}${st}<th class="s-orta s-k-islem">İşlemler</th></tr>`;
+// Kolon seti (stüdyoda para kolonları yerine Ödeme Tarihi — eski panel).
+function kolonlar() {
+  const para = studyo ? [] : [
+    { baslik: 'İndirim', sinif: 'rc-sag' }, { baslik: 'Toplam', sinif: 'rc-sag' },
+    { baslik: 'Ödenen', sinif: 'rc-sag' }, { baslik: 'Kalan', sinif: 'rc-sag' },
+  ];
+  return [
+    { baslik: 'Durum', sinif: 's-k-durum' },
+    { baslik: 'Satış Tarihi', sirala: 'tarih' },
+    { baslik: 'Müşteri', sirala: 'musteri' },
+    { baslik: 'Yaklaşan Ödeme' },
+    { baslik: 'İçerik' },
+    ...para,
+    ...(studyo ? [{ baslik: 'Ödeme Tarihi' }] : []),
+    { baslik: 'İşlemler', sinif: 'rc-orta s-k-islem' },
+  ];
 }
-const kolonSayisi = () => (studyo ? 7 : 10);
 
 // Satır durumu (a.kapali) ve izinli işlemler (a.aksiyonlar) API'den hazır gelir —
 // burada yalnızca ÇİZİLİR, iş kuralı hesaplanmaz (Flutter ile aynı sözleşme).
@@ -247,19 +272,19 @@ function satirCiz(a) {
     : '<span class="s-rozet s-r-acik">Açık</span>';
   const icerik = esc(a.icerikKisaltilmis || a.icerik || '').trim().replace(/\r?\n/g, '<br>');
   const para = studyo ? '' : `
-    <td class="s-sag">${esc(a.indirim || '0,00')} ₺</td>
-    <td class="s-sag">${esc(a.toplam)} ₺</td>
-    <td class="s-sag">${esc(a.odenen)} ₺</td>
-    <td class="s-sag s-kalan${a.kapali ? ' s-sifir' : ''}">${esc(a.kalan_tutar)} ₺</td>`;
-  const st = studyo ? `<td class="s-nowrap">${esc(a.odendi_tarihi || '-')}</td>` : '';
+    <td class="rc-sag">${esc(a.indirim || '0,00')} ₺</td>
+    <td class="rc-sag">${esc(a.toplam)} ₺</td>
+    <td class="rc-sag">${esc(a.odenen)} ₺</td>
+    <td class="rc-sag s-kalan${a.kapali ? ' s-sifir' : ''}">${esc(a.kalan_tutar)} ₺</td>`;
+  const st = studyo ? `<td class="rc-nowrap">${esc(a.odendi_tarihi || '-')}</td>` : '';
   return `<tr>
     <td>${rozet}</td>
-    <td class="s-nowrap">${esc(a.acilis_tarihi)}${a.acilis_saati ? ' <small>' + esc(a.acilis_saati) + '</small>' : ''}</td>
+    <td class="rc-nowrap">${esc(a.acilis_tarihi)}${a.acilis_saati ? ' <small>' + esc(a.acilis_saati) + '</small>' : ''}</td>
     <td>${esc(a.musteri)}</td>
-    <td class="s-nowrap">${esc(a.planlanan_alacak_tarihi || '-')}</td>
+    <td class="rc-nowrap">${esc(a.planlanan_alacak_tarihi || '-')}</td>
     <td class="s-icerik">${icerik}</td>
     ${para}${st}
-    <td class="s-orta">${islemlerCiz(a)}</td>
+    <td class="rc-orta">${islemlerCiz(a)}</td>
   </tr>`;
 }
 
@@ -292,7 +317,7 @@ async function satirIslem(e) {
     return;
   }
   toast(sonuc.govde.mesaj || 'İşlem tamamlandı', 'ok');
-  yukle();
+  tablo.yenile(false); // bulunduğu sayfada kal
 }
 
 async function faturasizGizleTikla() {
@@ -305,7 +330,6 @@ async function faturasizGizleTikla() {
     return;
   }
   toast(r.govde.veri.faturasiz_gizle ? 'Faturasız işlemler gizlendi' : 'Faturasız işlemler gösteriliyor', 'ok');
-  durum.page = 1;
   yukle();
 }
 
@@ -317,46 +341,22 @@ function ekKontrollerCiz(v) {
   btn.querySelector('span').textContent = v.faturasiz_gizle_aktif ? 'Faturasızlar gizli' : 'Faturasızları gizle';
 }
 
-let istekNo = 0;
-async function yukle() {
-  if (!salonId) {
-    el('#sGovde').innerHTML = `<tr><td colspan="10" class="s-bos">Şube seçili değil (?sube=... bekleniyor).</td></tr>`;
-    return;
-  }
-  const no = ++istekNo;
-  el('#sGovde').innerHTML = `<tr><td colspan="${kolonSayisi()}" class="s-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</td></tr>`;
-  const r = await api('GET', '/satislar', {
-    params: {
-      salon_id: salonId, tarih1: durum.tarih1, tarih2: durum.tarih2, tur: durum.tur,
-      personel_id: durum.personelId, musteri_id: durum.musteriId, page: durum.page, satis_durumu: durum.satisDurumu,
-    },
-  });
-  if (no !== istekNo) return; // daha yeni bir istek var — eski cevabı çizme
-  if (!r.ok || !r.govde || !r.govde.basarili) {
-    const msg = (r.govde && r.govde.mesaj) || `Hata (${r.kod})`;
-    el('#sGovde').innerHTML = `<tr><td colspan="${kolonSayisi()}" class="s-bos s-hata">${esc(msg)}</td></tr>`;
-    return;
-  }
-  const v = r.govde.veri;
+// Liste cevabıyla ekranın tablo DIŞI kısımları (kartlar, sekmeler, filtre seçenekleri).
+function ekranGuncelle(v) {
   const studyoDegisti = studyo !== !!v.studyo_modu;
   sonVeri = v;
   studyo = !!v.studyo_modu;
   if (studyoDegisti) {
     if (studyo && durum.tur === 3) durum.tur = 0;
     sekmeCiz();
+    tablo.kolonlarAyarla(kolonlar());
   }
   durumSecenekCiz();
   personelGrupGoster();
   ekKontrollerCiz(v);
   ozetCiz(v);
-  baslikCiz();
-  const list = v.data || [];
-  el('#sGovde').innerHTML = list.length ? list.map(satirCiz).join('')
-    : `<tr><td colspan="${kolonSayisi()}" class="s-bos">Kayıt bulunamadı.</td></tr>`;
-  sayfalamaCiz(el('#sSayfalama'), v, (no) => { durum.page = no; yukle(); });
 }
 
 iskeletCiz();
-baslikCiz();
 personelleriYukle();
 yukle();

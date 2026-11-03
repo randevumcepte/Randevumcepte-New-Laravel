@@ -13,7 +13,8 @@
  * data-salon (blade) ya da ?sube= query'sinden.
  */
 
-import { qp, api, el, esc, mesaj, onay, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 
 // Hesap turleri + cinsiyetler API'den (GET /personel/form-verisi) — UI'da sabit liste yok.
@@ -25,7 +26,6 @@ const CAP = { hizmet: 'Hizmet', urun: 'Urun', paket: 'Paket' };
 const kok = document.getElementById('rc-personel');
 let salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 
-const durum = { baslik: '', page: 1 };
 let benim = null;   // giriş yapanın kendi yetkileri (buton gate'i için)
 let sema = null;    // yetki şeması (tanimlar + kategoriler + sablonlar) — bir kez yüklenir
 let formDuzenleme = false; // prim kalem boş-durum mesajı için
@@ -56,40 +56,41 @@ function iskeletCiz() {
 
       <div class="rc-ozet" id="pOzet"></div>
 
-      <div class="p-filtre-kart">
-        <div class="p-ara">
-          <i class="bi bi-search"></i>
-          <input type="search" id="pAra" placeholder="Personel adı ara…" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="p-tablo-sar">
-        <table class="p-tablo">
-          <thead>
-            <tr>
-              <th>Personel</th><th>Telefon</th><th>Hesap Türü</th>
-              <th class="p-sag">Maaş</th><th class="p-orta">Takvimde</th>
-              <th class="p-orta">Durum</th><th class="p-orta">İşlemler</th>
-            </tr>
-          </thead>
-          <tbody id="pGovde"><tr><td colspan="7" class="p-bos">Yükleniyor…</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="rc-sayfalama" id="pSayfalama"></div>
+      <div id="pTablo"></div>
     </div>`;
 
   if (el('#pYeni')) el('#pYeni').addEventListener('click', () => formAc(null));
 
-  let aramaZaman;
-  el('#pAra').addEventListener('input', (e) => {
-    clearTimeout(aramaZaman);
-    const v = e.target.value.trim();
-    aramaZaman = setTimeout(() => { durum.baslik = v; durum.page = 1; yukle(); }, 350);
+  // Ortak veri tablosu: sayfa boyu (10/25/50/100), tablo içi arama, sayfalama.
+  // Sıralama yok: liste takvim sırasıyla gelir (satırdaki ▲▼ ile değiştirilir).
+  tablo = veriTablosu(el('#pTablo'), {
+    anahtar: 'personel',
+    tabloSinif: 'p-tablo',
+    birim: 'personel',
+    araIpucu: 'Ad, unvan, telefon…',
+    bosMesaj: 'Personel bulunamadı.',
+    kolonlar: [
+      { baslik: 'Personel' }, { baslik: 'Telefon' }, { baslik: 'Hesap Türü' },
+      { baslik: 'Maaş', sinif: 'rc-sag' }, { baslik: 'Takvimde', sinif: 'rc-orta' },
+      { baslik: 'Durum', sinif: 'rc-orta' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
+    ],
+    satir: (p, i, liste) => satirCiz(p, i, liste.length),
+    kaynak: (prm) => (salonId
+      ? api('GET', '/personel', { params: { ...prm, salon_id: salonId } })
+      : Promise.resolve({ ok: false, kod: 422, govde: { mesaj: 'Şube seçili değil (?sube=... bekleniyor).' } })),
+    cizildi: (liste, v) => {
+      sonListe = liste;
+      const o = (v && v.ozet) || {};
+      el('#pOzet').innerHTML =
+        ozetKart('bi-people-fill', 'Toplam Personel', o.toplam ?? 0, 'mor') +
+        ozetKart('bi-check2-circle', 'Aktif', o.aktif ?? 0, 'yesil') +
+        ozetKart('bi-calendar-check', 'Takvimde', o.takvimde ?? 0, 'mavi');
+    },
   });
 
-  el('#pGovde').addEventListener('click', satirTiklama);
-  el('#pGovde').addEventListener('change', satirDegisim);
+  // Satır aksiyonları (delegasyon — tablo kapsayıcısı kalıcı)
+  el('#pTablo').addEventListener('click', satirTiklama);
+  el('#pTablo').addEventListener('change', satirDegisim);
 }
 
 // ─────────────────────────── LİSTE ───────────────────────────
@@ -126,39 +127,19 @@ function satirCiz(p, idx, toplam) {
 
   return `<tr data-id="${p.id}">
     <td><div class="p-kisi">${sira}${avatar}<div><div class="p-kisi-ad">${esc(p.personel_adi || '—')}</div>${p.unvan ? `<div class="p-kisi-unvan">${esc(p.unvan)}</div>` : ''}</div></div></td>
-    <td class="p-nowrap">${esc(p.cep_telefon || '—')}</td>
+    <td class="rc-nowrap">${esc(p.cep_telefon || '—')}</td>
     <td>${rol}</td>
-    <td class="p-sag">${maas}</td>
-    <td class="p-orta">${takvim}</td>
-    <td class="p-orta">${durumHuc}</td>
-    <td class="p-orta">${islemler || '—'}</td>
+    <td class="rc-sag">${maas}</td>
+    <td class="rc-orta">${takvim}</td>
+    <td class="rc-orta">${durumHuc}</td>
+    <td class="rc-orta">${islemler || '—'}</td>
   </tr>`;
 }
 
 let sonListe = [];
-async function yukle() {
-  if (!salonId) {
-    el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos">Şube seçili değil (?sube=... bekleniyor).</td></tr>`;
-    return;
-  }
-  el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</td></tr>`;
-  const { ok, kod, govde } = await api('GET', '/personel', { params: { salon_id: salonId, baslik: durum.baslik, page: durum.page } });
-  if (!ok || !govde || !govde.basarili) {
-    el('#pGovde').innerHTML = `<tr><td colspan="7" class="p-bos p-hata">${esc((govde && govde.mesaj) || `Hata (${kod})`)}</td></tr>`;
-    return;
-  }
-  const v = govde.veri;
-  sonListe = v.data || [];
-  const o = v.ozet || {};
-  el('#pOzet').innerHTML =
-    ozetKart('bi-people-fill', 'Toplam Personel', o.toplam ?? 0, 'mor') +
-    ozetKart('bi-check2-circle', 'Aktif', o.aktif ?? 0, 'yesil') +
-    ozetKart('bi-calendar-check', 'Takvimde', o.takvimde ?? 0, 'mavi');
-  el('#pGovde').innerHTML = sonListe.length
-    ? sonListe.map((p, i) => satirCiz(p, i, sonListe.length)).join('')
-    : `<tr><td colspan="7" class="p-bos">Personel bulunamadı.</td></tr>`;
-  sayfalamaCiz(el('#pSayfalama'), v, (no) => { durum.page = no; yukle(); }, 'personel');
-}
+let tablo = null;
+// Kayıt sonrası yenileme: bulunduğu sayfada kal (arama/sayfa boyu korunur).
+const yukle = () => tablo.yenile(false);
 
 function personelBul(id) { return sonListe.find((p) => String(p.id) === String(id)); }
 
