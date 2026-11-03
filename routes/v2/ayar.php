@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AyarController;
+use App\Http\Controllers\Api\V2\CihazController;
 use App\Http\Controllers\Api\V2\IsletmeGorselController;
+use App\Http\Controllers\Api\V2\OdaController;
 use App\Http\Controllers\Api\V2\RandevuAyarController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,4 +36,20 @@ Route::prefix('ayar')->group(function () {
 
     Route::get('/tema', [AyarController::class, 'tema']);
     Route::put('/tema', [AyarController::class, 'temaKaydet']);
+
+    // Takvim kaynaklari — cihaz ve oda AYNI uc kumesi (KaynakTabanController); kayit govdesi ture ozel.
+    foreach (['cihazlar' => CihazController::class, 'odalar' => OdaController::class] as $yol => $controller) {
+        Route::prefix($yol)->group(function () use ($controller) {
+            Route::get('/', [$controller, 'liste']);
+            Route::get('/form-verisi', [$controller, 'formVerisi']);
+            Route::post('/', [$controller, 'kaydet']);
+            Route::prefix('{id}')->whereNumber('id')->group(function () use ($controller) {
+                Route::get('/', [$controller, 'goster']);
+                Route::patch('/', [$controller, 'kaydet']);
+                Route::delete('/', [$controller, 'sil']);
+                Route::patch('/durum', [$controller, 'durum']);
+                Route::patch('/sira', [$controller, 'sira']);
+            });
+        });
+    }
 });

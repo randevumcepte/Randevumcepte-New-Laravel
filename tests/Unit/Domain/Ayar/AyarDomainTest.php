@@ -5,6 +5,7 @@ namespace Tests\Unit\Domain\Ayar;
 use App\Domain\Ayar\AyarSozluk;
 use App\Domain\Ayar\HaftalikSaat;
 use App\Domain\Ayar\HexRenk;
+use App\Domain\Ayar\KaynakTuru;
 use App\Domain\Ayar\SalonTemaSeed;
 use PHPUnit\Framework\TestCase;
 
@@ -103,5 +104,19 @@ class AyarDomainTest extends TestCase
         $this->assertFalse(AyarSozluk::takvimTuruGecerli(4));
         $this->expectException(\LogicException::class);
         AyarSozluk::yetki('yok');
+    }
+
+    public function test_kaynak_turu_tablolari_ve_renk_dongusu(): void
+    {
+        $this->assertSame('cihazlar', KaynakTuru::Cihaz->tablo());
+        $this->assertSame('oda_adi', KaynakTuru::Oda->adKolonu());
+        $this->assertSame('salon_oda_renkleri', KaynakTuru::Oda->renkTablosu());
+        $this->assertSame('cihaz_id', KaynakTuru::Cihaz->fk());
+        $this->assertSame('odalar', KaynakTuru::Oda->sekme());
+        $this->assertSame(1, KaynakTuru::sonrakiRenk(null));
+        $this->assertSame(4, KaynakTuru::sonrakiRenk(3));
+        $this->assertSame(1, KaynakTuru::sonrakiRenk(10));
+        // Sekme kodlari sozlukte tanimli (yetki anahtari buradan okunur).
+        $this->assertSame(['ayar.cihaz_oda_yonet'], AyarSozluk::yetki(KaynakTuru::Cihaz->sekme()));
     }
 }

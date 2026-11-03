@@ -8,21 +8,12 @@ namespace App\Http\Requests\Ayar;
  */
 class CalismaSaatiIstegi extends AyarIstegi
 {
+    use HaftalikPlanKurallari;
+
     protected array $jsonAlanlar = ['gunler'];
 
     protected function alanKurallari(): array
     {
-        $saat = ['nullable', 'regex:/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/'];
-
-        return [
-            'gunler'                        => ['required', 'array', 'size:7'],
-            'gunler.*.haftanin_gunu'        => ['required', 'integer', 'between:1,7', 'distinct'],
-            'gunler.*.calisiyor'            => ['required', 'boolean'],
-            'gunler.*.baslangic_saati'      => $saat,
-            'gunler.*.bitis_saati'          => $saat,
-            'gunler.*.mola_var'             => ['sometimes', 'boolean'],
-            'gunler.*.mola_baslangic_saati' => $saat,
-            'gunler.*.mola_bitis_saati'     => $saat,
-        ];
+        return $this->planKurallari();
     }
 }

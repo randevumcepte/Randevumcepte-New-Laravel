@@ -11,6 +11,7 @@ use App\Models\PersonelPrimOrani;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use App\Support\HaftalikSaatDeposu;
+use App\Support\TakvimSirasi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -80,34 +81,9 @@ class PersonelYazServisi
             return ['sonuc' => 'error', 'mesaj' => 'delta 1 veya -1 olmalı'];
         }
 
-        $aktifler = Personeller::where('salon_id', $salonId)
-            ->where('aktif', 1)
-            ->orderBy('takvim_sirasi', 'asc')
-            ->orderBy('id', 'asc')
-            ->get()
-            ->values();
-
-        $idx = $aktifler->search(fn ($p) => (int) $p->id === $personelId);
-        if ($idx === false) {
-            return ['sonuc' => 'notfound'];
-        }
-        $hedefIdx = $idx + $delta;
-        if ($hedefIdx < 0 || $hedefIdx >= $aktifler->count()) {
-            return ['sonuc' => 'sinir'];
-        }
-
-        $a = $aktifler[$idx];
-        $b = $aktifler[$hedefIdx];
-        $aSira = $a->takvim_sirasi;
-        $bSira = $b->takvim_sirasi;
-        if ($aSira != $bSira) {
-            // 3 adimli swap (olasi UNIQUE constraint icin negatif temp deger).
-            $a->takvim_sirasi = -1 * abs($a->id);
-            $a->save();
-            $b->takvim_sirasi = $aSira;
-            $b->save();
-            $a->takvim_sirasi = $bSira;
-            $a->save();
+        $sonuc = TakvimSirasi::kaydir('salon_personelleri', ['salon_id' => $salonId, 'aktif' => 1], $personelId, $delta);
+        if ($sonuc !== 'ok') {
+            return ['sonuc' => $sonuc];
         }
 
         AktiviteLog::yaz($salonId, $yapanId, 'personel_sirala', 'personel', $personelId, null,

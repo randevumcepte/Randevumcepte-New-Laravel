@@ -47,7 +47,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Seans takibi | ~4 | 🟡 | liste + kartlar + seans ekle/durum + lazer cihaz bilgisi var (yazma `SEANS_V2_YAZMA_AKTIF`); dökümü PDF eski panelde, müşteri paneli (`musteriMi`) v1'de |
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
-| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Cihaz, oda, hizmet, şube, Google entegrasyonu yok (Faz 2-3) |
+| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema; Faz 2: cihazlar + odalar — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Hizmet, şube (Faz 3), Google entegrasyonu (en son) yok |
 | Öngörüşme | ~6 | ❌ | |
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
@@ -218,7 +218,19 @@ Ekran sekmeleri (ve hangisinin açık olduğu) `GET /ayar/ozet?salon_id=` → `{
 | `POST /musteriindirim_kaydet` | `GET/PUT /ayar/musteri-indirimleri` | `{sadik:{acik, yuzde}, aktif:{acik, yuzde}}`; eski form adları da kabul edilir |
 | `GET /salonTemaGet/{id}` / `POST /salonTemaSet/{id}` | `GET /ayar/tema` / `PUT /ayar/tema` | aynı `{config, seed}`; yazma rol 1-3 (Flutter `canEditServer`) sunucuda zorunlu; `duzenleyebilir` bayrağı döner |
 
-Henüz taşınmayan Ayarlar sekmeleri (v1'de kalır): cihazlar (`cihazgetir`, `cihazekle`…), odalar (`odagetir`, `odaekleduzenle`…), hizmetler (`hizmet_liste_getir`, `hizmetekleduzenle`…), şubeler, Google takvim. Eski web hataları v2'ye taşınmayacak: cihaz saatleri hep "çalışmıyor" kaydediliyordu (alan adı uyuşmazlığı), şube aktif/pasif `subeler` tablosuna salon id'siyle yazıyordu, oda silme sıra kaydırması salon sınırı tanımıyordu.
+| `POST /cihazgetir/{id}?page {baslik}` | `GET /ayar/cihazlar?salon_id=&ara=&page=&per_page=` (`tumu=1` → sayfasız) | satır: `id, cihaz_adi, durum (1/0), aktifmi, aciklama` (Flutter Cihaz modeli) + `ad, musait, durum_etiket, takvim_sirasi, yukari, asagi` |
+| `GET /cihazlar/{id}` (basit liste) | `GET /ayar/cihazlar?salon_id=&tumu=1` | |
+| `GET /cihazekle/{id}?cihaz_adi&calisiyor1..7&cihaz_baslangicsaati1..7…` | `POST /ayar/cihazlar {salon_id, cihaz_adi, gunler[7]}`; düzenleme `PATCH /ayar/cihazlar/{id}` (v1'de yoktu) | plan biçimi çalışma saatleri ile aynı; varsayılanlar `GET /ayar/cihazlar/form-verisi` |
+| `POST /cihazmusaitisaretle` / `cihazmusaitdegilisaretle {cihaz_id}` | `PATCH /ayar/cihazlar/{id}/durum {salon_id, musait, aciklama?}` | eskide yetkisiz/kapsamsızdı |
+| `POST /cihaz_sil {cihaz_id}` (v1 hard delete!) | `DELETE /ayar/cihazlar/{id}?salon_id=` | pasife alır (web ile aynı), takvim rengi silinir, sıra yeniden numaralanır |
+| web `cihazSiralamaArtir/Azalt` | `PATCH /ayar/cihazlar/{id}/sira {salon_id, delta: -1/1}` | cevap: güncel tam liste |
+| `POST /odagetir/{id}?page {baslik}` | `GET /ayar/odalar?…` | + `personeller[{id, personel_adi}]` (Flutter Oda modeli), `hizmetler[{id, hizmet_adi}]` |
+| `GET /oda_detay/{oda_id}?salon_id=` | `GET /ayar/odalar/{id}?salon_id=` | `personel_ids`, `hizmet_ids` artık int |
+| `GET /oda_personel_listesi/{id}` + `GET /oda_hizmet_listesi/{id}` | `GET /ayar/odalar/form-verisi?salon_id=` → `{personeller, hizmetler}` | |
+| `POST /odaekleduzenle/{id}` (form; `oda_personeli`/`oda_hizmetleri` JSON metni) | `POST /ayar/odalar`, `PATCH /ayar/odalar/{id}` `{oda_adi, personel_ids[], hizmet_ids[]}` | eski adlar + JSON metni kabul; başka salonun kimlikleri süzülür |
+| `POST /odamusaitisaretle` / `odamusaitdegilisaretle`, `POST /oda_sil` | `PATCH /ayar/odalar/{id}/durum`, `DELETE /ayar/odalar/{id}`, `PATCH /ayar/odalar/{id}/sira` | cihaz ile aynı uç kümesi |
+
+Henüz taşınmayan Ayarlar sekmeleri (v1'de kalır): hizmetler (`hizmet_liste_getir`, `hizmetekleduzenle`…), şubeler, Google takvim. Eski web hataları v2'ye taşınmadı: cihaz saatleri hep "çalışmıyor" kaydediliyordu (alan adı uyuşmazlığı), oda silme sıra kaydırması salon sınırı tanımıyordu, müsait/sıralama uçları yetkisizdi; taşınacak: şube aktif/pasif `subeler` tablosuna salon id'siyle yazıyordu.
 
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 

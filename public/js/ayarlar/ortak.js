@@ -85,3 +85,49 @@ export function tarihBagla(kok) {
 
 export const isaretli = (form, ad) => !!form.querySelector(`[name="${ad}"]`)?.checked;
 export const deger = (form, ad) => form.querySelector(`[name="${ad}"]`)?.value ?? '';
+
+/**
+ * 7 günlük çalışma + mola planı tablosu (salon çalışma saatleri + cihaz formu ORTAK).
+ * gunler: API plan biçimi [{haftanin_gunu, gun_adi, calisiyor, baslangic_saati, ... mola_bitis_saati}].
+ * Çizdikten sonra planBagla(kok) ile saat seçici + "çalışmıyor" soluklaştırma bağlanır.
+ */
+export function planTablosu(gunler) {
+  const saat = (ad, d) => `<input type="text" name="${ad}" value="${esc(d)}" data-saat inputmode="numeric" maxlength="5">`;
+  const tik = (ad, acik) => `<span class="rc-switch"><input type="checkbox" name="${ad}"${acik ? ' checked' : ''}><span class="rc-kaydir"></span></span>`;
+  return `<div class="rc-tablo-sar"><table class="rc-tablo ay-saat-tablo">
+    <thead><tr><th>Gün</th><th class="rc-orta">Çalışıyor</th><th>Başlangıç</th><th>Bitiş</th><th class="rc-orta">Mola</th><th>Mola Başlangıç</th><th>Mola Bitiş</th></tr></thead>
+    <tbody>${gunler.map((g) => `
+      <tr data-gun="${g.haftanin_gunu}" class="${g.calisiyor ? '' : 'ay-kapali'}">
+        <th>${esc(g.gun_adi)}</th>
+        <td class="rc-orta">${tik('calisiyor', g.calisiyor)}</td>
+        <td>${saat('baslangic_saati', g.baslangic_saati)}</td>
+        <td>${saat('bitis_saati', g.bitis_saati)}</td>
+        <td class="rc-orta">${tik('mola_var', g.mola_var)}</td>
+        <td>${saat('mola_baslangic_saati', g.mola_baslangic_saati)}</td>
+        <td>${saat('mola_bitis_saati', g.mola_bitis_saati)}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+export function planBagla(kok) {
+  saatBagla(kok);
+  kok.addEventListener('change', (e) => {
+    if (e.target.name === 'calisiyor') e.target.closest('tr').classList.toggle('ay-kapali', !e.target.checked);
+  });
+}
+
+/** Tablodaki planı API gövdesine çevirir. */
+export function planOku(kok) {
+  return [...kok.querySelectorAll('tr[data-gun]')].map((tr) => {
+    const d = (ad) => tr.querySelector(`[name="${ad}"]`);
+    return {
+      haftanin_gunu: Number(tr.dataset.gun),
+      calisiyor: d('calisiyor').checked,
+      baslangic_saati: d('baslangic_saati').value || null,
+      bitis_saati: d('bitis_saati').value || null,
+      mola_var: d('mola_var').checked,
+      mola_baslangic_saati: d('mola_baslangic_saati').value || null,
+      mola_bitis_saati: d('mola_bitis_saati').value || null,
+    };
+  });
+}

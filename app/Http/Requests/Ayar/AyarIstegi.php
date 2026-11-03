@@ -24,7 +24,8 @@ abstract class AyarIstegi extends V2Istegi
         'takvim_renk_sirasi' => 'Renk sırası', 'gunluk_limit' => 'Günlük online slot limiti', 'istisnalar' => 'İstisnalar',
         'istisnalar.*.tarih' => 'İstisna tarihi', 'istisnalar.*.tip' => 'İstisna tipi',
         'sadik.yuzde' => 'Sadık müşteri indirimi', 'aktif.yuzde' => 'Aktif müşteri indirimi',
-        'preset' => 'Tema', 'brightnessMode' => 'Görünüm modu', 'logo' => 'Logo', 'gorseller' => 'Görseller',
+        'cihaz_adi' => 'Cihaz adı', 'oda_adi' => 'Oda adı', 'personel_ids' => 'Personeller', 'hizmet_ids' => 'Hizmetler',
+        'musait' => 'Durum', 'preset' => 'Tema', 'brightnessMode' => 'Görünüm modu', 'logo' => 'Logo', 'gorseller' => 'Görseller',
     ];
 
     public function messages(): array
