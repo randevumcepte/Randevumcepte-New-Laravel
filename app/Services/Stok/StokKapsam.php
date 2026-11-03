@@ -4,6 +4,7 @@ namespace App\Services\Stok;
 
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
+use App\Services\Yetki\SalonSahipligi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\DB;
  */
 class StokKapsam
 {
+    public function __construct(private SalonSahipligi $sahiplik) {}
+
     /** Kaynak adi → [tablo, kullaniciya gosterilecek ad] (beyaz liste). */
     private const KAYNAK = [
         'urun'      => ['urunler', 'Ürün'],
@@ -56,31 +59,21 @@ class StokKapsam
         }
     }
 
-    /** Musteri bu salonun portfoyunde mi (hizli satis). */
+    /** Musteri bu salonun portfoyunde mi (hizli satis) — ortak SalonSahipligi. */
     public function musteriOlmali(int $userId, int $salonId): void
     {
-        $var = DB::table('musteri_portfoy')->where('user_id', $userId)->where('salon_id', $salonId)->exists();
-        if (! $var) {
-            throw new GecersizIslemException('Müşteri bu işletmeye ait değil');
-        }
+        $this->sahiplik->musteriOlmali($userId, $salonId);
     }
 
-    /** Personel bu salonun personeli mi (hizli satis). */
+    /** Personel bu salonun personeli mi (hizli satis) — ortak SalonSahipligi. */
     public function personelOlmali(?int $personelId, int $salonId): void
     {
-        if (! $personelId) {
-            return;
-        }
-        if (! DB::table('salon_personelleri')->where('id', $personelId)->where('salon_id', $salonId)->exists()) {
-            throw new GecersizIslemException('Personel bu işletmeye ait değil');
-        }
+        $this->sahiplik->personelOlmali($personelId, $salonId);
     }
 
-    /** Hizmet bu salonun sundugu hizmetlerden mi (sarf recetesi). */
+    /** Hizmet bu salonun sundugu hizmetlerden mi (sarf recetesi) — ortak SalonSahipligi. */
     public function hizmetOlmali(int $hizmetId, int $salonId): void
     {
-        if (! DB::table('salon_sunulan_hizmetler')->where('hizmet_id', $hizmetId)->where('salon_id', $salonId)->exists()) {
-            throw new GecersizIslemException('Hizmet bu işletmede tanımlı değil');
-        }
+        $this->sahiplik->hizmetOlmali($hizmetId, $salonId);
     }
 }

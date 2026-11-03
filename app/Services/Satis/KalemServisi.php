@@ -8,6 +8,7 @@ use App\Models\Adisyonlar;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
+use App\Services\Paket\PaketSorgusu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * Eski sistemle BİREBİR kolon/fiyat semantiği:
  *   - hizmet.fiyat = salon_sunulan_hizmetler.baslangic_fiyat (satır fiyatı)
  *   - urun.fiyat   = urunler.fiyat (BİRİM) × adet  (SATIR TOPLAMI)
- *   - paket.fiyat  = SUM(paket_hizmetler.fiyat)  (yoksa paketler.fiyat)
+ *   - paket.fiyat  = etkin katalog fiyati (Domain\Paket\PaketTutari)
  *
  * Eski sistemden GÜVENLİ farklar (tutarsızlık önleme):
  *   - Kaleme tahsilat yapılmışsa adet değiştirme / silme REDDEDİLİR (eski
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\DB;
  */
 class KalemServisi
 {
+    public function __construct(private PaketSorgusu $paketler) {}
+
     /** Katalogdan adisyona kalem ekle. */
     public function ekle(int $adisyonId, string $tip, int $katalogId, array $opt): array
     {
@@ -74,18 +77,11 @@ class KalemServisi
                 $k->save();
                 $yeniId = $k->id;
             } elseif ($tip === 'paket') {
-                $p = DB::table('paketler')->where('id', $katalogId)->first();
-                if (! $p) {
-                    throw new BulunamadiException('Paket bulunamadı');
-                }
-                $fiyat = (float) DB::table('paket_hizmetler')->where('paket_id', $katalogId)->sum('fiyat');
-                $seans = (float) DB::table('paket_hizmetler')->where('paket_id', $katalogId)->sum('seans');
-                if (! $fiyat) {
-                    $fiyat = $p->fiyat;
-                }
-                if (! $seans) {
-                    $seans = $p->miktar;
-                }
+                // Etkin katalog fiyat/seansi (PaketTutari); paket bu salonun aktif paketi olmali.
+                // fiyat/seans opt'ta verilirse (Paket Yonetimi satisi) o kullanilir — yetki cagri yerinde.
+                $katalog = $this->paketler->satisTutari($katalogId, $salonId);
+                $fiyat = $opt['fiyat'] ?? $katalog['fiyat'];
+                $seans = $opt['seans'] ?? $katalog['seans'];
                 $k = new AdisyonPaketler();
                 $k->adisyon_id = $adisyonId;
                 $k->paket_id = $katalogId;

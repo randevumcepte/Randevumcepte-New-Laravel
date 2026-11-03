@@ -49,6 +49,7 @@ final class DogrulamaMetinleri
             'exists'               => ':attribute bulunamadı.',
             'different'            => ':attribute ile :other aynı olamaz.',
             'date_format'          => ':attribute :format biçiminde olmalı.',
+            'distinct'             => ':attribute birden fazla kez seçilmiş.',
         ];
     }
 

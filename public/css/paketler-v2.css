@@ -1,0 +1,42 @@
+/* Paket Yönetimi (v2) — YALNIZ ekrana özgü kurallar. Başlık, modal, form alanı, buton,
+   satır işlemi, müşteri seçici ortak: v2-bilesen.css (.rc-*); tablo: panel.css. */
+
+.pk-kabuk { padding: 6px 2px 40px; }
+.pk-soluk { color: #9191a3; font-size: 12px; }
+
+/* Satış çubuğu (eski tek satır toolbar: müşteri + personel + Satış Yap) */
+.pk-satis { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; background: #fff; border: 1px solid #ececf2; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.pk-satis .rc-alan { flex: 1 1 220px; min-width: 0; }
+.pk-satis .pk-musteri { flex: 2 1 280px; }
+.pk-satis-sag { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+.pk-secim { font-size: 13px; color: #6b6b7c; }
+.pk-secim button { border: 0; background: none; color: #5C008E; font-weight: 700; cursor: pointer; padding: 0; }
+
+/* Tablo */
+.pk-tablo { min-width: 720px; }
+.pk-sec-th, .pk-sec { width: 44px; text-align: center; }
+.pk-sec input { width: 18px; height: 18px; accent-color: #5C008E; cursor: pointer; }
+.pk-tablo tr.pk-secili td { background: #f7f1fd; }
+.pk-ad { font-weight: 700; }
+.pk-hizmet { color: #6b6b7c; max-width: 340px; overflow-wrap: anywhere; }
+.pk-fiyat { font-weight: 700; color: var(--rc-mor, #5C008E); white-space: nowrap; }
+
+/* Paket formu: hizmet çipleri */
+.pk-cipler { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.pk-cip { display: inline-flex; align-items: center; gap: 6px; background: #f2ecfb; color: #5C008E; border: 1px solid #e0d6f2; border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 13px; font-weight: 600; }
+.pk-cip small { font-weight: 500; color: #7a6a96; }
+.pk-cip button { border: 0; background: #fff; color: #5C008E; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; line-height: 1; font-size: 15px; }
+
+/* Satış modalı */
+.pk-satis-ozet { margin-bottom: 12px; color: #2a2140; }
+.pk-satis-kalem { border: 1px solid #ececf2; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.pk-satis-kalem .pk-ad { margin-bottom: 8px; }
+.pk-satis-kalem input[readonly] { background: #f5f5f7; cursor: not-allowed; }
+
+@media (prefers-color-scheme: dark) {
+  .pk-satis, .pk-satis-kalem { background: #22222e; border-color: #34344c; }
+  .pk-tablo tr.pk-secili td { background: #2d2340; }
+  .pk-cip { background: #2d2340; color: #c9a7f0; border-color: #403059; }
+  .pk-cip button { background: #1b1b26; color: #c9a7f0; }
+  .pk-satis-ozet { color: #ededf5; }
+}

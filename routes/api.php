@@ -164,6 +164,9 @@ Route::prefix('v2')->group(function () {
         // RAPORLAR (satis / isletme) + KASA + MASRAF — routes/v2/rapor.php
         require __DIR__.'/v2/rapor.php';
 
+        // PAKET YONETIMI (paket tanimi liste/ekle/duzenle/sil + secili paketleri sat) — routes/v2/paket.php
+        require __DIR__.'/v2/paket.php';
+
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 
