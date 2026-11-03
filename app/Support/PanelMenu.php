@@ -45,6 +45,8 @@ class PanelMenu
             ['etiket' => 'Grup Dersi Raporu',  'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'grup-dersi-raporu', 'pageindex' => 206,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Ön Görüşmeler',      'ikon' => 'bi bi-chat-left-text',   'slug' => 'ongorusmeler',      'pageindex' => 12, 'yetki' => 'gorusme.liste_gor', 'studyo_gizle' => true],
             ['etiket' => 'Randevular',         'ikon' => 'bi bi-card-heading',     'slug' => 'randevular-liste',  'pageindex' => 3],
+            // v2 ekran — eski "Form Yönetimi" (arsivyonetimi) karşılığı.
+            ['etiket' => 'Form Yönetimi',      'ikon' => 'bi bi-file-earmark-text','slug' => 'arsivyonetimi',     'v2_rota' => '/v2/formlar', 'pageindex' => 50, 'yetki' => ['form.olustur', 'form.gonder'], 'studyo_gizle' => true],
             ['etiket' => 'Ajanda',             'ikon' => 'bi bi-calendar-event',   'slug' => 'ajanda',            'pageindex' => 70, 'yetki' => 'randevu.takvim_gor'],
 
             // ───────────── Satış & Finans

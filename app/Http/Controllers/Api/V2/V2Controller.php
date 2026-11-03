@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
+use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
+use App\Services\Yetki\GuvenlikKapisi;
+use Illuminate\Http\Request;
 
 /**
  * Tum /api/v2 controller'larinin ortak tabani — kimlik, kayit-bulunamadi ve yazma
@@ -32,6 +35,24 @@ abstract class V2Controller extends Controller
         }
 
         return $user;
+    }
+
+    /**
+     * Istekteki salon_id + KAPSAM + YETKI (OR-gate) tek adimda.
+     *
+     * @param  array<string>|string  $yetkiler
+     * @return array{0:int,1:int} [yetkili id, salon id]
+     */
+    protected function salonDenetle(Request $request, array|string $yetkiler): array
+    {
+        $user = $this->kullanici();
+        $salonId = $request->integer('salon_id');
+        if (! $salonId) {
+            throw new GecersizIslemException('salon_id zorunlu');
+        }
+        app(GuvenlikKapisi::class)->denetle($user->id, $salonId, $yetkiler);
+
+        return [(int) $user->id, $salonId];
     }
 
     /** Kaydin salonu cozulemediyse 404 (kapsam sizintisi yok); cozulduyse salon_id. */

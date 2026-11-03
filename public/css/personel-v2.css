@@ -54,49 +54,11 @@
   .p-islem-arsiv { background: #3a1c1c; color: #f0a0a0; border-color: #553030; }
 }
 
-/* ── Toggle switch ── */
-.p-switch { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; vertical-align: middle; }
-.p-switch input { display: none; }
-.p-switch .p-kaydir { position: absolute; inset: 0; background: #ccc; border-radius: 999px; transition: .2s; }
-.p-switch .p-kaydir::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
-.p-switch input:checked + .p-kaydir { background: #2bb673; }
-.p-switch input:checked + .p-kaydir::before { transform: translateX(18px); }
+/* Toggle switch, modal, form alanları ve butonlar ortak: v2-bilesen.css (.rc-*) */
 
 /* Sayfalama + yükleniyor spinner'ı ortak: panel.css .rc-sayfa* / .rc-yukleniyor */
 
-/* ── Modal ── */
-.p-modal-overlay { position: fixed; inset: 0; background: rgba(20, 12, 35, .5); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 9000; overflow-y: auto; }
-.p-modal { background: #fff; border-radius: 20px; width: 100%; max-width: 760px; box-shadow: 0 16px 44px rgba(23, 25, 45, .2); overflow: hidden; animation: p-ac .18s ease; }
-.p-modal.p-dar { max-width: 620px; }
-@keyframes p-ac { from { transform: translateY(14px); opacity: 0; } }
-.p-modal-bas { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; background: linear-gradient(135deg, #5C008E 0%, #7B2FB8 50%, #9D5DC8 100%); color: #fff; overflow: hidden; }
-.p-modal-bas::before { content: ''; position: absolute; top: -40px; right: -40px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255, 255, 255, .14); }
-.p-modal-bas-ic { display: flex; align-items: center; gap: 13px; position: relative; z-index: 1; min-width: 0; }
-.p-modal-ikon { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-size: 21px; color: #fff; background: rgba(255, 255, 255, .18); flex: 0 0 auto; }
-.p-modal-bas h2 { margin: 0; font-size: 18px; font-weight: 800; color: #fff; }
-.p-modal-altbaslik { font-size: 12px; color: rgba(255, 255, 255, .85); margin-top: 2px; }
-.p-kapat { position: relative; z-index: 1; border: none; background: rgba(255, 255, 255, .18); color: #fff; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; line-height: 1; cursor: pointer; flex: 0 0 auto; transition: .15s; }
-.p-kapat:hover { background: rgba(255, 255, 255, .3); }
-.p-modal-govde { padding: 22px 24px; max-height: 70vh; overflow-y: auto; background: #fafbfc; }
-.p-modal-alt { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #eee; background: #fff; }
-@media (prefers-color-scheme: dark) {
-  .p-modal { background: #22222e; }
-  .p-modal-govde { background: #1b1b26; }
-  .p-modal-alt { background: #22222e; border-color: #34344c; }
-}
 
-/* ── Form ── */
-.p-form-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 16px; }
-.p-alan { display: flex; flex-direction: column; gap: 6px; }
-.p-alan.p-tam { grid-column: 1 / -1; }
-.p-alan label { font-size: 11.5px; color: #9191a3; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-.p-alan input, .p-alan select, .p-alan .rs-btn {
-  border: 1px solid #dcdce8; border-radius: 10px; padding: 10px 12px; font-size: 14px; background: #fff; color: #2a2140; outline: none; transition: .15s;
-}
-.p-alan input:focus, .p-alan select:focus, .p-alan .rs-btn:focus { border-color: #9b6bd8; box-shadow: 0 0 0 3px rgba(123, 47, 247, .12); }
-@media (prefers-color-scheme: dark) {
-  .p-alan input, .p-alan select, .p-alan .rs-btn { background: #1b1b26; border-color: #34344c; color: #ededf5; }
-}
 
 /* ── Bölüm kartı (section) — eski "Personel Bilgileri" modal deseni ── */
 .p-sec { background: #fff; border: 1px solid #ece6f2; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(92, 0, 142, .04); }
@@ -158,13 +120,6 @@
   .p-kalem-yuzde { background: #1b1b26; border-color: #34344c; color: #ededf5; }
 }
 
-/* ── Buton ── */
-.p-btn { border: none; cursor: pointer; font-weight: 700; font-size: 14px; padding: 11px 22px; border-radius: 11px; transition: .15s; }
-.p-btn-birincil { background: linear-gradient(135deg, #5C008E, #7B2FB8 60%, #9D5DC8); color: #fff; box-shadow: 0 4px 14px rgba(92, 0, 142, .3); }
-.p-btn-birincil:hover { transform: translateY(-1px); }
-.p-btn-birincil:disabled { opacity: .6; cursor: default; transform: none; }
-.p-btn-ikincil { background: #f0edfa; color: #5C008E; border: 1px solid #e0d6f2; }
-@media (prefers-color-scheme: dark) { .p-btn-ikincil { background: #2d2340; color: #c9a7f0; border-color: #403059; } }
 
 /* ── Yetki editörü ── */
 .p-sablonlar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
@@ -209,18 +164,6 @@
   .p-tablo { min-width: 680px; }
   .p-islem { padding: 9px 12px; }          /* dokunma hedefi ≥ ~40px */
   .p-sira button { width: 28px; height: 22px; font-size: 13px; }
-  .p-switch { width: 46px; height: 26px; }
-  .p-switch .p-kaydir::before { width: 20px; height: 20px; }
-  .p-switch input:checked + .p-kaydir::before { transform: translateX(20px); }
-
-  /* Modal → alt-sayfa: ekranın altına yapışır, tam genişlik, rahat kaydırma. */
-  .p-modal-overlay { padding: 0; align-items: flex-end; }
-  .p-modal { max-width: 100%; border-radius: 20px 20px 0 0; animation: p-yukari .2s ease; }
-  .p-modal-govde { max-height: 72vh; padding: 18px 16px; }
-  .p-modal-bas, .p-modal-alt { padding: 15px 16px; }
-  .p-modal-alt { position: sticky; bottom: 0; }     /* kaydet butonu hep erişilebilir */
-  .p-btn { flex: 1; padding: 13px 16px; }            /* alt butonlar tam genişlik paylaşır */
   .p-sablonlar { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 9px; }
   .p-saatler-izgara { gap: 6px 0; }                  /* zaten tek kolon (<680px) */
 }
-@keyframes p-yukari { from { transform: translateY(100%); } }

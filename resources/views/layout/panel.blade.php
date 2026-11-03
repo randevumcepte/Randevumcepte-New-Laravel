@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
     <link rel="stylesheet" href="/css/panel.css?v=9">
+    {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
+    <link rel="stylesheet" href="/css/v2-bilesen.css?v=1">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>

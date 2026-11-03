@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\V2\AdisyonController;
 use App\Domain\Asistan\GorevTuru;
 use App\Http\Controllers\Api\V2\AlacakController;
+use App\Http\Controllers\Api\V2\ArsivController;
 use App\Http\Controllers\Api\V2\AsistanController;
+use App\Http\Controllers\Api\V2\FormSablonController;
 use App\Http\Controllers\Api\V2\KabukController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\PersonelController;
@@ -155,6 +157,32 @@ Route::prefix('v2')->group(function () {
         Route::patch('/personel/{id}/saatler', [PersonelController::class, 'saatKaydet'])->whereNumber('id');
         Route::delete('/personel/{id}', [PersonelController::class, 'arsivle'])->whereNumber('id');
         Route::patch('/personel/{id}/yetki', [PersonelYetkiController::class, 'kaydet'])->whereNumber('id');
+
+        /*
+         | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
+         | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim
+         | (SMS) form.gonder. Yazmalar FORM_V2_YAZMA_AKTIF kill-switch arkasinda (409).
+         | SMS/WA 'form_link' outbox'i ile eski monolitten gider. PDF uretimi eski panelde.
+         */
+        Route::get('/form/arsiv', [ArsivController::class, 'liste']);
+        Route::get('/form/form-verisi', [ArsivController::class, 'formVerisi']);
+        Route::get('/form/musteri-ara', [ArsivController::class, 'musteriAra']);
+        Route::get('/form/musteri/{userId}', [ArsivController::class, 'musteriBilgi'])->whereNumber('userId');
+        Route::post('/form/arsiv', [ArsivController::class, 'formGonder']);
+        Route::post('/form/arsiv/harici', [ArsivController::class, 'hariciBelge']);
+        Route::post('/form/arsiv/{id}/gonder', [ArsivController::class, 'tekrarGonder'])->whereNumber('id');
+        Route::post('/form/arsiv/{id}/onayla', [ArsivController::class, 'onayla'])->whereNumber('id');
+        Route::post('/form/arsiv/{id}/iptal', [ArsivController::class, 'iptal'])->whereNumber('id');
+        Route::post('/form/sozlesme', [ArsivController::class, 'sozlesme']);
+        Route::get('/form/sozlesme/odeme-plani', [ArsivController::class, 'odemePlani']);
+        Route::get('/form/sozlesme-metni', [FormSablonController::class, 'sozlesmeMetni']);
+        Route::put('/form/sozlesme-metni', [FormSablonController::class, 'sozlesmeMetniKaydet']);
+        Route::get('/form/sablon', [FormSablonController::class, 'liste']);
+        Route::get('/form/sablon/{id}', [FormSablonController::class, 'goster'])->whereNumber('id');
+        Route::post('/form/sablon', [FormSablonController::class, 'kaydet']);
+        Route::patch('/form/sablon/{id}', [FormSablonController::class, 'kaydet'])->whereNumber('id');
+        Route::delete('/form/sablon/{id}', [FormSablonController::class, 'sil'])->whereNumber('id');
+        Route::patch('/form/sablon/{id}/sira', [FormSablonController::class, 'sirala'])->whereNumber('id');
 
         /*
          | E-ASISTAN ("Asistanım") — gorev listesi + gorev iptal + ayarlar. Kimlik +

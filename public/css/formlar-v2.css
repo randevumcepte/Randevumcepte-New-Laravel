@@ -1,0 +1,56 @@
+/* Form Yönetimi (v2) — yalnız ekrana özgü kurallar. Başlık, sekme, rozet, modal, form
+   alanı, buton ve satır işlemleri ortak: v2-bilesen.css (.rc-*). */
+
+.f-kabuk { padding: 6px 2px 40px; }
+.f-tablo td { vertical-align: middle; }
+.f-belge { display: inline-flex; align-items: center; gap: 6px; color: #5C008E; font-weight: 600; text-decoration: none; }
+.f-belge:hover { text-decoration: underline; }
+.f-belge i { color: #c0392b; }
+.f-bos { padding: 30px 10px; text-align: center; }
+.f-sira { display: inline-flex; gap: 4px; }
+
+/* Şablonlar sekmesi */
+.f-sablon-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+
+/* Modal ızgaraları */
+.f-izgara-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 16px; margin-top: 14px; }
+.f-iki { grid-column: span 2; }
+.f-aralik { margin-top: 14px; }
+.f-satir { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.f-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px !important; }
+.f-kutu { margin-top: 16px; border: 1px solid #e6e1f2; background: #fff; border-radius: 14px; padding: 14px 16px; }
+.f-kutu-baslik { font-weight: 800; color: #5C008E; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.f-plan { margin-top: 12px; }
+.f-plan-ozet { font-size: 13.5px; margin-bottom: 8px; color: #4b4b5c; }
+.f-plan-tablo { font-size: 13px; }
+.f-plan-tablo td, .f-plan-tablo th { padding: 7px 10px !important; }
+.f-imza { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.f-imza canvas { width: 100%; height: 160px; border: 2px dashed #cbbfe0; border-radius: 12px; background: #fff; touch-action: none; cursor: crosshair; }
+.f-onay { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: #2a2140; cursor: pointer; padding: 8px 0; text-transform: none !important; letter-spacing: 0 !important; }
+
+/* Şablon oluşturucu */
+.f-alt-baslik { font-size: 15px; font-weight: 800; margin: 20px 0 4px; color: #2a2140; }
+.f-elemanlar { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.f-eleman { display: grid; grid-template-columns: 130px 1fr auto; gap: 12px; align-items: start; background: #fff; border: 1px solid #ebebf3; border-left: 4px solid var(--tip, #999); border-radius: 12px; padding: 10px 12px; }
+.f-eleman-tip { font-size: 11px; font-weight: 800; color: var(--tip, #666); text-transform: uppercase; letter-spacing: .3px; padding-top: 10px; }
+.f-eleman-girdi input, .f-eleman-girdi textarea { width: 100%; box-sizing: border-box; }
+.f-eleman-yan { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.f-zorunlu { font-size: 11px; color: #dc3545; font-weight: 700; }
+.f-oto { padding: 9px 12px; background: #e7f5ff; border: 1px dashed #0dcaf0; border-radius: 9px; font-size: 13px; color: #0c5460; }
+.f-grup { margin-top: 12px; }
+.f-grup-baslik { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: #8a8a9a; margin-bottom: 6px; }
+.f-grup-baslik small { text-transform: none; font-weight: 500; letter-spacing: 0; }
+.f-tip-btn { border: 1px solid var(--tip, #ccc); color: var(--tip, #555); background: #fff; border-radius: 9px; padding: 7px 11px; margin: 0 6px 6px 0; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
+.f-tip-btn:hover { background: var(--tip, #555); color: #fff; }
+
+@media (prefers-color-scheme: dark) {
+  .f-kutu, .f-eleman, .f-tip-btn, .f-imza canvas { background: #22222e; border-color: #34344c; }
+  .f-alt-baslik, .f-onay { color: #ededf5; }
+  .f-plan-ozet { color: #cfcfe0; }
+}
+@media (max-width: 560px) {
+  .f-eleman { grid-template-columns: 1fr; }
+  .f-eleman-tip { padding-top: 0; }
+  .f-eleman-yan { flex-direction: row; align-items: center; justify-content: space-between; }
+  .f-iki { grid-column: auto; }
+}

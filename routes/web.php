@@ -71,3 +71,14 @@ Route::get('/v2/santral/{sube?}', function ($sube = null) {
 
     return view('v2.santral', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Form Yonetimi v2 — arsiv (form/sozlesme/harici belge) listesi + Form Gonder /
+ | Sozlesme Olustur / Belge Ekle modallari + Form Sablonlari olusturucu host sayfasi
+ | (ayni island deseni). Veri /api/v2/form/* — FORM_V2_YAZMA_AKTIF kapaliyken 409.
+ */
+Route::get('/v2/formlar/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.formlar', ['salonId' => $salonId]);
+})->whereNumber('sube');

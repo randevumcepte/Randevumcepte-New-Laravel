@@ -16,6 +16,7 @@
 import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 
 // Hesap turleri + cinsiyetler API'den (GET /personel/form-verisi) — UI'da sabit liste yok.
 let formVeri = { hesap_turleri: [], cinsiyetler: [] };
@@ -116,11 +117,11 @@ function satirCiz(p, idx, toplam) {
     </span>` : '';
 
   const takvim = duzenleY
-    ? `<label class="p-switch"><input type="checkbox" data-aksiyon="takvim" data-id="${p.id}" ${p.takvimde_gorunsun ? 'checked' : ''}><span class="p-kaydir"></span></label>`
+    ? `<label class="rc-switch"><input type="checkbox" data-aksiyon="takvim" data-id="${p.id}" ${p.takvimde_gorunsun ? 'checked' : ''}><span class="rc-kaydir"></span></label>`
     : (p.takvimde_gorunsun ? '<i class="bi bi-check-lg" style="color:#16a34a"></i>' : '<i class="bi bi-x-lg" style="color:#c0392b"></i>');
 
   const durumHuc = duzenleY
-    ? `<label class="p-switch"><input type="checkbox" data-aksiyon="aktif" data-id="${p.id}" ${p.aktif ? 'checked' : ''}><span class="p-kaydir"></span></label>`
+    ? `<label class="rc-switch"><input type="checkbox" data-aksiyon="aktif" data-id="${p.id}" ${p.aktif ? 'checked' : ''}><span class="rc-kaydir"></span></label>`
     : (p.aktif ? '<span class="p-rozet p-r-aktif">Aktif</span>' : '<span class="p-rozet p-r-pasif">Pasif</span>');
 
   const islemler =
@@ -187,31 +188,7 @@ async function satirDegisim(e) {
 
 // ─────────────────────────── MODAL ───────────────────────────
 
-function modalAc(baslik, govdeHtml, altHtml, opt = {}) {
-  modalKapat();
-  const ov = document.createElement('div');
-  ov.className = 'p-modal-overlay';
-  ov.id = 'pModal';
-  const altb = opt.altbaslik ? `<div class="p-modal-altbaslik">${esc(opt.altbaslik)}</div>` : '';
-  ov.innerHTML = `
-    <div class="p-modal${opt.dar ? ' p-dar' : ''}" role="dialog">
-      <div class="p-modal-bas">
-        <div class="p-modal-bas-ic">
-          <span class="p-modal-ikon"><i class="bi bi-${esc(opt.ikon || 'person')}"></i></span>
-          <div><h2>${esc(baslik)}</h2>${altb}</div>
-        </div>
-        <button class="p-kapat" id="pModalKapat" aria-label="Kapat">&times;</button>
-      </div>
-      <div class="p-modal-govde">${govdeHtml}</div>
-      ${altHtml ? `<div class="p-modal-alt">${altHtml}</div>` : ''}
-    </div>`;
-  document.body.appendChild(ov);
-  ov.addEventListener('click', (e) => { if (e.target === ov) modalKapat(); });
-  el('#pModalKapat').addEventListener('click', modalKapat);
-  return ov;
-}
-function modalKapat() { const m = el('#pModal'); if (m) m.remove(); }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modalKapat(); });
+// Ortak modal: lib/v2-modal.js (modalAc / modalKapat).
 
 // ─────────────────────────── EKLE / DÜZENLE ───────────────────────────
 
@@ -222,7 +199,7 @@ function saatSatirlari(onek, saatler) {
     const acik = s.acik ?? (onek === 'calisma'); // çalışma default açık, mola default kapalı
     h += `
       <div class="p-saat-row${acik ? ' p-dolu' : ''}" data-row="${onek}-${g}">
-        <label class="p-switch"><input type="checkbox" class="p-${onek}-acik" data-gun="${g}" ${acik ? 'checked' : ''}><span class="p-kaydir"></span></label>
+        <label class="rc-switch"><input type="checkbox" class="p-${onek}-acik" data-gun="${g}" ${acik ? 'checked' : ''}><span class="rc-kaydir"></span></label>
         <span class="p-saat-gun">${GUNLER[g]}</span>
         <input type="time" class="p-${onek}-bas" data-gun="${g}" value="${esc((s.baslangic_saati || (onek === 'calisma' ? '09:00' : '13:00')).slice(0, 5))}">
         <input type="time" class="p-${onek}-bit" data-gun="${g}" value="${esc((s.bitis_saati || (onek === 'calisma' ? '18:00' : '14:00')).slice(0, 5))}">
@@ -238,7 +215,7 @@ function primToggleSatiri(tur, baslik) {
         <div class="p-detay-baslik"><i class="bi bi-list-ul"></i> ${baslik}</div>
         <div class="p-detay-hint">Açıksa genel "${baslik.replace('Primini Kaleme Göre Belirle', 'Primi %')}" pasif olur; her kaleme ayrı yüzde girersiniz.</div>
       </div>
-      <label class="p-switch"><input type="checkbox" id="f${CAP[tur]}Detayli"><span class="p-kaydir"></span></label>
+      <label class="rc-switch"><input type="checkbox" id="f${CAP[tur]}Detayli"><span class="rc-kaydir"></span></label>
     </div>
     <div class="p-kalem-list" id="${tur}KalemList" style="display:none"></div>`;
 }
@@ -267,12 +244,12 @@ async function formAc(p) {
     <div class="p-sec">
       <div class="p-sec-bas"><span class="p-sec-ikon p-sec-info"><i class="bi bi-person-badge"></i></span>
         <div><h3>Temel Bilgiler</h3></div></div>
-      <div class="p-form-izgara">
-        <div class="p-alan"><label>Ad Soyad *</label><input id="fAd" value="${esc(p?.personel_adi || '')}"></div>
-        <div class="p-alan"><label>Ünvan</label><input id="fUnvan" value="${esc(p?.unvan || '')}"></div>
-        <div class="p-alan"><label>Cep Telefonu</label><input id="fTel" value="${esc(p?.cep_telefon || '')}" placeholder="05XX XXX XX XX"></div>
-        <div class="p-alan"><label>Cinsiyet</label><select id="fCinsiyet"><option value="">Seçiniz</option>${cinsOpt}</select></div>
-        <div class="p-alan"><label>Hesap Türü *</label><select id="fRol"><option value="">Seçiniz</option>${rolOpt}</select></div>
+      <div class="rc-form-izgara">
+        <div class="rc-alan"><label>Ad Soyad *</label><input id="fAd" value="${esc(p?.personel_adi || '')}"></div>
+        <div class="rc-alan"><label>Ünvan</label><input id="fUnvan" value="${esc(p?.unvan || '')}"></div>
+        <div class="rc-alan"><label>Cep Telefonu</label><input id="fTel" value="${esc(p?.cep_telefon || '')}" placeholder="05XX XXX XX XX"></div>
+        <div class="rc-alan"><label>Cinsiyet</label><select id="fCinsiyet"><option value="">Seçiniz</option>${cinsOpt}</select></div>
+        <div class="rc-alan"><label>Hesap Türü *</label><select id="fRol"><option value="">Seçiniz</option>${rolOpt}</select></div>
       </div>
     </div>
 
@@ -295,10 +272,10 @@ async function formAc(p) {
       <div class="p-sec-bas"><span class="p-sec-ikon p-sec-prim"><i class="bi bi-cash-coin"></i></span>
         <div><h3>Prim &amp; Hak Ediş Ayarları</h3><div class="p-sec-alt">Aylık maaş ve tahsilat üzerinden prim yüzdeleri (Hak Ediş raporunda hesaplanır)</div></div></div>
       <div class="p-prim-grid">
-        <div class="p-alan"><label>Sabit Maaş (₺)</label><input id="fMaas" type="number" step="0.01" value="${esc(p?.maas ?? '')}"></div>
-        <div class="p-alan"><label>Hizmet Primi (%)</label><input id="fHizmetPrim" type="number" step="0.01" value="${esc(p?.hizmet_prim_yuzde ?? '')}"></div>
-        <div class="p-alan"><label>Ürün Primi (%)</label><input id="fUrunPrim" type="number" step="0.01" value="${esc(p?.urun_prim_yuzde ?? '')}"></div>
-        <div class="p-alan"><label>Paket Primi (%)</label><input id="fPaketPrim" type="number" step="0.01" value="${esc(p?.paket_prim_yuzde ?? '')}"></div>
+        <div class="rc-alan"><label>Sabit Maaş (₺)</label><input id="fMaas" type="number" step="0.01" value="${esc(p?.maas ?? '')}"></div>
+        <div class="rc-alan"><label>Hizmet Primi (%)</label><input id="fHizmetPrim" type="number" step="0.01" value="${esc(p?.hizmet_prim_yuzde ?? '')}"></div>
+        <div class="rc-alan"><label>Ürün Primi (%)</label><input id="fUrunPrim" type="number" step="0.01" value="${esc(p?.urun_prim_yuzde ?? '')}"></div>
+        <div class="rc-alan"><label>Paket Primi (%)</label><input id="fPaketPrim" type="number" step="0.01" value="${esc(p?.paket_prim_yuzde ?? '')}"></div>
       </div>
       ${primToggleSatiri('hizmet', 'Hizmet Primini Kaleme Göre Belirle')}
       ${primToggleSatiri('urun', 'Ürün Primini Kaleme Göre Belirle')}
@@ -306,8 +283,8 @@ async function formAc(p) {
     </div>`;
 
   const alt = `
-    <button class="p-btn p-btn-ikincil" id="fIptal">Vazgeç</button>
-    <button class="p-btn p-btn-birincil" id="fKaydet"><i class="bi bi-check-lg"></i> Kaydet</button>`;
+    <button class="rc-btn rc-btn-ikincil" id="fIptal">Vazgeç</button>
+    <button class="rc-btn rc-btn-birincil" id="fKaydet"><i class="bi bi-check-lg"></i> Kaydet</button>`;
 
   modalAc(duzenleme ? 'Personel Düzenle' : 'Yeni Personel', govde, alt, {
     ikon: 'person-lines-fill',
@@ -315,7 +292,7 @@ async function formAc(p) {
   });
 
   // Çalışma/mola satır vurgusu toggle ile senkron.
-  el('.p-modal-govde').addEventListener('change', (e) => {
+  el('.rc-modal-govde').addEventListener('change', (e) => {
     const sw = e.target.closest('.p-calisma-acik, .p-mola-acik');
     if (sw) sw.closest('.p-saat-row').classList.toggle('p-dolu', sw.checked);
   });
@@ -371,7 +348,7 @@ function primDetayUygula(tur, on) {
   const genel = el('#f' + CAP[tur] + 'Prim');
   if (genel) {
     genel.disabled = on;
-    const alan = genel.closest('.p-alan');
+    const alan = genel.closest('.rc-alan');
     if (alan) alan.classList.toggle('p-genel-pasif', on);
   }
   const satir = document.querySelector(`.p-detay-toggle[data-tur="${tur}"]`);
@@ -470,7 +447,7 @@ async function yetkiAc(p) {
     const satirlar = list.map((t) => `
       <div class="p-yetki-sat">
         <div class="p-yetki-bilgi"><div class="p-yetki-label">${esc(t.label)}</div>${t.aciklama ? `<div class="p-yetki-ac">${esc(t.aciklama)}</div>` : ''}</div>
-        <label class="p-switch"><input type="checkbox" class="p-yk" data-key="${esc(t.key)}" ${ayarlar[t.key] ? 'checked' : ''}><span class="p-kaydir"></span></label>
+        <label class="rc-switch"><input type="checkbox" class="p-yk" data-key="${esc(t.key)}" ${ayarlar[t.key] ? 'checked' : ''}><span class="rc-kaydir"></span></label>
       </div>`).join('');
     return `<div class="p-kat"><div class="p-kat-bas"><i class="bi bi-${esc(kinfo.ikon)}"></i> ${esc(kinfo.ad)}</div>${satirlar}</div>`;
   }).join('');
@@ -480,8 +457,8 @@ async function yetkiAc(p) {
     <div class="p-sablonlar" id="ykSablonlar">${sablonKart}</div>
     <div id="ykKategoriler">${katHtml}</div>`;
   const alt = `
-    <button class="p-btn p-btn-ikincil" id="ykIptal">Vazgeç</button>
-    <button class="p-btn p-btn-birincil" id="ykKaydet"><i class="bi bi-shield-check"></i> Yetkileri Kaydet</button>`;
+    <button class="rc-btn rc-btn-ikincil" id="ykIptal">Vazgeç</button>
+    <button class="rc-btn rc-btn-birincil" id="ykKaydet"><i class="bi bi-shield-check"></i> Yetkileri Kaydet</button>`;
 
   modalAc('Yetki Yönetimi', govde, alt, { ikon: 'shield-lock', altbaslik: esc(p.personel_adi) + ' için erişim yetkileri' });
 
@@ -529,15 +506,15 @@ async function arsivleAkis(p) {
   const satirlar = (v.hizmetler || []).map((h) => `
     <div class="p-transfer-sat">
       <div class="p-transfer-bilgi"><strong>${esc(h.tarih)}${h.saat ? ' ' + esc(h.saat) : ''}</strong> · ${esc(h.musteri || '—')} · ${esc(h.hizmet || '—')}</div>
-      <select class="p-alan p-transfer-hedef" data-rh="${h.rh_id}" style="min-width:180px"><option value="">Devralacak personel…</option>${hedefOpt}</select>
+      <select class="rc-alan p-transfer-hedef" data-rh="${h.rh_id}" style="min-width:180px"><option value="">Devralacak personel…</option>${hedefOpt}</select>
     </div>`).join('');
 
   const govde = `
     <div class="p-uyari"><i class="bi bi-exclamation-triangle"></i> <strong>${esc(p.personel_adi)}</strong> arşivlenmeden önce, gelecekteki <strong>${v.count}</strong> randevu hizmeti başka bir personele devredilmelidir.</div>
     ${satirlar}`;
   const alt = `
-    <button class="p-btn p-btn-ikincil" id="arIptal">Vazgeç</button>
-    <button class="p-btn p-btn-birincil" id="arKaydet"><i class="bi bi-archive"></i> Devret ve Arşivle</button>`;
+    <button class="rc-btn rc-btn-ikincil" id="arIptal">Vazgeç</button>
+    <button class="rc-btn rc-btn-birincil" id="arKaydet"><i class="bi bi-archive"></i> Devret ve Arşivle</button>`;
 
   modalAc('Personeli Arşivle', govde, alt, { ikon: 'archive', altbaslik: 'Gelecek hizmetleri devret, sonra arşivle' });
   el('#arIptal').addEventListener('click', modalKapat);
