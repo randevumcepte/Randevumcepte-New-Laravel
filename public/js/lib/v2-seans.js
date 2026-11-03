@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=2';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -272,5 +272,6 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
     yukle();
   }
 
+  tablo.yenile(); // veriTablosu ilk yüklemeyi kendisi yapmaz
   return { yenile: () => tablo.yenile(false) };
 }
