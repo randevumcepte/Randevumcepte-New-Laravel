@@ -64,8 +64,8 @@ eşlenir (`ikon` alanı web içindir). `user_agent` dönmez (veri minimizasyonu)
 ## Erişim
 
 Eski ekranla birebir: kimlik + salon kapsamı + kullanıcının bu salonda **Yönetici (rol 4) veya Personel
-(rol 5)** rolü YOK → Hesap Sahibi ve rol ataması olmayan yetkili görür; diğerleri 403. Menü öğesi
-(`PanelMenu`, `ayar.salon_bilgi`) değiştirilmedi — v2 menü geçişi kullanıcı "geçiş" deyince.
+(rol 5)** rolü YOK → Hesap Sahibi ve rol ataması olmayan yetkili görür; diğerleri 403. v2 menü öğesi
+(`PanelMenu`) `v2_rota=/v2/log-hareketleri` ile bu sayfaya bağlı; personel rolünde gizli (`rol5_gizle`).
 
 ## Yeni hareket eklemek
 

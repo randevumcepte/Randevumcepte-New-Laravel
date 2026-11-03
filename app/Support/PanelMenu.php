@@ -85,7 +85,7 @@ class PanelMenu
 
             // ───────────── Sistem
             ['etiket' => 'Ayarlar',            'ikon' => 'bi bi-gear',             'slug' => 'ayarlar', 'ek_sorgu' => 'p=temelbilgiler', 'v2_rota' => '/v2/ayarlar', 'pageindex' => 9, 'yetki' => 'ayar.salon_bilgi', 'bolum' => 'Sistem'],
-            ['etiket' => 'Log Hareketleri',    'ikon' => 'bi bi-clock-history',    'slug' => 'log-hareketleri',   'pageindex' => 110, 'yetki' => 'ayar.salon_bilgi'],
+            ['etiket' => 'Log Hareketleri',    'ikon' => 'bi bi-clock-history',    'slug' => 'log-hareketleri',   'v2_rota' => '/v2/log-hareketleri', 'pageindex' => 110, 'yetki' => 'ayar.salon_bilgi', 'rol5_gizle' => true],
         ];
     }
 
