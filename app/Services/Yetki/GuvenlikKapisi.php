@@ -66,10 +66,23 @@ class GuvenlikKapisi
      */
     public function yoneticiDenetle($yetkiliId, $salonId): void
     {
+        $this->rolDisiDenetle($yetkiliId, $salonId, [5], 'Bu ekran personel hesaplarına kapalıdır');
+    }
+
+    /**
+     * KIMLIK + KAPSAM + kullanicinin bu salondaki rollerinden HICBIRI $kapaliRoller'de degil.
+     * Rol bazli kapatilan ekranlarin ortak kapisi (yoneticiDenetle = [5]; Log Hareketleri = [4, 5]).
+     *
+     * @param  int[]  $kapaliRoller  model_has_roles.role_id (1=Hesap Sahibi … 4=Yonetici, 5=Personel)
+     *
+     * @throws YetkisizErisimException
+     */
+    public function rolDisiDenetle($yetkiliId, $salonId, array $kapaliRoller, string $mesaj = 'Bu ekrana erişim yetkiniz yok'): void
+    {
         $this->kapsamDenetle($yetkiliId, $salonId);
 
-        if (in_array(5, $this->kapsam->salonRolleri($yetkiliId, $salonId), true)) {
-            throw new YetkisizErisimException('Bu ekran personel hesaplarına kapalıdır');
+        if (array_intersect($kapaliRoller, $this->kapsam->salonRolleri($yetkiliId, $salonId)) !== []) {
+            throw new YetkisizErisimException($mesaj);
         }
     }
 }

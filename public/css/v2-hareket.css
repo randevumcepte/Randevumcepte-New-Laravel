@@ -1,0 +1,55 @@
+/* v2 HAREKET tablosu (lib/v2-hareket.js) — Log Hareketleri sayfası + gömülü hareket tabloları ORTAK.
+   Başlık, form alanı, buton: v2-bilesen.css (.rc-*); tablo / arama / sayfalama: panel.css (.rc-tablo, .rc-dt-*).
+   Kategori renkleri API'den (satırda --hk-renk / --hk-zemin değişkeni). */
+
+.hk-kabuk { padding: 6px 2px 40px; }
+
+/* Renk açıklaması = kategori filtresi */
+.hk-lejant { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.hk-lejant-oge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+  background: #fff; border: 1px solid #eee; padding: 6px 12px; border-radius: 20px; transition: .15s; }
+.hk-lejant-oge:hover { border-color: currentColor; }
+.hk-lejant-oge.aktif { border-color: currentColor; box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 18%, transparent); }
+
+/* Filtreler */
+.hk-filtre { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px; }
+.hk-filtre .rc-alan { min-width: 150px; }
+.hk-filtre select, .hk-filtre input { border: 1px solid #e2e2ee; border-radius: 9px; padding: 8px 10px; font-size: 13px; background: #fff; color: inherit; }
+
+/* Satır */
+.hk-tablo-ic { min-width: 980px; }
+.hk-tablo-ic .hk-k-zaman { width: 140px; }
+.hk-tablo-ic .hk-k-kisi { width: 190px; }
+.hk-tablo-ic .hk-k-islem { width: 230px; }
+.hk-tablo-ic .hk-k-ip { width: 120px; }
+.hk-satir:hover { background: var(--hk-zemin); }
+.hk-zaman { position: relative; }
+.hk-serit { position: absolute; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--hk-renk); }
+.hk-tarih { font-weight: 700; font-size: 12.5px; }
+.hk-soluk { color: #9a94a6; font-size: 11.5px; }
+.hk-guclu { font-weight: 700; }
+.hk-kisi, .hk-islem { display: flex; align-items: center; gap: 10px; }
+.hk-avatar { width: 34px; height: 34px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.hk-rol { font-size: 11px; font-weight: 700; margin-top: 1px; }
+.hk-ikon { width: 36px; height: 36px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; flex: 0 0 auto; }
+.hk-rozet { display: inline-block; padding: 3px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800; }
+.hk-kat { font-size: 10.5px; font-weight: 700; margin-top: 3px; opacity: .9; }
+.hk-kaynak { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 12px; font-size: 10px; font-weight: 800; background: #eef2f6; color: #475569; }
+.hk-kaynak-mobil { background: #eef2ff; color: #4338ca; }
+.hk-kaynak-v2 { background: #f2ecfb; color: #5C008E; }
+.hk-hedef-tip { display: inline-block; background: #f3eafa; color: #5C008E; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 8px; margin-bottom: 3px; }
+.hk-aciklama { color: #4b4459; }
+.hk-detay { margin-top: 5px; }
+.hk-detay summary { cursor: pointer; font-weight: 600; color: #9a94a6; font-size: 11.5px; }
+.hk-detay pre { background: #faf8ff; border: 1px solid #ece3f8; border-radius: 8px; padding: 9px; font-size: 11.5px; margin: 6px 0 0; max-width: 380px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+.hk-ip { font-family: ui-monospace, Menlo, Consolas, monospace; color: #94909f; font-size: 11.5px; white-space: nowrap; }
+
+@media (prefers-color-scheme: dark) {
+  .hk-lejant-oge, .hk-filtre select, .hk-filtre input { background: #22222e; border-color: #34344c; }
+  .hk-satir:hover { background: color-mix(in srgb, var(--hk-renk) 12%, transparent); }
+  .hk-aciklama { color: #cfcfe0; }
+  .hk-hedef-tip, .hk-kaynak-v2 { background: #2d2340; color: #c9a7f0; }
+  .hk-kaynak { background: #2a2a38; color: #cfcfe0; }
+  .hk-kaynak-mobil { background: #262a4a; color: #a5b4fc; }
+  .hk-detay pre { background: #1b1b26; border-color: #34344c; color: #ededf5; }
+}

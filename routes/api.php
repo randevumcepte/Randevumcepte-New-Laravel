@@ -189,6 +189,9 @@ Route::prefix('v2')->group(function () {
         // SEANS TAKIBI (liste + seans ekle/durum + lazer cihaz bilgisi) — routes/v2/seans.php
         require __DIR__.'/v2/seans.php';
 
+        // LOG HAREKETLERI (salon_aktivite_log salt okuma: liste + filtre secenekleri) — routes/v2/hareket.php
+        require __DIR__.'/v2/hareket.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim
