@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AdisyonController;
+use App\Domain\Asistan\GorevTuru;
 use App\Http\Controllers\Api\V2\AlacakController;
+use App\Http\Controllers\Api\V2\AsistanController;
 use App\Http\Controllers\Api\V2\KabukController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\PersonelController;
@@ -152,6 +154,16 @@ Route::prefix('v2')->group(function () {
         Route::patch('/personel/{id}/saatler', [PersonelController::class, 'saatKaydet'])->whereNumber('id');
         Route::delete('/personel/{id}', [PersonelController::class, 'arsivle'])->whereNumber('id');
         Route::patch('/personel/{id}/yetki', [PersonelYetkiController::class, 'kaydet'])->whereNumber('id');
+
+        /*
+         | E-ASISTAN ("Asistanım") — gorev listesi + gorev iptal + ayarlar. Kimlik +
+         | kapsam + rol 5 degil (controller). Yazmalar ASISTAN_V2_YAZMA_AKTIF arkasinda.
+         */
+        Route::get('/asistan/gorevler', [AsistanController::class, 'gorevler']);
+        Route::post('/asistan/gorev/{tur}/{id}/iptal', [AsistanController::class, 'iptal'])
+            ->whereIn('tur', GorevTuru::iptalEdilebilenler())->whereNumber('id');
+        Route::get('/asistan/ayarlar', [AsistanController::class, 'ayarlar']);
+        Route::patch('/asistan/ayarlar', [AsistanController::class, 'ayarKaydet']);
     });
 
 });

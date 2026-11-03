@@ -49,3 +49,14 @@ Route::get('/v2/takvim/{sube?}', function ($sube = null) {
 
     return view('v2.takvim', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Asistanım (E-Asistan) v2 — bugunku/yarinki gorevler + ayarlar host sayfasi
+ | (ayni island deseni). Veri /api/v2/asistan/* (Bearer); yazmalar
+ | ASISTAN_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
+ */
+Route::get('/v2/asistan/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.asistan', ['salonId' => $salonId]);
+})->whereNumber('sube');

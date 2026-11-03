@@ -40,4 +40,19 @@ class KapsamServisi
 
         return in_array((int) $salonId, $this->kullaniciSalonlari($yetkiliId), true);
     }
+
+    /** @return int[] Kullanicinin bu salondaki rolleri (model_has_roles; 1=Hesap Sahibi … 5=Personel) */
+    public function salonRolleri($yetkiliId, $salonId): array
+    {
+        if (! $yetkiliId || ! $salonId) {
+            return [];
+        }
+
+        return DB::table('model_has_roles')
+            ->where('model_id', $yetkiliId)
+            ->where('salon_id', $salonId)
+            ->pluck('role_id')
+            ->map(fn ($r) => (int) $r)
+            ->all();
+    }
 }

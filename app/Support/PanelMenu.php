@@ -35,7 +35,7 @@ class PanelMenu
         return [
             // ───────────── Genel
             ['etiket' => 'Özet',               'ikon' => 'bi bi-grid-1x2-fill',    'slug' => '',                  'pageindex' => 0,  'rol5_gizle' => true, 'bolum' => 'Genel'],
-            ['etiket' => 'Asistanım',          'ikon' => 'bi bi-card-checklist',   'slug' => 'e_asistan',         'pageindex' => 60, 'ozellik' => 'uyelik_turu_premium', 'rol5_gizle' => true],
+            ['etiket' => 'Asistanım',          'ikon' => 'bi bi-card-checklist',   'slug' => 'e_asistan',         'v2_rota' => '/v2/asistan', 'pageindex' => 60, 'ozellik' => 'uyelik_turu_premium', 'rol5_gizle' => true],
             ['etiket' => 'Santral',            'ikon' => 'bi bi-phone',            'slug' => 'santral',           'pageindex' => 43, 'ozellik' => 'santral_aktif',      'rol5_gizle' => true],
 
             // ───────────── Randevu

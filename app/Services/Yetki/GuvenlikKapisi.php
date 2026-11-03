@@ -57,4 +57,19 @@ class GuvenlikKapisi
             throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
         }
     }
+
+    /**
+     * KIMLIK + KAPSAM + rol 5 (personel) DEGIL. Eski panelin personelmi() ile
+     * personele kapatilan yonetici ekranlari icin (orn. Asistanım).
+     *
+     * @throws YetkisizErisimException
+     */
+    public function yoneticiDenetle($yetkiliId, $salonId): void
+    {
+        $this->kapsamDenetle($yetkiliId, $salonId);
+
+        if (in_array(5, $this->kapsam->salonRolleri($yetkiliId, $salonId), true)) {
+            throw new YetkisizErisimException('Bu ekran personel hesaplarına kapalıdır');
+        }
+    }
 }

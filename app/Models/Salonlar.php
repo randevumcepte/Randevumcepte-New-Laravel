@@ -18,4 +18,12 @@ class Salonlar extends Model
     protected $table = 'salonlar';
 
     protected $guarded = [];
+
+    /** Klinik/studyo salon turleri: musteri yerine "danisan" denir (eski menu/metinlerle birebir). */
+    public const DANISAN_TURLERI = [15, 28, 29];
+
+    public static function danisanMi($salonTuruId): bool
+    {
+        return in_array((int) $salonTuruId, self::DANISAN_TURLERI, true);
+    }
 }

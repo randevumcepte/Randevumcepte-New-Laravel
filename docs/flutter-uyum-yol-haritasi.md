@@ -52,7 +52,8 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
 | SMS / WhatsApp | ~20 | ❌ | |
-| Dashboard / e-asistan / hatırlatma / bildirim | ~15 | ❌ | |
+| E-asistan (Asistanım) | 2 | ✅ | `/asistan/*` — eşleme aşağıda |
+| Dashboard / hatırlatma / bildirim | ~13 | ❌ | (dashboard `easistandatadashboard` henüz v1) |
 | Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |
 | Çağrı merkezi / santral | ~30 | ❌ | (v1'de Bearer'lı `CagriApi`) |
 
@@ -80,6 +81,16 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | `POST /primHakedisToplu/{salon}` | — | ❌ Faz 3 (her satır `Personel.fromJson` alanlarını da taşımalı, id = `id` veya `personel_id`) |
 | `POST /personelPrimHesaplaAyYil` | — | ❌ Faz 3 (`*_toplam(_numeric)`, `*_hakedis(_numeric)`, `adisyonlar[]`) |
 | `POST /primOde`, `/primOdemeListesi`, `/primOdemeSil`, `/primHareketEkle`, `/primHareketSil` | — | ❌ Faz 3 (`odemeler[].id`, `hareketler[].id` JSON sayı) |
+
+## E-asistan (Asistanım) — v1 → v2 eşlemesi
+
+| v1 (Flutter) | v2 | Durum |
+|---|---|---|
+| `GET /easistandata/{ms_timestamp}/{salon}?page` (`EAsistan.fromJson`) | `GET /asistan/gorevler?salon_id=&tarih=Y-m-d&page=&per_page=` | ✅ aynı alanlar (`baslik, mesaj, sonuc, durum, saat, tur, iptal_edilebilir, iptal_edildi, randevu_id/alacak_id/kampanya_id`) + `id, durum_kod, durum_etiket, musteri_ad`; zarf `veri.{data,current_page,last_page,total}` |
+| `POST /gorev-iptal-et {randevu_id\|alacak_id\|kampanya_id}` | `POST /asistan/gorev/{tur}/{id}/iptal` | ✅ + kapsam + sunucuda iptal-edilebilirlik kontrolü (422) |
+| (Flutter'da ayarlar sekmesi yok) | `GET /asistan/ayarlar`, `PATCH /asistan/ayarlar {ayarlar:{anahtar:bool}, tekrar_arama_saat}` | ✅ ayar listesi API'den (sabit liste yok) |
+
+Notlar: v1 `baslik` müşteri adıydı (avatar baş harfleri) → v2'de `musteri_ad`; `baslik` görev türü başlığıdır. v1 kampanyayı D+1'de arıyordu, v2 web kanoniği D (asistan_tarih_saat günü). v1 `durum` için `'Ulaşıldı<'` (fazla karakter) dönüyordu; v2 temiz.
 
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 
