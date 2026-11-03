@@ -15,6 +15,7 @@ import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
+import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
 
 const kok = document.getElementById('rc-paket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -33,12 +34,6 @@ const oku = (yol, params = {}) => api('GET', yol, { params: { ...params, salon_i
 const yaz = (method, yol, body = {}) => api(method, yol, { body: method === 'DELETE' ? undefined : { ...body, salon_id: salonId } });
 const sayiVeyaNull = (v) => (String(v ?? '').trim() === '' ? null : Number(String(v).replace(',', '.')));
 const paketBul = (id) => sonListe.find((p) => String(p.id) === String(id));
-
-async function kilitle(btn, metin, is) {
-  const eski = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = `<span class="rc-yukleniyor"></span> ${esc(metin)}`;
-  try { return await is(); } finally { btn.disabled = false; btn.innerHTML = eski; }
-}
 
 /** "8" ya da hizmet bazlı seans varsa "8 (5 + 3)". */
 function seansMetni(p) {
@@ -213,10 +208,7 @@ function satisYap() {
         <div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>
         ${fiyatGizli() ? '' : `<div class="rc-alan"><label>Fiyat (₺)</label><input type="number" min="0" step="0.01" data-fiyat value="${p.fiyat}" ${fiyatAcik ? '' : 'readonly title="Fiyat değiştirme yetkiniz yok"'}></div>`}
       </div></div>`).join('')}`;
-  const alt = fiyatGizli()
-    ? '<button class="rc-btn rc-btn-ikincil" data-odeme="0">Ödeme Alınmadı</button><button class="rc-btn rc-btn-yesil" data-odeme="1"><i class="bi bi-check-lg"></i> Ödeme Alındı</button>'
-    : '<button class="rc-btn rc-btn-ikincil" data-kapat>Vazgeç</button><button class="rc-btn rc-btn-yesil" data-odeme=""><i class="bi bi-arrow-right"></i> Tahsilata Git</button>';
-  const ov = modalAc(fiyatGizli() ? 'Seans Sayısı' : 'Seans ve Fiyatı Belirleyin', govde, alt, { ikon: 'cart-check', sabit: true });
+  const ov = modalAc(fiyatGizli() ? 'Seans Sayısı' : 'Seans ve Fiyatı Belirleyin', govde, satisAltButonlari(fiyatGizli()), { ikon: 'cart-check', sabit: true });
   el('[data-kapat]', ov)?.addEventListener('click', modalKapat);
   // Çift tıklama / ağ tekrarı ikinci adisyon açmasın — modal başına tek anahtar.
   const anahtar = crypto.randomUUID();
@@ -229,11 +221,7 @@ function satisYap() {
     });
     const r = await yaz('POST', '/paket/satis', { musteri_id: m.id, personel_id: el('#pkPersonel')?.value || null, kalemler, idempotency_key: anahtar });
     if (!yazSonuc(r)) return;
-    const adisyonId = r.govde.veri.adisyon_id;
-    if (!fiyatGizli()) { location.href = `/v2/tahsilat/${adisyonId}?sube=${salonId}`; return; }
-    // Stüdyo: "Ödeme Alındı" → mevcut adisyon ödeme ucu (tamOde); ardından Satış Takibi.
-    if (btn.dataset.odeme === '1') yazSonuc(await api('PATCH', `/adisyon/${adisyonId}/odeme`, { body: { alindi: true } }));
-    location.href = `/v2/satislar?sube=${salonId}`;
+    await satisSonrasi(salonId, r.govde.veri.adisyon_id, { studyo: fiyatGizli(), odemeAlindi: btn.dataset.odeme === '1' });
   })));
 }
 

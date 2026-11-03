@@ -67,8 +67,10 @@ Route::get('/v2/asistan/{sube?}', function ($sube = null) {
  | (Bearer); kasa yazmalari KASA_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
  | Paket Yonetimi v2 — paket tanimi tablosu + ekle/duzenle/sil + "Satis Yap"; veri
  | /api/v2/paket/* (Bearer); yazmalar PAKET_V2_YAZMA_AKTIF kapaliyken 409.
+ | On Gorusmeler v2 — liste (durum sekmeleri) + ekle/duzenle + satis yapildi/yapilmadi; veri
+ | /api/v2/ongorusme/* (Bearer); yazmalar ONGORUSME_V2_YAZMA_AKTIF kapaliyken 409.
  */
-foreach (['ozet' => 'v2.ozet', 'raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler'] as $yol => $gorunum) {
+foreach (['ozet' => 'v2.ozet', 'raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler', 'ongorusmeler' => 'v2.ongorusmeler'] as $yol => $gorunum) {
     Route::get('/v2/'.$yol.'/{sube?}', fn ($sube = null) => view($gorunum, ['salonId' => (int) ($sube ?: request('sube', 0))]))
         ->whereNumber('sube');
 }

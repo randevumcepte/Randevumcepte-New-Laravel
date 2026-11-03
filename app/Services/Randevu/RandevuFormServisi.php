@@ -26,22 +26,33 @@ class RandevuFormServisi
     public function formVerisi(int $salonId, ?int $randevuId, bool $telGor): array
     {
         $randevu = $randevuId ? $this->randevuOnDoldur($salonId, $randevuId, $telGor) : null;
+
+        return $this->kaynakSecenekleri($salonId) + [
+            'hizmetler'   => $this->hizmetler($salonId, $randevuId),
+            'haritalar'   => $this->haritalar($salonId),
+            'randevu'     => $randevu,
+        ];
+    }
+
+    /**
+     * Randevu ureten TUM formlarin (randevu editoru, on gorusme) ortak secenekleri — tek kaynak:
+     * takvim turu, musteri/danisan etiketi, aktif personel / oda / cihaz listeleri (takvim sirasi).
+     * Satir alanlari salonun takvim turune gore (eski web modali ile ayni):
+     * personel HER ZAMAN; oda turu 1/2 DEGILSE; cihaz turu 1/3 DEGILSE.
+     */
+    public function kaynakSecenekleri(int $salonId): array
+    {
         $salon = DB::table('salonlar')->where('id', $salonId)->first(['randevu_takvim_turu', 'salon_turu_id']);
 
         return [
-            // Satir alanlari salonun takvim turune gore (eski web modali ile ayni):
-            // personel HER ZAMAN; oda turu 1/2 DEGILSE; cihaz turu 1/3 DEGILSE.
             'takvim_turu'    => (int) ($salon->randevu_takvim_turu ?? 0),
             'musteri_etiket' => in_array((int) ($salon->salon_turu_id ?? 0), [15, 28, 29], true) ? 'Danışan' : 'Müşteri',
-            'hizmetler'   => $this->hizmetler($salonId, $randevuId),
             'personeller' => DB::table('salon_personelleri')->where('salon_id', $salonId)->where('aktif', 1)
                 ->orderBy('takvim_sirasi')->get(['id', 'personel_adi as ad'])->map(fn ($p) => ['id' => (int) $p->id, 'ad' => $p->ad])->all(),
             'odalar'      => DB::table('odalar')->where('salon_id', $salonId)->where('aktifmi', 1)->orderBy('takvim_sirasi')
                 ->get(['id', 'oda_adi as ad', 'personel_id'])->map(fn ($o) => ['id' => (int) $o->id, 'ad' => $o->ad, 'personel_id' => $o->personel_id ? (int) $o->personel_id : null])->all(),
             'cihazlar'    => DB::table('cihazlar')->where('salon_id', $salonId)->where('aktifmi', 1)->orderBy('takvim_sirasi')
                 ->get(['id', 'cihaz_adi as ad'])->map(fn ($c) => ['id' => (int) $c->id, 'ad' => $c->ad])->all(),
-            'haritalar'   => $this->haritalar($salonId),
-            'randevu'     => $randevu,
         ];
     }
 

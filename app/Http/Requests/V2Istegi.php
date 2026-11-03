@@ -48,6 +48,23 @@ abstract class V2Istegi extends FormRequest
         return DogrulamaMetinleri::alanlar();
     }
 
+    /**
+     * Eski istemci (web / mobil v1) alan adlarini v2 adlarina cevirir — yalnizca v2 adi
+     * gelmediyse. Gecis gunu istemci degismeden calissin diye (Ayar, On Gorusme ...).
+     *
+     * @param  array<string,string>  $esleme  eski ad => v2 adi
+     */
+    protected function eskiAdlar(array $esleme): void
+    {
+        $birlestir = [];
+        foreach ($esleme as $eski => $yeni) {
+            if (! $this->has($yeni) && $this->has($eski)) {
+                $birlestir[$yeni] = $this->input($eski);
+            }
+        }
+        $this->merge($birlestir);
+    }
+
     protected function prepareForValidation(): void
     {
         foreach ($this->jsonAlanlar as $alan) {

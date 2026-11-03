@@ -14,7 +14,7 @@
 
 import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
+import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 
@@ -37,13 +37,6 @@ const secenek = (liste, secili, deger = 'id', ad = 'ad', bos = '— Seç —') =
   liste.map((x) => `<option value="${esc(x[deger])}"${String(secili ?? '') === String(x[deger]) ? ' selected' : ''}>${esc(x[ad])}</option>`).join('');
 const urunBul = (id) => sonListe.find((u) => String(u.id) === String(id));
 const bos = (ikon, metin) => `<div class="st-bos"><i class="bi ${ikon}"></i>${esc(metin)}</div>`;
-
-/** Buton kilidi + metin; işlem bitince eski haline döner. */
-async function kilitle(btn, metin, is) {
-  const eski = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = `<span class="rc-yukleniyor"></span> ${esc(metin)}`;
-  try { return await is(); } finally { btn.disabled = false; btn.innerHTML = eski; }
-}
 
 /** Yazma sonrası: tablo (aynı sayfa) + özet + form verisi tazelenir. */
 async function tazele({ formVerisi = false } = {}) {

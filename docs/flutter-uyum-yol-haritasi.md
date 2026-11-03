@@ -48,7 +48,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
 | Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema; Faz 2: cihazlar + odalar; Faz 3: hizmetler + şubeler (salt okuma) — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Google entegrasyonu (en son), yeni şube açma yok |
-| Öngörüşme | ~6 | ❌ | |
+| Öngörüşme | ~6 | ✅ | `/ongorusme/*` — liste+sayaç, detay, form verisi, ekle/düzenle (çakışma), satış yapıldı/yapılmadı; v1 alan adları kabul; eşleme docs/strangler-ongorusme.md; yazma `ONGORUSME_V2_YAZMA_AKTIF` |
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
 | SMS / WhatsApp | ~20 | ❌ | |

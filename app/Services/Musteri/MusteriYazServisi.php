@@ -70,6 +70,38 @@ class MusteriYazServisi
         });
     }
 
+    /**
+     * Telefona gore kisiyi BUL ya da OLUSTUR ve bu salonun portfoyunde oldugunu garanti et —
+     * musteri kaydinin YAN URUN oldugu akislar (on gorusme) icin. kaydet()'ten tek farki:
+     * kisi portfoyde zaten aktifse 409 DEGIL, mevcut kayit doner (kimlik alanlari degismez —
+     * users baska salonlarla ortak). Yeni kisi / portfoye ekleme kaydet() ile AYNI adimlar.
+     *
+     * @param  array{salon_id:int, yapan_id:int, ad_soyad:string, telefon:?string, email:?string, cinsiyet:?int, musteri_tipi:?int}  $g
+     * @return array{id:int, name:string, yeni:bool, portfoye_eklendi:bool}
+     */
+    public function bulVeyaOlustur(array $g): array
+    {
+        $salonId = (int) $g['salon_id'];
+        $yapanId = (int) $g['yapan_id'];
+        $tel = TelefonNumarasi::kanonik($g['telefon'] ?? null);
+        if ($tel === '' || Telefon::maskeliMi($g['telefon'] ?? '')) {
+            throw new GecersizIslemException('Geçerli bir telefon numarası girin.');
+        }
+
+        return DB::transaction(function () use ($g, $salonId, $yapanId, $tel) {
+            $mevcut = DB::table('users')->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($tel))
+                ->orderBy('id')->first(['id', 'name']);
+            if (! $mevcut) {
+                return $this->yeniMusteri($salonId, $yapanId, $tel, $g);
+            }
+            $aktif = DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $mevcut->id)->where('aktif', 1)->exists();
+
+            return $aktif
+                ? ['id' => (int) $mevcut->id, 'name' => (string) $mevcut->name, 'yeni' => false, 'portfoye_eklendi' => false]
+                : $this->portfoyeEkle($salonId, (int) $mevcut->id, (string) $mevcut->name, $yapanId, $g);
+        });
+    }
+
     /** Portfoyden cikar (soft: aktif=0 — eski musteri_sil ile ayni; kayit ve gecmis korunur). */
     public function sil(int $salonId, int $userId, int $yapanId): array
     {

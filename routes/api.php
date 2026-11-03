@@ -174,6 +174,9 @@ Route::prefix('v2')->group(function () {
         // PAKET YONETIMI (paket tanimi liste/ekle/duzenle/sil + secili paketleri sat) — routes/v2/paket.php
         require __DIR__.'/v2/paket.php';
 
+        // ON GORUSME (liste + ekle/duzenle + satis yapildi / yapilmadi) — routes/v2/ongorusme.php
+        require __DIR__.'/v2/ongorusme.php';
+
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 

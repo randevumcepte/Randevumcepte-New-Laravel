@@ -39,7 +39,7 @@ class KalemServisi
             }
             $salonId = (int) $adisyon->salon_id;
             $personelId = isset($opt['personel_id']) ? (int) $opt['personel_id'] : null;
-            $bugun = date('Y-m-d');
+            $bugun = $opt['tarih'] ?? date('Y-m-d'); // islem tarihi (satis tarihi secilebilen akislar)
             $saat = date('H:i:s');
 
             if ($tip === 'hizmet') {
@@ -49,16 +49,23 @@ class KalemServisi
                 if (! $kat) {
                     throw new BulunamadiException('Hizmet bu salonun katalogunda yok');
                 }
+                // fiyat / seans opt'ta verilirse (on gorusme donusumu) o kullanilir — fiyat yetkisi cagri yerinde.
+                // Seans: bos / <=1 → tekil hizmet (NULL); 2+ → seansli (eski "Yeni Satis" hizmet kurali).
+                $seans = isset($opt['seans']) && (int) $opt['seans'] > 1 ? (int) $opt['seans'] : null;
                 $k = new AdisyonHizmetler();
                 $k->adisyon_id = $adisyonId;
                 $k->hizmet_id = $katalogId;
                 $k->personel_id = $personelId;
-                $k->fiyat = $kat->baslangic_fiyat;
+                $k->fiyat = $opt['fiyat'] ?? $kat->baslangic_fiyat;
                 $k->sure = $kat->sure_dk;
                 $k->islem_tarihi = $bugun;
                 $k->islem_saati = $saat;
                 $k->kullanilan_seans = 0;
                 $k->kullanilmayan_seans = 0;
+                if ($seans !== null) {
+                    $k->seans_sayisi = $seans;
+                    $k->bekleyen_seans = $seans;
+                }
                 $k->save();
                 $yeniId = $k->id;
             } elseif ($tip === 'urun') {

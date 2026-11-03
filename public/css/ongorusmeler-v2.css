@@ -1,0 +1,31 @@
+/* Ön Görüşmeler (v2) — YALNIZ ekrana özgü kurallar. Başlık, sekme, rozet, modal, form alanı,
+   buton, satır işlemi, müşteri seçici ortak: v2-bilesen.css (.rc-*); tablo: panel.css. */
+
+.og-kabuk { padding: 6px 2px 40px; }
+.og-soluk { color: #9191a3; font-size: 12.5px; }
+
+/* Tablo (eski: müşteri vurgulu, oluşturma / personel soluk, telefon tabular) */
+.og-tablo { min-width: 960px; }
+.og-ad { font-weight: 700; }
+.og-tel { font-variant-numeric: tabular-nums; }
+.og-neden-tur { display: inline-block; font-size: 11px; font-weight: 700; color: #5C008E; background: #f2ecfb; border-radius: 6px; padding: 1px 7px; margin-right: 4px; }
+.og-rozet-btn { border: 0; background: none; padding: 0; cursor: pointer; }
+.og-rozet-btn:hover .rc-rozet { filter: brightness(.95); }
+.rc-islem.og-olumlu { color: #16a34a; }
+
+/* Form bölümleri (eski modal: Müşteri Bilgileri · Görüşme Detayı · Tarih & Personel) */
+.og-bolum { background: #fbfafd; border: 1px solid #ece6f3; border-radius: 12px; padding: 12px 14px 14px; margin-bottom: 12px; }
+.og-bolum-baslik { font-size: 11px; font-weight: 700; color: #5C008E; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+/* Satış / not modalları */
+.og-satis-ozet { margin-bottom: 14px; color: #2a2140; }
+.og-not { margin: 0; white-space: pre-wrap; color: #2a2140; line-height: 1.5; }
+#sFiyat[readonly] { background: #f5f5f7; cursor: not-allowed; }
+
+@media (prefers-color-scheme: dark) {
+  .og-bolum { background: #22222e; border-color: #34344c; }
+  .og-bolum-baslik, .og-neden-tur { color: #c9a7f0; }
+  .og-neden-tur { background: #2d2340; }
+  .og-satis-ozet, .og-not { color: #ededf5; }
+  #sFiyat[readonly] { background: #1b1b26; }
+}

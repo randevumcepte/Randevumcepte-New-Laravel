@@ -45,16 +45,4 @@ abstract class AyarIstegi extends V2Istegi
     {
         return self::ALANLAR + DogrulamaMetinleri::alanlar();
     }
-
-    /** Eski istemci alan adlarini v2 adlarina cevirir (yalnizca v2 adi gelmediyse). */
-    protected function eskiAdlar(array $esleme): void
-    {
-        $birlestir = [];
-        foreach ($esleme as $eski => $yeni) {
-            if (! $this->has($yeni) && $this->has($eski)) {
-                $birlestir[$yeni] = $this->input($eski);
-            }
-        }
-        $this->merge($birlestir);
-    }
 }

@@ -73,7 +73,7 @@ class HizliSatisServisi
                         'batch_uuid'         => $batch,
                         'birim_satis_fiyati' => $urun->fiyat,
                         'birim_alis_fiyati'  => $urun->alis_fiyati,
-                        'aciklama'           => 'Hızlı satış',
+                        'aciklama'           => $v['aciklama'] ?? 'Hızlı satış',
                         'kullanici_id'       => $yetkiliId,
                     ]);
                 }

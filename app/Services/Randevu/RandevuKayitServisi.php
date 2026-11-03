@@ -222,6 +222,28 @@ class RandevuKayitServisi
         return $eskiKontrol !== '' ? ['mesaj' => $eskiKontrol, 'sert' => false] : null;
     }
 
+    /**
+     * Tek zaman araliginda personel / oda / cihaz doluluk denetimi — randevu editoru DISINDA
+     * randevu ureten akislar (on gorusme) AYNI kurali ve mesaji kullansin diye. Salon
+     * 'cakisma_uyarisi_aktif' ayari kapaliysa denetim yok. Bos dize = cakisma yok.
+     *
+     * @param  array{personel_id?:?int, oda_id?:?int, cihaz_id?:?int}  $kaynaklar
+     */
+    public function kaynakCakismasi(int $salonId, string $tarih, string $saat, string $bitis, array $kaynaklar, ?int $haricRandevuId = null): string
+    {
+        if (empty(DB::table('salonlar')->where('id', $salonId)->value('cakisma_uyarisi_aktif'))) {
+            return '';
+        }
+        $h = [];
+        foreach (array_keys(self::KAYNAK_TABLO) as $kolon) {
+            $h[$kolon] = $kaynaklar[$kolon] ?? null;
+        }
+
+        return $this->kaynakDoluMu($salonId, [
+            'tarihler' => [$tarih], 'hizmetler' => [$h], 'satirlar' => [['saat' => $saat, 'saat_bitis' => $bitis]],
+        ], $haricRandevuId);
+    }
+
     /** Eski _kaynak_cakisma_tekil_api: ilk dolu kaynakta mesaj. */
     private function kaynakDoluMu(int $salonId, array $gi, ?int $haric): string
     {

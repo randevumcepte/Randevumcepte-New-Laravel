@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\DB;
  *         personel_pasif (payload: personel_id; randevu_id null),
  *         musteri_kayit (payload: user_id, yeni_hesap, cinsiyet_tahmin),
  *         kara_liste_bildirim (payload: user_id),
- *         sms (payload: mesajlar[{to,message}], dogrulama; randevu_id null — kasa bildirimleri / onay kodlari).
+ *         sms (payload: mesajlar[{to,message}], dogrulama; randevu_id null — kasa bildirimleri / onay kodlari),
+ *         ongorusme_kayit (randevu_id = on gorusme randevusu; payload: on_gorusme_id, guncelleme —
+ *           musteri SMS + personel SMS/bildirim/push, ayar_id=12).
  */
 class BildirimKuyrugu
 {
