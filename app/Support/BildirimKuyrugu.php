@@ -22,7 +22,8 @@ use Illuminate\Support\Facades\DB;
  *         ongorusme_kayit (randevu_id = on gorusme randevusu; payload: on_gorusme_id, guncelleme —
  *           musteri SMS + personel SMS/bildirim/push, ayar_id=12).
  *         anket_gonder (payload: user_id, personel_id, kanal; randevu_id null — Çağrı Merkezi memnuniyet anketi),
- *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi manuel WhatsApp).
+ *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi manuel WhatsApp),
+ *         cark_duyuru (payload: baslik, mesaj; randevu_id null — Çarkıfelek "müşterilere duyur" push'u).
  */
 class BildirimKuyrugu
 {

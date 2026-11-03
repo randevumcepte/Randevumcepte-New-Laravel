@@ -70,7 +70,7 @@ class PanelMenu
             ['etiket' => 'Bildirim Reklamları','ikon' => 'bi bi-megaphone',        'slug' => 'bildirim-reklamlari', 'v2_rota' => '/v2/bildirim-reklamlari', 'pageindex' => 81, 'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Reklam Yönetimi',    'ikon' => 'bi bi-cash-coin',        'slug' => 'kampanya_yonetimi', 'pageindex' => 82,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Etkinlikler',        'ikon' => 'bi bi-text-left',        'slug' => 'etkinlik',          'pageindex' => 83,  'yetki' => 'pazarlama.kampanya_yonet'],
-            ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],
+            ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'v2_rota' => '/v2/carkifelek', 'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],
             ['etiket' => 'Uygulama Afişi',     'ikon' => 'bi bi-qr-code',          'slug' => 'uygulama-afisi',    'v2_rota' => '/v2/uygulama-afisi', 'pageindex' => 85,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'WhatsApp Yönetimi',  'ikon' => 'bi bi-whatsapp',         'slug' => 'whatsapp',          'pageindex' => 90,  'yetki' => 'pazarlama.whatsapp_gonder'],
             ['etiket' => 'SMS Yönetimi',       'ikon' => 'bi bi-chat-square-text', 'slug' => 'toplusms',          'pageindex' => 91,  'yetki' => 'pazarlama.toplu_sms'],

@@ -209,6 +209,9 @@ Route::prefix('v2')->group(function () {
         // CAGRI MERKEZI (calisma ekrani, arama randevulari, cagri kayitlari, performans, liste yonetimi) — routes/v2/cagri-merkezi.php
         require __DIR__.'/v2/cagri-merkezi.php';
 
+        // CARKIFELEK + SADAKAT (cark ayari, kupon/kazananlar, hatirlatma, puan odulleri, kazanim kurali) — routes/v2/cark.php
+        require __DIR__.'/v2/cark.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim

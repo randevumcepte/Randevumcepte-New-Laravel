@@ -41,6 +41,17 @@ final class HareketKatalogu
         'randevu_geldi_iptal'     => ['etiket' => 'Randevu: geldi geri alındı'],
         'personel_arsiv'          => ['etiket' => 'Personel arşivlendi', 'kategori' => HareketKategorisi::SILME],
         'sadakat_puan_kazanim'    => ['etiket' => 'Sadakat puanı kazanıldı', 'kategori' => HareketKategorisi::ODEME],
+        // Çarkıfelek + sadakat (v2)
+        'cark_dilim_kaydet'          => ['etiket' => 'Çark dilimleri kaydedildi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_aktif_toggle'          => ['etiket' => 'Çark aktif/pasif yapıldı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_duyuru_gonder'         => ['etiket' => 'Çark duyurusu gönderildi', 'kategori' => HareketKategorisi::GONDERIM],
+        'cark_kupon_kullan'          => ['etiket' => 'Çark kuponu kullanıldı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_kupon_geri_al'         => ['etiket' => 'Çark kuponu kullanımı geri alındı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_hatirlatma_kaydet'     => ['etiket' => 'Çark hatırlatma ayarları kaydedildi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_puan_odulu_ekle'       => ['etiket' => 'Puan ödülü eklendi', 'kategori' => HareketKategorisi::EKLEME],
+        'cark_puan_odulu_guncelle'   => ['etiket' => 'Puan ödülü güncellendi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cark_puan_odulu_sil'        => ['etiket' => 'Puan ödülü silindi', 'kategori' => HareketKategorisi::SILME],
+        'sadakat_kazanim_kurali'     => ['etiket' => 'Puan kazanma kuralı güncellendi', 'kategori' => HareketKategorisi::GUNCELLEME],
         // Çağrı Merkezi (v2) — tüm yazmalar AktiviteLog::yaz ile; yenisi gerekirse buraya tek satır.
         'cagri_gorusme_sonucu'          => ['etiket' => 'Çağrı: görüşme sonucu', 'kategori' => HareketKategorisi::GUNCELLEME],
         'cagri_arama_baslat'            => ['etiket' => 'Çağrı başlatıldı', 'kategori' => HareketKategorisi::GONDERIM],
