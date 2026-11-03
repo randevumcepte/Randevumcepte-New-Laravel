@@ -93,3 +93,19 @@ Route::get('/v2/stok/{sube?}', function ($sube = null) {
 
     return view('v2.stok', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Musteri Yonetimi v2 — musteri listesi (Tumu/Sadik/Aktif/Pasif/Yeni sekmeleri) ve
+ | musteri detay (Genel, Randevular, Olcum, Satislar, Saglik) host sayfalari (ayni
+ | island deseni). Veri /api/v2/musteri/* (Bearer); yazmalar MUSTERI_V2_YAZMA_AKTIF
+ | kapaliyken 409 (UI toast gosterir).
+ */
+Route::get('/v2/musteriler/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.musteriler', ['salonId' => $salonId]);
+})->whereNumber('sube');
+
+Route::get('/v2/musteri/{musteri}', function ($musteri) {
+    return view('v2.musteri-detay', ['musteriId' => (int) $musteri, 'salonId' => (int) request('sube', 0)]);
+})->whereNumber('musteri');

@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\DB;
  * Turler: randevu_iptal, randevu_onay, dogrulama_kodu, kvkk_kodu, seans_kullanim,
  *         randevu_tasindi, google_takvim (payload: sync[] / sil[] rh id),
  *         personel_sifre (payload: personel_id, yeni_hesap), yetki_degisti,
- *         personel_pasif (payload: personel_id; randevu_id null).
+ *         personel_pasif (payload: personel_id; randevu_id null),
+ *         musteri_kayit (payload: user_id, yeni_hesap, cinsiyet_tahmin),
+ *         kara_liste_bildirim (payload: user_id).
  */
 class BildirimKuyrugu
 {

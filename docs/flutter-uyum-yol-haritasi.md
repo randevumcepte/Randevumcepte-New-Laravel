@@ -40,7 +40,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı var; randevu **listesi**, randevu-sonrası not, sesli randevu, grup dersi yok |
 | Satış / adisyon / tahsilat / alacak | ~30 | 🟡 | liste, adisyon, kalem, tahsilat, alacak var; taksit, senet, kupon/kampanya kodu, müşteri indirim türü yok |
 | Katalog (hizmet/ürün/paket listeleri) | ~8 | 🟡 | `GET /katalog` var; sayfalı yönetim listeleri ve CRUD yok |
-| Müşteri | ~15 | ❌ | liste/arama (Bearer'lı tek v1 grubu), ekle/güncelle, detay, kara liste, sağlık, ölçüm |
+| Müşteri | ~15 | 🟡 | liste+sayaç+seçici, detay, randevu notları, randevular, ekle/güncelle/sil, kara liste, sağlık, ölçüm var (yazma `MUSTERI_V2_YAZMA_AKTIF`); resimler, seanslar, toplu içe aktarma, anket/WhatsApp, harici tahsilat yok |
 | Kasa / masraf / gün sonu | ~8 | ❌ | |
 | Senet | ~5 | ❌ | |
 | Raporlar (satış/personel/müşteri listeleri) | ~8 | ❌ | |
@@ -129,6 +129,32 @@ v1'de düzeltilen açıklar: id'li uçlar (`urun-sil`, `kategori-sil`, `depo-sil
 ve transfer/manuel hareket mobilde yetkisizdi; stok önbelleği eşzamanlı yazımda kayıp veriyordu; sayım
 seçilen deponun değil ürünün toplam stoğuyla fark hesaplıyordu (web).
 
+## Müşteri — v1 → v2 eşlemesi
+
+Tüm uçlar `salon_id` ister; müşteri o salonun aktif portföyünde ve kullanıcının portföy kapsamında
+(`musteri.tum_portfoy_gor` yoksa yalnız kendi müşterileri) değilse 404. DTO = `MusteriDanisan.fromJson` üst kümesi
+(`id, name, cep_telefon, email, dogum_tarihi, cinsiyet, tc_kimlik_no, musteri_tipi, ozel_notlar, kayit_tarihi,
+randevu_sayisi, son_randevu_tarihi, odeme_sayisi, profil_resim` + `segment{kod,etiket}`, `kara_liste`, `toplam_odenen`).
+
+| v1 (Flutter) | v2 | Durum |
+|---|---|---|
+| `POST /musterilistegetir/{salon}?page {arama, durum}` | `GET /musteri?salon_id=&durum=0..4&ara=&page=` | ✅ `durum` aynı kodlar (+4 yeni eklenen); cevapta `sayilar` |
+| `GET /musteri_sayilari_getir/{salon}` | `GET /musteri/sayilar?salon_id=` (liste cevabında da `sayilar`) | ✅ aynı anahtarlar (int) + `yeni_musteriler` |
+| `GET /musteriler/{salon}?search&limit&offset` (lazy seçici) | `GET /musteri?ara=&per_page=&page=` veya `GET /musteri/ara?q=&limit=` | ✅ HTTP katmanı `offset/limit` → `page/per_page` |
+| `GET /musteriler/{salon}` (tam liste, 8+ ekran) | `GET /musteri/ara` (sunucu arama) | 🟡 tam liste dökümü bilinçli olarak yok (sayfalı/aramalı) |
+| `GET /kullaniciBilgiGetir/{id}`, `POST /musteritahsilat?userId=`, `GET /musteri-detay/{id}` | `GET /musteri/{id}?salon_id=` | ✅ tek uç; portföy alanları salona göre, `profil_resim` göreli |
+| `GET /musteri-randevulari/{id}` | `GET /musteri/{id}/randevu-notlari` | ✅ `{id, tarih, hizmetler[{hizmet_adi}], personel_notu, randevu_sonrasi_not}` sayfalı |
+| `POST /randevular?page {musteri_id…}` (müşteri sekmesi) | `GET /musteri/{id}/randevular` | ✅ `durum{kod,etiket,renk}`, `telafi`, `hizmetler[]`, `kaynaklar[]` |
+| `POST /satislar?page {musteriid…}` | `GET /satislar?musteri_id=` | ✅ (mevcut uç; `musteri.gecmis_satis_gor` istisnası) |
+| `POST /musteriekleguncelle/{salon}` (ekle) | `POST /musteri` | ✅ aynı alan adları; mükerrer telefon → 409 (v1 `status:'warning'`) |
+| `POST /musteriekleguncelle/{salon}` (`musteri_id` ile) | `PATCH /musteri/{id}` | ✅ maskeli telefon gelirse numara korunur |
+| `POST /musterisil {salonid, portfoy_id}` | `DELETE /musteri/{id}?salon_id=` | ✅ müşteri (user) id ile; soft delete |
+| `POST /musteri-karaliste-durum`, `/musteri-karaliste-ayari` | detayda `kara_liste`; `PATCH /musteri/{id}/kara-liste {kara_liste}` | ✅ bildirim outbox `kara_liste_bildirim` |
+| `POST /saglikbilgilerigir` | `PATCH /musteri/{id}/saglik` | ✅ + iki açıklama alanı (v1 düşürüyordu); sorular `GET /musteri/form-verisi` |
+| `POST /musteri-olcum-liste / -ekle / -sil` | `GET/POST /musteri/{id}/olcumler`, `DELETE /musteri/olcum/{id}` | ✅ VKİ sunucuda; `vki_sinif` dahil |
+| `POST /musteri-danisan-turunu-getir` (ham "1"/"2") | detayda `segment{kod,etiket}` | ✅ |
+| `POST /musteriresimleri`, `/musteriresimekle…`, `/check_phone`, `/anket-hizli-gonder`, WhatsApp uçları | — | ❌ sonraki faz |
+
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 
 - `personelekleduzenle` mola anahtarlarını (`mola1..7`) `calisiyor1..7`'den kopyalıyor → mola açık/kapalı fiilen yok sayılıyor. v2 doğru alanları kullanır.
@@ -145,5 +171,5 @@ seçilen deponun değil ürünün toplam stoğuyla fark hesaplıyordu (web).
 1. Personel Faz 3: prim / hak ediş / ödeme (Flutter `prim_hakedis`, `hakedislerim`, `personeldetay`).
 2. Randevu boşlukları: randevu listesi (`/randevular?page`), randevu-sonrası not, grup dersi.
 3. Satış boşlukları: taksit, senet, kupon/kampanya kodu, müşteri indirim türü.
-4. Müşteri → Kasa/Rapor → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
+4. Müşteri kalanları (resimler, seanslar, toplu içe aktarma) → Kasa/Rapor → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
 5. En son: Flutter HTTP katmanı geçişi (kullanıcı "geçiş" dediğinde).

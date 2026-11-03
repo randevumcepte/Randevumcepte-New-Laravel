@@ -105,8 +105,39 @@ async function yukle(salonId) {
   }
   const veri = govde.veri;
   const aktifSlug = document.body.dataset.aktif || '';
+  _kabukSalon = veri.salon?.id || null;
   menuCiz(veri.menu, aktifSlug);
   headerCiz(veri);
+}
+
+/* ───────────── Header müşteri araması (GET /musteri/ara → /v2/musteri/{id}) ───────────── */
+let _kabukSalon = null;
+function aramaBagla() {
+  const girdi = el('#rcAra');
+  if (!girdi) return;
+  const kutu = document.createElement('div');
+  kutu.className = 'rc-ara-sonuc';
+  kutu.hidden = true;
+  girdi.closest('.rc-ara').appendChild(kutu);
+  let zaman, no = 0;
+  const kapat = () => { kutu.hidden = true; };
+  girdi.addEventListener('input', () => {
+    clearTimeout(zaman);
+    const q = girdi.value.trim();
+    if (q.length < 2 || !_kabukSalon) { kapat(); return; }
+    zaman = setTimeout(async () => {
+      const benim = ++no;
+      const r = await api('GET', '/musteri/ara', { params: { salon_id: _kabukSalon, q, limit: 8 } });
+      if (benim !== no) return;
+      const liste = r.ok && r.govde?.basarili ? r.govde.veri : [];
+      kutu.innerHTML = liste.length
+        ? liste.map((m) => `<a href="/v2/musteri/${m.id}?sube=${_kabukSalon}"><b>${esc(m.ad)}</b><small>${esc(m.telefon || '')}</small></a>`).join('')
+        : `<div class="rc-ara-bos">${esc(r.govde && !r.govde.basarili ? (r.govde.mesaj || 'Sonuç yok') : 'Sonuç yok')}</div>`;
+      kutu.hidden = false;
+    }, 300);
+  });
+  girdi.addEventListener('keydown', (e) => { if (e.key === 'Escape') kapat(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.rc-ara')) kapat(); });
 }
 
 /* ───────────── Sidebar aç/kapa (masaüstü daralt + mobil çekmece) ───────────── */
@@ -183,4 +214,5 @@ window.rcPanel = {
 };
 
 etkilesimBagla();
+aramaBagla();
 yukle(null); // önce varsayılan salon; sayfa isterse salonAyarla ile tazeler

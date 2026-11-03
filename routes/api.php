@@ -161,6 +161,9 @@ Route::prefix('v2')->group(function () {
         // STOK YONETIMI (urun, tanim, hareket, alis, transfer, sayim, hizli satis) — routes/v2/stok.php
         require __DIR__.'/v2/stok.php';
 
+        // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
+        require __DIR__.'/v2/musteri.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim

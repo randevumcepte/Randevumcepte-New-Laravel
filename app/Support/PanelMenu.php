@@ -63,7 +63,7 @@ class PanelMenu
             ['etiket' => 'Raporlar',           'ikon' => 'bi bi-pie-chart',        'slug' => 'raporlar',          'pageindex' => 43,  'yetki' => 'rapor.satis'],
 
             // ───────────── Müşteri & Ekip
-            ['etiket' => 'Müşteriler',         'ikon' => 'bi bi-people',           'slug' => 'musteriler',        'pageindex' => 10,  'yetki' => 'musteri.liste_gor', 'bolum' => 'Müşteri & Ekip'],
+            ['etiket' => 'Müşteriler',         'ikon' => 'bi bi-people',           'slug' => 'musteriler',        'v2_rota' => '/v2/musteriler', 'pageindex' => 10,  'yetki' => 'musteri.liste_gor', 'bolum' => 'Müşteri & Ekip'],
             ['etiket' => 'Personeller',        'ikon' => 'bi bi-person-lines-fill','slug' => 'personel-yonetimi', 'v2_rota' => '/v2/personel', 'pageindex' => 5,   'yetki' => 'personel.liste_gor'],
 
             // ───────────── Pazarlama

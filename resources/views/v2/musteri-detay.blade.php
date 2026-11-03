@@ -1,0 +1,20 @@
+@extends('layout.panel')
+
+@section('baslik', 'Müşteri Detayı')
+@section('aktif', 'musteriler')
+
+@push('stil')
+    <link rel="stylesheet" href="/css/musteri-v2.css?v=1">
+@endpush
+
+@section('icerik')
+    {{-- Island build gerektirmez; /js/musteri-detay-v2.js statik servis edilir (public/).
+         Sekme #hash ile acilir (#randevular, #satislar, #saglik, #olcum).
+         data-eski-panel: profil resmi gibi goreli dosya yollari eski panel host'unda. --}}
+    <div id="rc-musteri-detay" data-musteri="{{ $musteriId }}" data-salon="{{ $salonId }}"
+         data-eski-panel="{{ rtrim(config('panel.eski_panel_url', ''), '/') }}"></div>
+@endsection
+
+@push('betik')
+    <script type="module" src="/js/musteri-detay-v2.js?v=1"></script>
+@endpush

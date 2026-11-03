@@ -138,6 +138,13 @@ html, body { margin: 0; padding: 0; }
   width: 300px; max-width: 34vw; color: #8a90ad;
 }
 .rc-ara input { border: 0; background: transparent; outline: none; width: 100%; font-size: 14px; color: var(--rc-metin); }
+.rc-ara { position: relative; }
+.rc-ara-sonuc { position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 260px; background: #fff; border: 1px solid var(--rc-cizgi); border-radius: 12px; box-shadow: var(--rc-golge-2, 0 12px 30px rgba(0,0,0,.12)); padding: 6px; z-index: 50; max-height: 360px; overflow-y: auto; }
+.rc-ara-sonuc a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: var(--rc-metin); text-decoration: none; font-size: 14px; }
+.rc-ara-sonuc a:hover { background: #f5eefe; }
+.rc-ara-sonuc small { margin-left: auto; color: #9191a3; font-size: 12.5px; white-space: nowrap; }
+.rc-ara-bos { padding: 10px; color: #9191a3; font-size: 13px; }
+@media (prefers-color-scheme: dark) { .rc-ara-sonuc { background: #22222e; } .rc-ara-sonuc a:hover { background: #2d2340; } }
 
 .rc-sube-sec select, .rc-sube-sec .rs-btn {
   height: 42px; border: 1px solid var(--rc-cizgi); border-radius: 12px;
