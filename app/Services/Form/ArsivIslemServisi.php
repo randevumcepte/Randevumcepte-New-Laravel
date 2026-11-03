@@ -14,6 +14,7 @@ use App\Models\FormTaslaklari;
 use App\Models\Personeller;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
+use App\Support\DosyaYukleme;
 use App\Support\EskiPanelLinki;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Http\UploadedFile;
@@ -344,22 +345,7 @@ class ArsivIslemServisi
 
     private function dosyaKaydet(?UploadedFile $dosya): string
     {
-        if (! $dosya || ! $dosya->isValid()) {
-            throw new GecersizIslemException('Yüklenecek dosyayı seçiniz.');
-        }
-        $uzanti = strtolower($dosya->getClientOriginalExtension());
-        if (! in_array($uzanti, (array) config('form.harici_uzantilar'), true)) {
-            throw new GecersizIslemException('Desteklenmeyen dosya türü. İzinli: '.implode(', ', (array) config('form.harici_uzantilar')));
-        }
-        if ($dosya->getSize() > (int) config('form.harici_maks_kb') * 1024) {
-            throw new GecersizIslemException('Dosya en fazla '.((int) config('form.harici_maks_kb') / 1024).' MB olabilir.');
-        }
-        $kok = pathinfo($dosya->getClientOriginalName(), PATHINFO_FILENAME);
-        $kok = trim(preg_replace('/[^A-Za-z0-9_-]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $kok) ?: 'belge'), '-') ?: 'belge';
-        $ad = mb_substr($kok, 0, 60).'-'.bin2hex(random_bytes(6)).'.'.$uzanti;
-
-        $dosya->move((string) config('form.harici_dizin'), $ad);
-
-        return 'public/formlar/'.$ad;
+        return 'public/formlar/'.DosyaYukleme::kaydet($dosya, (string) config('form.harici_dizin'),
+            (array) config('form.harici_uzantilar'), (int) config('form.harici_maks_kb'), 'belge');
     }
 }

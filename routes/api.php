@@ -170,6 +170,9 @@ Route::prefix('v2')->group(function () {
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 
+        // AYARLAR (isletme bilgileri, logo/galeri, calisma saatleri, randevu + online saatler, indirim, tema) — routes/v2/ayar.php
+        require __DIR__.'/v2/ayar.php';
+
         // SEANS TAKIBI (liste + seans ekle/durum + lazer cihaz bilgisi) — routes/v2/seans.php
         require __DIR__.'/v2/seans.php';
 

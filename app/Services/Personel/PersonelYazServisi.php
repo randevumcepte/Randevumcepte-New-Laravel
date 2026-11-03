@@ -7,11 +7,10 @@ use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Models\IsletmeYetkilileri;
 use App\Models\Personeller;
-use App\Models\PersonelCalismaSaatleri;
-use App\Models\PersonelMolaSaatleri;
 use App\Models\PersonelPrimOrani;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
+use App\Support\HaftalikSaatDeposu;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -266,29 +265,10 @@ class PersonelYazServisi
     private function saatleriYaz(int $personelId, array $calisma, array $mola): void
     {
         if (! empty($calisma)) {
-            PersonelCalismaSaatleri::where('personel_id', $personelId)->delete();
-            foreach ($calisma as $gun) {
-                PersonelCalismaSaatleri::create([
-                    'personel_id'     => $personelId,
-                    'haftanin_gunu'   => (int) ($gun['haftanin_gunu'] ?? 0),
-                    'calisiyor'       => (int) ($gun['calisiyor'] ?? 0),
-                    'baslangic_saati' => $gun['baslangic_saati'] ?? null,
-                    'bitis_saati'     => $gun['bitis_saati'] ?? null,
-                ]);
-            }
+            HaftalikSaatDeposu::yaz('personel', $personelId, HaftalikSaatDeposu::CALISMA, $calisma);
         }
-
         if (! empty($mola)) {
-            PersonelMolaSaatleri::where('personel_id', $personelId)->delete();
-            foreach ($mola as $gun) {
-                PersonelMolaSaatleri::create([
-                    'personel_id'     => $personelId,
-                    'haftanin_gunu'   => (int) ($gun['haftanin_gunu'] ?? 0),
-                    'mola_var'        => (int) ($gun['mola_var'] ?? 0),
-                    'baslangic_saati' => $gun['baslangic_saati'] ?? null,
-                    'bitis_saati'     => $gun['bitis_saati'] ?? null,
-                ]);
-            }
+            HaftalikSaatDeposu::yaz('personel', $personelId, HaftalikSaatDeposu::MOLA, $mola);
         }
     }
 

@@ -47,7 +47,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Seans takibi | ~4 | 🟡 | liste + kartlar + seans ekle/durum + lazer cihaz bilgisi var (yazma `SEANS_V2_YAZMA_AKTIF`); dökümü PDF eski panelde, müşteri paneli (`musteriMi`) v1'de |
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
-| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | ❌ | |
+| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Cihaz, oda, hizmet, şube, Google entegrasyonu yok (Faz 2-3) |
 | Öngörüşme | ~6 | ❌ | |
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
@@ -197,6 +197,28 @@ listesi, sekmeler ve buton yetkileri `GET /rapor/secenekler?ekran=satis|isletme|
 | `POST /devredenAylar` {salonId, yil} (ay sonu günü düşüyordu) | `GET /kasa/aylik?yil=` | ✅ `aylar[{ay, ay_adi, gelir, gider, net}]` (v1 `tahsilatlar/masraflar/donem_net_kar`) |
 | `POST /masrafekleduzenle/{salon}`, `/masrafsil/{salon}`, `GET /masrafkategorileri` | `POST /masraf`, `PATCH/DELETE /masraf/{id}`, `GET /masraf/form-verisi` | ✅ salon kapsamlı; tutar sayı |
 | (Flutter'da yok) | `POST /kasa/para-giris`, `POST /kasa/para-cikis/onay-kodu`, `POST /kasa/para-cikis`, `DELETE /kasa/gelir/{id}` | ✅ web Para Ekle / Çek / sil |
+
+## Ayarlar — v1 → v2 eşlemesi
+
+Ekran sekmeleri (ve hangisinin açık olduğu) `GET /ayar/ozet?salon_id=` → `{salon_adi, demo_hesabi, tema_duzenleyebilir, sekmeler[{kod, ad, ikon, v2, eski_url}]}`. Flutter `ayarlar.dart`'taki `Yetki.varMi` kart koşulları bu listeyle aynı eşlemedir (sunucuda tek yer: `AyarSozluk::SEKMELER`). v1'deki bu uçların neredeyse hiçbiri Bearer göndermiyordu; v2'de kimlik + kapsam + sekme yetkisi zorunlu.
+
+| v1 (Flutter bugün) | v2 | Not |
+|---|---|---|
+| `POST /salonlar {salon_id}` (ham salon satırı) | `GET /ayar/isletme?salon_id=` | aynı kolon adları (`salon_adi, adres, telefon_1, whatsapp, aciklama, instagram_sayfa, facebook_sayfa, vergi_*, kdv_orani, domain, logo, salon_turu_id`) + `logo_url`, `site_url`, `anahtar_kelimeler[]`, `galeri`, `secenekler.salon_turleri` |
+| `GET /salonturleri` | `GET /ayar/isletme` → `secenekler.salon_turleri[{id, ad}]` | |
+| `POST /isletmebilgiguncelle` (`isletme_adi`, `isletme_telefon`, `vergi_tc_no`…) | `PATCH /ayar/isletme` | eski adlar da kabul edilir; **kısmi** — gönderilmeyen alan değişmez; SEO `meta_description` + `anahtar_kelimeler[]` (v1'de yoktu) |
+| `POST /isletmelogoyukle` multipart `isletmelogo` | `POST /ayar/isletme/logo` multipart `logo` (veya `isletmelogo`) | cevap `{logo, logo_url}` |
+| (yok — yalnız web) | `GET/POST /ayar/isletme/gorseller`, `DELETE /ayar/isletme/gorseller/{id}` | galeri en fazla 12; silme salon kapsamında (eskide yetkisizdi) |
+| `GET /salonsaatleri/{id}` + `GET /salonmolasaatleri/{id}` | `GET /ayar/calisma-saatleri?salon_id=` | tek liste, 7 gün: `{haftanin_gunu, gun_adi, calisiyor, baslangic_saati, bitis_saati, mola_var, mola_baslangic_saati, mola_bitis_saati}` (IsletmeCalismaSaatleri alanları korunur) |
+| `GET /calisma_saati_guncelle_ekle/{id}?calisiyor1..7&calismasaatibaslangic1..7&calismasaatibisis1..7` + `mola_saati_guncelle_ekle` | `PUT /ayar/calisma-saatleri {salon_id, gunler[7]}` | çalışma + mola tek istekte; bitiş ≤ başlangıç → 422 |
+| `POST /randevuayarguncelle` | `PATCH /ayar/randevu` | **kısmi**; + `studyo_modu`, takvim renk alanları; `GET /ayar/randevu` seçenekleri (aralıklar, takvim türleri, palet) verir |
+| `GET /takvimRenkGet/{id}` / `POST /takvimRenkSet/{id} {aktif, renk}` | `GET /ayar/randevu` (`takvim_tek_renk_aktif`, `takvim_tek_renk`, `secenekler.palet`) / `PATCH /ayar/randevu` | `{aktif, renk}` eski adları da kabul edilir |
+| `GET /online_randevu_saatleri/{id}` | `GET /ayar/online-saatler?salon_id=` | v1 ile aynı anahtarlar (`kisitlama_aktif` artık bool) + `secenekler.istisna_tipleri` |
+| `POST /online_randevu_saatleri_guncelle` | `PUT /ayar/online-saatler` | aynı gövde (`gunler {"1":[slot]}`, `istisnalar[]`) |
+| `POST /musteriindirim_kaydet` | `GET/PUT /ayar/musteri-indirimleri` | `{sadik:{acik, yuzde}, aktif:{acik, yuzde}}`; eski form adları da kabul edilir |
+| `GET /salonTemaGet/{id}` / `POST /salonTemaSet/{id}` | `GET /ayar/tema` / `PUT /ayar/tema` | aynı `{config, seed}`; yazma rol 1-3 (Flutter `canEditServer`) sunucuda zorunlu; `duzenleyebilir` bayrağı döner |
+
+Henüz taşınmayan Ayarlar sekmeleri (v1'de kalır): cihazlar (`cihazgetir`, `cihazekle`…), odalar (`odagetir`, `odaekleduzenle`…), hizmetler (`hizmet_liste_getir`, `hizmetekleduzenle`…), şubeler, Google takvim. Eski web hataları v2'ye taşınmayacak: cihaz saatleri hep "çalışmıyor" kaydediliyordu (alan adı uyuşmazlığı), şube aktif/pasif `subeler` tablosuna salon id'siyle yazıyordu, oda silme sıra kaydırması salon sınırı tanımıyordu.
 
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 

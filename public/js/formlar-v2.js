@@ -12,7 +12,8 @@
  * kapalıyken 409 döner (toast).
  */
 
-import { qp, api, el, esc, mesaj, onay, yazSonuc, BASE, token } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { apiForm } from '/js/lib/v2-dosya.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=1';
@@ -46,17 +47,6 @@ const tlOku = (s) => {
   const n = Number(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v);
   return isNaN(n) ? null : n;
 };
-
-/** Çok parçalı (dosyalı) POST — api() yalnız JSON gönderir. */
-async function apiForm(yol, formData) {
-  const r = await fetch(BASE + yol, {
-    method: 'POST', cache: 'no-store', body: formData,
-    headers: { Accept: 'application/json', Authorization: 'Bearer ' + token() },
-  });
-  let govde = null;
-  try { govde = await r.json(); } catch (_) { govde = null; }
-  return { ok: r.ok, kod: r.status, govde };
-}
 
 // ─────────────────────────── İSKELET ───────────────────────────
 

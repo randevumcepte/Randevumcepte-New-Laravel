@@ -133,3 +133,13 @@ Route::get('/v2/seans-takibi/{sube?}', function ($sube = null) {
 
     return view('v2.seans-takibi', ['salonId' => $salonId]);
 })->whereNumber('sube');
+/*
+ | Ayarlar v2 — Isletme Bilgileri (logo, galeri, SEO), Calisma Saatleri, Randevu Ayarlari,
+ | Online Randevu Saatleri, Musteri Indirimleri host sayfasi (ayni island deseni). Sekme
+ | listesi /api/v2/ayar/ozet'ten; henuz tasinmamis sekmeler eski panele link verir.
+ | Yazmalar AYAR_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
+ */
+Route::get('/v2/ayarlar/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+    return view('v2.ayarlar', ['salonId' => $salonId]);
+})->whereNumber('sube');

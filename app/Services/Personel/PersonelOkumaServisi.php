@@ -3,9 +3,8 @@
 namespace App\Services\Personel;
 
 use App\Exceptions\BulunamadiException;
-use App\Models\PersonelCalismaSaatleri;
-use App\Models\PersonelMolaSaatleri;
 use App\Models\PersonelPrimOrani;
+use App\Support\HaftalikSaatDeposu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -138,33 +137,13 @@ class PersonelOkumaServisi
     /** Personelin haftalik calisma saatleri (7 gun). */
     public function calismaSaatleri(int $personelId): array
     {
-        return PersonelCalismaSaatleri::where('personel_id', $personelId)
-            ->orderBy('haftanin_gunu')
-            ->get()
-            ->map(fn ($s) => [
-                'id'               => (int) $s->id,
-                'haftanin_gunu'    => (int) $s->haftanin_gunu,
-                'calisiyor'        => (int) $s->calisiyor,
-                'baslangic_saati'  => $s->baslangic_saati,
-                'bitis_saati'      => $s->bitis_saati,
-            ])
-            ->all();
+        return HaftalikSaatDeposu::oku('personel', $personelId, HaftalikSaatDeposu::CALISMA);
     }
 
     /** Personelin haftalik mola (ogle arasi) saatleri (7 gun). */
     public function molaSaatleri(int $personelId): array
     {
-        return PersonelMolaSaatleri::where('personel_id', $personelId)
-            ->orderBy('haftanin_gunu')
-            ->get()
-            ->map(fn ($s) => [
-                'id'               => (int) $s->id,
-                'haftanin_gunu'    => (int) $s->haftanin_gunu,
-                'mola_var'         => (int) $s->mola_var,
-                'baslangic_saati'  => $s->baslangic_saati,
-                'bitis_saati'      => $s->bitis_saati,
-            ])
-            ->all();
+        return HaftalikSaatDeposu::oku('personel', $personelId, HaftalikSaatDeposu::MOLA);
     }
 
     /**
