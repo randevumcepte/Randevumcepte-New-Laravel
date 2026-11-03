@@ -157,3 +157,10 @@ Route::get('/v2/ayarlar/{sube?}', function ($sube = null) {
     $salonId = (int) ($sube ?: request('sube', 0));
     return view('v2.ayarlar', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Bildirim Reklamlari v2 — reklam kartlari + olustur/duzenle + yayinla/duraklat/sil + push gonder; veri
+ | /api/v2/bildirim-reklam/* (Bearer); yazmalar BILDIRIM_REKLAM_V2_YAZMA_AKTIF kapaliyken 409.
+ */
+Route::get('/v2/bildirim-reklamlari/{sube?}', fn ($sube = null) => view('v2.bildirim-reklamlari', ['salonId' => (int) ($sube ?: request('sube', 0))]))
+    ->whereNumber('sube');

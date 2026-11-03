@@ -51,6 +51,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Öngörüşme | ~6 | ✅ | `/ongorusme/*` — liste+sayaç, detay, form verisi, ekle/düzenle (çakışma), satış yapıldı/yapılmadı; v1 alan adları kabul; eşleme docs/strangler-ongorusme.md; yazma `ONGORUSME_V2_YAZMA_AKTIF` |
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
+| Bildirim reklamları (yönetici + müşteri uygulaması) | 12 | ✅ | `/bildirim-reklam/*` (liste+sayaç, form verisi, kaydet, durum, sil, görsel base64/multipart, alıcı sayısı, push gönder → outbox) + `/musteri-uygulama/reklamlar*` (`auth:api`); v1 alan adları aynı; eşleme docs/strangler-bildirim-reklam.md; yazma `BILDIRIM_REKLAM_V2_YAZMA_AKTIF` |
 | SMS / WhatsApp | ~20 | ❌ | |
 | E-asistan (Asistanım) | 2 | ✅ | `/asistan/*` — eşleme aşağıda |
 | Dashboard / hatırlatma / bildirim | ~13 | ◐ | Özet `GET /ozet/acilis`, `/ozet/kart/{kod}`, `/ozet/sekme/{kod}` ✅ (v1 `dashboard` + `dashboardKarsilastirma`; eşleme docs/strangler-ozet.md) — bildirim, hatırlatma, `easistandatadashboard`, boş saat kampanyası henüz v1 |

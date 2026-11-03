@@ -1,0 +1,95 @@
+/* v2 Bildirim Reklamları (public/js/bildirim-reklamlari-v2.js) — .br-* önekli; eski ekranın
+   kart / chip / kutu tasarımı. Ortak: başlık / buton / sekme / modal / alan v2-bilesen.css + panel.css (.rc-*). */
+
+.br-kabuk { padding: 6px 2px 40px; }
+
+.br-hero { display: flex; gap: 16px; align-items: center; background: linear-gradient(135deg, #7c3aed, #9d5dc8); color: #fff;
+  border-radius: 16px; padding: 20px 22px; margin-bottom: 18px; }
+.br-hero-ikon { font-size: 38px; flex: 0 0 auto; }
+.br-hero h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: #fff; }
+.br-hero p { margin: 0; font-size: 13px; opacity: .95; line-height: 1.55; }
+
+.br-arac { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.br-arac .rc-sekmeler { margin-bottom: 10px; }
+.br-ara { position: relative; min-width: 240px; margin-bottom: 10px; }
+.br-ara i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9191a3; }
+.br-ara input { width: 100%; border: 1px solid #e2e2ee; border-radius: 11px; padding: 10px 12px 10px 34px; font-size: 14px; background: #fff; color: inherit; }
+
+/* kartlar */
+.br-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.br-kart { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(15, 23, 42, .06); overflow: hidden; display: flex; flex-direction: column; }
+.br-kart-gorsel { position: relative; height: 140px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.br-kart-gorsel img { width: 100%; height: 100%; object-fit: cover; }
+.br-kart-gorsel > i { font-size: 34px; }
+.br-durum { position: absolute; top: 10px; right: 10px; color: #fff; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; }
+.br-gonderildi { position: absolute; top: 10px; left: 10px; background: rgba(255, 255, 255, .92); color: #16a34a; border-radius: 20px; padding: 2px 8px; font-size: 13px; }
+.br-kart-govde { padding: 14px 16px; flex: 1; }
+.br-tur { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; margin-bottom: 8px; }
+.br-kart-govde h4 { font-size: 15px; margin: 0 0 6px; font-weight: 800; color: #1e293b; }
+.br-kart-govde p { font-size: 13px; color: #64748b; margin: 0 0 10px; min-height: 18px; }
+.br-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #475569; }
+.br-meta i { color: #7c3aed; margin-right: 3px; }
+.br-adet { margin-top: 8px; font-size: 12px; color: #0ea5e9; font-weight: 700; }
+.br-kart-aksiyon { display: flex; border-top: 1px solid #f1f5f9; }
+.br-a { flex: 1; border: 0; background: transparent; padding: 10px 0; color: #64748b; cursor: pointer; font-size: 15px; transition: .15s; }
+.br-a:hover { background: #f8fafc; color: #7c3aed; }
+.br-a.br-sil:hover { color: #dc2626; }
+
+.br-bos { grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: #64748b; background: #fff; border-radius: 14px; }
+.br-bos-ikon { font-size: 52px; }
+.br-bos p { margin: 12px 0 16px; font-size: 15px; }
+
+/* form */
+.br-form { display: flex; flex-direction: column; gap: 14px; }
+.br-form [hidden] { display: none !important; }
+.br-ikili { display: grid; grid-template-columns: 7fr 5fr; gap: 16px; }
+.br-sol { display: flex; flex-direction: column; gap: 14px; }
+.br-yukle { height: 130px; border: 2px dashed #cbd5e1; border-radius: 14px; display: flex; align-items: center; justify-content: center; text-align: center;
+  color: #94a3b8; overflow: hidden; background: #f8fafc; cursor: pointer; transition: .15s; }
+.br-yukle:hover { border-color: #a78bfa; background: #faf7ff; }
+.br-yukle img { width: 100%; height: 100%; object-fit: cover; }
+.br-yukle i { font-size: 26px; display: block; }
+
+.br-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.br-chip { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: 14px; border: 1.5px solid #e5e7eb; border-radius: 14px;
+  cursor: pointer; background: #fff; margin: 0; transition: .15s; }
+.br-chip:hover { border-color: #c4b5fd; }
+.br-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.br-chip > i { font-size: 18px; color: #94a3b8; margin-bottom: 5px; }
+.br-chip b { font-size: 13px; color: #334155; }
+.br-chip small { font-size: 11px; color: #94a3b8; }
+.br-chip-tik { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; border-radius: 50%; background: #e5e7eb; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.br-chip:has(input:checked) { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 4px 12px rgba(124, 58, 237, .12); }
+.br-chip:has(input:checked) > i { color: #7c3aed; }
+.br-chip:has(input:checked) .br-chip-tik { background: #7c3aed; }
+
+.br-kutu { border-radius: 14px; padding: 15px 16px; border: 1.5px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; }
+.br-kupon { background: #faf5ff; border-color: #ede9fe; }
+.br-randevu { background: #f0f9ff; border-color: #bae6fd; }
+.br-kutu-baslik { font-weight: 800; color: #7c3aed; font-size: 13.5px; }
+.br-randevu .br-kutu-baslik, .br-randevu .br-ipucu { color: #0ea5e9; }
+.br-ipucu { display: block; color: #7c3aed; font-size: 11.5px; line-height: 1.45; }
+.br-randevu-not { color: #0ea5e9; }
+
+@media (max-width: 720px) {
+  .br-ikili { grid-template-columns: 1fr; }
+  .br-chips { grid-template-columns: 1fr; }
+  .br-ara { min-width: 0; flex: 1; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .br-kart, .br-bos { background: #1f1f2b; box-shadow: none; border: 1px solid #2e2e40; }
+  .br-kart-govde h4 { color: #f0ecff; }
+  .br-kart-govde p, .br-meta { color: #a8a8bd; }
+  .br-kart-aksiyon { border-color: #2e2e40; }
+  .br-a:hover { background: #2a2a3a; }
+  .br-ara input { background: #1b1b26; border-color: #34344c; }
+  .br-chip { background: #1b1b26; border-color: #34344c; }
+  .br-chip b { color: #e5e5f0; }
+  .br-chip:has(input:checked) { background: #2d2340; }
+  .br-yukle { background: #1b1b26; border-color: #34344c; }
+  .br-kutu { background: #1b1b26; border-color: #34344c; }
+  .br-kupon { background: #241b35; border-color: #3b2d57; }
+  .br-randevu { background: #14232f; border-color: #1f3a4d; }
+}

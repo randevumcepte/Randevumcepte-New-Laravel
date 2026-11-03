@@ -182,6 +182,9 @@ Route::prefix('v2')->group(function () {
         // PAKET YONETIMI (paket tanimi liste/ekle/duzenle/sil + secili paketleri sat) — routes/v2/paket.php
         require __DIR__.'/v2/paket.php';
 
+        // BILDIRIM REKLAMLARI (yonetim: liste/form/kaydet/durum/sil/gorsel + push gonder outbox) — routes/v2/bildirim-reklam.php
+        require __DIR__.'/v2/bildirim-reklam.php';
+
         // ON GORUSME (liste + ekle/duzenle + satis yapildi / yapilmadi) — routes/v2/ongorusme.php
         require __DIR__.'/v2/ongorusme.php';
 
@@ -252,6 +255,14 @@ Route::prefix('v2')->group(function () {
         Route::get('/santral/ayarlar', [SantralController::class, 'ayarlar']);
         Route::put('/santral/ayarlar/hatirlatma', [SantralController::class, 'hatirlatmaKaydet']);
         Route::put('/santral/ayarlar/ozel-menu', [SantralController::class, 'ozelMenuKaydet']);
+    });
+
+    /*
+     | MUSTERI UYGULAMASI — musteri (users) token'i ZORUNLU ('auth:api', legacy-passport).
+     | Kimlik token'dan; govdedeki user_id kullanilmaz. Isletme token'i bu gruba giremez.
+     */
+    Route::middleware('auth:api')->group(function () {
+        require __DIR__.'/v2/musteri-uygulama.php';
     });
 
 });

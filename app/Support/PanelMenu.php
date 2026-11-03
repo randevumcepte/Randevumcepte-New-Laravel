@@ -67,7 +67,7 @@ class PanelMenu
 
             // ───────────── Pazarlama
             ['etiket' => 'Memnuniyet Anketi',  'ikon' => 'bi bi-chat-dots',        'slug' => 'anket-sonuclari',   'pageindex' => 80,  'yetki' => 'pazarlama.anket_yonet', 'bolum' => 'Pazarlama'],
-            ['etiket' => 'Bildirim Reklamları','ikon' => 'bi bi-megaphone',        'slug' => 'bildirim-reklamlari','pageindex' => 81, 'yetki' => 'pazarlama.kampanya_yonet'],
+            ['etiket' => 'Bildirim Reklamları','ikon' => 'bi bi-megaphone',        'slug' => 'bildirim-reklamlari', 'v2_rota' => '/v2/bildirim-reklamlari', 'pageindex' => 81, 'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Reklam Yönetimi',    'ikon' => 'bi bi-cash-coin',        'slug' => 'kampanya_yonetimi', 'pageindex' => 82,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Etkinlikler',        'ikon' => 'bi bi-text-left',        'slug' => 'etkinlik',          'pageindex' => 83,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],

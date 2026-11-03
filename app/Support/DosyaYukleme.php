@@ -47,6 +47,43 @@ final class DosyaYukleme
     }
 
     /**
+     * Base64 gorsel ("data:image/png;base64,..." ya da ciplak base64) kaydetme — eski mobil
+     * istemcilerin (Flutter v1 reklam gorseli) gonderdigi bicim. Icerik GERCEKTEN gorsel olmali
+     * (getimagesizefromstring); uzanti MIME'dan belirlenir, istemcinin beyanina guvenilmez.
+     *
+     * @param  list<string>  $uzantilar
+     * @return string Kaydedilen dosya adi (dizin haric)
+     *
+     * @throws GecersizIslemException
+     */
+    public static function base64GorselKaydet(string $veri, string $dizin, array $uzantilar, int $maksKb, string $kok = 'gorsel'): string
+    {
+        $ham = base64_decode(preg_replace('#^data:[^;,]+;base64,#', '', trim($veri)), true);
+        if ($ham === false || $ham === '') {
+            throw new GecersizIslemException('Görsel çözülemedi.');
+        }
+        if (strlen($ham) > $maksKb * 1024) {
+            throw new GecersizIslemException('Dosya en fazla '.round($maksKb / 1024, 1).' MB olabilir.');
+        }
+        $bilgi = @getimagesizefromstring($ham);
+        $uzanti = match ($bilgi[2] ?? null) {
+            IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp', IMAGETYPE_GIF => 'gif', default => null,
+        };
+        if (! $uzanti || ! in_array($uzanti, $uzantilar, true)) {
+            throw new GecersizIslemException('Desteklenmeyen dosya türü. İzinli: '.implode(', ', $uzantilar));
+        }
+        if (! is_dir($dizin)) {
+            @mkdir($dizin, 0755, true);
+        }
+        $ad = $kok.'-'.bin2hex(random_bytes(6)).'.'.$uzanti;
+        if (file_put_contents(rtrim($dizin, '/').'/'.$ad, $ham) === false) {
+            throw new GecersizIslemException('Görsel kaydedilemedi.');
+        }
+
+        return $ad;
+    }
+
+    /**
      * Gorseli en-boy oranini koruyarak $yukseklik px'e kucultur (eski Intervention
      * resize(null, 720) karsiligi). GD yoksa / gorsel zaten kucukse / okunamazsa
      * dosyaya dokunmaz — yukleme asla bu adim yuzunden basarisiz olmaz.
