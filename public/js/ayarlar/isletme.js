@@ -5,7 +5,7 @@
  * Logo ve görseller seçildiği an yüklenir (eski davranış); metin alanları "Kaydet" ile.
  */
 import { esc, mesaj, onay, api, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
-import { apiForm } from '/js/lib/v2-dosya.js?v=1';
+import { apiForm } from '/js/lib/v2-dosya.js?v=2';
 import { yukle, kaydet, kart, alan, secim, kaydetCubugu, gonderBagla, deger } from '/js/ayarlar/ortak.js?v=4';
 
 const METIN_ALANLARI = ['salon_adi', 'salon_turu_id', 'adres', 'telefon_1', 'whatsapp', 'aciklama', 'instagram_sayfa',

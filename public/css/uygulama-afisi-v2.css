@@ -1,0 +1,43 @@
+/* v2 Uygulama İndirme Afişi (public/js/uygulama-afisi-v2.js) — .ua-* önekli.
+   Ortak: başlık / buton / rozet / spinner v2-bilesen.css + panel.css (.rc-*). */
+
+.ua-kabuk { padding: 6px 2px 40px; }
+
+.ua-kart { background: var(--rc-kart); border: 1px solid var(--rc-cizgi); border-radius: 18px; box-shadow: var(--rc-golge);
+  padding: 22px 24px; margin-bottom: 20px; color: var(--rc-metin); }
+.ua-kart h3 { font-size: 17px; font-weight: 800; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ua-kart p { color: var(--rc-sol); line-height: 1.7; margin: 0 0 16px; font-size: 14px; }
+
+.ua-afis { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+.ua-bilgi { flex: 1; min-width: 280px; }
+
+.ua-adim { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 14px; }
+.ua-no { flex: 0 0 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px;
+  background: var(--rc-t-mor); color: var(--rc-mor); }
+.ua-indir { margin-top: 8px; padding: 13px 26px; font-size: 15px; }
+
+.ua-onizleme { flex: 0 0 340px; max-width: 100%; min-height: 200px; display: grid; place-items: center; }
+.ua-onizleme img { width: 100%; display: block; border-radius: 14px; border: 1px solid var(--rc-cizgi); box-shadow: var(--rc-golge-2); }
+
+.ua-uyari { display: flex; gap: 14px; align-items: flex-start; background: var(--rc-t-turuncu); color: #9a3412;
+  border: 1px solid #fed7aa; border-radius: 14px; padding: 18px 20px; font-size: 14px; line-height: 1.6; }
+.ua-uyari > i { font-size: 22px; color: var(--rc-t-turuncu-ink); line-height: 1; }
+.ua-uyari b { display: block; margin-bottom: 4px; }
+
+.ua-link { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.ua-link input { flex: 1; min-width: 240px; border: 1px solid #e2e2ee; border-radius: 11px; padding: 11px 14px; font-size: 14px;
+  background: #faf8fd; color: inherit; }
+.ua-link a.rc-btn { text-decoration: none; }
+
+.ua-hata { color: #c0392b; font-size: 14px; }
+
+@media (max-width: 560px) {
+  .ua-kart { padding: 18px 16px; }
+  .ua-onizleme { flex-basis: 100%; }
+  .ua-link .rc-btn { flex: 1; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .ua-uyari { background: #3a2a1c; color: #fcd9b6; border-color: #5c3d22; }
+  .ua-link input { background: #1b1b26; border-color: #34344c; color: #ededf5; }
+}
