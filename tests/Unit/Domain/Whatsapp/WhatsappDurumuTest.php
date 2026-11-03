@@ -50,4 +50,12 @@ class WhatsappDurumuTest extends TestCase
         $d = WhatsappDurumu::salondan($this->salon(['whatsapp_durum' => 'disconnected', 'whatsapp_kontor' => 50]), '2026-11-03')->dizi();
         $this->assertSame(['bagli' => false, 'numara' => null, 'kontor' => null, 'kontor_kritik' => false], $d);
     }
+
+    public function test_paylasilan_oturum_salonu(): void
+    {
+        $this->assertSame(246, WhatsappDurumu::oturumSalonId(416, 246));   // paylaşılan → üst salon
+        $this->assertSame(416, WhatsappDurumu::oturumSalonId(416, null));
+        $this->assertSame(416, WhatsappDurumu::oturumSalonId(416, 0));
+        $this->assertSame(416, WhatsappDurumu::oturumSalonId(416, '416')); // kendini göstermiş
+    }
 }

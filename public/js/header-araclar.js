@@ -45,6 +45,7 @@ function whatsappCiz(kap, v) {
   if (!v) { kap.innerHTML = ''; return; }
   let baslik = v.bagli ? `WhatsApp bağlı${v.numara ? ` (${v.numara})` : ''}` : 'WhatsApp bağlı değil — QR ile bağlayın';
   if (v.kontor !== null) baslik += ` · Kontör: ${sayi(v.kontor)}`;
+  if (v.paylasilan) baslik += ` · Paylaşılan oturum: ${v.paylasilan.salon_adi}`;
   const kontor = v.kontor === null ? ''
     : `<span class="rc-rozet-kontor${v.kontor_kritik ? ' kritik' : ''}" title="WhatsApp kontör bakiyesi">${sayi(v.kontor)}</span>`;
   kap.innerHTML = rozet({

@@ -2,8 +2,8 @@
 
 namespace App\Services\Kabuk;
 
-use App\Domain\Whatsapp\WhatsappDurumu;
 use App\Services\Sms\Bakiye\SmsBakiyeServisi;
+use App\Services\Whatsapp\WhatsappOturumServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\KapsamServisi;
 use App\Support\PanelMenu;
@@ -20,6 +20,7 @@ class IletisimDurumServisi
         private GuvenlikKapisi $kapi,
         private KapsamServisi $kapsam,
         private SmsBakiyeServisi $smsBakiye,
+        private WhatsappOturumServisi $oturum,
     ) {}
 
     public function sms(int $yetkiliId, int $salonId): ?array
@@ -39,15 +40,14 @@ class IletisimDurumServisi
         if (! $this->gorebilir($yetkiliId, $salonId)) {
             return null;
         }
-        $salon = DB::table('salonlar')->where('id', $salonId)->first([
-            'whatsapp_aktif', 'whatsapp_durum', 'whatsapp_numara', 'whatsapp_kontor', 'whatsapp_deneme_bitis',
-        ]);
-        if (! $salon) {
+        // Paylaşılan oturumda (ör. 416 → 246) bağlantı + kontör oturum SAHİBİ salondan (gönderimle aynı).
+        $o = $this->oturum->coz($salonId);
+        if (! $o) {
             return null;
         }
 
-        return WhatsappDurumu::salondan($salon, date('Y-m-d'))->dizi()
-            + ['url' => $this->menuUrl('whatsapp', $salonId)];
+        return $o['durum']->dizi()
+            + ['paylasilan' => $o['paylasilan'], 'url' => $this->menuUrl('whatsapp', $salonId)];
     }
 
     private function gorebilir(int $yetkiliId, int $salonId): bool

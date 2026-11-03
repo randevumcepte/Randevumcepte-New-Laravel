@@ -11,6 +11,9 @@ namespace App\Domain\Whatsapp;
  *   kontorlu donem : salon deneme bitisi gectiyse; bitis yok/bozuksa global baslangic
  *   kontor rozeti  : bagliyken bakiye varsa YA DA kontorlu donemdeyse
  *   kritik         : kontorlu donemde bakiye bitti (mesajlar SMS'e duser)
+ *   paylasilan oturum: salonlar.whatsapp_paylasilan_salon_id doluysa (ornek 416 → 246) mesajlar UST
+ *                    salonun oturumundan ve kontorunden gider (eski WhatsAppService::resolveWaSalon);
+ *                    rozet ve on-kontroller de o salonun durumunu gostermeli → oturumSalonId().
  */
 final class WhatsappDurumu
 {
@@ -23,6 +26,14 @@ final class WhatsappDurumu
         public readonly int $kontor,
         public readonly bool $kontorluDonem,
     ) {}
+
+    /** Mesajin gercekte gittigi oturumun salonu: paylasilan salon (kendisi degilse) ya da kendisi. */
+    public static function oturumSalonId(int $salonId, int|string|null $paylasilanSalonId): int
+    {
+        $p = (int) $paylasilanSalonId;
+
+        return $p > 0 && $p !== $salonId ? $p : $salonId;
+    }
 
     /** @param object $salon salonlar satiri (whatsapp_* kolonlari) */
     public static function salondan(object $salon, string $bugun): self
