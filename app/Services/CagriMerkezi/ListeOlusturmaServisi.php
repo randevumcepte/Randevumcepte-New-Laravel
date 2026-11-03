@@ -5,6 +5,7 @@ namespace App\Services\CagriMerkezi;
 use App\Domain\CagriMerkezi\AramaFiltresi;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
 use App\Domain\CagriMerkezi\ListeDurumu;
+use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
@@ -70,7 +71,6 @@ class ListeOlusturmaServisi
     public function olustur(CagriMerkeziErisim $e, AramaFiltresi $f, array $v): array
     {
         $this->erisim->yoneticiZorunlu($e);
-        $personel = $this->erisim->personel((int) $v['personel_id'], $e);
         $baslik = trim($v['baslik']);
         $f = $f->aramasiz();
 
@@ -83,19 +83,39 @@ class ListeOlusturmaServisi
         if (! $ids) {
             throw new GecersizIslemException('Seçilen filtreye uyan müşteri bulunamadı.');
         }
+
+        $l = $this->listeYaz($e->salonId, $e->yetkiliId, $baslik, (int) $v['personel_id'], $v['aranacak_tarih'] ?? null, $f->snapshot(), $ids);
+        $mesaj = count($ids).' müşteri ile "'.$baslik.'" arama listesi oluşturuldu ('.$l['personel_adi'].').';
+        AktiviteLog::yaz($e->salonId, $e->yetkiliId, 'cagri_liste_olustur', 'arama_listesi', $l['id'], $baslik, $mesaj,
+            ['adet' => count($ids), 'personel_id' => (int) $v['personel_id'], 'filtre' => $f->ozet(), 'mod' => $v['mod']]);
+
+        return ['id' => $l['id'], 'adet' => count($ids), 'mesaj' => $mesaj];
+    }
+
+    /**
+     * Arama listesi + aranacak müşteriler yazımı — TEK yer (filtreyle oluşturma ve Reklam Yönetimi
+     * "Personele Ata" ortak). Personel salona ait olmalı; aynı başlıkta liste varsa 409.
+     *
+     * @param  int[]  $ids  user_id'ler
+     * @return array{id:int, personel_adi:string}
+     */
+    public function listeYaz(int $salonId, ?int $yetkiliId, string $baslik, int $personelId, ?string $aranacakTarih, array $snapshot, array $ids): array
+    {
         if (count($ids) > self::MAKS) {
             throw new GecersizIslemException('Bir listede en fazla '.number_format(self::MAKS, 0, ',', '.').' müşteri olabilir; filtreyi daraltın.');
         }
+        $personel = DB::table('salon_personelleri')->where('id', $personelId)->where('salon_id', $salonId)->first(['id', 'personel_adi'])
+            ?? throw new BulunamadiException('Geçerli bir personel seçin');
 
-        $listeId = DB::transaction(function () use ($e, $baslik, $personel, $v, $f, $ids) {
-            if (DB::table('arama_listesi')->where('salon_id', $e->salonId)->where('arama_baslik', $baslik)->lockForUpdate()->exists()) {
+        $id = DB::transaction(function () use ($salonId, $yetkiliId, $baslik, $personel, $aranacakTarih, $snapshot, $ids) {
+            if (DB::table('arama_listesi')->where('salon_id', $salonId)->where('arama_baslik', $baslik)->lockForUpdate()->exists()) {
                 throw new CakismaException('Bu isimde bir arama listesi zaten mevcut.');
             }
             $simdi = now();
             $id = DB::table('arama_listesi')->insertGetId([
-                'salon_id' => $e->salonId, 'arama_baslik' => mb_substr($baslik, 0, 255), 'personel_id' => (int) $personel->id,
-                'aranacak_tarih' => $v['aranacak_tarih'] ?? null, 'filtre_snapshot' => json_encode($f->snapshot() ?: new \stdClass, JSON_UNESCAPED_UNICODE),
-                'olusturan_yetkili_id' => $e->yetkiliId, 'durum' => ListeDurumu::AKTIF->value, 'created_at' => $simdi, 'updated_at' => $simdi,
+                'salon_id' => $salonId, 'arama_baslik' => mb_substr($baslik, 0, 255), 'personel_id' => (int) $personel->id,
+                'aranacak_tarih' => $aranacakTarih, 'filtre_snapshot' => json_encode($snapshot ?: new \stdClass, JSON_UNESCAPED_UNICODE),
+                'olusturan_yetkili_id' => $yetkiliId, 'durum' => ListeDurumu::AKTIF->value, 'created_at' => $simdi, 'updated_at' => $simdi,
             ]);
             foreach (array_chunk($ids, 500) as $parca) {
                 DB::table('aranacak_musteriler')->insert(array_map(fn ($uid) => [
@@ -106,10 +126,6 @@ class ListeOlusturmaServisi
             return (int) $id;
         });
 
-        $mesaj = count($ids).' müşteri ile "'.$baslik.'" arama listesi oluşturuldu ('.$personel->personel_adi.').';
-        AktiviteLog::yaz($e->salonId, $e->yetkiliId, 'cagri_liste_olustur', 'arama_listesi', $listeId, $baslik, $mesaj,
-            ['adet' => count($ids), 'personel_id' => (int) $personel->id, 'filtre' => $f->ozet(), 'mod' => $v['mod']]);
-
-        return ['id' => $listeId, 'adet' => count($ids), 'mesaj' => $mesaj];
+        return ['id' => $id, 'personel_adi' => (string) $personel->personel_adi];
     }
 }

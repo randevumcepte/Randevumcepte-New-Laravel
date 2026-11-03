@@ -1,0 +1,105 @@
+/* Reklam Yönetimi (v2) — YALNIZ ekrana özgü kurallar. Başlık, sekme, rozet, modal, form alanı,
+   buton, switch, satır işlemi, müşteri seçici, özet kartı ortak: v2-bilesen.css / panel.css (.rc-*). */
+
+.rk-kabuk { padding: 6px 2px 40px; }
+.rk-soluk { color: #9191a3; font-size: 12.5px; }
+.rk-blok { display: block; margin-top: 2px; }
+.rk-yesil { color: #16a34a; font-size: 12px; font-weight: 600; }
+.rk-kod { font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: .5px; color: #5C008E; }
+.rk-uyari { color: #c2410c; font-weight: 600; }
+.rk-ust-bosluk { margin-top: 12px; }
+
+/* Tablo */
+.rk-tablo { min-width: 1000px; }
+.rk-ad { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: #2a2140; cursor: pointer; text-align: left; }
+.rk-ad:hover { color: #5C008E; text-decoration: underline; }
+
+/* Kanal rozeti (renk kanala göre) */
+.rk-kanal { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.rk-kanal-1 { background: #f2ecfb; color: #5C008E; }
+.rk-kanal-2 { background: #e8f3ff; color: #1d5fbf; }
+.rk-kanal-3 { background: #fff4e5; color: #b45309; }
+.rk-kanal-4 { background: #eef2f3; color: #475569; }
+
+/* Sihirbaz bölümleri */
+.rk-bolum { background: #fbfafd; border: 1px solid #ece6f3; border-radius: 12px; padding: 12px 14px 14px; margin-bottom: 12px; }
+.rk-bolum[hidden] { display: none; }
+.rk-bolum-baslik { font-size: 12px; font-weight: 700; color: #5C008E; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rk-bolum-baslik small { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.rk-no { width: 22px; height: 22px; border-radius: 50%; background: #5C008E; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+.rk-sayac { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12.5px; color: #16a34a; background: #eafaf1; border-radius: 999px; padding: 2px 10px; }
+.rk-sayac-sifir { color: #b91c1c; background: #fdecec; }
+.rk-bilgi { background: #f4f0fa; border-radius: 10px; padding: 9px 12px; font-size: 13px; color: #4a3a63; margin-bottom: 12px; }
+.rk-bilgi + .rk-bilgi { margin-top: -4px; }
+.rk-onay { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; cursor: pointer; }
+.rk-grup[hidden], .rk-yuzde[hidden], .rk-xal[hidden], .rk-aksiyonlar[hidden] { display: none; }
+
+/* Seçim kartları (kanal / hedef / preset) */
+.rk-kartlar { display: grid; gap: 8px; }
+.rk-kartlar-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rk-kartlar-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rk-kart { position: relative; display: flex; flex-direction: column; gap: 3px; border: 1.5px solid #e2e2ee; background: #fff; border-radius: 12px; padding: 10px 12px; cursor: pointer; text-align: left; font: inherit; transition: .15s; }
+.rk-kart input { position: absolute; opacity: 0; pointer-events: none; }
+.rk-kart i { font-size: 18px; color: #7B2FB8; }
+.rk-kart b { font-size: 13.5px; color: #2a2140; }
+.rk-kart small { font-size: 11.5px; color: #8a8a9c; line-height: 1.35; }
+.rk-kart:hover { border-color: #b98fe0; }
+.rk-kart.secili { border-color: #5C008E; background: #f7f1fd; box-shadow: 0 0 0 3px rgba(92, 0, 142, .08); }
+.rk-emoji { font-size: 22px; }
+
+/* Çipler (cinsiyet / indirim türü / yer tutucu) */
+.rk-cipler { display: flex; flex-wrap: wrap; gap: 6px; }
+.rk-cip { display: inline-flex; align-items: center; border: 1px solid #e2e2ee; background: #fff; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer; color: #555; }
+.rk-cip input { display: none; }
+.rk-cip.secili { background: #5C008E; border-color: #5C008E; color: #fff; }
+.rk-yer { margin: 6px 0 10px; }
+.rk-yer .rk-cip { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; padding: 3px 9px; }
+
+/* Mesaj önizleme / sohbet balonları */
+.rk-onizleme-bas { font-size: 12px; font-weight: 700; color: #5C008E; margin-bottom: 6px; }
+.rk-onizleme-bas small { font-weight: 500; color: #9191a3; }
+.rk-balon { background: #fff; border: 1px solid #ece6f3; border-radius: 14px 14px 14px 4px; padding: 10px 12px; white-space: pre-wrap; line-height: 1.5; color: #2a2140; font-size: 13.5px; }
+.rk-sohbet { background: #f6f4fa; border-radius: 12px; padding: 12px; min-height: 240px; }
+.rk-mesaj { max-width: 88%; padding: 8px 11px; border-radius: 14px; margin-bottom: 7px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+.rk-mesaj-bot { background: #fff; border: 1px solid #ece6f3; border-bottom-left-radius: 4px; color: #2a2140; }
+.rk-mesaj-musteri { background: #5C008E; color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+
+/* Senaryo sihirbazı */
+.rk-senaryolar { display: flex; flex-wrap: wrap; gap: 8px; }
+.rk-senaryo { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e2e2ee; background: #fff; border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.rk-senaryo:hover { border-color: #b98fe0; }
+.rk-senaryo i { color: #7B2FB8; }
+.rk-senaryo-izgara { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.rk-aksiyonlar { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 10px; }
+.rk-aksiyon { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+
+/* Rapor */
+.rk-rapor-ust { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.rk-rapor-ozet { margin-bottom: 10px; }
+.rk-rapor-bilgi { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 13px; margin-bottom: 12px; color: #4a3a63; }
+.rk-link { border: 0; background: none; color: #5C008E; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.rk-rapor-arac { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.rk-rapor-eylem { display: flex; gap: 6px; flex-wrap: wrap; }
+.rk-rapor-eylem .rc-btn { padding: 8px 14px; font-size: 13px; }
+
+@media (max-width: 760px) {
+  .rk-kartlar-4, .rk-kartlar-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rk-senaryo-izgara { grid-template-columns: 1fr; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .rk-bolum { background: #22222e; border-color: #34344c; }
+  .rk-bolum-baslik, .rk-onizleme-bas, .rk-kod, .rk-link { color: #c9a7f0; }
+  .rk-kart, .rk-cip, .rk-senaryo { background: #1b1b26; border-color: #34344c; color: #cfcfe0; }
+  .rk-kart b, .rk-ad { color: #ededf5; }
+  .rk-kart.secili { background: #2d2340; border-color: #9D5DC8; }
+  .rk-cip.secili { background: #7B2FB8; border-color: #7B2FB8; color: #fff; }
+  .rk-bilgi { background: #2d2340; color: #e4d6f7; }
+  .rk-balon, .rk-mesaj-bot { background: #1b1b26; border-color: #34344c; color: #ededf5; }
+  .rk-sohbet { background: #22222e; }
+  .rk-rapor-bilgi { color: #cfcfe0; }
+  .rk-kanal-1 { background: #2d2340; color: #c9a7f0; }
+  .rk-kanal-2 { background: #1d2a3d; color: #8ab8f5; }
+  .rk-kanal-3 { background: #3a2c17; color: #f5c27a; }
+  .rk-kanal-4 { background: #2a2f36; color: #b7c2cf; }
+}

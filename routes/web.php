@@ -166,3 +166,11 @@ Route::get('/v2/ayarlar/{sube?}', function ($sube = null) {
  */
 Route::get('/v2/bildirim-reklamlari/{sube?}', fn ($sube = null) => view('v2.bildirim-reklamlari', ['salonId' => (int) ($sube ?: request('sube', 0))]))
     ->whereNumber('sube');
+
+/*
+ | Reklam Yonetimi v2 — kampanya listesi (kanal sekmeleri) + olustur/duzenle sihirbazi + reklam raporu
+ | (katilimci sekmeleri) + Senaryo Sihirbazi; veri /api/v2/kampanya/* (Bearer); yazmalar
+ | KAMPANYA_V2_YAZMA_AKTIF kapaliyken 409.
+ */
+Route::get('/v2/reklam-yonetimi/{sube?}', fn ($sube = null) => view('v2.reklam-yonetimi', ['salonId' => (int) ($sube ?: request('sube', 0))]))
+    ->whereNumber('sube');

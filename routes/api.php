@@ -185,6 +185,9 @@ Route::prefix('v2')->group(function () {
         // BILDIRIM REKLAMLARI (yonetim: liste/form/kaydet/durum/sil/gorsel + push gonder outbox) — routes/v2/bildirim-reklam.php
         require __DIR__.'/v2/bildirim-reklam.php';
 
+        // REKLAM YONETIMI (kampanya liste/sihirbaz/rapor + katilimci islemleri + senaryo sihirbazi) — routes/v2/kampanya.php
+        require __DIR__.'/v2/kampanya.php';
+
         // ON GORUSME (liste + ekle/duzenle + satis yapildi / yapilmadi) — routes/v2/ongorusme.php
         require __DIR__.'/v2/ongorusme.php';
 
