@@ -8,7 +8,7 @@
  * tembel yükler (public/js/cagri-merkezi/<kod>.js → export async function ciz(kap, ctx, params)).
  * YENİ SEKME: sunucuda CagriMerkeziSekmeleri'ne tek satır + aşağıdaki MODULLER'e tek satır.
  *
- * Arama randevusu hatırlatması: dakikada bir /yaklasan → "Arama Randevuları" sekme sayacı +
+ * Arama randevusu hatırlatması: dakikada bir /yaklasan → "Arama Randevularım" sekme sayacı +
  * sayfa üstü uyarı ("Müşteriye git" → Çalışma Ekranında o müşteri açılır).
  */
 import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=1';
@@ -19,11 +19,13 @@ const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) 
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 const MODULLER = {
-  calisma: () => import('/js/cagri-merkezi/calisma.js?v=1'),
-  takvim: () => import('/js/cagri-merkezi/takvim.js?v=1'),
-  kayitlar: () => import('/js/cagri-merkezi/kayitlar.js?v=1'),
-  performans: () => import('/js/cagri-merkezi/performans.js?v=1'),
-  listeler: () => import('/js/cagri-merkezi/listeler.js?v=1'),
+  calisma: () => import('/js/cagri-merkezi/calisma.js?v=2'),
+  ajanda: () => import('/js/cagri-merkezi/ajanda.js?v=1'),
+  takvim: () => import('/js/cagri-merkezi/takvim.js?v=2'),
+  kayitlar: () => import('/js/cagri-merkezi/kayitlar.js?v=2'),
+  performans: () => import('/js/cagri-merkezi/performans.js?v=2'),
+  listeler: () => import('/js/cagri-merkezi/listeler.js?v=2'),
+  ayarlar: () => import('/js/cagri-merkezi/ayarlar.js?v=1'),
 };
 const HATIRLATMA_SN = 60;
 
@@ -66,7 +68,7 @@ function hatirlatmaBaslat(ctx, sayfa) {
 
   const ciz = () => {
     const gorunen = son.filter((x) => !kapatilan.has(x.id));
-    sayfa.rozet('takvim', son.length);
+    sayfa.rozet('ajanda', son.length);
     kutu.hidden = !gorunen.length;
     kutu.innerHTML = gorunen.length ? `<i class="bi bi-bell-fill"></i><div class="cm-hat-liste">${gorunen.slice(0, 3).map((x) => `
       <div class="cm-hat"><span class="rc-rozet rc-rozet-${FAZ[x.faz][1]}">${FAZ[x.faz][0]}</span>

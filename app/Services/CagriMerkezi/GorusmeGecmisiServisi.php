@@ -84,8 +84,32 @@ class GorusmeGecmisiServisi
         ];
     }
 
+    /**
+     * Müşteriyle yapılan TÜM görüşme ses kayıtları (santral CDR, son N gün; eski musteri_ses_kayitlari).
+     * Not eşlemesi yapmaz — salt okuma.
+     */
+    public function tumSesler(CagriMerkeziErisim $e, int $aranacakId): array
+    {
+        $k = $this->erisim->kayit($aranacakId, $e);
+        $son10 = CdrSiniflandirici::son10((string) DB::table('users')->where('id', $k->user_id)->value('cep_telefon'));
+        if ($son10 === '') {
+            return ['kayitlar' => [], 'santral_hata' => false];
+        }
+        [$adaylar, $hata] = $this->adaylar($e->salonId, $son10, (int) config('cagri_merkezi.tum_ses_gun'));
+        $host = (string) config('cagri_merkezi.cdr_ses_host');
+
+        return [
+            'kayitlar' => array_map(function ($c) use ($host) {
+                $ts = SantralKaydi::tsDen($c['ts']);
+
+                return ['tarih' => $ts ? date('d.m.Y H:i', $ts) : '', 'url' => SantralKaydi::url($c['path'], $host)];
+            }, $adaylar),
+            'santral_hata' => $hata,
+        ];
+    }
+
     /** @return array{0: array<int, array{path:string, ts:int}>, 1: bool} [adaylar, santral hatası] */
-    private function adaylar(int $salonId, string $son10): array
+    private function adaylar(int $salonId, string $son10, ?int $gun = null): array
     {
         $dahililer = SantralErisimServisi::dahililer(
             Personeller::where('salon_id', $salonId)->where(fn ($q) => $q->whereNotNull('dahili_no')->orWhereNotNull('dahili_no_webrtc'))
@@ -95,7 +119,7 @@ class GorusmeGecmisiServisi
         }
         $trunk = (string) DB::table('sabit_numaralar')->where('salon_id', $salonId)->value('numara');
         $cdr = $this->santral->cdrListesi($dahililer, $trunk ?: null,
-            now()->subDays((int) config('cagri_merkezi.gecmis_ses_gun'))->toDateString(), now()->addDay()->toDateString(),
+            now()->subDays($gun ?? (int) config('cagri_merkezi.gecmis_ses_gun'))->toDateString(), now()->addDay()->toDateString(),
             (int) config('santral.cdr_tavan', 500));
 
         return [SantralKaydi::adaylar($cdr['satirlar'], $son10), $cdr['hata']];

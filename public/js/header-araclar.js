@@ -74,7 +74,7 @@ async function softphoneKurulum(kap, salonId, nesil) {
   const ayar = await getir('/softphone', salonId);
   if (!ayar || nesil !== _nesil) return;
   // Softphone kodu + sip.js (~270 KB) yalnız telefonu olan kullanıcıya yüklenir.
-  const [{ softphoneKur }] = await Promise.all([import('/js/softphone/softphone-panel.js?v=1'), sipKutuphanesi()]);
+  const [{ softphoneKur }] = await Promise.all([import('/js/softphone/softphone-panel.js?v=2'), sipKutuphanesi()]);
   if (nesil !== _nesil) return;
   _softphone = softphoneKur(kap, salonId, ayar);
 }

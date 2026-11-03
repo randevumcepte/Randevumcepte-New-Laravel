@@ -1,6 +1,6 @@
 /**
  * Çağrı Merkezi › LİSTE YÖNETİMİ (yönetici; eski arama-dashboard "Liste Yönetimi" sekmesi).
- * Liste seç → sonuca göre segmentler (sabit set, sunucudan); segmenti CSV indir, seçili
+ * "Yeni Arama Listesi" (filtreyle oluştur — cagri-merkezi/liste-olustur.js). Liste seç → sonuca göre segmentler (sabit set, sunucudan); segmenti CSV indir, seçili
  * segment(ler)i yeni listeyle başka personele taşı, listenin tamamını personele ata / atamayı
  * geri al, aktif / pasif / arşiv, sil. Veri: /cagri-merkezi/listeler[/{id}/segmentler|csv|durum|personel|tasi].
  */
@@ -8,6 +8,7 @@ import { token, BASE, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=1';
+import { listeOlustur } from '/js/cagri-merkezi/liste-olustur.js?v=1';
 
 export async function ciz(kap, ctx) {
   const d = { arsiv: false, listeler: [], id: null, veri: null, secim: new Set() };
@@ -19,6 +20,7 @@ export async function ciz(kap, ctx) {
         <label class="cm-kucuk"><input type="checkbox" id="lArsiv"> Arşivdekiler</label>
         <select id="lListe" class="cm-liste-sec"></select>
         <button type="button" class="rc-btn rc-btn-ikincil" id="lYenile"><i class="bi bi-arrow-clockwise"></i></button>
+        <button type="button" class="rc-btn rc-btn-yesil" id="lYeni"><i class="bi bi-plus-lg"></i> Yeni Arama Listesi</button>
       </div>
       <p class="cm-soluk cm-kucuk cm-aciklama">Bir arama listesini sonuca göre ayırın; segmenti <b>indirin</b> ya da seçtiğiniz segmentleri <b>başka personele taşıyın</b>.</p>
       <div id="lGovde"><div class="cm-bos"><i class="bi bi-hand-index"></i>Yukarıdan bir arama listesi seçin.</div></div>
@@ -93,6 +95,7 @@ export async function ciz(kap, ctx) {
 
   $('#lArsiv').addEventListener('change', (e) => { d.arsiv = e.target.checked; listeleriYukle(); });
   $('#lListe').addEventListener('change', (e) => { d.id = Number(e.target.value) || null; segmentYukle(); });
+  $('#lYeni').addEventListener('click', () => listeOlustur(ctx, { tamam: async (v) => { await listeleriYukle(); d.id = v.id; $('#lListe').value = String(v.id); segmentYukle(); } }));
   $('#lYenile').addEventListener('click', async () => { await listeleriYukle(); segmentYukle(); });
   $('#lGovde').addEventListener('change', (e) => {
     const c = e.target.closest('[data-sec]');

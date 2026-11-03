@@ -4,7 +4,7 @@ namespace App\Domain\CagriMerkezi;
 
 /**
  * Çağrı Merkezi sayfasının SEKME KAYIT DEFTERİ — eski 4 ayrı sayfa (arama-listelerim,
- * arama-randevu-takvim, arama-cagri-kayitlari, arama-dashboard[+Liste Yönetimi]) tek sayfada.
+ * arama-randevu-takvim, arama-cagri-kayitlari, arama-dashboard[+Liste Yönetimi]) + arama-randevularim (ajanda) + cagri-ayarlari tek sayfada.
  *
  * Hangi sekmenin kime görüneceği SUNUCUDA karar verilir; web (lib/v2-sekme.js) ve Flutter
  * (TabBar) aynı listeyi çizer. YENİ SEKME EKLEMEK:
@@ -20,6 +20,8 @@ final class CagriMerkeziSekmeleri
     private const TANIMLAR = [
         ['kod' => 'calisma', 'ad' => 'Çalışma Ekranı', 'ikon' => 'bi-headset', 'yalniz_yonetici' => false,
             'aciklama' => 'Atanan listelerden müşterileri arayın, görüşme sonucunu ve notunu kaydedin.'],
+        ['kod' => 'ajanda', 'ad' => 'Arama Randevularım', 'ikon' => 'bi-alarm', 'yalniz_yonetici' => false,
+            'aciklama' => 'Bekleyen arama randevularınız; seçilen günün dökümü, arama ve erteleme.'],
         ['kod' => 'takvim', 'ad' => 'Arama Randevuları', 'ikon' => 'bi-calendar-check', 'yalniz_yonetici' => false,
             'aciklama' => 'Seçilen güne ait arama randevuları personele göre, saat sırasıyla.'],
         ['kod' => 'kayitlar', 'ad' => 'Çağrı Kayıtları', 'ikon' => 'bi-telephone', 'yalniz_yonetici' => false,
@@ -27,7 +29,9 @@ final class CagriMerkeziSekmeleri
         ['kod' => 'performans', 'ad' => 'Performans', 'ikon' => 'bi-bar-chart', 'yalniz_yonetici' => true,
             'aciklama' => 'Personel bazlı atanan data, aranan, görüşme ve dönüşüm takibi.'],
         ['kod' => 'listeler', 'ad' => 'Liste Yönetimi', 'ikon' => 'bi-sliders', 'yalniz_yonetici' => true,
-            'aciklama' => 'Listeyi sonuca göre ayır, indir, başka personele taşı, arşivle.'],
+            'aciklama' => 'Filtreyle yeni arama listesi oluştur; listeyi sonuca göre ayır, indir, taşı, arşivle.'],
+        ['kod' => 'ayarlar', 'ad' => 'Ayarlar', 'ikon' => 'bi-gear', 'yalniz_yonetici' => true,
+            'aciklama' => 'Görüşme scriptleri ve sonuç kategorileri.'],
     ];
 
     /** Erişime göre görünür sekmeler (sıra korunur). */

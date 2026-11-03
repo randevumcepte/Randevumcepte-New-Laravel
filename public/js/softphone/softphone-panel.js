@@ -5,7 +5,7 @@
  * Sorumluluk ayrımı: SIP bağlantısı/çağrı → SipHat, zil sesleri → Zil, burada yalnızca
  * arayüz durumu (tek ciz() fonksiyonu) + API (arayan adı, dakika).
  *
- * Dışa açık: window.rcSoftphone.ara(numara) / .bagliMi() — diğer v2 ekranları (ARA butonları)
+ * Dışa açık: window.rcSoftphone.ara(numara, {etiket?}) / .bagliMi() — diğer v2 ekranları (ARA butonları)
  * için. Eski ekranlardan taşınan kod için webphoneAra / webphoneBagliMi takma adları.
  * Her çağrı aşaması document'e 'rc:softphone' olayı ({asama, numara, cagriId, yon}) olarak
  * yayılır; çağrı sonrası iş (ses kaydı bağlama vb.) ekranlar tarafından dinlenir.
@@ -87,7 +87,7 @@ export function softphoneKur(kap, salonId, ayar) {
     durum.asama = asama === 'bitti' ? null : asama;
     if (asama === 'cikiyor' || asama === 'geliyor') {
       durum.numara = numara;
-      durum.ad = '';
+      durum.ad = adlar.get(numara) || '';   // ara(…, {etiket}) ile verilen ad numaradan ÖNCE görünür
       paneliAc();
     }
     if (asama === 'cikiyor') zil.gidenBaslat();
@@ -132,11 +132,16 @@ export function softphoneKur(kap, salonId, ayar) {
   /* ───────── dışa açık API ───────── */
   const disApi = {
     bagliMi: () => hat.bagliMi(),
-    ara(numara) {
+    /**
+     * opt.etiket: numara yerine gösterilecek ad (ör. KVKK maskeli "Ferdi K. · 0532 *** ** 67") —
+     * numara giriş kutusuna YAZILMAZ, panelde yalnız etiket görünür (Çağrı Merkezi kayıtlı müşteri araması).
+     */
+    ara(numara, opt = {}) {
       let tel = String(numara || '').replace(/\D/g, '');
       if (!tel || !hat.bagliMi()) return false; // çağıran taraf santral originate'e düşebilir
       if (/^5\d{9}$/.test(tel)) tel = '0' + tel; // TR cep: 05XXXXXXXXX
-      girdi.value = tel;
+      if (opt.etiket) adlar.set(tel, String(opt.etiket));
+      girdi.value = opt.etiket ? '' : tel;
       paneliAc();
       return hat.ara(tel);
     },

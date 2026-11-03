@@ -8,7 +8,7 @@ artık **tek uç kümesinden** beslenir. Web: `/v2/cagri-merkezi?sube=&p=calisma
 ## Sekmeler (sunucu kayıt defteri)
 `Domain/CagriMerkezi/CagriMerkeziSekmeleri` sekme listesini ve görünürlüğünü tutar; `GET /cagri-merkezi/acilis`
 ile web (`lib/v2-sekme.js`) ve Flutter (TabBar) aynı listeyi çizer. Personel (rol 5): Çalışma Ekranı, Arama
-Randevuları, Çağrı Kayıtları. Yönetici: + Performans, Liste Yönetimi.
+Randevularım, Arama Randevuları, Çağrı Kayıtları. Yönetici: + Performans, Liste Yönetimi, Ayarlar.
 
 **Yeni sekme eklemek:** `CagriMerkeziSekmeleri::TANIMLAR`'a tek satır → `public/js/cagri-merkezi/<kod>.js`
 (`export async function ciz(kap, ctx, params)`) → `cagri-merkezi-v2.js` `MODULLER`'e tek satır. Uçlar değişmez.
@@ -69,9 +69,18 @@ telefonda satış, anket, liste durum/personel/taşı/sil, CSV) bu yolla loglan�
 | `POST segment-indir` | `GET /listeler/{id}/csv?kod=` | text/csv |
 | `GET scriptler`, `GET kategoriler`, `GET personeller` | `GET /acilis` içinde | |
 
-Kapsam dışı (eski panelde kalır, sonraki faz): filtreyle **arama listesi oluşturma** (`arama_filtre_onizleme` +
-`arama_listesi_ekle`, `AramaFiltreService`), script / kategori **tanımlama** ekranı (`cagri-ayarlari`), WhatsApp
-manuel mesaj (`whatsapp-gonder`, yalnız mobil kullanıyordu), WebRTC softphone.
+| `POST filtre-onizleme` (web `arama_filtre_onizleme`) | `POST /listeler/onizleme {filtre{}, page, per_page}` | `toplam`, `toplam_filtresiz`, `ozet`, sayfalı `data[{id, ad, telefon, sira, kayit_tarihi}]`; filtre seçenekleri `acilis.liste_filtreleri` |
+| `POST liste-ekle {arama_basligi, aramapersoneli, aranacak_tarih, filtre, secilenMusteriler}` | `POST /listeler {baslik, personel_id, aranacak_tarih, filtre{}, mod: tumu\|aralik\|secili, ids[], bas, bit}` | küme sunucuda çözülür; `secili` filtreyle kesiştirilir; aynı başlık 409 |
+| web `cagri-script-liste/kaydet/sil`, `cagri-kategori-liste/kaydet/sil` | `GET /ayarlar` · `POST\|PATCH\|DELETE /scriptler[/{id}]` · `POST\|PATCH\|DELETE /kategoriler[/{id}]` | yönetici; agent tarafı `acilis` (yalnız aktifler) |
+| `POST whatsapp-gonder {aranacak_musteri_id, mesaj}` | `POST /kayit/{id}/whatsapp {mesaj}` | bağlantı ön-kontrolü (paylaşılan oturum dahil) 409; gönderim outbox `whatsapp_mesaj` |
+| web `musteri-ses-kayitlari` | `GET /kayit/{id}/ses-kayitlari` | son 120 gün, salt okuma |
+| `arama-baslat {softphone:1}` | `POST /kayit/{id}/ara {softphone:1}` · `POST /ara {…, softphone:1}` | → `{softphone:true, numara_ara, etiket}`; web `rcSoftphone.ara(numara, {etiket})` panelde numara yerine etiketi (maskeli kullanıcıda maskeli ad+telefon) gösterir |
+
+Sekmeler (7): Çalışma Ekranı, **Arama Randevularım** (eski `arama-randevularim` ajandası), Arama Randevuları (takvim),
+Çağrı Kayıtları, Performans, Liste Yönetimi (+ **Yeni Arama Listesi**), **Ayarlar** (scriptler + sonuç kategorileri).
+Liste filtresinde müşteri durumu v2 tek segment kuralıyla (`Domain\Musteri\Segment`, müşteri listesiyle aynı; eski
+stüdyo modu `odendi` sayımı uygulanmaz). Eski webphone kancaları (`arama-listesi-arandi-isaretle`,
+`aramaListesineSesKaydiEkle`) gerekmez: arama başlatma ve ses eşleme sunucuda.
 
 ## Eskiye göre bilinçli farklar
 - **Güvenlik:** v1/web'de `arama_liste_detay_getir`, `santral_not_ekle`, `cagri_musteri_gecmisi`, `arama_listesi_arandi_isaretle`

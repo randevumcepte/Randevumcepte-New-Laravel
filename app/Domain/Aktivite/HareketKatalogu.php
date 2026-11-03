@@ -55,6 +55,12 @@ final class HareketKatalogu
         'cagri_liste_atama_kaldir'      => ['etiket' => 'Arama listesi ataması geri alındı', 'kategori' => HareketKategorisi::GUNCELLEME],
         'cagri_liste_segment_tasi'      => ['etiket' => 'Arama listesi segmenti taşındı', 'kategori' => HareketKategorisi::GUNCELLEME],
         'cagri_liste_sil'               => ['etiket' => 'Arama listesi silindi'],
+        'cagri_liste_olustur'           => ['etiket' => 'Arama listesi oluşturuldu', 'kategori' => HareketKategorisi::EKLEME],
+        'cagri_whatsapp_gonder'         => ['etiket' => 'Çağrı: WhatsApp mesajı'],
+        'cagri_script_kaydet'           => ['etiket' => 'Görüşme scripti kaydedildi'],
+        'cagri_script_sil'              => ['etiket' => 'Görüşme scripti silindi'],
+        'cagri_kategori_kaydet'         => ['etiket' => 'Sonuç kategorisi kaydedildi'],
+        'cagri_kategori_sil'            => ['etiket' => 'Sonuç kategorisi silindi'],
     ];
 
     /** Hedef tipi → etiket (yoksa kelime sözlüğüyle). */
@@ -69,6 +75,8 @@ final class HareketKatalogu
         'sms'          => 'SMS',
         'aranacak_musteri' => 'Aranacak müşteri',
         'arama_listesi'    => 'Arama listesi',
+        'cagri_script'     => 'Görüşme scripti',
+        'cagri_kategori'   => 'Sonuç kategorisi',
     ];
 
     /** Kod kelimesi → Türkçe yazım (kodlar ASCII; okunur etiket için). */

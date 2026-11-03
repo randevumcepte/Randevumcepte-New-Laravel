@@ -90,7 +90,7 @@
     {{-- Telefon: TUM input[type=tel]'lere ulke kodu secici + ulkeye gore bicim (sonradan eklenenler dahil). --}}
     <script type="module" src="/js/telefon-ulke.js?v=1"></script>
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
-    <script type="module" src="/js/header-araclar.js?v=1"></script>
+    <script type="module" src="/js/header-araclar.js?v=2"></script>
     <script type="module" src="/js/panel-kabuk.js?v=7"></script>
     @stack('betik')
 </body>

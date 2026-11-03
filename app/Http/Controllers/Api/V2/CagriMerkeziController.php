@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
  *   GET /cagri-merkezi/listeler/{id}/musteriler?grup=&ara=&page=&per_page=   kuyruk + durum çipleri
  *   GET /cagri-merkezi/kayit/{id}?salon_id=               tek aranacak müşteri (kuyruk satırı biçimi)
  *   GET /cagri-merkezi/kayit/{id}/gecmis?salon_id=        çağrı geçmişi + ses kayıtları
+ *   GET /cagri-merkezi/kayit/{id}/ses-kayitlari?salon_id= müşteriyle TÜM ses kayıtları (son 120 gün)
  *   GET /cagri-merkezi/kayit/{id}/musteri?salon_id=       dönüşüm formu müşteri kimliği (ad tam, telefon yetkiye göre)
  *   GET /cagri-merkezi/musteri-ara?salon_id=&q=           manuel arama randevusu için müşteri arama
  */
@@ -57,6 +58,11 @@ class CagriMerkeziController extends CagriMerkeziTabanController
     public function gecmis(Request $request, int $id, GorusmeGecmisiServisi $s)
     {
         return ApiCevap::basarili($s->getir($this->erisim($request), $id));
+    }
+
+    public function sesKayitlari(Request $request, int $id, GorusmeGecmisiServisi $s)
+    {
+        return ApiCevap::basarili($s->tumSesler($this->erisim($request), $id));
     }
 
     /** Arama randevusu ekleme için müşteri arama (randevu formuyla AYNI kural; telefon maskesi). */

@@ -6,6 +6,7 @@ use App\Services\CagriMerkezi\AnketGonderimServisi;
 use App\Services\CagriMerkezi\AramaBaslatmaServisi;
 use App\Services\CagriMerkezi\GorusmeSonucServisi;
 use App\Services\CagriMerkezi\TelefondaSatisServisi;
+use App\Services\CagriMerkezi\WhatsappMesajServisi;
 use App\Services\Satis\TekKalemSatisServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
@@ -16,14 +17,16 @@ use Illuminate\Validation\Rule;
  * cagri_randevu_verildi_isaretle, cagri_arama_randevu_iptal, arama_randevu_ertele,
  * cagri_arama_randevu_ekle, cagri_hizli_satis, cagri_anket_gonder).
  *
- *   POST /cagri-merkezi/kayit/{id}/ara                 santral originate (numara istemciye gitmez)
- *   POST /cagri-merkezi/ara            {user_id?|numara?}  müşteri kartı / çağrı kaydı "Ara"
+ *   POST /cagri-merkezi/kayit/{id}/ara  {softphone?}   santral originate (numara istemciye gitmez); softphone=1 ve
+ *                                                      numarayı görebilen kullanıcı → {softphone:true, numara_ara}
+ *   POST /cagri-merkezi/ara            {user_id?|numara?, softphone?}  müşteri kartı / çağrı kaydı "Ara"
  *   POST /cagri-merkezi/kayit/{id}/sonuc               {sonuc?, not?, tarih?, saat?, satis_tutari?, kategori_id?, alt_kategori_id?, arama_personel_id?}
  *   POST /cagri-merkezi/kayit/{id}/randevu-verildi     normal randevu oluşturuldu → 8 + rozet
  *   POST /cagri-merkezi/kayit/{id}/iptal               arama randevusu iptal (9)
  *   POST /cagri-merkezi/kayit/{id}/ertele              {tarih, saat}
  *   POST /cagri-merkezi/kayit/{id}/satis               {tur, katalog_id, fiyat?, seans?, adet?, personel_id?, not?, idempotency_key} → {adisyon_id}
  *   POST /cagri-merkezi/kayit/{id}/anket               memnuniyet anketi (outbox)
+ *   POST /cagri-merkezi/kayit/{id}/whatsapp {mesaj}    manuel WhatsApp mesajı (outbox; bağlantı ön-kontrolü 409)
  *   POST /cagri-merkezi/arama-randevusu                {musteri_id, personel_id, tarih, saat, not?}
  *
  * Arama başlatma yazma bayrağından bağımsızdır; diğerleri CAGRI_MERKEZI_V2_YAZMA_AKTIF arkasında.
@@ -32,7 +35,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 {
     public function ara(Request $request, int $id, AramaBaslatmaServisi $s)
     {
-        $sonuc = $s->kayittan($this->erisim($request), $id);
+        $sonuc = $s->kayittan($this->erisim($request), $id, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
 
         return $sonuc['basarili'] ? ApiCevap::basarili($sonuc, $sonuc['mesaj']) : ApiCevap::hata($sonuc['mesaj'], 422, $sonuc);
     }
@@ -40,7 +43,7 @@ class CagriIslemController extends CagriMerkeziTabanController
     public function araNumara(Request $request, AramaBaslatmaServisi $s)
     {
         $v = $request->validate(['user_id' => ['nullable', 'integer', 'min:1'], 'numara' => ['nullable', 'string', 'max:30']]);
-        $sonuc = $s->numaradan($this->erisim($request), $v['user_id'] ?? null, $v['numara'] ?? null);
+        $sonuc = $s->numaradan($this->erisim($request), $v['user_id'] ?? null, $v['numara'] ?? null, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
 
         return $sonuc['basarili'] ? ApiCevap::basarili($sonuc, $sonuc['mesaj']) : ApiCevap::hata($sonuc['mesaj'], 422, $sonuc);
     }
@@ -106,6 +109,15 @@ class CagriIslemController extends CagriMerkeziTabanController
         ]);
 
         return ApiCevap::basarili($s->sat($e, $id, $v), 'Satış oluşturuldu; tahsilatı satış ekranından alabilirsiniz.');
+    }
+
+    public function whatsapp(Request $request, int $id, WhatsappMesajServisi $s)
+    {
+        $e = $this->yazmaErisimi($request);
+        $v = $request->validate(['mesaj' => ['required', 'string', 'max:'.WhatsappMesajServisi::MAKS_UZUNLUK]]);
+        $sonuc = $s->gonder($e, $id, $v['mesaj']);
+
+        return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
     }
 
     public function anket(Request $request, int $id, AnketGonderimServisi $s)

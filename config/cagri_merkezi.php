@@ -33,6 +33,7 @@ return [
     /* Pencereler (gün) — eski kodla aynı. */
     'gecmis_ses_gun'      => 5,    // müşteri geçmişi ses adayı penceresi
     'gecmis_ses_esik_gun' => 2,    // bu günden eski notların kaydı yeniden atanmaz
+    'tum_ses_gun'         => 120,  // "Tüm Ses Kayıtları" penceresi (eski musteri_ses_kayitlari)
     'kayitlar_gun'        => 60,   // Çağrı Kayıtları varsayılan aralığı
     'kayitlar_tavan'      => 800,  // Çağrı Kayıtları en fazla satır
 

@@ -5,11 +5,11 @@
  * arama, sayfalama SUNUCUDA). Personel yalnız kendi dahilisini görür; maske sunucuda.
  * Veri: GET /cagri-merkezi/cagri-kayitlari · "Ara": POST /cagri-merkezi/ara {user_id|numara}.
  */
-import { esc, tarihStr, mesaj } from '/js/lib/v2-ortak.js?v=1';
+import { esc, tarihStr } from '/js/lib/v2-ortak.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { sure, sesOynatici } from '/js/cagri-merkezi/ortak.js?v=1';
+import { sure, sesOynatici, aramaBaslat } from '/js/cagri-merkezi/ortak.js?v=2';
 
 const YONLER = [{ kod: '', ad: 'Tümü', ikon: 'bi-telephone' }, { kod: 'gelen', ad: 'Gelen', ikon: 'bi-telephone-inbound' }, { kod: 'giden', ad: 'Giden', ikon: 'bi-telephone-outbound' }];
 
@@ -68,10 +68,7 @@ export async function ciz(kap, ctx) {
     const b = e.target.closest('[data-ara]');
     const s = b && d.satirlar[Number(b.dataset.ara)];
     if (!s) return;
-    kilitle(b, '', async () => {
-      const r = await ctx.yaz('POST', '/ara', s.kayitli ? { user_id: s.user_id } : { numara: s.telefon });
-      mesaj(r.govde?.mesaj || (r.ok ? 'Arama başlatıldı' : `Arama başlatılamadı (${r.kod})`), r.ok && r.govde?.basarili ? 'ok' : 'hata');
-    });
+    kilitle(b, '', () => aramaBaslat(ctx, '/ara', s.kayitli ? { user_id: s.user_id } : { numara: s.telefon }));
   });
   tablo.yenile();
 }

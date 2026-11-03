@@ -10,7 +10,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { gorusmeKokpiti, harf } from '/js/cagri-merkezi/ortak.js?v=1';
+import { gorusmeKokpiti, harf } from '/js/cagri-merkezi/ortak.js?v=2';
 
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 const GUNLER = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];

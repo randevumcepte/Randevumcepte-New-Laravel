@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V2\CagriAyarController;
 use App\Http\Controllers\Api\V2\CagriIslemController;
 use App\Http\Controllers\Api\V2\CagriListeController;
 use App\Http\Controllers\Api\V2\CagriMerkeziController;
@@ -21,6 +22,7 @@ Route::prefix('cagri-merkezi')->group(function () {
     Route::get('/listeler/{id}/musteriler', [CagriMerkeziController::class, 'kuyruk'])->whereNumber('id');
     Route::get('/kayit/{id}', [CagriMerkeziController::class, 'kayit'])->whereNumber('id');
     Route::get('/kayit/{id}/gecmis', [CagriMerkeziController::class, 'gecmis'])->whereNumber('id');
+    Route::get('/kayit/{id}/ses-kayitlari', [CagriMerkeziController::class, 'sesKayitlari'])->whereNumber('id');
     Route::get('/kayit/{id}/musteri', [CagriMerkeziController::class, 'musteri'])->whereNumber('id');
     Route::get('/musteri-ara', [CagriMerkeziController::class, 'musteriAra']);
 
@@ -31,6 +33,7 @@ Route::prefix('cagri-merkezi')->group(function () {
     Route::post('/kayit/{id}/iptal', [CagriIslemController::class, 'iptal'])->whereNumber('id');
     Route::post('/kayit/{id}/ertele', [CagriIslemController::class, 'ertele'])->whereNumber('id');
     Route::post('/kayit/{id}/satis', [CagriIslemController::class, 'satis'])->whereNumber('id');
+    Route::post('/kayit/{id}/whatsapp', [CagriIslemController::class, 'whatsapp'])->whereNumber('id');
     Route::post('/kayit/{id}/anket', [CagriIslemController::class, 'anket'])->whereNumber('id');
     Route::post('/ara', [CagriIslemController::class, 'araNumara']);
     Route::post('/arama-randevusu', [CagriIslemController::class, 'aramaRandevusu']);
@@ -43,11 +46,22 @@ Route::prefix('cagri-merkezi')->group(function () {
     Route::get('/performans/{personelId}', [CagriRaporController::class, 'personelDetay'])->whereNumber('personelId');
     Route::get('/cagri-kayitlari', [CagriRaporController::class, 'cagriKayitlari']);
 
-    // Liste yönetimi (yönetici)
+    // Liste oluşturma + yönetimi (yönetici)
+    Route::post('/listeler/onizleme', [CagriListeController::class, 'onizleme']);
+    Route::post('/listeler', [CagriListeController::class, 'olustur']);
     Route::get('/listeler/{id}/segmentler', [CagriListeController::class, 'segmentler'])->whereNumber('id');
     Route::get('/listeler/{id}/csv', [CagriListeController::class, 'csv'])->whereNumber('id');
     Route::patch('/listeler/{id}/durum', [CagriListeController::class, 'durum'])->whereNumber('id');
     Route::patch('/listeler/{id}/personel', [CagriListeController::class, 'personel'])->whereNumber('id');
     Route::post('/listeler/{id}/tasi', [CagriListeController::class, 'tasi'])->whereNumber('id');
     Route::delete('/listeler/{id}', [CagriListeController::class, 'sil'])->whereNumber('id');
+
+    // Ayarlar: görüşme scriptleri + sonuç kategorileri (yönetici)
+    Route::get('/ayarlar', [CagriAyarController::class, 'getir']);
+    Route::post('/scriptler', [CagriAyarController::class, 'scriptKaydet']);
+    Route::patch('/scriptler/{id}', [CagriAyarController::class, 'scriptKaydet'])->whereNumber('id');
+    Route::delete('/scriptler/{id}', [CagriAyarController::class, 'scriptSil'])->whereNumber('id');
+    Route::post('/kategoriler', [CagriAyarController::class, 'kategoriKaydet']);
+    Route::patch('/kategoriler/{id}', [CagriAyarController::class, 'kategoriKaydet'])->whereNumber('id');
+    Route::delete('/kategoriler/{id}', [CagriAyarController::class, 'kategoriSil'])->whereNumber('id');
 });

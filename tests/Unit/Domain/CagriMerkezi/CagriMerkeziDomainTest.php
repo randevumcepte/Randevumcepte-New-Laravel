@@ -110,8 +110,8 @@ class CagriMerkeziDomainTest extends TestCase
         $this->assertFalse($personel->listeyeErisir(null));
         $this->assertTrue($yonetici->listeyeErisir(null));
         $this->assertFalse($personel->personeleAtayabilir(56));
-        $this->assertSame(['calisma', 'takvim', 'kayitlar'], array_column(CagriMerkeziSekmeleri::gorunur($personel), 'kod'));
-        $this->assertSame(['calisma', 'takvim', 'kayitlar', 'performans', 'listeler'], array_column(CagriMerkeziSekmeleri::gorunur($yonetici), 'kod'));
+        $this->assertSame(['calisma', 'ajanda', 'takvim', 'kayitlar'], array_column(CagriMerkeziSekmeleri::gorunur($personel), 'kod'));
+        $this->assertSame(['calisma', 'ajanda', 'takvim', 'kayitlar', 'performans', 'listeler', 'ayarlar'], array_column(CagriMerkeziSekmeleri::gorunur($yonetici), 'kod'));
         $this->assertFalse(CagriMerkeziSekmeleri::acikMi('performans', $personel));
         $this->assertSame(ListeDurumu::AKTIF, ListeDurumu::dbden(null));
         $this->assertSame(ListeDurumu::AKTIF, ListeDurumu::dbden(0));

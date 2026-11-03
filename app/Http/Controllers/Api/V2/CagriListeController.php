@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\CagriMerkezi\AramaFiltresi;
 use App\Domain\CagriMerkezi\ListeDurumu;
 use App\Services\CagriMerkezi\AramaListesiServisi;
+use App\Services\CagriMerkezi\ListeOlusturmaServisi;
 use App\Support\ApiCevap;
+use App\Support\ListeIstegi;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
- * ÇAĞRI MERKEZİ v2 — LİSTE YÖNETİMİ (yönetici). Eski cagri_liste_segmentler, cagri_liste_durum,
+ * ÇAĞRI MERKEZİ v2 — LİSTE YÖNETİMİ (yönetici). Eski arama_filtre_onizleme + arama_listesi_ekle, cagri_liste_segmentler, cagri_liste_durum,
  * cagri_liste_personel_degistir, cagri_segment_ata + cagri_toplu_aktar (tek uç), cagri_liste_sil,
  * cagri_segment_indir karşılığı.
  *
+ *   POST   /cagri-merkezi/listeler/onizleme     {filtre{}, page, per_page}  canlı sayaç + sayfalı müşteri listesi
+ *   POST   /cagri-merkezi/listeler              {baslik, personel_id, aranacak_tarih?, filtre{}, mod: tumu|aralik|secili, ids[]?, bas?, bit?}
  *   GET    /cagri-merkezi/listeler/{id}/segmentler
  *   PATCH  /cagri-merkezi/listeler/{id}/durum      {durum: 1|2|3}
  *   PATCH  /cagri-merkezi/listeler/{id}/personel   {personel_id: int|null}   null → atamayı geri al
@@ -22,6 +27,33 @@ use Illuminate\Validation\Rule;
  */
 class CagriListeController extends CagriMerkeziTabanController
 {
+    public function onizleme(Request $request, ListeOlusturmaServisi $s)
+    {
+        $e = $this->erisim($request);
+        $l = ListeIstegi::istekten($request, 50);
+
+        return ApiCevap::basarili($s->onizleme($e, AramaFiltresi::diziden((array) $request->input('filtre', [])), $l->sayfa, $l->sayfaBoyu));
+    }
+
+    public function olustur(Request $request, ListeOlusturmaServisi $s)
+    {
+        $e = $this->yazmaErisimi($request);
+        $v = $request->validate([
+            'baslik'         => ['required', 'string', 'max:190'],
+            'personel_id'    => ['required', 'integer', 'min:1'],
+            'aranacak_tarih' => ['nullable', 'date_format:Y-m-d'],
+            'filtre'         => ['nullable', 'array'],
+            'mod'            => ['required', Rule::in(['tumu', 'aralik', 'secili'])],
+            'ids'            => ['required_if:mod,secili', 'array', 'max:20000'],
+            'ids.*'          => ['integer', 'min:1'],
+            'bas'            => ['required_if:mod,aralik', 'nullable', 'integer', 'min:1'],
+            'bit'            => ['required_if:mod,aralik', 'nullable', 'integer', 'gte:bas'],
+        ]);
+        $sonuc = $s->olustur($e, AramaFiltresi::diziden($v['filtre'] ?? []), $v);
+
+        return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
+    }
+
     public function segmentler(Request $request, int $id, AramaListesiServisi $s)
     {
         return ApiCevap::basarili($s->segmentler($this->erisim($request), $id));

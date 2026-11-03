@@ -54,6 +54,56 @@ export function gecmisCiz(kap, liste, { bos = 'Bu müşteriyle henüz görüşme
   }).join('');
 }
 
+/**
+ * ARA — v2 kabuğundaki WebRTC softphone bağlıysa softphone ile (sunucu numara + gösterim etiketi
+ * döner; panelde numara değil etiket görünür), değilse santral originate (Bria çalar). Tek yerden:
+ * kokpit + Çağrı Kayıtları + ajanda.  @returns {Promise<boolean>} başlatıldı mı
+ */
+export async function aramaBaslat(ctx, yol, govde = {}) {
+  const sp = window.rcSoftphone;
+  const softphone = !!(sp && sp.bagliMi && sp.bagliMi());
+  const r = await ctx.yaz('POST', yol, { ...govde, softphone: softphone ? 1 : 0 });
+  if (!r.ok || !r.govde?.basarili) { mesaj(r.govde?.mesaj || `Arama başlatılamadı (${r.kod})`, 'hata'); return false; }
+  const v = r.govde.veri || {};
+  if (v.softphone && v.numara_ara) {
+    if (!sp.ara(v.numara_ara, { etiket: v.etiket })) { mesaj('Softphone hazır değil — üst köşedeki telefonun "Bağlı" olduğundan emin olun.', 'hata'); return false; }
+    return true;
+  }
+  mesaj(r.govde.mesaj || 'Arama başlatıldı', 'ok');
+  return true;
+}
+
+/** Müşteriyle yapılan TÜM ses kayıtları (son 120 gün) — modal. */
+export async function tumSesKayitlari(ctx, kayitId, ad) {
+  const ov = modalAc('Tüm Ses Kayıtları', '<div id="tsListe"><div class="cm-bos"><span class="rc-yukleniyor"></span></div></div>', '', { ikon: 'soundwave', altbaslik: ad });
+  const r = await ctx.oku(`/kayit/${kayitId}/ses-kayitlari`);
+  const kap = el('#tsListe', ov);
+  if (!kap) return;
+  if (!r.ok || !r.govde?.basarili) { kap.innerHTML = `<div class="cm-bos cm-hata">${esc(r.govde?.mesaj || 'Kayıtlar yüklenemedi')}</div>`; return; }
+  const { kayitlar, santral_hata: hata } = r.govde.veri;
+  kap.innerHTML = (hata ? '<div class="cm-uyari">Santrale şu an ulaşılamıyor; liste eksik olabilir.</div>' : '')
+    + (kayitlar.length ? kayitlar.map((x) => `<div class="cm-gecmis"><span class="cm-gecmis-tarih"><i class="bi bi-clock"></i> ${esc(x.tarih)}</span>${sesOynatici(x.url)}</div>`).join('')
+      : '<div class="cm-bos"><i class="bi bi-mic-mute"></i>Bu müşteriyle kayıtlı görüşme bulunamadı.</div>');
+}
+
+/** Manuel WhatsApp mesajı (numara personele gösterilmez; sunucu müşteriye gönderir). */
+function whatsappMesaj(ctx, k) {
+  const ov = modalAc('WhatsApp Mesajı', `${alan('Mesaj *', '<textarea id="waMesaj" rows="5" maxlength="1000" placeholder="Müşteriye gönderilecek mesaj…"></textarea><span class="rc-ipucu" id="waSay">0 / 1000</span>', 'rc-tam')}`,
+    '<button class="rc-btn rc-btn-ikincil" data-kapat>Vazgeç</button><button class="rc-btn rc-btn-yesil" id="waGonder"><i class="bi bi-whatsapp"></i> Gönder</button>',
+    { ikon: 'whatsapp', altbaslik: k.ad, dar: true });
+  const $ = (s) => el(s, ov);
+  $('[data-kapat]').onclick = modalKapat;
+  $('#waMesaj').oninput = () => { $('#waSay').textContent = `${$('#waMesaj').value.length} / 1000`; };
+  $('#waGonder').onclick = (e) => {
+    const m = $('#waMesaj').value.trim();
+    if (!m) return mesaj('Mesaj boş olamaz.', 'hata');
+    kilitle(e.currentTarget, 'Gönderiliyor…', async () => {
+      const r = await ctx.yaz('POST', `/kayit/${k.aranacak_musteri_id}/whatsapp`, { mesaj: m });
+      if (yazSonuc(r, r.govde?.mesaj)) modalKapat();
+    });
+  };
+}
+
 /** Tek randevuIslemleri örneği (randevu formu çekmecesi body'ye bir kez eklenir). */
 let _randevu = null;
 const randevu = (ctx) => (_randevu ||= randevuIslemleri({ salonId: ctx.salonId }));
@@ -136,11 +186,15 @@ export function gorusmeKokpiti(kap, ctx, k, opt = {}) {
             <input type="time" id="kSonraSaat">
           </div>
           <button type="button" class="cm-kaydet" id="kKaydet"><i class="bi bi-save"></i> Sonucu Kaydet</button>
-          ${y.anket ? '<button type="button" class="cm-anket" id="kAnket"><i class="bi bi-star"></i> Memnuniyet Anketi Gönder</button>' : ''}
+          <div class="cm-iki">
+            <button type="button" class="cm-whatsapp" id="kWhatsapp"><i class="bi bi-whatsapp"></i> WhatsApp Mesajı</button>
+            ${y.anket ? '<button type="button" class="cm-anket" id="kAnket"><i class="bi bi-star"></i> Memnuniyet Anketi</button>' : ''}
+          </div>
         </div>
         <div class="cm-kart">
           <div class="cm-kart-bas"><i class="bi bi-clock-history"></i> Çağrı Geçmişi &amp; Ses Kayıtları
-            <button type="button" class="cm-mini-btn" id="kGecmisYenile"><i class="bi bi-arrow-clockwise"></i> Yenile</button></div>
+            <button type="button" class="cm-mini-btn" id="kTumSes"><i class="bi bi-soundwave"></i> Tüm Ses Kayıtları</button>
+            <button type="button" class="cm-mini-btn cm-mini-yan" id="kGecmisYenile"><i class="bi bi-arrow-clockwise"></i> Yenile</button></div>
           <div id="kGecmis"><div class="cm-bos"><span class="rc-yukleniyor"></span></div></div>
         </div>
       </div>
@@ -226,14 +280,10 @@ export function gorusmeKokpiti(kap, ctx, k, opt = {}) {
   });
 
   $('#kAra').addEventListener('click', (ev) => kilitle(ev.currentTarget, 'Bağlanıyor…', async () => {
-    const r = await ctx.yaz('POST', `/kayit/${k.aranacak_musteri_id}/ara`);
-    if (r.ok && r.govde?.basarili) {
-      mesaj(r.govde.mesaj || 'Arama başlatıldı', 'ok');
-      if (Number(k.durum_kod) === 3) durumYaz(1);
-    } else {
-      mesaj(r.govde?.mesaj || `Arama başlatılamadı (${r.kod})`, 'hata');
-    }
+    if (await aramaBaslat(ctx, `/kayit/${k.aranacak_musteri_id}/ara`) && Number(k.durum_kod) === 3) durumYaz(1);
   }));
+  $('#kWhatsapp').addEventListener('click', () => whatsappMesaj(ctx, k));
+  $('#kTumSes').addEventListener('click', () => tumSesKayitlari(ctx, k.aranacak_musteri_id, k.ad));
 
   $('#kAnket')?.addEventListener('click', async (ev) => {
     if (!await onay('Müşteriye anket linki WhatsApp veya SMS ile gönderilecek.', { baslik: 'Memnuniyet anketi gönderilsin mi?', tamam: 'Evet, gönder' })) return;
