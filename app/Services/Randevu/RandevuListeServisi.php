@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\DB;
  * olusturan, olusturulma. Ilk tuketici: musteri detay "Randevular" sekmesi.
  *
  * Eskiden farki: HTML uretmez (durum = {kod, etiket, renk}); musteri kartinda "son 300"
- * siniri yerine sunucu sayfalamasi. Personel kapsami: randevu.tum_personel_gor yoksa
+ * siniri yerine sunucu sayfalamasi. Tablo aramasi (ara) satirda GORUNEN icerikte: tarih
+ * (gg.aa.yyyy), saat, durum etiketi, hizmet, personel/cihaz/oda, not, olusturan. Personel kapsami: randevu.tum_personel_gor yoksa
  * yalnizca kendi (asil — yardimci olmayan) kalemlerinin bulundugu randevular.
  */
 class RandevuListeServisi
@@ -29,7 +30,8 @@ class RandevuListeServisi
             ->when($f['musteri_id'] ?? null, fn ($q, $uid) => $q->where('r.user_id', $uid))
             ->when($f['kisit_personel_id'] ?? null, fn ($q, $pid) => $q->whereExists(fn ($e) => $e->selectRaw('1')
                 ->from('randevu_hizmetler as rk')->whereColumn('rk.randevu_id', 'r.id')
-                ->where('rk.personel_id', $pid)->whereRaw('COALESCE(rk.yardimci_personel,0) != 1')));
+                ->where('rk.personel_id', $pid)->whereRaw('COALESCE(rk.yardimci_personel,0) != 1')))
+            ->when($l->likeDeseni(), fn ($q, $like) => $this->ara($q, $like, (string) $l->ara));
 
         $toplam = (clone $q)->count();
 
@@ -65,6 +67,38 @@ class RandevuListeServisi
                 ];
             })->all(),
         ] + ListeIstegi::meta($l->sayfa, $l->sayfaBoyu, $toplam);
+    }
+
+    /** Tablo aramasi — kolonlar listede gosterilenlerle ayni. */
+    private function ara($q, string $like, string $ham): void
+    {
+        $durumlar = RandevuDurumu::etiketeUyanlar($ham);
+
+        $q->where(function ($w) use ($like, $durumlar) {
+            $w->whereRaw("DATE_FORMAT(r.tarih, '%d.%m.%Y') LIKE ?", [$like])
+                ->orWhereRaw("TIME_FORMAT(r.saat, '%H:%i') LIKE ?", [$like])
+                ->orWhere('r.personel_notu', 'like', $like)
+                ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('isletmeyetkilileri as oy')
+                    ->whereColumn('oy.id', 'r.olusturan_personel_id')->where('oy.name', 'like', $like))
+                ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('randevu_hizmetler as ak')
+                    ->leftJoin('hizmetler as ah', 'ah.id', '=', 'ak.hizmet_id')
+                    ->leftJoin('salon_personelleri as ap', 'ap.id', '=', 'ak.personel_id')
+                    ->leftJoin('cihazlar as ac', 'ac.id', '=', 'ak.cihaz_id')
+                    ->leftJoin('odalar as ao', 'ao.id', '=', 'ak.oda_id')
+                    ->whereColumn('ak.randevu_id', 'r.id')
+                    ->where(fn ($x) => $x->where('ah.hizmet_adi', 'like', $like)->orWhere('ap.personel_adi', 'like', $like)
+                        ->orWhere('ac.cihaz_adi', 'like', $like)->orWhere('ao.oda_adi', 'like', $like)));
+            foreach ($durumlar as [$durum, $geldi]) {
+                $w->orWhere(function ($d) use ($durum, $geldi) {
+                    $d->where('r.durum', $durum);
+                    if ($geldi === false) {
+                        $d->whereNull('r.randevuya_geldi');
+                    } elseif ($geldi !== null) {
+                        $d->where('r.randevuya_geldi', $geldi);
+                    }
+                });
+            }
+        });
     }
 
     /**

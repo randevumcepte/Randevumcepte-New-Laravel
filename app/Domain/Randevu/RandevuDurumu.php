@@ -28,6 +28,30 @@ final class RandevuDurumu
         return ['kod' => $kod, 'etiket' => $etiket, 'renk' => $renk];
     }
 
+    /** etiket() ile ayni tablo: [durum, geldi(true=1 / 0 / false=NULL / null=farketmez), etiket] */
+    private const ETIKETLER = [
+        [1, 1, 'Geldi'], [1, 0, 'Gelmedi'], [1, false, 'Onaylı'],
+        [2, null, 'İptal'], [3, null, 'Müşteri Tarafından İptal'], [0, null, 'Beklemede'],
+    ];
+
+    /**
+     * Arama metninin gectigi durum etiketleri (tablo aramasi icin, Turkce kucuk harf).
+     *
+     * @return list<array{0:int, 1:int|false|null}>
+     */
+    public static function etiketeUyanlar(string $ara): array
+    {
+        // Turkce kucuk harf + ı/i esitlenir (IPTAL / iptal / İptal hepsi eslesir).
+        $kucuk = fn (string $x) => str_replace('ı', 'i', mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $x), 'UTF-8'));
+        $ara = $kucuk(trim($ara));
+        if ($ara === '') {
+            return [];
+        }
+
+        return array_values(array_map(fn ($e) => [$e[0], $e[1]],
+            array_filter(self::ETIKETLER, fn ($e) => str_contains($kucuk($e[2]), $ara))));
+    }
+
     /**
      * Liste satirinda izinli islemler — eski randevu_liste_getir islem menusu ile ayni:
      *   Beklemede     → Duzenle, Onayla (randevu.onayla), Iptal Et

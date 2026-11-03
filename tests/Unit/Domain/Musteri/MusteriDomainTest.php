@@ -65,6 +65,16 @@ class MusteriDomainTest extends TestCase
         $this->assertSame('beklemede', RandevuDurumu::etiket(0, null)['kod']);
     }
 
+    public function test_randevu_durum_aramasi(): void
+    {
+        $this->assertSame([[0, null]], RandevuDurumu::etiketeUyanlar('bekle'));
+        $this->assertSame([[2, null], [3, null]], RandevuDurumu::etiketeUyanlar('İPTAL'));
+        $this->assertSame([[1, false]], RandevuDurumu::etiketeUyanlar('onaylı'));
+        $this->assertSame([[1, 1]], RandevuDurumu::etiketeUyanlar('geld'));
+        $this->assertSame([[2, null], [3, null]], RandevuDurumu::etiketeUyanlar('IPTAL'));
+        $this->assertSame([], RandevuDurumu::etiketeUyanlar('Lazer'));
+    }
+
     public function test_randevu_liste_aksiyonlari_eski_menu_ile_ayni(): void
     {
         $this->assertSame(['onayla' => true, 'duzenle' => true, 'iptal' => true], RandevuDurumu::aksiyonlar(0, null, true, true));
