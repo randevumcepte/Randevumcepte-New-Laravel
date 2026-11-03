@@ -76,10 +76,9 @@ class PanelMenu
             ['etiket' => 'SMS Yönetimi',       'ikon' => 'bi bi-chat-square-text', 'slug' => 'toplusms',          'pageindex' => 91,  'yetki' => 'pazarlama.toplu_sms'],
 
             // ───────────── Çağrı Merkezi
-            ['etiket' => 'Çağrı Merkezi',      'ikon' => 'bi bi-headset',          'slug' => 'arama-dashboard',       'pageindex' => 100, 'ozellik' => 'santral_aktif', 'bolum' => 'Çağrı Merkezi'],
-            ['etiket' => 'Arama Randevu Takvimi','ikon' => 'bi bi-calendar-check', 'slug' => 'arama-randevu-takvim',  'pageindex' => 101, 'ozellik' => 'santral_aktif'],
-            ['etiket' => 'Çağrı Kayıtları',    'ikon' => 'bi bi-telephone',        'slug' => 'arama-cagri-kayitlari', 'pageindex' => 102, 'ozellik' => 'santral_aktif'],
-            ['etiket' => 'Atanan Aramalar',    'ikon' => 'bi bi-telephone-outbound','slug' => 'arama-listelerim',     'pageindex' => 103, 'ozellik' => 'santral_aktif'],
+            // Eski 4 sayfa (Çağrı Merkezi paneli, Arama Randevu Takvimi, Çağrı Kayıtları, Atanan Aramalar)
+            // TEK sekmeli v2 sayfasında; sekme görünürlüğü (personel/yönetici) /api/v2/cagri-merkezi/acilis'ten.
+            ['etiket' => 'Çağrı Merkezi',      'ikon' => 'bi bi-headset',          'slug' => 'cagri-merkezi', 'v2_rota' => '/v2/cagri-merkezi', 'pageindex' => 100, 'ozellik' => 'santral_aktif', 'bolum' => 'Çağrı Merkezi'],
 
             // ───────────── Sistem
             ['etiket' => 'Ayarlar',            'ikon' => 'bi bi-gear',             'slug' => 'ayarlar', 'ek_sorgu' => 'p=temelbilgiler', 'v2_rota' => '/v2/ayarlar', 'pageindex' => 9, 'yetki' => 'ayar.salon_bilgi', 'bolum' => 'Sistem'],

@@ -11,12 +11,12 @@
  * satır işlemleri (islemler.duzenle/sonuclandir) /api/v2/ongorusme/* uçlarından — Flutter da aynı
  * uçları kullanır; burada iş kuralı yok. Yazmalar ONGORUSME_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
-import { qp, api, el, esc, TL, mesaj, onay, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, TL, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
 import { trTarih } from '/js/lib/v2-donem.js?v=1';
+import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=1';
 
 const kok = document.getElementById('rc-ongorusme');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -36,25 +36,9 @@ const yetki = (k) => !!fv.yetkiler?.[k];
 const fiyatGizli = () => !!fv.studyo_modu; // stüdyo MODEL B
 const oku = (yol, params = {}) => api('GET', yol, { params: { ...params, salon_id: salonId } });
 const yaz = (method, yol, body = {}) => api(method, yol, { body: { ...body, salon_id: salonId } });
-const sayiVeyaNull = (v) => (String(v ?? '').trim() === '' ? null : Number(String(v).replace(',', '.')));
 const kayitBul = (id) => sonListe.find((k) => String(k.id) === String(id));
-const nedenler = () => fv.nedenler.flatMap((g) => g.secenekler.map((s) => ({ ...s, grup: g.etiket })));
-const nedenBul = (anahtar) => nedenler().find((s) => s.anahtar === anahtar);
-const secenekler = (liste, secili, bos = null, deger = 'id', ad = 'ad') =>
-  (bos !== null ? `<option value="">${esc(bos)}</option>` : '')
-  + liste.map((x) => `<option value="${esc(x[deger])}"${String(secili ?? '') === String(x[deger]) ? ' selected' : ''}>${esc(x[ad])}</option>`).join('');
-const alan = (etiket, html, sinif = '') => `<div class="rc-alan ${sinif}"><label>${etiket}</label>${html}</div>`;
-const tarihBagla = (inp) => { if (window.flatpickr) window.flatpickr(inp, { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd.m.Y', allowInput: true, disableMobile: true }); };
+const nedenBul = (anahtar) => nedenListesi(fv).find((s) => s.anahtar === anahtar);
 
-/** Saat seçenekleri sunucudaki aralıktan (eski modal: 07:00–23:45, 15 dk). */
-function saatSecenekleri(secili) {
-  const { baslangic = '07:00', bitis = '23:45', adim_dk: adim = 15 } = fv.saat_araligi || {};
-  const dk = (s) => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
-  const out = [];
-  for (let t = dk(baslangic); t <= dk(bitis); t += adim) out.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`);
-  if (secili && !out.includes(secili)) out.push(secili);
-  return '<option value="">Seçiniz</option>' + out.map((s) => `<option${s === secili ? ' selected' : ''}>${s}</option>`).join('');
-}
 
 // ─────────────────────────── iskelet + tablo ───────────────────────────
 
@@ -150,68 +134,9 @@ function satirTiklama(e) {
 
 // ─────────────────────────── ekle / düzenle ───────────────────────────
 
+/** Ekle / düzenle — ortak form (lib/v2-ongorusme.js; Çağrı Merkezi de aynı formu açar). */
 function gorusmeFormu(k) {
-  const bolum = (ikon, baslik, icerik) => `<div class="og-bolum"><div class="og-bolum-baslik"><i class="bi ${ikon}"></i> ${baslik}</div><div class="rc-form-izgara">${icerik}</div></div>`;
-  const nedenSec = '<option value="">Seçiniz</option>' + nedenler()
-    .map((s) => `<option value="${esc(s.anahtar)}"${k?.neden?.anahtar === s.anahtar ? ' selected' : ''}>${esc(s.grup)} : ${esc(s.ad)}</option>`).join('');
-  const personel = k?.personel_id ?? fv.varsayilan_personel_id;
-  const govde = `
-    <form id="ogForm" autocomplete="off">
-      ${bolum('bi-person', `${esc(fv.musteri_etiket || 'Müşteri')} Bilgileri`, `
-        ${alan(`Mevcut ${esc(fv.musteri_etiket || 'Müşteri')} <small>(kayıtlıysa)</small>`, '<div id="fMusteri"></div><span class="rc-ipucu">Daha önce kaydedilmişse buradan seçin, aksi halde aşağıdaki alanları doldurun.</span>', 'rc-tam')}
-        ${alan('Ad Soyad *', `<input id="fAd" required maxlength="255" value="${esc(k?.ad_soyad || '')}">`)}
-        ${alan('Telefon *', `<input id="fTel" type="tel" value="${esc(k?.cep_telefon || '')}">`)}
-        ${alan('E-mail <small>(opsiyonel)</small>', `<input id="fEmail" type="email" maxlength="255" value="${esc(k?.email || '')}">`)}
-        ${alan('Cinsiyet', `<select id="fCinsiyet">${secenekler(fv.cinsiyetler, k?.cinsiyet, 'Seçiniz')}</select>`)}`)}
-      ${bolum('bi-clipboard2-check', 'Görüşme Detayı', `
-        ${alan('Ön Görüşme Sebebi *', `<select id="fNeden" required>${nedenSec}</select>`)}
-        ${alan('Referans', `<select id="fReferans">${secenekler(fv.referanslar, k?.musteri_tipi, 'Yok')}</select>`)}`)}
-      ${bolum('bi-calendar-event', 'Tarih &amp; Personel', `
-        ${alan('Tarih *', `<input id="fTarih" required value="${esc(k?.hatirlatma_tarihi || tarihStr(new Date()))}">`)}
-        ${alan('Saat *', `<select id="fSaat" required>${saatSecenekleri(k?.on_gorusme_saati)}</select>`)}
-        ${fv.oda_zorunlu ? alan('Oda *', `<select id="fOda" required>${secenekler(fv.odalar, k?.oda_id, 'Seçiniz')}</select>`) : ''}
-        ${alan('Görüşmeyi Yapan *', `<select id="fPersonel" required>${secenekler(fv.personeller, personel, 'Seçiniz')}</select>`)}
-        ${alan('Açıklama <small>(opsiyonel)</small>', `<textarea id="fAciklama" rows="2" maxlength="2000" placeholder="Görüşme ile ilgili kısa notlar…">${esc(k?.aciklama || '')}</textarea>`, 'rc-tam')}`)}
-    </form>`;
-  const ov = modalAc(k ? 'Ön Görüşme Düzenleme' : 'Yeni Ön Görüşme', govde,
-    '<button class="rc-btn rc-btn-ikincil" type="button" data-kapat>Vazgeç</button><button class="rc-btn rc-btn-birincil" type="submit" form="ogForm" id="fKaydet"><i class="bi bi-check-lg"></i> Kaydet</button>',
-    { ikon: 'person-plus', sabit: true, genis: true, altbaslik: k ? k.ad_soyad : 'Müşteri ile yapılacak ön görüşmeyi planlayın.' });
-  el('[data-kapat]', ov).onclick = modalKapat;
-  tarihBagla(el('#fTarih', ov));
-
-  // Mevcut müşteri seçilince ad / telefon ondan dolar; "Değiştir" serbest girişe döner.
-  const baslangic = k?.musteri ? { id: k.musteri.id, ad: k.musteri.name, telefon: k.cep_telefon } : null;
-  const secici = musteriSecici(el('#fMusteri', ov), {
-    salonId, yol: '/ongorusme/musteri-ara', baslangic,
-    onSec: (m) => { if (m) { el('#fAd', ov).value = m.ad || ''; el('#fTel', ov).value = m.telefon || ''; } },
-  });
-
-  el('#ogForm', ov).addEventListener('submit', (e) => {
-    e.preventDefault();
-    const neden = nedenBul(el('#fNeden', ov).value);
-    const eksik = [!neden && 'Ön görüşme sebebini seçiniz.', !el('#fPersonel', ov).value && 'Ön görüşmeyi gerçekleştirecek personeli seçiniz.',
-      fv.oda_zorunlu && !el('#fOda', ov)?.value && 'Oda seçiniz.', !el('#fSaat', ov).value && 'Saat seçiniz.'].filter(Boolean);
-    if (eksik.length) return mesaj(eksik.join(' '), 'hata');
-    const d = {
-      musteri_id: secici.secili()?.id || null, ad_soyad: el('#fAd', ov).value.trim(), telefon: el('#fTel', ov).value.trim(),
-      email: el('#fEmail', ov).value.trim() || null, cinsiyet: sayiVeyaNull(el('#fCinsiyet', ov).value),
-      musteri_tipi: sayiVeyaNull(el('#fReferans', ov).value), neden_tur: neden.tur, neden_id: neden.id,
-      tarih: el('#fTarih', ov).value, saat: el('#fSaat', ov).value, oda_id: sayiVeyaNull(el('#fOda', ov)?.value),
-      personel_id: Number(el('#fPersonel', ov).value), aciklama: el('#fAciklama', ov).value.trim() || null,
-    };
-    kilitle(el('#fKaydet', ov), 'Kaydediliyor…', () => kaydet(k, d));
-  });
-}
-
-/** Kaydet; çakışma iş sonucudur (veri.cakismavar='1') → onayla "yine de kaydet". */
-async function kaydet(k, d) {
-  const gonder = (ek = {}) => (k ? yaz('PATCH', `/ongorusme/${k.id}`, { ...d, ...ek }) : yaz('POST', '/ongorusme', { ...d, ...ek }));
-  let r = await gonder();
-  if (r.ok && r.govde?.veri?.cakismavar === '1') {
-    if (!await onay(`${r.govde.veri.cakisanunsurlar} Yine de kaydetmek istiyor musunuz?`, { baslik: 'Çakışma Var', tamam: 'Yine de kaydet' })) return;
-    r = await gonder({ cakisanrandevuekle: 1 });
-  }
-  if (yazSonuc(r, r.govde?.mesaj)) { modalKapat(); tablo.yenile(!k); }
+  ongorusmeFormu({ salonId, fv, kayit: k, onKaydet: () => tablo.yenile(!k) });
 }
 
 // ─────────────────────────── sonuçlandır ───────────────────────────

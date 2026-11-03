@@ -70,8 +70,11 @@ Route::get('/v2/asistan/{sube?}', function ($sube = null) {
  | On Gorusmeler v2 — liste (durum sekmeleri) + ekle/duzenle + satis yapildi/yapilmadi; veri
  | /api/v2/ongorusme/* (Bearer); yazmalar ONGORUSME_V2_YAZMA_AKTIF kapaliyken 409.
  | Log Hareketleri v2 — salon aktivite logu (salt okuma); veri /api/v2/hareketler* (Bearer).
+ | Uygulama Afisi v2 — QR'li indirme afisi onizleme + PDF + paylasim linki (salt okuma); /api/v2/uygulama-afisi*.
+ | Cagri Merkezi v2 — eski 4 sayfa tek sekmeli sayfa (?p=calisma|takvim|kayitlar|performans|listeler);
+ | veri /api/v2/cagri-merkezi/* (Bearer); yazmalar CAGRI_MERKEZI_V2_YAZMA_AKTIF kapaliyken 409.
  */
-foreach (['ozet' => 'v2.ozet', 'raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler', 'ongorusmeler' => 'v2.ongorusmeler', 'log-hareketleri' => 'v2.log-hareketleri'] as $yol => $gorunum) {
+foreach (['ozet' => 'v2.ozet', 'raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler', 'ongorusmeler' => 'v2.ongorusmeler', 'log-hareketleri' => 'v2.log-hareketleri', 'cagri-merkezi' => 'v2.cagri-merkezi', 'uygulama-afisi' => 'v2.uygulama-afisi'] as $yol => $gorunum) {
     Route::get('/v2/'.$yol.'/{sube?}', fn ($sube = null) => view($gorunum, ['salonId' => (int) ($sube ?: request('sube', 0))]))
         ->whereNumber('sube');
 }

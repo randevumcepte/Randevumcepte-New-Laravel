@@ -152,3 +152,7 @@
 .rc-rd-musteri { font-weight: 700; color: #5C008E; text-decoration: none; }
 .rc-rd-musteri:hover { text-decoration: underline; }
 @media (prefers-color-scheme: dark) { .rc-rd-musteri { color: #c9a6ec; } }
+
+/* Sekmeli sayfa (lib/v2-sekme.js) — tembel yüklenen sekme gövdesi */
+.rc-sekme-yuk { display: flex; justify-content: center; padding: 40px 0; }
+.rc-sekme-bos { text-align: center; color: #9191a3; padding: 40px 12px; font-size: 14px; }

@@ -55,7 +55,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | E-asistan (Asistanım) | 2 | ✅ | `/asistan/*` — eşleme aşağıda |
 | Dashboard / hatırlatma / bildirim | ~13 | ◐ | Özet `GET /ozet/acilis`, `/ozet/kart/{kod}`, `/ozet/sekme/{kod}` ✅ (v1 `dashboard` + `dashboardKarsilastirma`; eşleme docs/strangler-ozet.md) — bildirim, hatırlatma, `easistandatadashboard`, boş saat kampanyası henüz v1 |
 | Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |
-| Çağrı merkezi / santral | ~30 | ❌ | (v1'de Bearer'lı `CagriApi`) |
+| Çağrı merkezi / santral | ~30 | ✅ | `/cagri-merkezi/*` (çalışma ekranı, arama randevuları, çağrı kayıtları, performans, liste yönetimi — tek sekmeli `/v2/cagri-merkezi`) + `/santral/*`; eşleme docs/strangler-cagri-merkezi.md; yazma `CAGRI_MERKEZI_V2_YAZMA_AKTIF`. Liste oluşturma (filtre motoru) + script/kategori tanımı henüz v1 |
 
 ## Personel — v1 → v2 eşlemesi
 

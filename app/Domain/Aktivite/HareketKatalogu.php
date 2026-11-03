@@ -41,6 +41,20 @@ final class HareketKatalogu
         'randevu_geldi_iptal'     => ['etiket' => 'Randevu: geldi geri alındı'],
         'personel_arsiv'          => ['etiket' => 'Personel arşivlendi', 'kategori' => HareketKategorisi::SILME],
         'sadakat_puan_kazanim'    => ['etiket' => 'Sadakat puanı kazanıldı', 'kategori' => HareketKategorisi::ODEME],
+        // Çağrı Merkezi (v2) — tüm yazmalar AktiviteLog::yaz ile; yenisi gerekirse buraya tek satır.
+        'cagri_gorusme_sonucu'          => ['etiket' => 'Çağrı: görüşme sonucu', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cagri_arama_baslat'            => ['etiket' => 'Çağrı başlatıldı', 'kategori' => HareketKategorisi::GONDERIM],
+        'cagri_randevu_verildi'         => ['etiket' => 'Çağrı: randevu verildi', 'kategori' => HareketKategorisi::EKLEME],
+        'cagri_arama_randevu_ekle'      => ['etiket' => 'Arama randevusu eklendi'],
+        'cagri_arama_randevu_ertele'    => ['etiket' => 'Arama randevusu ertelendi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cagri_arama_randevu_iptal'     => ['etiket' => 'Arama randevusu iptal edildi'],
+        'cagri_telefonda_satis'         => ['etiket' => 'Telefonda satış', 'kategori' => HareketKategorisi::ODEME],
+        'cagri_anket_gonder'            => ['etiket' => 'Memnuniyet anketi gönderildi'],
+        'cagri_liste_durum_degistir'    => ['etiket' => 'Arama listesi durumu değişti'],
+        'cagri_liste_personel_degistir' => ['etiket' => 'Arama listesi personele atandı'],
+        'cagri_liste_atama_kaldir'      => ['etiket' => 'Arama listesi ataması geri alındı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cagri_liste_segment_tasi'      => ['etiket' => 'Arama listesi segmenti taşındı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'cagri_liste_sil'               => ['etiket' => 'Arama listesi silindi'],
     ];
 
     /** Hedef tipi → etiket (yoksa kelime sözlüğüyle). */
@@ -53,11 +67,13 @@ final class HareketKatalogu
         'ongorusme'    => 'Ön görüşme',
         'santral_ayar' => 'Santral ayarı',
         'sms'          => 'SMS',
+        'aranacak_musteri' => 'Aranacak müşteri',
+        'arama_listesi'    => 'Arama listesi',
     ];
 
     /** Kod kelimesi → Türkçe yazım (kodlar ASCII; okunur etiket için). */
     private const KELIMELER = [
-        'alis' => 'alış', 'arsiv' => 'arşiv', 'askiya' => 'askıya', 'cark' => 'çark', 'calisma' => 'çalışma',
+        'alis' => 'alış', 'arsiv' => 'arşiv', 'askiya' => 'askıya', 'cagri' => 'çağrı', 'cark' => 'çark', 'calisma' => 'çalışma',
         'cikis' => 'çıkış', 'degistir' => 'değiştir', 'duzenle' => 'düzenle', 'fis' => 'fiş', 'fisi' => 'fişi',
         'giris' => 'giriş', 'girisi' => 'girişi', 'gonder' => 'gönder', 'gorev' => 'görev', 'gorsel' => 'görsel',
         'gorseli' => 'görseli', 'gorusme' => 'görüşme', 'guncelle' => 'güncelle', 'hatirlatma' => 'hatırlatma',

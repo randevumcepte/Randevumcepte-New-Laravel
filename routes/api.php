@@ -200,6 +200,12 @@ Route::prefix('v2')->group(function () {
         // LOG HAREKETLERI (salon_aktivite_log salt okuma: liste + filtre secenekleri) — routes/v2/hareket.php
         require __DIR__.'/v2/hareket.php';
 
+        // UYGULAMA AFISI (salt okuma: durum/link + afis onizleme JPEG + PDF) — routes/v2/uygulama-afisi.php
+        require __DIR__.'/v2/uygulama-afisi.php';
+
+        // CAGRI MERKEZI (calisma ekrani, arama randevulari, cagri kayitlari, performans, liste yonetimi) — routes/v2/cagri-merkezi.php
+        require __DIR__.'/v2/cagri-merkezi.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim

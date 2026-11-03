@@ -7,26 +7,18 @@ use App\Domain\OnGorusme\GorusmeNedeni;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
-use App\Exceptions\YetkisizErisimException;
-use App\Models\Adisyonlar;
 use App\Services\Musteri\MusteriYazServisi;
-use App\Services\Paket\PaketSatisServisi;
-use App\Services\Satis\KalemServisi;
-use App\Services\Stok\HizliSatisServisi;
+use App\Services\Satis\TekKalemSatisServisi;
 use App\Services\Yetki\SalonSahipligi;
 use App\Support\AktiviteLog;
-use App\Support\Idempotency;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Ön görüşmeyi SONUÇLANDIR — eski web/mobil ongorusmesatisyapildi + ongorusmesatisyapilmadi.
  *
- * "Satış yapıldı" görüşmenin nedenine göre satışı MEVCUT v2 satış yazıcılarıyla açar
- * (kopya adisyon/kalem/stok kodu yok); tahsilat BURADA ALINMAZ — istemci dönen adisyon_id
- * ile tahsilat ekranına gider (stüdyo: PATCH /adisyon/{id}/odeme), Paket Yönetimi ile aynı:
- *   paket  → PaketSatisServisi (katalog fiyatı; farklı fiyat 'satis.indirim_uygula' ister)
- *   ürün   → HizliSatisServisi (katalog fiyatı × adet + stok 'satis' hareketi)
- *   hizmet → adisyon + KalemServisi hizmet kalemi (seans 2+ → seanslı; fiyat kuralı paketle aynı)
+ * "Satış yapıldı" görüşmenin nedenine göre satışı ortak Satis\TekKalemSatisServisi ile açar
+ * (paket / ürün / hizmet → mevcut v2 satış yazıcıları; Çağrı Merkezi "Telefonda Satış" ile AYNI
+ * yazıcı); tahsilat BURADA ALINMAZ — istemci dönen adisyon_id ile tahsilat ekranına gider.
  *
  * Eskiden farklar (güvenlik / tutarlılık):
  *   - Yalnız BEKLEMEDE görüşme sonuçlandırılır; satır kilitlenir → çift tıklama / iki cihaz
@@ -41,9 +33,7 @@ class OnGorusmeSonucServisi
     public function __construct(
         private SalonSahipligi $sahiplik,
         private MusteriYazServisi $musteri,
-        private PaketSatisServisi $paketSatis,
-        private HizliSatisServisi $urunSatis,
-        private KalemServisi $kalem,
+        private TekKalemSatisServisi $satis,
     ) {}
 
     /**
@@ -65,14 +55,8 @@ class OnGorusmeSonucServisi
 
             $ortak = ['musteri_id' => $musteriId, 'personel_id' => $saticiId, 'idempotency_key' => 'ongorusme-'.$id];
             $tarih = $v['tarih'] ?? now()->toDateString();
-            $satis = match ($neden->tur) {
-                GorusmeNedeni::PAKET => $this->paketSatis->sat($salonId, $ortak + ['tarih' => $tarih, 'kalemler' => [
-                    array_filter(['paket_id' => $neden->id, 'seans' => $v['seans'] ?? null, 'fiyat' => $v['fiyat'] ?? null], fn ($x) => $x !== null),
-                ]], $kim),
-                GorusmeNedeni::URUN => $this->urunSatis->sat($salonId, $ortak + ['satis_tarihi' => $tarih, 'aciklama' => 'Ön görüşmeden ürün satışı',
-                    'sepet' => [['urun_id' => $neden->id, 'miktar' => (int) ($v['adet'] ?? 1)]]], ['yetkili_id' => $yetkiliId, 'olusturan_personel_id' => $kim['personel_id']]),
-                GorusmeNedeni::HIZMET => $this->hizmetSat($salonId, $neden->id, $ortak + ['tarih' => $tarih] + $v, $kim),
-            };
+            $satis = $this->satis->sat($salonId, $neden->tur, $neden->id,
+                $ortak + ['tarih' => $tarih, 'aciklama' => 'Ön görüşmeden ürün satışı'] + $v, $kim);
 
             DB::table('on_gorusmeler')->where('id', $id)->update([
                 'durum' => GorusmeDurumu::SATIS_YAPILDI->db(), 'user_id' => $musteriId, 'updated_at' => now(),
@@ -131,30 +115,5 @@ class OnGorusmeSonucServisi
             'salon_id' => $salonId, 'yapan_id' => $yetkiliId, 'ad_soyad' => (string) $og->ad_soyad, 'telefon' => $og->cep_telefon,
             'email' => $og->email, 'cinsiyet' => $og->cinsiyet, 'musteri_tipi' => $og->musteri_tipi,
         ])['id'];
-    }
-
-    /**
-     * Hizmet satışı: adisyon + tek hizmet kalemi (KalemServisi). Fiyat kuralı paket satışıyla
-     * aynı: katalogdan farklı fiyat yalnız 'satis.indirim_uygula' yetkisiyle.
-     */
-    private function hizmetSat(int $salonId, int $hizmetId, array $g, array $kim): array
-    {
-        $katalog = (float) DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $hizmetId)->max('baslangic_fiyat');
-        $fiyat = isset($g['fiyat']) ? round((float) $g['fiyat'], 2) : $katalog;
-        if ($fiyat !== round($katalog, 2) && ! $kim['fiyat_degistirebilir']) {
-            throw new YetkisizErisimException('Hizmet fiyatını değiştirme yetkiniz yok');
-        }
-        $yetkiliId = (int) $kim['yetkili_id'];
-
-        return Idempotency::calistir('ongorusme_hizmet_satis', $g['idempotency_key'], $yetkiliId, $salonId, function () use ($salonId, $hizmetId, $g, $fiyat, $yetkiliId) {
-            $adisyon = Adisyonlar::create([
-                'user_id' => $g['musteri_id'], 'salon_id' => $salonId, 'olusturan_id' => $yetkiliId, 'tarih' => $g['tarih'],
-            ]);
-            $this->kalem->ekle((int) $adisyon->id, 'hizmet', $hizmetId, [
-                'personel_id' => $g['personel_id'], 'fiyat' => $fiyat, 'seans' => $g['seans'] ?? null, 'tarih' => $g['tarih'],
-            ]);
-
-            return ['adisyon_id' => (int) $adisyon->id, 'toplam_tutar' => $fiyat];
-        });
     }
 }

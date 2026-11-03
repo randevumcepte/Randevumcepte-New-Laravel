@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=2';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=3';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -16,6 +16,8 @@
  *     yenile    : yazma sonrası liste/takvim tazele
  *     secili    : (randevuId|null) → çekmece açık randevu vurgusu
  *   r.cekmeceAc(id) / r.cekmeceKapat() / r.islemYap(v, islem) / r.randevuFormu({...})
+ *     randevuFormu({ musteri: {id, ad, telefon}, kaydedildi: (sonuc, yeniMi) => {} }) — müşteri seçili
+ *     başlar (Çağrı Merkezi "Yeni Randevu"); kaydedildi yazım sonrası (çağrıyı işaretleme vb.)
  *   r.modal(html) / r.yazVeyaOnizle(yontem, yol, govde)
  *
  * randevuTablosu(): Randevular listesi (/v2/randevular) ve müşteri kartı "Randevular"
@@ -329,7 +331,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
    *  - Elle girilen sure/fiyat satir TOPLAMIDIR; hizmetlere katalog oraninda dagitilir.
    *  - Isletme panelinden olusan randevu ONAYLIDIR (durum alani yok).
    */
-  async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu' }) {
+  async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu', musteri = null, kaydedildi = null }) {
     const r = await api('GET', '/randevu/form-verisi', { params: { salon_id: salonId, randevu_id: randevuId } });
     if (!r.ok || !r.govde?.basarili) return panel().toast(r.govde?.mesaj || 'Form yüklenemedi', 'hata');
     const fv = r.govde.veri;
@@ -372,7 +374,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
     });
     const f = {
       sekme: 'randevu',
-      musteri: mevcut ? { id: mevcut.user_id, ad: mevcut.musteri_ad, telefon: mevcut.telefon } : null,
+      musteri: mevcut ? { id: mevcut.user_id, ad: mevcut.musteri_ad, telefon: mevcut.telefon } : musteri,
       // Duzenleme: her kalem bir satir (mevcut sure/fiyat elle girilmis sayilir → korunur).
       satirlar: mevcut
         ? mevcut.hizmetler.map((h, i, a) => ({
@@ -712,6 +714,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         kapat();
         panel().toast(mevcut ? 'Randevu güncellendi' : 'Randevu oluşturuldu', 'ok');
         yenile?.();
+        kaydedildi?.(sonuc, !mevcut);
         if (mevcut) yenidenAc(mevcut.randevu_id);
         return;
       }
