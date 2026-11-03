@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=12">
+    <link rel="stylesheet" href="/css/panel.css?v=13">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=2">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
@@ -64,6 +64,12 @@
             </div>
 
             <div class="rc-header-sag">
+                {{-- Kalan SMS + WhatsApp durumu + WebRTC softphone (header-araclar.js doldurur; kurallar sunucuda) --}}
+                <div class="rc-header-araclar">
+                    <div id="rcSmsRozet"></div>
+                    <div id="rcWaRozet"></div>
+                    <div id="rcSoftphone" class="rc-sp"></div>
+                </div>
                 <a class="rc-header-ic" id="rcAyarBtn" title="Ayarlar" style="display:none"><i class="bi bi-gear"></i></a>
                 <div class="rc-kullanici" id="rcKullanici">
                     <div class="rc-avatar" id="rcAvatar">R</div>
@@ -83,6 +89,8 @@
     <script type="module" src="/js/arama-select.js?v=1"></script>
     {{-- Telefon: TUM input[type=tel]'lere ulke kodu secici + ulkeye gore bicim (sonradan eklenenler dahil). --}}
     <script type="module" src="/js/telefon-ulke.js?v=1"></script>
+    {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
+    <script type="module" src="/js/header-araclar.js?v=1"></script>
     <script type="module" src="/js/panel-kabuk.js?v=7"></script>
     @stack('betik')
 </body>

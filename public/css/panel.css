@@ -378,3 +378,72 @@ html, body { margin: 0; padding: 0; }
   .rc-dt-ara { flex-basis: auto; }
   .rc-tablo thead th, .rc-tablo tbody td { padding: 11px 12px; }
 }
+
+/* ───────────────── Header rozetleri: kalan SMS + WhatsApp + softphone (header-araclar.js) ───────────────── */
+.rc-header-araclar { display: flex; align-items: center; gap: 8px; }
+.rc-header-araclar:empty, .rc-header-araclar > div:empty { display: none; }
+.rc-rozet {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 40px; padding: 0 12px; border-radius: 11px; border: 0;
+  font: inherit; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap;
+  text-decoration: none; cursor: default; transition: filter .15s;
+}
+a.rc-rozet, button.rc-rozet { cursor: pointer; }
+a.rc-rozet:hover, button.rc-rozet:hover { filter: brightness(1.07); }
+.rc-rozet i { font-size: 16px; }
+.rc-rozet-sms { background: #f0a020; }
+.rc-rozet-wa.bagli { background: #25D366; }
+.rc-rozet-wa.kopuk { background: #DC2626; }
+.rc-rozet-kontor { background: rgba(255,255,255,.3); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 800; }
+.rc-rozet-kontor.kritik { background: #DC2626; box-shadow: 0 0 0 1px #fff; }
+
+/* Softphone */
+.rc-sp { position: relative; }
+.rc-rozet-sp { background: var(--rc-yesil); }
+.rc-sp-nokta { width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: .55; }
+.rc-sp[data-durum="bagli"] .rc-sp-nokta { opacity: 1; }
+.rc-sp[data-durum="kopuk"] .rc-rozet-sp, .rc-sp[data-durum="yeniden"] .rc-rozet-sp { background: #8a90ad; }
+.rc-sp[data-durum="geliyor"] .rc-rozet-sp { animation: rc-sp-cal 1s ease-in-out infinite; }
+@keyframes rc-sp-cal { 50% { filter: brightness(1.25); transform: scale(1.06); } }
+.rc-sp-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; width: 290px;
+  background: var(--rc-kart); border: 1px solid var(--rc-cizgi); border-radius: 16px;
+  box-shadow: var(--rc-golge-2); padding: 14px;
+}
+.rc-sp-ekran {
+  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px;
+  border-radius: 12px; background: var(--rc-mor); color: #fff; font-size: 13.5px; font-weight: 600;
+}
+.rc-sp-ekran i { font-size: 20px; opacity: .85; }
+.rc-sp-numara {
+  width: 100%; margin-top: 10px; height: 46px; border: 1px solid var(--rc-cizgi); border-radius: 12px;
+  text-align: center; font-size: 20px; letter-spacing: 1px; color: var(--rc-metin); background: var(--rc-zemin); outline: none;
+}
+.rc-sp-numara:focus { border-color: var(--rc-mor); }
+.rc-sp-tuslar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.rc-sp-tus {
+  height: 46px; border: 1px solid var(--rc-cizgi); border-radius: 12px; background: #fff;
+  font-size: 18px; font-weight: 600; color: var(--rc-metin); cursor: pointer;
+}
+.rc-sp-tus:hover { background: var(--rc-mor-acik); border-color: var(--rc-mor-acik); color: var(--rc-mor); }
+.rc-sp-eylemler { display: flex; gap: 8px; margin-top: 12px; }
+.rc-sp-eylem {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px; border: 0; border-radius: 12px; color: #fff; cursor: pointer; font-size: 11px; font-weight: 700;
+}
+.rc-sp-eylem i { font-size: 18px; }
+.rc-sp-eylem[hidden] { display: none; }
+.rc-sp-eylem:disabled { opacity: .35; cursor: not-allowed; }
+.rc-sp-eylem.yesil { background: var(--rc-yesil); }
+.rc-sp-eylem.kirmizi { background: var(--rc-kirmizi); }
+.rc-sp-eylem.turuncu { background: #f0a020; }
+.rc-sp-eylem.aktif { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px #f0a020; }
+
+@media (max-width: 1100px) {
+  .rc-rozet-wa .rc-rozet-metin { display: none; }
+}
+@media (max-width: 860px) {
+  .rc-rozet-sms, .rc-rozet-wa { display: none; }
+  .rc-rozet { padding: 0 10px; }
+  .rc-sp-panel { position: fixed; top: calc(var(--rc-header-y) + 6px); right: 10px; left: 10px; width: auto; }
+}

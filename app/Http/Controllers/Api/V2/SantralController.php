@@ -102,16 +102,6 @@ class SantralController extends V2Controller
 
     // ---------------------------------------------------------------------
 
-    private function salonId(Request $request): int
-    {
-        $salonId = (int) $request->input('salon_id');
-        if (! $salonId) {
-            throw new GecersizIslemException('salon_id zorunlu');
-        }
-
-        return $salonId;
-    }
-
     /** @return array{0:string,1:string} Y-m-d; bos → bugun, ters sira duzeltilir. */
     private function tarihAraligi(Request $request): array
     {

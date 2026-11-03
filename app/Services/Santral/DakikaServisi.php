@@ -26,13 +26,9 @@ class DakikaServisi
             return null;
         }
 
-        $trunk = (string) DB::table('sabit_numaralar')->where('salon_id', $salonId)->value('numara');
-        $paket = DB::table('salon_dakika_paketi')->where('salon_id', $salonId)->first(['tanimli_dakika', 'sayim_baslangic']);
+        $paket = $this->paket($salonId);
         $baslangic = $this->sayimBaslangic($salonId, $paket);
-
-        $kullanim = preg_match('/^\d+$/', $trunk)
-            ? $this->istemci->dakikaOzeti($trunk, $baslangic, date('Y-m-d'), $dahili)
-            : ['dakika' => 0.0, 'adet' => 0, 'hata' => false];
+        $kullanim = $this->kullanim($salonId, $baslangic, $dahili);
 
         $kullanilan = round($kullanim['dakika'], 1);
         $sonuc = [
@@ -54,6 +50,36 @@ class DakikaServisi
         }
 
         return $sonuc;
+    }
+
+    /**
+     * Salon havuzunda kalan dakika (tanimli − kullanilan). Softphone header rozeti: eski layout
+     * DakikaHesap::hesapla()['kalan']'i rolden bagimsiz gosteriyordu. Santral okunamazsa null.
+     */
+    public function havuzKalan(int $salonId): ?float
+    {
+        $paket = $this->paket($salonId);
+        $kullanim = $this->kullanim($salonId, $this->sayimBaslangic($salonId, $paket), null);
+        if ($kullanim['hata']) {
+            return null;
+        }
+
+        return round((int) ($paket->tanimli_dakika ?? 0) - round($kullanim['dakika'], 1), 1);
+    }
+
+    private function paket(int $salonId): ?object
+    {
+        return DB::table('salon_dakika_paketi')->where('salon_id', $salonId)->first(['tanimli_dakika', 'sayim_baslangic']);
+    }
+
+    /** @return array{dakika: float, adet: int, hata: bool} Trunk tanimsizsa kullanim 0. */
+    private function kullanim(int $salonId, string $baslangic, ?string $dahili): array
+    {
+        $trunk = (string) DB::table('sabit_numaralar')->where('salon_id', $salonId)->value('numara');
+
+        return preg_match('/^\d+$/', $trunk)
+            ? $this->istemci->dakikaOzeti($trunk, $baslangic, date('Y-m-d'), $dahili)
+            : ['dakika' => 0.0, 'adet' => 0, 'hata' => false];
     }
 
     private function sayimBaslangic(int $salonId, ?object $paket): string

@@ -27,4 +27,15 @@ return [
      | Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir); kapaliyken yazma uclari 409 doner (hicbir sey yazilmaz).
      */
     'yazma_aktif' => (bool) env('SANTRAL_V2_YAZMA_AKTIF', true),
+
+    /*
+     | WebRTC softphone (panel header'i) — eski public/js/santral/webphone.js ile ayni santral.
+     | Ses dosyalari eski panelden (config panel.eski_panel_url) servis edilir; yollar ona goredir.
+     */
+    'softphone' => [
+        'sip_sunucu'    => env('SOFTPHONE_SIP_SUNUCU', 'santral.randevumcepte.com.tr'),
+        'wss_url'       => env('SOFTPHONE_WSS_URL', 'wss://santral.randevumcepte.com.tr:8089/ws'),
+        'zil_yolu'      => '/public/telefon-ses/phone_incoming.mp3',
+        'geri_zil_yolu' => '/public/telefon-ses/phone-outgoing.mp3',
+    ],
 ];

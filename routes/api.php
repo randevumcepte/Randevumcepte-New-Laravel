@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V2\ArsivController;
 use App\Http\Controllers\Api\V2\AsistanController;
 use App\Http\Controllers\Api\V2\FormSablonController;
 use App\Http\Controllers\Api\V2\KabukController;
+use App\Http\Controllers\Api\V2\KabukDurumController;
 use App\Http\Controllers\Api\V2\KatalogController;
 use App\Http\Controllers\Api\V2\PersonelController;
 use App\Http\Controllers\Api\V2\PersonelYetkiController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\V2\RandevuTakvimController;
 use App\Http\Controllers\Api\V2\RandevuTelafiController;
 use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SantralController;
+use App\Http\Controllers\Api\V2\SoftphoneController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
 use App\Http\Controllers\Api\V2\TelefonController;
@@ -74,6 +76,12 @@ Route::prefix('v2')->group(function () {
     Route::middleware('auth:isletmeyonetim-api')->group(function () {
         // Panel kabugu (sol menu + header verisi) — v2 ekranlarinin ortak shell'i.
         Route::get('/kabuk', [KabukController::class, 'goster']);
+        // Header rozetleri: kalan SMS + WhatsApp durumu (personel rolune null) + WebRTC softphone.
+        Route::get('/kabuk/sms', [KabukDurumController::class, 'sms']);
+        Route::get('/kabuk/whatsapp', [KabukDurumController::class, 'whatsapp']);
+        Route::get('/softphone', [SoftphoneController::class, 'goster']);
+        Route::get('/softphone/dakika', [SoftphoneController::class, 'dakika']);
+        Route::get('/softphone/arayan', [SoftphoneController::class, 'arayan']);
         Route::get('/adisyon/{id}', [AdisyonController::class, 'goster'])->whereNumber('id');
 
         // RANDEVU (Faz 1 — SALT OKUMA). Yazma yollari sonraki fazlarda.
@@ -191,6 +199,9 @@ Route::prefix('v2')->group(function () {
 
         // LOG HAREKETLERI (salon_aktivite_log salt okuma: liste + filtre secenekleri) — routes/v2/hareket.php
         require __DIR__.'/v2/hareket.php';
+
+        // CAGRI MERKEZI (calisma ekrani, arama randevulari, cagri kayitlari, performans, liste yonetimi) — routes/v2/cagri-merkezi.php
+        require __DIR__.'/v2/cagri-merkezi.php';
 
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde

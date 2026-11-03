@@ -45,3 +45,25 @@ Ek yapısal alanlar: `zaman` (Y-m-d H:i:s), `yon`, `kategori`, `etiket`, `renk` 
 ## Flutter geçişi (kullanıcı "geçiş" deyince — şimdilik Flutter'a dokunulmuyor)
 `backend.dart::santralraporlari` → `ApiClient` (Bearer) ile `GET /api/v2/santral/cagrilar`; liste `veri.data`,
 `has_more` yerine `veri.current_page < veri.last_page`. `user_id` parametresi gereksiz (kimlik token'dan).
+
+## Header rozetleri: WebRTC softphone + kalan SMS + WhatsApp durumu
+Eski `layout_isletmeadmin` header'ındaki üç buton (`#webtelefon` + `webphone.js`, `.kalansms`, `#whatsappDurumKutu`)
+v2 panel kabuğuna taşındı; tüm v2 ekranlarında görünür. Görünürlük kuralları **sunucuda** (veri `null` → çizilmez).
+
+| Yöntem | Yol | Cevap / kural |
+|---|---|---|
+| GET | `/api/v2/softphone?salon_id=` | `{dahili, sifre, sip_sunucu, wss_url, arama_yapabilir, sesler{zil,geri_zil}}` · santral etkin + kullanıcının bu salonda `dahili_no_webrtc`'si varsa; yoksa `null`. `arama_yapabilir=false` → personel rolü (5), eskisi gibi yalnız gelen çağrı |
+| GET | `/api/v2/softphone/dakika?salon_id=` | `{kalan}` salon havuzu (`DakikaServisi::havuzKalan`, eski `DakikaHesap` kalan'ı) |
+| GET | `/api/v2/softphone/arayan?salon_id=&numara=` | `{ad}` salon portföyünden müşteri adı (eski `/isletmeyonetim/musteriarama`) |
+| GET | `/api/v2/kabuk/sms?salon_id=` | `{kalan, url}` · personel rolüne `null`; VoiceTelekom (`yeni_sms=1`) / Efetech, 120 sn önbellek |
+| GET | `/api/v2/kabuk/whatsapp?salon_id=` | `{bagli, numara, kontor, kontor_kritik, url}` · personel rolüne `null`; kurallar `Domain/Whatsapp/WhatsappDurumu` |
+
+Web: `public/js/header-araclar.js` (rozetler, softphone tembel yükleme) → `softphone/softphone-panel.js` (UI) +
+`softphone/sip-hat.js` (SIP bağlantı/çağrı, otomatik yeniden bağlanma) + `softphone/zil.js`; sip.js `public/js/vendor/`.
+Diğer ekranlar: `window.rcSoftphone.ara(numara)` / `.bagliMi()` (eski adlar `webphoneAra`/`webphoneBagliMi` da var),
+çağrı aşamaları `document` üzerinde `rc:softphone` olayı.
+
+Eskiye göre farklar: SIP şifresi her sayfanın HTML'ine gömülmüyor (yalnız sahibine API'den); SMS bakiyesi her
+sayfa açılışında sağlayıcıya gitmiyor (önbellek, 5 sn zaman aşımı; eskisi 120 sn bekleyebiliyordu); görüşme
+sırasında tuş takımı DTMF gönderir (sesli menüler); santrali kapalı salonda telefon butonu çizilmez; no-op
+`dahilibaglandi` çağrısı kaldırıldı; rozet linkleri yalnız v2 karşılığı olan ekrana gider (şimdilik bilgi rozeti).

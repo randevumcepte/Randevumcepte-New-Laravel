@@ -46,15 +46,23 @@ abstract class V2Controller extends Controller
     protected function salonDenetle(Request $request, array|string $yetkiler): array
     {
         $user = $this->kullanici();
-        $salonId = $request->integer('salon_id');
-        if (! $salonId) {
-            throw new GecersizIslemException('salon_id zorunlu');
-        }
+        $salonId = $this->salonId($request);
         $yetkiler === []
             ? app(GuvenlikKapisi::class)->kapsamDenetle($user->id, $salonId)   // salonun her uyesi (yetki anahtari aranmaz)
             : app(GuvenlikKapisi::class)->denetle($user->id, $salonId, $yetkiler);
 
         return [(int) $user->id, $salonId];
+    }
+
+    /** Istekteki zorunlu salon_id (yoksa 422). Kapsam denetimi cagirana aittir. */
+    protected function salonId(Request $request): int
+    {
+        $salonId = $request->integer('salon_id');
+        if (! $salonId) {
+            throw new GecersizIslemException('salon_id zorunlu');
+        }
+
+        return $salonId;
     }
 
     /** Kullanicinin bu salonda yetki anahtari var mi (buton/alan gorunurlugu icin; 403 atmaz). */
