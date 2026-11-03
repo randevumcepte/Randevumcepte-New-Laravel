@@ -183,7 +183,7 @@ function kaynakFiltresiUygula() {
 
 // Takvim turune gore kaynak ikonu (personel → resim/harf). Bootstrap Icons 1.11.
 const KAYNAK_IKON = {
-  kategori: 'bi-scissors',   // hizmet kategorisi (Satis Takibi'ndeki Hizmet ikonu ile ayni)
+  kategori: 'bi-clipboard2-check',   // hizmet kategorisi (Satis Takibi'ndeki Hizmet ikonu ile ayni)
   cihaz: 'bi-cpu',
   oda: 'bi-door-open',
 };

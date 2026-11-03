@@ -21,7 +21,7 @@ const MODULLER = {
   randevu: () => import('/js/ayarlar/randevu.js?v=4'),
   online_saatler: () => import('/js/ayarlar/online-saatler.js?v=4'),
   cihazlar: () => import('/js/ayarlar/cihazlar.js?v=4'),
-  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=4'),
+  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=5'),
   odalar: () => import('/js/ayarlar/odalar.js?v=4'),
   musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=4'),
 };

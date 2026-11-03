@@ -58,7 +58,7 @@ export async function ciz(kap, ctx) {
     kaynak: (p) => api('GET', '/ayar/hizmetler', { params: { ...p, ...P, kategori_id: kategoriId } }),
     cizildi: (_l, v) => {
       if (!v?.ozet) return;
-      el('[data-ozet]', kap).innerHTML = ozetKart('bi-scissors', 'Hizmet', v.ozet.toplam_hizmet, 'mor') + ozetKart('bi-tags', 'Kategori', v.ozet.toplam_kategori, 'turkuaz');
+      el('[data-ozet]', kap).innerHTML = ozetKart('bi-clipboard2-check', 'Hizmet', v.ozet.toplam_hizmet, 'mor') + ozetKart('bi-tags', 'Kategori', v.ozet.toplam_kategori, 'turkuaz');
     },
   });
   tablo.yenile();
@@ -113,7 +113,7 @@ export async function ciz(kap, ctx) {
         ${f.cihazlar.length ? secimListesi('cihaz_ids', 'Hizmette kullanılan cihazlar', f.cihazlar, 'cihaz_adi', (h?.cihazlar || []).map((c) => c.id)) : ''}
       </div>`,
       '<button class="rc-btn rc-btn-ikincil" data-iptal>Vazgeç</button><button class="rc-btn rc-btn-birincil" data-tamam><i class="bi bi-check2"></i> Kaydet</button>',
-      { ikon: 'scissors', genis: true, sabit: true });
+      { ikon: 'clipboard2-check', genis: true, sabit: true });
     secimFiltreBagla(ov);
     el('[data-iptal]', ov).onclick = modalKapat;
     el('[data-kat-ac]', ov).onclick = () => { el('[data-kat-yeni]', ov).hidden = false; el('[data-kat-yeni] input', ov).focus(); };

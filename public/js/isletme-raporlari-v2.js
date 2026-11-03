@@ -102,7 +102,7 @@ const CIZICILER = {
       <div class="rc-ozet">
         ${ozetKart('bi-calendar2-check', 'Randevu', sayi(v.toplam_randevu), 'mor')}
         ${ozetKart('bi-receipt', 'Adisyon', sayi(v.toplam_adisyon), 'yesil')}
-        ${ozetKart('bi-scissors', 'Uygulanan Hizmet', sayi(v.uygulanan_hizmet), 'turuncu')}
+        ${ozetKart('bi-clipboard2-check', 'Uygulanan Hizmet', sayi(v.uygulanan_hizmet), 'turuncu')}
         ${ozetKart('bi-bag-check', 'Satılan Ürün', sayi(v.satilan_urun), 'mavi')}
         ${ozetKart('bi-gift', 'Satılan Paket', sayi(v.satilan_paket), 'turkuaz')}
         ${ozetKart('bi-graph-up-arrow', 'Net Satış', TL(v.satis_net), 'mor')}

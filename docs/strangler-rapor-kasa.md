@@ -82,5 +82,10 @@ Yazmalar `KASA_V2_YAZMA_AKTIF` kapalıyken 409 (varsayılan kapalı).
 ```
 cd /var/www/www-root/data/www/randevumcepteyeni && php artisan route:clear && php artisan config:clear
 php artisan test --filter='RaporDonemiTest|PrimHesapTest'
+
+# Tutarlilik (GERCEK veri, salt okuma; tutmayan kontrol varsa cikis kodu 1):
+php artisan rapor:tutarlilik 20                                   # bugun, ay, gecen_ay, yil
+php artisan rapor:tutarlilik 20 432 --donem=bugun,dun,hafta,ay,gecen_ay,yil,gecen_yil --sadece-hata
+php artisan rapor:tutarlilik 20 --donem=ozel --baslangic=2026-01-01 --bitis=2026-06-30
 # yazmayı açmak (kontrollü test sonrası): .env KASA_V2_YAZMA_AKTIF=true → php artisan config:clear
 ```

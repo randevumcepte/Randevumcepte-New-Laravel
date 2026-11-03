@@ -32,7 +32,7 @@ class RaporSecenekServisi
                 'varsayilan_donem' => 'bugun',
                 'sekmeler' => array_values(array_filter([
                     ['kod' => 'isletme', 'ad' => 'İşletme', 'ikon' => 'bi-building', 'yetki' => $var('rapor.satis')],
-                    ['kod' => 'hizmet', 'ad' => 'Hizmet', 'ikon' => 'bi-scissors', 'yetki' => $var('rapor.satis')],
+                    ['kod' => 'hizmet', 'ad' => 'Hizmet', 'ikon' => 'bi-clipboard2-check', 'yetki' => $var('rapor.satis')],
                     ['kod' => 'urun', 'ad' => 'Ürün', 'ikon' => 'bi-box-seam', 'yetki' => $var('rapor.satis')],
                     ['kod' => 'personel', 'ad' => 'Personel', 'ikon' => 'bi-people', 'yetki' => $var('rapor.personel_performans')],
                     ['kod' => 'musteri', 'ad' => 'Müşteri', 'ikon' => 'bi-person-heart', 'yetki' => $var('rapor.musteri')],
@@ -74,7 +74,7 @@ class RaporSecenekServisi
         $zorunlu = $this->zorunluPersonel($yetkiliId, $salonId);
         $sekmeler = [
             ['kod' => 'tum', 'ad' => 'Tümü', 'ikon' => 'bi-layers'],
-            ['kod' => 'hizmet', 'ad' => 'Hizmet Raporları', 'ikon' => 'bi-list-check'],
+            ['kod' => 'hizmet', 'ad' => 'Hizmet Raporları', 'ikon' => 'bi-clipboard2-check'],
             ['kod' => 'urun', 'ad' => 'Ürün Raporları', 'ikon' => 'bi-box-seam'],
             ['kod' => 'paket', 'ad' => 'Paket Raporları', 'ikon' => 'bi-gift'],
         ];

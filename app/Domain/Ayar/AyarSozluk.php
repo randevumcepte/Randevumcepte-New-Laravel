@@ -16,7 +16,7 @@ final class AyarSozluk
         'subeler'           => ['ad' => 'Şubeler',                'ikon' => 'bi-diagram-3',       'yetki' => ['ayar.sube_yonet'],       'v2' => true,  'eski_p' => 'subeler'],
         'calisma_saatleri'  => ['ad' => 'Çalışma Saatleri',       'ikon' => 'bi-clock',           'yetki' => ['ayar.salon_bilgi'],      'v2' => true,  'eski_p' => 'calismasaatleri'],
         'cihazlar'          => ['ad' => 'Cihazlar',               'ikon' => 'bi-cpu',             'yetki' => ['ayar.cihaz_oda_yonet'],  'v2' => true,  'eski_p' => 'cihazlar'],
-        'hizmetler'         => ['ad' => 'Hizmetler',              'ikon' => 'bi-scissors',        'yetki' => ['hizmet.tanim_olustur', 'hizmet.kategori_yonet'], 'v2' => true,  'eski_p' => 'hizmetler'],
+        'hizmetler'         => ['ad' => 'Hizmetler',              'ikon' => 'bi-clipboard2-check',        'yetki' => ['hizmet.tanim_olustur', 'hizmet.kategori_yonet'], 'v2' => true,  'eski_p' => 'hizmetler'],
         'odalar'            => ['ad' => 'Odalar',                 'ikon' => 'bi-door-closed',     'yetki' => ['ayar.cihaz_oda_yonet'],  'v2' => true,  'eski_p' => 'odalar'],
         'randevu'           => ['ad' => 'Randevu Ayarları',       'ikon' => 'bi-calendar-check',  'yetki' => ['randevu.online_ayar'],   'v2' => true,  'eski_p' => 'randevuayarlari'],
         'online_saatler'    => ['ad' => 'Online Randevu Saatleri', 'ikon' => 'bi-globe2',         'yetki' => ['randevu.online_ayar'],   'v2' => true,  'eski_p' => 'onlinerandevusaatleri'],

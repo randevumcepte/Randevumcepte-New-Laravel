@@ -14,5 +14,5 @@
 
 @push('betik')
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script type="module" src="/js/isletme-raporlari-v2.js?v=1"></script>
+    <script type="module" src="/js/isletme-raporlari-v2.js?v=2"></script>
 @endpush
