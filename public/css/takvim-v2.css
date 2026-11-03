@@ -82,6 +82,15 @@
 #tTakvim .ec-event { border-radius: 10px; box-shadow: none; padding: 0; overflow: hidden; }
 /* Cekmecede acik randevu: belirgin cerceve + golge (takvim kararmaz). */
 #tTakvim .ec-event.t-secili { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--rc-mor), 0 8px 18px rgba(92,0,142,.25); z-index: 5; }
+/* Boyutlandirma tutamaci: kutuphane alt kenarda GORUNMEZ 8px serit cizer; uzerine
+   gelince gorunen bir tutma cubugu (sure uzat/kisalt). Tasinamaz barlarda yok. */
+#tTakvim .ec-event .ec-resizer { z-index: 2; }
+#tTakvim .ec-event .ec-resizer::after {
+  content: ''; position: absolute; left: 50%; bottom: 2px; width: 28px; height: 4px; margin-left: -14px;
+  border-radius: 3px; background: rgba(43, 47, 69, .35); opacity: 0; transition: opacity .15s;
+}
+#tTakvim .ec-event:hover .ec-resizer::after, #tTakvim .ec-event.ec-resizing-y .ec-resizer::after { opacity: 1; }
+#tTakvim .ec-event .ec-resizer:hover::after { background: var(--rc-mor); }
 #tTakvim .ec-event.t-kapali { background: repeating-linear-gradient(45deg, #e3e5ee 0 6px, #f1f2f7 6px 12px) !important; }
 #tTakvim .ec-now-indicator { border-color: var(--rc-kirmizi); }
 /* Gunluk gorunumde tek tarihlik ust baslik satiri gereksiz (tarih ust cubukta) → gizle.
