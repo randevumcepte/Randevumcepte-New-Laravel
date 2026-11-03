@@ -4,7 +4,8 @@
  * Her tabloda aynı davranış:
  *   - "Sayfada [10|25|50|100] kayıt göster" (tercih tablo başına localStorage'da)
  *   - "Ara": tablo İÇERİĞİNDE arama (350 ms gecikmeli)
- *   - Sıralanabilir başlıklar (kolon.sirala), sayfalama, yükleniyor / boş / hata satırı
+ *   - Başlığa tıkla sırala: ilk tık artan, tekrar tık azalan (kolon.sirala), sayfalama,
+ *     yükleniyor / boş / hata satırı
  *
  * İki kaynak modu:
  *   SUNUCU : kaynak({page, per_page, ara, sirala, yon}) → api() sonucu ({ok,kod,govde});
@@ -86,7 +87,8 @@ export function veriTablosu(kap, opt) {
     const th = e.target.closest('th[data-sirala]');
     if (!th) return;
     const alan = th.dataset.sirala;
-    durum.yon = durum.sirala === alan && durum.yon === 'asc' ? 'desc' : (durum.sirala === alan ? 'asc' : 'desc');
+    // Yeni kolon → artan; aynı kolona tekrar tık → artan ↔ azalan.
+    durum.yon = durum.sirala === alan ? (durum.yon === 'asc' ? 'desc' : 'asc') : 'asc';
     durum.sirala = alan; durum.page = 1; yukle();
   });
 
@@ -97,8 +99,9 @@ export function veriTablosu(kap, opt) {
     thead.innerHTML = '<tr>' + kolonlar.map((k) => {
       if (!k.sirala) return `<th class="${esc(k.sinif || '')}">${esc(k.baslik)}</th>`;
       const aktif = durum.sirala === k.sirala;
-      const ikon = aktif ? (durum.yon === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
-      return `<th class="rc-siralanir${aktif ? ' aktif' : ''} ${esc(k.sinif || '')}" data-sirala="${esc(k.sirala)}">${esc(k.baslik)} <i class="bi ${ikon}"></i></th>`;
+      const ikon = aktif ? (durum.yon === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill') : 'bi-chevron-expand';
+      const ipucu = aktif ? (durum.yon === 'asc' ? 'Artan — azalan için tıklayın' : 'Azalan — artan için tıklayın') : 'Sıralamak için tıklayın';
+      return `<th class="rc-siralanir${aktif ? ' aktif' : ''} ${esc(k.sinif || '')}" data-sirala="${esc(k.sirala)}" title="${ipucu}" aria-sort="${aktif ? (durum.yon === 'asc' ? 'ascending' : 'descending') : 'none'}">${esc(k.baslik)} <i class="bi ${ikon}"></i></th>`;
     }).join('') + '</tr>';
   }
 

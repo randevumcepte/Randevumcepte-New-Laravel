@@ -12,7 +12,7 @@
  */
 
 import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 
 const kok = document.getElementById('rc-satislar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -232,17 +232,17 @@ function ozetCiz(v) {
 // Kolon seti (stüdyoda para kolonları yerine Ödeme Tarihi — eski panel).
 function kolonlar() {
   const para = studyo ? [] : [
-    { baslik: 'İndirim', sinif: 'rc-sag' }, { baslik: 'Toplam', sinif: 'rc-sag' },
-    { baslik: 'Ödenen', sinif: 'rc-sag' }, { baslik: 'Kalan', sinif: 'rc-sag' },
+    { baslik: 'İndirim', sinif: 'rc-sag', sirala: 'indirim' }, { baslik: 'Toplam', sinif: 'rc-sag', sirala: 'toplam' },
+    { baslik: 'Ödenen', sinif: 'rc-sag', sirala: 'odenen' }, { baslik: 'Kalan', sinif: 'rc-sag', sirala: 'kalan' },
   ];
   return [
-    { baslik: 'Durum', sinif: 's-k-durum' },
+    { baslik: 'Durum', sinif: 's-k-durum', sirala: 'durum' },
     { baslik: 'Satış Tarihi', sirala: 'tarih' },
     { baslik: 'Müşteri', sirala: 'musteri' },
-    { baslik: 'Yaklaşan Ödeme' },
+    { baslik: 'Yaklaşan Ödeme', sirala: 'yaklasan' },
     { baslik: 'İçerik' },
     ...para,
-    ...(studyo ? [{ baslik: 'Ödeme Tarihi' }] : []),
+    ...(studyo ? [{ baslik: 'Ödeme Tarihi', sirala: 'odeme_tarihi' }] : []),
     { baslik: 'İşlemler', sinif: 'rc-orta s-k-islem' },
   ];
 }

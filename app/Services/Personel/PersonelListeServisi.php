@@ -26,20 +26,39 @@ class PersonelListeServisi
      * @return array{data: array, current_page:int, last_page:int, per_page:int, total:int,
      *               ozet: array{toplam:int, aktif:int, takvimde:int}}
      */
-    public function listele(int $salonId, ?string $baslik, array $gor = [], int $perPage = 10, bool $tumu = false): array
+    /** Tablo sıralama alanı → kolon (beyaz liste; controller da aynı anahtarları kabul eder). */
+    public const SIRALAMA = [
+        'ad'         => 'sp.personel_adi',
+        'telefon'    => 'sp.cep_telefon',
+        'hesap_turu' => 'r.id',
+        'maas'       => 'sp.maas',
+        'takvimde'   => 'sp.takvimde_gorunsun',
+        'durum'      => 'sp.aktif',
+    ];
+
+    public function listele(int $salonId, ?string $baslik, array $gor = [], int $perPage = 10, bool $tumu = false, ?string $sirala = null, string $yon = 'asc'): array
     {
         $sorgu = $this->okuma->temelSorgu()
             ->where('sp.salon_id', $salonId)
             ->where(fn ($q) => $this->arsivsiz($q, 'sp.arsivli'))
-            ->groupBy('sp.id')
-            ->orderBy('sp.takvim_sirasi', 'asc')
-            ->orderBy('sp.id', 'asc');
+            ->groupBy('sp.id');
 
-        // Tablo araması: satırda görünen içerik — ad, unvan, telefon.
+        // Sıralama: varsayılan takvim sırası (satırdaki ▲▼ ile yönetilir). Gizli alana
+        // (maaş/telefon görünmüyorsa) göre sıralanmaz — sıra, gizli değeri sızdırmasın.
+        $gizli = ['maas' => ! ($gor['maas'] ?? true), 'telefon' => ! ($gor['telefon'] ?? true)];
+        if ($sirala && isset(self::SIRALAMA[$sirala]) && empty($gizli[$sirala])) {
+            $sorgu->orderBy(self::SIRALAMA[$sirala], $yon === 'desc' ? 'desc' : 'asc');
+        }
+        $sorgu->orderBy('sp.takvim_sirasi', 'asc')->orderBy('sp.id', 'asc');
+
+        // Tablo araması: satırda görünen içerik — ad, unvan, telefon (yalnız görünüyorsa).
         if ($like = ListeIstegi::like($baslik)) {
-            $sorgu->where(fn ($w) => $w->where('sp.personel_adi', 'like', $like)
-                ->orWhere('sp.unvan', 'like', $like)
-                ->orWhere('sp.cep_telefon', 'like', $like));
+            $sorgu->where(function ($w) use ($like, $gizli) {
+                $w->where('sp.personel_adi', 'like', $like)->orWhere('sp.unvan', 'like', $like);
+                if (! $gizli['telefon']) {
+                    $w->orWhere('sp.cep_telefon', 'like', $like);
+                }
+            });
         }
 
         $donustur = fn ($row) => $this->okuma->donustur($row, $gor);

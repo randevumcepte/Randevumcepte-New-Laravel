@@ -15,7 +15,7 @@
  */
 
 import { api, el, esc, TL, mesaj, onay } from '/js/lib/v2-ortak.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
 const tablolar = {};
@@ -120,7 +120,7 @@ function kalemlerGoster() {
     kolonlar: [
       { baslik: 'Kalem', sirala: 'ad', deger: (x) => x.ad }, { baslik: 'Tür', sirala: 'tip', deger: (x) => TUR_AD[x.tip] },
       { baslik: 'Fiyat', sinif: 'rc-sag', sirala: 'fiyat', deger: (x) => Number(x.fiyat) || 0 },
-      { baslik: 'İndirim', sinif: 'rc-sag' }, { baslik: '' },
+      { baslik: 'İndirim', sinif: 'rc-sag', sirala: 'indirim', deger: (x) => Number(x.indirim) || 0 }, { baslik: '' },
     ],
     araMetni: (x) => `${x.ad} ${TUR_AD[x.tip]} ${x.ek}`,
     satir: (x) => satir(x.tip, x.id, x.ad, x.ek, x.fiyat, x.indirim, x.adet),
@@ -159,7 +159,7 @@ function gecmisGoster() {
     birim: 'tahsilat',
     bosMesaj: 'Henüz tahsilat yapılmamış.',
     kolonlar: [
-      { baslik: 'Tarih', sirala: 'tarih', deger: (o) => o.odeme_tarihi || '' }, { baslik: 'Tür' },
+      { baslik: 'Tarih', sirala: 'tarih', deger: (o) => o.odeme_tarihi || '' }, { baslik: 'Tür', sirala: 'tur', deger: (o) => yontemAd(o.odeme_yontemi_id) },
       { baslik: 'Tutar', sinif: 'rc-sag', sirala: 'tutar', deger: (o) => Number(o.tutar) || 0 }, { baslik: '' },
     ],
     araMetni: (o) => `${o.odeme_tarihi || ''} ${yontemAd(o.odeme_yontemi_id)} ${o.tutar}`,
@@ -184,7 +184,7 @@ function alacakGoster() {
     birim: 'alacak',
     bosMesaj: 'Planlanan alacak yok.',
     kolonlar: [
-      { baslik: 'Vade', sirala: 'vade', deger: (x) => x.planlanan_odeme_tarihi || '' }, { baslik: 'Not' },
+      { baslik: 'Vade', sirala: 'vade', deger: (x) => x.planlanan_odeme_tarihi || '' }, { baslik: 'Not', sirala: 'not', deger: (x) => x.aciklama || '' },
       { baslik: 'Tutar', sinif: 'rc-sag', sirala: 'tutar', deger: (x) => Number(x.tutar) || 0 }, { baslik: '' },
     ],
     araMetni: (x) => `${x.planlanan_odeme_tarihi || ''} ${x.aciklama || ''} ${x.tutar}`,

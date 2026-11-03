@@ -34,6 +34,14 @@ class SatisListeServisi
             .'+COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_paketler WHERE adisyon_id=adisyonlar.id'.$pf.'),0))';
     }
 
+    /** İNDİRİM toplamı (per adisyonlar.id) — opsiyonel personel filtreli ($pf). */
+    private static function indirimSql(string $pf): string
+    {
+        return '(COALESCE((SELECT SUM(COALESCE(indirim_tutari,0)) FROM adisyon_hizmetler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
+            .'+COALESCE((SELECT SUM(COALESCE(indirim_tutari,0)) FROM adisyon_urunler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
+            .'+COALESCE((SELECT SUM(COALESCE(indirim_tutari,0)) FROM adisyon_paketler WHERE adisyon_id=adisyonlar.id'.$pf.'),0))';
+    }
+
     /** ODENEN (per adisyonlar.id) — kalem tahsilat tablolari, opsiyonel $pf. */
     private static function odenenSql(string $pf): string
     {
@@ -150,15 +158,40 @@ class SatisListeServisi
                 });
             });
 
-        // Sıralama (beyaz liste controller'da): tarih (varsayılan, yeni→eski) | musteri.
+        // Sıralama (beyaz liste controller'da; $yon yalnız asc|desc). Her kolon satırda
+        // gösterilen değerle AYNI ifadeyle sıralanır (personel filtresi $pf dahil).
         $yon = ($o['yon'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-        if (($o['sirala'] ?? null) === 'musteri') {
-            $base->orderBy(
-                User::select('name')->whereColumn('users.id', 'adisyonlar.user_id')->limit(1),
-                $yon
-            );
-        } else {
-            $base->orderBy('adisyonlar.tarih', $yon);
+        $pb = fn (int $adet) => $pid ? array_fill(0, $adet, $pid) : [];
+        $bakiyeSql = '('.self::netSql($pf).' - '.self::odenenSql($pf).')';
+        switch ($o['sirala'] ?? 'tarih') {
+            case 'musteri':
+                $base->orderBy(User::select('name')->whereColumn('users.id', 'adisyonlar.user_id')->limit(1), $yon);
+                break;
+            case 'durum': // artan: açık önce
+                $studyoModu
+                    ? $base->orderByRaw('COALESCE(adisyonlar.odendi,0) '.$yon)
+                    : $base->orderByRaw('(CASE WHEN '.$bakiyeSql.' > 0 THEN 0 ELSE 1 END) '.$yon, $pb(6));
+                break;
+            case 'yaklasan': // satırdaki "Yaklaşan Ödeme" = müşterinin en yakın planlanan alacağı
+                $base->orderByRaw('(SELECT MIN(al.planlanan_odeme_tarihi) FROM alacaklar al WHERE al.user_id = adisyonlar.user_id) '.$yon);
+                break;
+            case 'indirim':
+                $base->orderByRaw(self::indirimSql($pf).' '.$yon, $pb(3));
+                break;
+            case 'toplam':
+                $base->orderByRaw(self::netSql($pf).' '.$yon, $pb(3));
+                break;
+            case 'odenen':
+                $base->orderByRaw(self::odenenSql($pf).' '.$yon, $pb(3));
+                break;
+            case 'kalan':
+                $base->orderByRaw($bakiyeSql.' '.$yon, $pb(6));
+                break;
+            case 'odeme_tarihi':
+                $base->orderBy('adisyonlar.odendi_tarihi', $yon);
+                break;
+            default:
+                $base->orderBy('adisyonlar.tarih', $yon);
         }
         $base->orderBy('adisyonlar.id', $yon);
 

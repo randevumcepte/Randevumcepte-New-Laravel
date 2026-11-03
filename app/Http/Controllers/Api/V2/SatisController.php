@@ -28,6 +28,9 @@ class SatisController extends V2Controller
 
     protected string $yazmaKapaliMesaj = 'Düzenleme henüz etkin değil';
 
+    /** Tablo sıralama beyaz listesi (SatisListeServisi'ndeki ifadelerle birebir). */
+    private const SIRALANABILIR = ['durum', 'tarih', 'musteri', 'yaklasan', 'indirim', 'toplam', 'odenen', 'kalan', 'odeme_tarihi'];
+
     private const LISTE_YETKI = ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al'];
 
     public function __construct(
@@ -46,7 +49,7 @@ class SatisController extends V2Controller
      *   fatura (1/0), satis_durumu (acik|kapali|faturali|faturasiz — eski paneldeki
      *   tek "Satis Durumu" secimi; verilirse acik_kapali/fatura yerine gecer),
      *   musteriMi, appBundle + ortak tablo parametreleri (ListeIstegi): page, per_page,
-     *   ara (adisyon no / müşteri / hizmet-ürün-paket / personel adı), sirala (tarih|musteri), yon.
+     *   ara (adisyon no / müşteri / hizmet-ürün-paket / personel adı), sirala (SIRALANABILIR), yon.
      * Cevap: `yetkiler` (sayfa duzeyi) + her satirda `kapali` ve `aksiyonlar` —
      * web ve Flutter durum/buton kararini YENIDEN HESAPLAMAZ (tek kaynak).
      */
@@ -114,7 +117,7 @@ class SatisController extends V2Controller
             'kisit_personel_id' => $kisit,
             'yetkiler'          => $yetkiler,
         // Ortak tablo sözleşmesi: page, per_page (API varsayılanı 20 — eski mobil), ara, sirala/yon.
-        ] + ListeIstegi::istekten($request, 20, ['tarih', 'musteri'], 'tarih', 'desc')->dizi());
+        ] + ListeIstegi::istekten($request, 20, self::SIRALANABILIR, 'tarih', 'desc')->dizi());
         if ($kapaliGizle) {
             $veri['kapali_sayisi'] = 0;
         }

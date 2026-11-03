@@ -56,8 +56,9 @@ class PersonelController extends V2Controller
             $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor']);
         }
 
-        // Ortak tablo sözleşmesi (ara/baslik, per_page, page) — ListeIstegi.
-        $liste = ListeIstegi::istekten($request, 10);
+        // Ortak tablo sözleşmesi (ara/baslik, per_page, page, sirala/yon) — ListeIstegi.
+        // Sıralama verilmezse takvim sırası (varsayılan); gizli alan servis içinde elenir.
+        $liste = ListeIstegi::istekten($request, 10, array_keys(PersonelListeServisi::SIRALAMA), null, 'asc');
 
         return ApiCevap::basarili($this->liste->listele(
             $salonId,
@@ -65,6 +66,8 @@ class PersonelController extends V2Controller
             $this->gorunurluk($user->id, $salonId, $listeGor),
             $liste->sayfaBoyu,
             $tumu,
+            $liste->sirala,
+            $liste->yon,
         ));
     }
 

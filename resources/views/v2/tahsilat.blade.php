@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/tahsilat-v2.js?v=10"></script>
+    <script type="module" src="/js/tahsilat-v2.js?v=11"></script>
 @endpush

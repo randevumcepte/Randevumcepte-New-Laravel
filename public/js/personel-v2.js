@@ -14,7 +14,7 @@
  */
 
 import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 
 // Hesap turleri + cinsiyetler API'den (GET /personel/form-verisi) — UI'da sabit liste yok.
@@ -69,10 +69,13 @@ function iskeletCiz() {
     birim: 'personel',
     araIpucu: 'Ad, unvan, telefon…',
     bosMesaj: 'Personel bulunamadı.',
+    // Başlığa tıkla sırala (artan/azalan). Gizli alan (maaş) sıralanmaz — sunucu da reddeder.
     kolonlar: [
-      { baslik: 'Personel' }, { baslik: 'Telefon' }, { baslik: 'Hesap Türü' },
-      { baslik: 'Maaş', sinif: 'rc-sag' }, { baslik: 'Takvimde', sinif: 'rc-orta' },
-      { baslik: 'Durum', sinif: 'rc-orta' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
+      { baslik: 'Personel', sirala: 'ad' }, { baslik: 'Telefon', sirala: 'telefon' },
+      { baslik: 'Hesap Türü', sirala: 'hesap_turu' },
+      { baslik: 'Maaş', sinif: 'rc-sag', ...(yetkiVar('personel.maas_tutar_gor') ? { sirala: 'maas' } : {}) },
+      { baslik: 'Takvimde', sinif: 'rc-orta', sirala: 'takvimde' },
+      { baslik: 'Durum', sinif: 'rc-orta', sirala: 'durum' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
     ],
     satir: (p, i, liste) => satirCiz(p, i, liste.length),
     kaynak: (prm) => (salonId
@@ -105,7 +108,8 @@ function satirCiz(p, idx, toplam) {
   const yetkiY = yetkiVar('personel.yetki_yonet');
   const silY = yetkiVar('personel.sil');
 
-  const sira = duzenleY ? `
+  // ▲▼ takvim sırasını değiştirir; başka bir kolona göre sıralıyken anlamsız → gizli.
+  const sira = duzenleY && !(tablo && tablo.durum.sirala) ? `
     <span class="p-sira">
       <button data-aksiyon="yukari" data-id="${p.id}" ${idx === 0 ? 'disabled' : ''} title="Yukarı"><i class="bi bi-caret-up-fill"></i></button>
       <button data-aksiyon="asagi" data-id="${p.id}" ${idx === toplam - 1 ? 'disabled' : ''} title="Aşağı"><i class="bi bi-caret-down-fill"></i></button>
