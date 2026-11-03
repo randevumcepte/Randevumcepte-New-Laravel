@@ -47,7 +47,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Seans takibi | ~4 | 🟡 | liste + kartlar + seans ekle/durum + lazer cihaz bilgisi var (yazma `SEANS_V2_YAZMA_AKTIF`); dökümü PDF eski panelde, müşteri paneli (`musteriMi`) v1'de |
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
-| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema; Faz 2: cihazlar + odalar — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Hizmet, şube (Faz 3), Google entegrasyonu (en son) yok |
+| Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | 🟡 | `/ayar/*` Faz 1: işletme bilgileri + logo/galeri, çalışma/mola saatleri, randevu ayarları + takvim rengi, online randevu saatleri, müşteri indirimleri, tema; Faz 2: cihazlar + odalar; Faz 3: hizmetler + şubeler (salt okuma) — eşleme aşağıda; yazma `AYAR_V2_YAZMA_AKTIF`. Google entegrasyonu (en son), yeni şube açma yok |
 | Öngörüşme | ~6 | ❌ | |
 | Ajanda | 3 | ❌ | |
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
@@ -230,7 +230,16 @@ Ekran sekmeleri (ve hangisinin açık olduğu) `GET /ayar/ozet?salon_id=` → `{
 | `POST /odaekleduzenle/{id}` (form; `oda_personeli`/`oda_hizmetleri` JSON metni) | `POST /ayar/odalar`, `PATCH /ayar/odalar/{id}` `{oda_adi, personel_ids[], hizmet_ids[]}` | eski adlar + JSON metni kabul; başka salonun kimlikleri süzülür |
 | `POST /odamusaitisaretle` / `odamusaitdegilisaretle`, `POST /oda_sil` | `PATCH /ayar/odalar/{id}/durum`, `DELETE /ayar/odalar/{id}`, `PATCH /ayar/odalar/{id}/sira` | cihaz ile aynı uç kümesi |
 
-Henüz taşınmayan Ayarlar sekmeleri (v1'de kalır): hizmetler (`hizmet_liste_getir`, `hizmetekleduzenle`…), şubeler, Google takvim. Eski web hataları v2'ye taşınmadı: cihaz saatleri hep "çalışmıyor" kaydediliyordu (alan adı uyuşmazlığı), oda silme sıra kaydırması salon sınırı tanımıyordu, müsait/sıralama uçları yetkisizdi; taşınacak: şube aktif/pasif `subeler` tablosuna salon id'siyle yazıyordu.
+| `POST /hizmet_liste_getir/{id}?page {baslik}` | `GET /ayar/hizmetler?salon_id=&kategori_id=&ara=&page=` (`tumu=1`) | satır `id` = salon hizmet kaydı; Flutter Hizmet anahtarları (`hizmet_id, hizmet_adi, hizmet_kategorisi, sure_dk, fiyat, personel, cihaz, ozel_hizmet`) + `personeller[]`, `cihazlar[]`, `maliyet`, `cinsiyet`; + `ozet` |
+| `GET /hizmetler/{id}` (basit liste) | `GET /ayar/hizmetler?salon_id=&tumu=1` | |
+| `POST /seciliolmayanhizmetlerigetir`, `POST /hizmetkategorileri` | `GET /ayar/hizmetler/form-verisi` → `{kategoriler, personeller, cihazlar, cinsiyetler, havuz[{kategori_id, kategori_adi, hizmetler}]}` | havuz = sistem + salonun pasif özel hizmetleri |
+| `POST /hizmetekleduzenle {yeniekleme, hizmetler, sureler, fiyatlar, secilipersoneller…}` | `POST /ayar/hizmetler/havuzdan {salon_id, hizmetler:[{hizmet_id, fiyat, sure_dk, personel_ids, cihaz_ids}]}` · düzenleme `PATCH /ayar/hizmetler/{id}` | paralel diziler yerine kalem nesneleri; eskide pasif kayıt salon filtresiz aranıyordu (başka salonun satırı taşınabiliyordu) |
+| `POST /sistemeyenihizmetekle` | `POST /ayar/hizmetler {hizmet_adi, kategori_id, sure_dk, fiyat, maliyet, cinsiyet, personel_ids, cihaz_ids}` | eski `personeller=[12,"cihaz-5"]` karışık listesi de kabul |
+| `POST /hizmetsil {hizmetId}` | `DELETE /ayar/hizmetler/{id}?salon_id=` | pasife alır |
+| (web) `hizmet-yonetimi/kategori-ekle` | `POST /ayar/hizmet-kategorileri {salon_id, kategori_adi}` | kategoriler GLOBAL (eski şema); aynı ad varsa mevcut döner. Eski "kategori sil" hiçbir şey silmiyordu — v2'de yok |
+| `GET subeler/{salonid}` (`subeler` tablosu) | `GET /ayar/subeler?salon_id=` | kullanıcının eriştiği salonlar (panel şube seçicisiyle aynı kaynak) + `kalan_gun`, `yeni_sube_url` (eski panel) |
+
+Henüz taşınmayan: Google takvim entegrasyonu (en son), yeni şube açma (hesap + şifre SMS'i — outbox türü gerekir), şube aktif/pasif (eski düğme `subeler` tablosuna salon id'siyle yazıyordu; doğru anlamı netleşmeli).
 
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 

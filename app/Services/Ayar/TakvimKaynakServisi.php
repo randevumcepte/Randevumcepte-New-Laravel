@@ -3,6 +3,7 @@
 namespace App\Services\Ayar;
 
 use App\Domain\Ayar\KaynakTuru;
+use App\Domain\Ayar\TakvimRengi;
 use App\Exceptions\BulunamadiException;
 use App\Support\AktiviteLog;
 use App\Support\TakvimSirasi;
@@ -63,7 +64,7 @@ class TakvimKaynakServisi
 
         $sonRenk = DB::table($tur->renkTablosu())->where('salon_id', $salonId)->orderByDesc('id')->value('renk_id');
         DB::table($tur->renkTablosu())->insert([
-            'salon_id' => $salonId, $tur->fk() => $id, 'renk_id' => KaynakTuru::sonrakiRenk($sonRenk !== null ? (int) $sonRenk : null),
+            'salon_id' => $salonId, $tur->fk() => $id, 'renk_id' => TakvimRengi::sonraki($sonRenk !== null ? (int) $sonRenk : null),
         ] + $this->zaman());
 
         return $id;

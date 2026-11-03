@@ -131,3 +131,25 @@ export function planOku(kok) {
     };
   });
 }
+
+/**
+ * Aranabilir onay kutusu listesi (oda personel/hizmet, hizmet personel/cihaz seçimi ORTAK).
+ * liste: [{id, <alan>}]; secili: id dizisi. Arama için secimFiltreBagla(kok) bir kez çağrılır.
+ */
+export const secimListesi = (ad, baslik, liste, alan, secili = []) => `
+  <div class="rc-alan rc-tam"><label>${esc(baslik)}</label>
+    ${liste.length > 8 ? `<input type="text" class="ay-filtre" data-filtre="${esc(ad)}" placeholder="Listede ara…">` : ''}
+    <div class="ay-secim" data-liste="${esc(ad)}">${liste.map((x) => `
+      <label data-ad="${esc(String(x[alan]).toLocaleLowerCase('tr'))}"><input type="checkbox" name="${esc(ad)}" value="${x.id}"${secili.includes(x.id) ? ' checked' : ''}> ${esc(x[alan])}</label>`).join('')
+      || '<span class="ay-soluk">Kayıt yok</span>'}</div></div>`;
+
+export function secimFiltreBagla(kok) {
+  kok.addEventListener('input', (e) => {
+    const ad = e.target.dataset.filtre;
+    if (!ad) return;
+    const q = e.target.value.trim().toLocaleLowerCase('tr');
+    kok.querySelectorAll(`[data-liste="${ad}"] label`).forEach((l) => { l.hidden = !!q && !l.dataset.ad.includes(q); });
+  });
+}
+
+export const seciliIdler = (kok, ad) => [...kok.querySelectorAll(`[name="${ad}"]:checked`)].map((i) => Number(i.value));

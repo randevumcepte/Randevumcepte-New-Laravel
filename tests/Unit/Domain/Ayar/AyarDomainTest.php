@@ -7,6 +7,7 @@ use App\Domain\Ayar\HaftalikSaat;
 use App\Domain\Ayar\HexRenk;
 use App\Domain\Ayar\KaynakTuru;
 use App\Domain\Ayar\SalonTemaSeed;
+use App\Domain\Ayar\TakvimRengi;
 use PHPUnit\Framework\TestCase;
 
 class AyarDomainTest extends TestCase
@@ -113,10 +114,19 @@ class AyarDomainTest extends TestCase
         $this->assertSame('salon_oda_renkleri', KaynakTuru::Oda->renkTablosu());
         $this->assertSame('cihaz_id', KaynakTuru::Cihaz->fk());
         $this->assertSame('odalar', KaynakTuru::Oda->sekme());
-        $this->assertSame(1, KaynakTuru::sonrakiRenk(null));
-        $this->assertSame(4, KaynakTuru::sonrakiRenk(3));
-        $this->assertSame(1, KaynakTuru::sonrakiRenk(10));
+        $this->assertSame(1, TakvimRengi::sonraki(null));
+        $this->assertSame(4, TakvimRengi::sonraki(3));
+        $this->assertSame(1, TakvimRengi::sonraki(10));
         // Sekme kodlari sozlukte tanimli (yetki anahtari buradan okunur).
         $this->assertSame(['ayar.cihaz_oda_yonet'], AyarSozluk::yetki(KaynakTuru::Cihaz->sekme()));
+    }
+
+    public function test_cinsiyet_etiketi_bos_ve_gecersiz(): void
+    {
+        $this->assertSame('Kadın', AyarSozluk::cinsiyetEtiketi(0));
+        $this->assertSame('Unisex', AyarSozluk::cinsiyetEtiketi('2'));
+        $this->assertNull(AyarSozluk::cinsiyetEtiketi(null));
+        $this->assertNull(AyarSozluk::cinsiyetEtiketi(''));
+        $this->assertNull(AyarSozluk::cinsiyetEtiketi(9));
     }
 }

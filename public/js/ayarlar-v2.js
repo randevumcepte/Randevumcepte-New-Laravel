@@ -3,7 +3,7 @@
  *
  * Sekme listesi ve görünürlüğü /api/v2/ayar/ozet'ten gelir (yetki eşlemesi SUNUCUDA; web ve
  * Flutter aynı listeyi görür). v2'ye taşınmış sekmeler kendi modülünü (public/js/ayarlar/*)
- * tembel yükler; henüz taşınmamış olanlar (Şubeler, Hizmetler, Entegrasyonlar)
+ * tembel yükler; henüz taşınmamış olan (Entegrasyonlar — Google Takvim)
  * eski paneldeki aynı sekmeye link verir. Seçili sekme ?p= ile adres çubuğunda tutulur.
  */
 import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=1';
@@ -14,13 +14,15 @@ if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 /** Sekme kodu → modül (yalnız görsel/çizim; hangi sekmenin açık olduğu API'den). */
 const MODULLER = {
-  isletme: () => import('/js/ayarlar/isletme.js?v=1'),
-  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=2'),
-  randevu: () => import('/js/ayarlar/randevu.js?v=1'),
-  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=1'),
-  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=1'),
-  odalar: () => import('/js/ayarlar/odalar.js?v=1'),
-  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=1'),
+  isletme: () => import('/js/ayarlar/isletme.js?v=3'),
+  subeler: () => import('/js/ayarlar/subeler.js?v=3'),
+  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=3'),
+  randevu: () => import('/js/ayarlar/randevu.js?v=3'),
+  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=3'),
+  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=3'),
+  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=3'),
+  odalar: () => import('/js/ayarlar/odalar.js?v=3'),
+  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=3'),
 };
 
 let ozet = null;

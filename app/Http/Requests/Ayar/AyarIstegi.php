@@ -25,7 +25,9 @@ abstract class AyarIstegi extends V2Istegi
         'istisnalar.*.tarih' => 'İstisna tarihi', 'istisnalar.*.tip' => 'İstisna tipi',
         'sadik.yuzde' => 'Sadık müşteri indirimi', 'aktif.yuzde' => 'Aktif müşteri indirimi',
         'cihaz_adi' => 'Cihaz adı', 'oda_adi' => 'Oda adı', 'personel_ids' => 'Personeller', 'hizmet_ids' => 'Hizmetler',
-        'musait' => 'Durum', 'preset' => 'Tema', 'brightnessMode' => 'Görünüm modu', 'logo' => 'Logo', 'gorseller' => 'Görseller',
+        'musait' => 'Durum', 'hizmet_adi' => 'Hizmet adı', 'sure_dk' => 'Süre', 'maliyet' => 'Maliyet', 'cinsiyet' => 'Cinsiyet',
+        'cihaz_ids' => 'Cihazlar', 'kategori_adi' => 'Kategori adı', 'hizmetler' => 'Hizmetler', 'hizmetler.*.hizmet_id' => 'Hizmet',
+        'hizmetler.*.fiyat' => 'Fiyat', 'hizmetler.*.sure_dk' => 'Süre', 'preset' => 'Tema', 'brightnessMode' => 'Görünüm modu', 'logo' => 'Logo', 'gorseller' => 'Görseller',
     ];
 
     public function messages(): array
@@ -34,6 +36,7 @@ abstract class AyarIstegi extends V2Istegi
             'required_if' => ':attribute zorunlu.',
             'present'     => ':attribute gönderilmeli.',
             'size.array'  => ':attribute :size kalem içermeli.',
+            'min.string'  => ':attribute en az :min karakter olmalı.',
             'between.numeric' => ':attribute :min-:max arasında olmalı.',
         ];
     }

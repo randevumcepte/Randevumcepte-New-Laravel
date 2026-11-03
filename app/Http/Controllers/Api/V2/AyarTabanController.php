@@ -41,10 +41,21 @@ abstract class AyarTabanController extends V2Controller
         return $this->salonDenetle($request, AyarSozluk::yetki($sekme))[1];
     }
 
-    /** @return array{0:int,1:int} [yetkili id, salon id] — okuma denetimi + kill-switch */
+    /** @return array{0:int,1:int} [yetkili id, salon id] — sekme yetkisi + kill-switch */
     protected function yazmaSalonu(Request $request, string $sekme): array
     {
-        $kimlik = $this->salonDenetle($request, AyarSozluk::yetki($sekme));
+        return $this->yetkiliYazma($request, AyarSozluk::yetki($sekme));
+    }
+
+    /**
+     * Sekmeden daha dar yetki isteyen yazmalar (orn. Hizmetler: tanim_olustur / kategori_yonet ayri).
+     *
+     * @param  array<string>|string  $yetki
+     * @return array{0:int,1:int} [yetkili id, salon id]
+     */
+    protected function yetkiliYazma(Request $request, array|string $yetki): array
+    {
+        $kimlik = $this->salonDenetle($request, $yetki);
         $this->yazmaAcikMi();
 
         return $kimlik;

@@ -16,9 +16,6 @@ enum KaynakTuru: string
     case Cihaz = 'cihaz';
     case Oda = 'oda';
 
-    /** Takvim renk_id dongusu (renk_duzenleri 10'lu palet). */
-    public const RENK_SAYISI = 10;
-
     public function tablo(): string
     {
         return $this === self::Cihaz ? 'cihazlar' : 'odalar';
@@ -48,11 +45,5 @@ enum KaynakTuru: string
     public function etiket(): string
     {
         return $this === self::Cihaz ? 'Cihaz' : 'Oda';
-    }
-
-    /** Son kullanilan renk_id'den sonraki (10'dan sonra 1'e doner) — eskiyle ayni. */
-    public static function sonrakiRenk(?int $sonRenkId): int
-    {
-        return $sonRenkId === null || $sonRenkId >= self::RENK_SAYISI ? 1 : $sonRenkId + 1;
     }
 }

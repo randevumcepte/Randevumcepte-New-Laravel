@@ -109,3 +109,14 @@
   .ay-secim { background: #1b1b26; border-color: #34344c; }
   .ay-secim label { color: #ededf5; }
 }
+
+/* ── Hizmetler ── */
+.ay-cinsiyet { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; vertical-align: 1px; }
+.ay-c-0 { background: #fce7f3; color: #be185d; }
+.ay-c-1 { background: #dbeafe; color: #1d4ed8; }
+.ay-c-2 { background: #d1fae5; color: #047857; }
+.ay-uyari { color: #c9771f; font-size: 13px; }
+.ay-havuz { display: flex; flex-direction: column; gap: 6px; }
+.ay-havuz section[hidden] { display: none; }
+.ay-havuz-kalem { margin-bottom: 12px; }
+.ay-kopya [data-kat-yeni], [data-kat-yeni] { margin-top: 6px; }

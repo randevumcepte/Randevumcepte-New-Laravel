@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Api\V2\AyarController;
 use App\Http\Controllers\Api\V2\CihazController;
+use App\Http\Controllers\Api\V2\HizmetController;
 use App\Http\Controllers\Api\V2\IsletmeGorselController;
 use App\Http\Controllers\Api\V2\OdaController;
 use App\Http\Controllers\Api\V2\RandevuAyarController;
+use App\Http\Controllers\Api\V2\SubeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,6 +38,19 @@ Route::prefix('ayar')->group(function () {
 
     Route::get('/tema', [AyarController::class, 'tema']);
     Route::put('/tema', [AyarController::class, 'temaKaydet']);
+
+    Route::prefix('hizmetler')->group(function () {
+        Route::get('/', [HizmetController::class, 'liste']);
+        Route::get('/form-verisi', [HizmetController::class, 'formVerisi']);
+        Route::post('/', [HizmetController::class, 'ekle']);
+        Route::post('/havuzdan', [HizmetController::class, 'havuzdanEkle']);
+        Route::get('/{id}', [HizmetController::class, 'goster'])->whereNumber('id');
+        Route::patch('/{id}', [HizmetController::class, 'guncelle'])->whereNumber('id');
+        Route::delete('/{id}', [HizmetController::class, 'kaldir'])->whereNumber('id');
+    });
+    Route::post('/hizmet-kategorileri', [HizmetController::class, 'kategoriEkle']);
+
+    Route::get('/subeler', [SubeController::class, 'liste']);
 
     // Takvim kaynaklari — cihaz ve oda AYNI uc kumesi (KaynakTabanController); kayit govdesi ture ozel.
     foreach (['cihazlar' => CihazController::class, 'odalar' => OdaController::class] as $yol => $controller) {
