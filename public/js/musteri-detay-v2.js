@@ -200,6 +200,7 @@ async function notlarYukle(sayfa) {
 
 function randevularYukle(p) {
   const TELAFI = { telafi_randevusu: 'Telafi Randevusu', telafi_verildi: 'Telafi Verildi' };
+  // Sunucu kaynaklı tablo ilk yüklemeyi kendisi yapmaz (lib/v2-tablo.js) — yenile() şart.
   veriTablosu(p, {
     anahtar: 'musteri_randevular',
     birim: 'randevu',
@@ -222,13 +223,14 @@ function randevularYukle(p) {
       <td>${esc(r.olusturan || '—')}</td>
       <td class="rc-nowrap">${r.olusturulma ? tarihTr(r.olusturulma) + ' <small>' + esc(String(r.olusturulma).slice(11, 16)) + '</small>' : '—'}</td>
     </tr>`,
-  });
+  }).yenile();
 }
 
 // ─────────────────────────── SATIŞLAR ───────────────────────────
 
 function satislarYukle(p) {
   const studyo = a.studyo_modu;
+  // Sunucu kaynaklı tablo ilk yüklemeyi kendisi yapmaz (lib/v2-tablo.js) — yenile() şart.
   veriTablosu(p, {
     anahtar: 'musteri_satislar',
     birim: 'satış',
@@ -260,7 +262,7 @@ function satislarYukle(p) {
         <td class="rc-orta"><span class="rc-islemler">${islem || '—'}</span></td>
       </tr>`;
     },
-  });
+  }).yenile();
 }
 
 // ─────────────────────────── VÜCUT ÖLÇÜMÜ ───────────────────────────
