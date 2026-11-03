@@ -45,7 +45,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Senet | ~5 | ❌ | |
 | Raporlar (satış/personel/müşteri listeleri) | ~8 | ❌ | |
 | Seans takibi | ~4 | ❌ | |
-| Stok | ~20 | ❌ | `/stok/*` (form-urlencoded) |
+| Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
 | Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | ❌ | |
 | Öngörüşme | ~6 | ❌ | |
@@ -92,6 +92,43 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 
 Notlar: v1 `baslik` müşteri adıydı (avatar baş harfleri) → v2'de `musteri_ad`; `baslik` görev türü başlığıdır. v1 kampanyayı D+1'de arıyordu, v2 web kanoniği D (asistan_tarih_saat günü). v1 `durum` için `'Ulaşıldı<'` (fazla karakter) dönüyordu; v2 temiz.
 
+## Stok — v1 → v2 eşlemesi
+
+v1 `services/stok_api.dart` → `https://…/api/stok/*` (form-urlencoded, Bearer yok, salon path'te).
+v2: `GET` uçlarında `salon_id` query'de, `POST` gövdesinde; kayıt id'li uçlarda salon kayıttan çözülür.
+Alan adları Flutter modelleriyle (`Urun`, `Depo`, `Tedarikci`, `UrunKategorisi`, `StokHareketi`)
+AYNI; sayılar ham `int/float`, boş id'ler `null` (modeller `toString()` ile okuduğundan uyumlu).
+Ek alanlar: `stok_seviyesi` (`tukendi|kritik|dusuk|normal`) + `stok_renk`, `tip_etiket`,
+`birim_etiket`, hareketlerde `hareket_etiket/hareket_renk/urun_adi/depo_adi` — istemci yeniden hesaplamaz.
+
+| v1 (Flutter) | v2 | Not |
+|---|---|---|
+| `GET /ozet/{salon}` | `GET /stok/ozet?salon_id=` | `dusuk_stok` artık kritik sınırı da sayar (rozetle tutarlı) |
+| `GET /dusuk-stok/{salon}` | `GET /stok/dusuk-stok?salon_id=` | seviye kritik/düşük olanlar |
+| `POST /urunler/{salon} {arama,kategori_id,tip}` | `GET /stok/urunler?salon_id=&ara=&kategori_id=&tip=&seviye=&tumu=1` | `tumu=1` → sayfasız; yoksa `{data, current_page, last_page, per_page, total}`; `depo_id=` → `depo_stok` |
+| `GET /urun/{id}` | `GET /stok/urunler/{id}` | + `depo_stoklari[]` |
+| `POST /urun-barkod/{salon} {barkod}` | `GET /stok/urunler/barkod?salon_id=&barkod=` | bulunamazsa 404 (eski `status:bulunamadi`) |
+| `POST /urun-kaydet/{salon}` (id=0 yeni) | `POST /stok/urunler` · `PATCH /stok/urunler/{id}` | PATCH kısmi; aynı salonda tekrarlı barkod 422 |
+| `POST /urun-sil {urun_id}` | `DELETE /stok/urunler/{id}` | pasif |
+| `GET /urun-satis-raporu/{urun}` | `GET /stok/urunler/{id}/satis-raporu?baslangic=&bitis=` | |
+| `GET /kategoriler/{salon}` · `POST /kategori-kaydet` · `POST /kategori-sil {id}` | `GET/POST /stok/kategoriler` · `PATCH/DELETE /stok/kategoriler/{id}` | depolar / tedarikciler / receteler AYNI kalıp |
+| `GET /depolar/{salon}` … `POST /depo-sil {id}` | `/stok/depolar[/{id}]` | varsayılan / stoklu depo silinemez (422) |
+| `GET /tedarikciler/{salon}` … | `/stok/tedarikciler[/{id}]` | yazma `urun.tedarikci_yonet` |
+| `GET /receteler/{salon}?hizmet_id=&hizmet_tipi=` … | `/stok/receteler[/{id}]` | ürün + hizmet salona ait olmalı |
+| `POST /hareketler/{salon} {urun_id,…,limit}` | `GET /stok/hareketler?salon_id=&urun_id=&depo_id=&hareket_tipi=&baslangic=&bitis=&page=&per_page=` | sayfalı (`limit` yok) |
+| `POST /manuel-hareket/{salon}` | `POST /stok/hareketler` | tip: `fire|manuel|iade|sarf` |
+| `POST /alis-girisi/{salon} {kalemler: JSON}` | `POST /stok/alis {kalemler: []}` | tek transaction; JSON-metin `kalemler` de kabul |
+| `POST /transfer/{salon}` | `POST /stok/transfer` | kaynak depoda yetersiz stok 422 |
+| `POST /sayim-uygula/{salon}` | `POST /stok/sayim {depo_id, kalemler}` | tek transaction |
+| `POST /hizli-satis/{salon} {sepet: JSON}` | `POST /stok/hizli-satis` | **`idempotency_key` zorunlu**; `miktar` tam sayı; `birim_fiyat` yok sayılır (katalog fiyatı); peşinde `satis.tahsilat_al` + `TAHSILAT_V2_YAZMA_AKTIF` |
+| — | `GET /stok/form-verisi?salon_id=` | kategoriler, depolar, tedarikçiler, birimler, tipler, hareket tipleri, ödeme yöntemleri, `yetkiler`, yazma bayrakları |
+| — | `GET /stok/musteri-ara?salon_id=&q=` | hızlı satış müşteri seçici (`urun.sat`) |
+
+v1'de düzeltilen açıklar: id'li uçlar (`urun-sil`, `kategori-sil`, `depo-sil`…) salon denetimi yapmıyordu
+(başka işletmenin kaydı değiştirilebiliyordu); `_yetkiVar` kimliksiz isteği yetkili sayıyordu; depo-kaydet
+ve transfer/manuel hareket mobilde yetkisizdi; stok önbelleği eşzamanlı yazımda kayıp veriyordu; sayım
+seçilen deponun değil ürünün toplam stoğuyla fark hesaplıyordu (web).
+
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 
 - `personelekleduzenle` mola anahtarlarını (`mola1..7`) `calisiyor1..7`'den kopyalıyor → mola açık/kapalı fiilen yok sayılıyor. v2 doğru alanları kullanır.
@@ -108,5 +145,5 @@ Notlar: v1 `baslik` müşteri adıydı (avatar baş harfleri) → v2'de `musteri
 1. Personel Faz 3: prim / hak ediş / ödeme (Flutter `prim_hakedis`, `hakedislerim`, `personeldetay`).
 2. Randevu boşlukları: randevu listesi (`/randevular?page`), randevu-sonrası not, grup dersi.
 3. Satış boşlukları: taksit, senet, kupon/kampanya kodu, müşteri indirim türü.
-4. Müşteri → Kasa/Rapor → Ayar → Stok → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
+4. Müşteri → Kasa/Rapor → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
 5. En son: Flutter HTTP katmanı geçişi (kullanıcı "geçiş" dediğinde).

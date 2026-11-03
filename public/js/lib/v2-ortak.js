@@ -58,8 +58,16 @@ export const onay = (metin, opt) => panel().onay(metin, opt);
 /** Yazma cevabi: basariliysa true (opsiyonel basari toast'i); degilse hata toast'i + false (409 kill-switch dahil). */
 export function yazSonuc({ ok, kod, govde }, basariMsg) {
   if (ok && govde && govde.basarili) { if (basariMsg) mesaj(basariMsg, 'ok'); return true; }
-  mesaj((govde && govde.mesaj) || `Hata (${kod})`, 'hata');
+  mesaj(ilkAlanHatasi(govde) || (govde && govde.mesaj) || `Hata (${kod})`, 'hata');
   return false;
+}
+
+/** 422 doğrulama zarfında ({veri: {alan: [mesaj]}}) ilk alan mesajı; yoksa null. */
+function ilkAlanHatasi(govde) {
+  const v = govde && !govde.basarili && govde.veri;
+  if (!v || typeof v !== 'object') return null;
+  const ilk = Object.values(v).find((m) => Array.isArray(m) && m.length);
+  return ilk ? String(ilk[0]) : null;
 }
 
 /**

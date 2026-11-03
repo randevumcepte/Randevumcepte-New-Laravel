@@ -158,6 +158,9 @@ Route::prefix('v2')->group(function () {
         Route::delete('/personel/{id}', [PersonelController::class, 'arsivle'])->whereNumber('id');
         Route::patch('/personel/{id}/yetki', [PersonelYetkiController::class, 'kaydet'])->whereNumber('id');
 
+        // STOK YONETIMI (urun, tanim, hareket, alis, transfer, sayim, hizli satis) — routes/v2/stok.php
+        require __DIR__.'/v2/stok.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim

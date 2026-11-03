@@ -1,0 +1,77 @@
+/* Stok Yönetimi (v2) — YALNIZ ekrana özgü kurallar. Başlık, modal, form alanı, buton,
+   rozet, satır işlemi, müşteri seçici ortak: v2-bilesen.css (.rc-*); tablo/özet: panel.css. */
+
+.st-kabuk { padding: 6px 2px 40px; }
+
+/* Özet: kırmızı (Tükenen) varyantı — panel.css'te yok */
+.rc-k-pembe { background: var(--rc-t-pembe, #fdebf1); color: var(--rc-t-pembe-ink, #c24277); }
+
+/* Üst aksiyonlar: eski ekranın renk anlamları (Alış turuncu, Ayarlar koyu) */
+.st-btn-turuncu { background: #f6a609; color: #fff; box-shadow: 0 4px 12px rgba(246, 166, 9, .25); }
+.st-btn-koyu { background: #455a64; color: #fff; }
+.st-btn-turuncu:hover, .st-btn-koyu:hover { transform: translateY(-1px); }
+
+/* Ayarlar açılır menüsü */
+.st-menu { position: relative; }
+.st-menu-liste { position: absolute; right: 0; top: calc(100% + 6px); min-width: 210px; background: #fff; border-radius: 12px; box-shadow: 0 10px 28px rgba(23, 25, 45, .16); padding: 6px; z-index: 50; display: none; }
+.st-menu.acik .st-menu-liste { display: block; }
+.st-menu-liste button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left; padding: 9px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; color: #2a2140; }
+.st-menu-liste button:hover { background: #f5eefe; }
+.st-menu-liste i { color: var(--rc-mor, #5C008E); width: 18px; }
+@media (prefers-color-scheme: dark) { .st-menu-liste { background: #22222e; } .st-menu-liste button { color: #ededf5; } }
+
+/* Filtre çubuğu (tablonun üstü) */
+.st-filtre { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.st-filtre select { min-width: 180px; border: 1px solid #dcdce8; border-radius: 10px; padding: 9px 12px; background: #fff; font-size: 14px; }
+
+/* Tablo hücreleri */
+.st-tablo { min-width: 960px; }
+.st-urun-ad { font-weight: 700; }
+.st-urun-alt { font-size: 12px; color: #9191a3; }
+.st-kat-nokta { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.st-barkod { background: #f5f5f7; padding: 2px 6px; border-radius: 4px; font-size: 11.5px; }
+.st-mor { color: var(--rc-mor, #5C008E); font-weight: 700; }
+.st-soluk { color: #b0b0c0; }
+
+/* Modal içi bölüm kartı (eski .stk-bolum) */
+.st-bolum { background: #fff; border: 1px solid #ececf2; border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+.st-bolum-baslik { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--rc-mor, #5C008E); font-weight: 800; margin-bottom: 12px; }
+.st-bilgi { background: #e3f2fd; border-color: #bbdefb; color: #1565c0; font-size: 13px; display: flex; gap: 10px; }
+@media (prefers-color-scheme: dark) { .st-bolum { background: #22222e; border-color: #34344c; } }
+
+/* Segment (ürün tipi) */
+.st-segment { display: flex; gap: 4px; background: #f3e8fa; border-radius: 10px; padding: 4px; }
+.st-segment button { flex: 1; border: 0; background: transparent; padding: 8px 10px; border-radius: 7px; font-weight: 700; color: #6a1b9a; cursor: pointer; }
+.st-segment button.aktif { background: var(--rc-mor, #5C008E); color: #fff; }
+
+/* Satır listeleri (kategori/depo/tedarikçi) */
+.st-satir { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #ececf2; border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; }
+.st-satir-ikon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex: 0 0 auto; background: #f3e8fa; color: #6a1b9a; }
+.st-satir-ic { flex: 1; min-width: 0; }
+.st-satir-ic b { display: block; }
+.st-satir-ic small { color: #9191a3; }
+.st-bos { text-align: center; color: #a0a0b0; padding: 26px 10px; }
+.st-bos i { font-size: 36px; opacity: .4; display: block; margin-bottom: 8px; }
+@media (prefers-color-scheme: dark) { .st-satir { background: #22222e; border-color: #34344c; } }
+
+/* Hızlı satış: ürün listesi + sepet + toplam */
+.st-urun-liste { max-height: 220px; overflow-y: auto; border: 1px solid #ececf2; border-radius: 10px; margin-top: 8px; background: #fff; }
+.st-urun-satir { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-bottom: 1px solid #f1f1f6; background: transparent; padding: 9px 12px; cursor: pointer; text-align: left; }
+.st-urun-satir:hover { background: #e8f5e9; }
+.st-urun-satir span:first-child { flex: 1; font-weight: 600; }
+.st-sepet-satir { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #ececf2; }
+.st-sepet-satir > div { flex: 1; min-width: 0; }
+.st-sepet-satir input { width: 74px; text-align: center; border: 1px solid #dcdce8; border-radius: 8px; padding: 6px; font-weight: 700; }
+.st-toplam { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #2bb673, #1f9159); color: #fff; padding: 14px 18px; border-radius: 12px; margin-top: 4px; }
+.st-toplam b { font-size: 24px; }
+.st-onay { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+
+/* Alış kalemleri / sayım tablosu */
+.st-kalem { display: grid; grid-template-columns: 1fr 110px 120px 40px; gap: 8px; align-items: end; margin-bottom: 8px; }
+.st-kalem input, .st-kalem select, .st-sayim input { border: 1px solid #dcdce8; border-radius: 9px; padding: 8px 10px; font-size: 14px; width: 100%; box-sizing: border-box; }
+.st-sayim { width: 100%; border-collapse: collapse; }
+.st-sayim th { font-size: 11px; color: #8a8a9a; text-transform: uppercase; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ececf2; }
+.st-sayim td { padding: 8px 10px; border-bottom: 1px solid #f1f1f6; }
+.st-sayim input { width: 110px; text-align: center; }
+.st-sayim tr.farkli td { background: #fff8e1; }
+@media (max-width: 560px) { .st-kalem { grid-template-columns: 1fr 1fr; } .st-filtre select { flex: 1; min-width: 0; } }

@@ -56,7 +56,7 @@ class PanelMenu
             ['etiket' => 'Adisyonlar',         'ikon' => 'bi bi-files',            'slug' => 'adisyonlar',        'pageindex' => 111, 'yetki' => 'satis.tum_satis_gor'],
             ['etiket' => 'Paket Yönetimi',     'ikon' => 'bi bi-grid-3x3',         'slug' => 'paketsatislari',    'pageindex' => 4,   'yetki' => 'paket.tanim_olustur'],
             ['etiket' => 'Seans Takibi',       'ikon' => 'bi bi-check2-square',    'slug' => 'seanstakip',        'pageindex' => 30,  'yetki' => 'paket.seans_takip'],
-            ['etiket' => 'Stok Yönetimi',      'ikon' => 'bi bi-tags',             'slug' => 'urunler',           'pageindex' => 20,  'yetki' => 'urun.tanim_olustur'],
+            ['etiket' => 'Stok Yönetimi',      'ikon' => 'bi bi-tags',             'slug' => 'urunler',           'v2_rota' => '/v2/stok', 'pageindex' => 20,  'yetki' => ['urun.tanim_olustur', 'urun.stok_giris', 'urun.stok_sayim', 'urun.tedarikci_yonet']],
             ['etiket' => 'Senet Takibi',       'ikon' => 'bi bi-clipboard2',       'slug' => 'senetler',          'pageindex' => 40,  'yetki' => 'satis.senet_olustur'],
             ['etiket' => 'Kasa Raporu',        'ikon' => 'bi bi-cash-stack',       'slug' => 'kasadefteri',       'pageindex' => 41,  'yetki' => 'rapor.kasa'],
             ['etiket' => 'İşletme Raporları',  'ikon' => 'bi bi-graph-up-arrow',   'slug' => 'isletmeraporlari',  'pageindex' => 42,  'yetki' => 'rapor.satis'],

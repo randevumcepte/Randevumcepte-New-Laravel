@@ -82,3 +82,14 @@ Route::get('/v2/formlar/{sube?}', function ($sube = null) {
 
     return view('v2.formlar', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Stok Yonetimi v2 — urun tablosu + ozet + alis/sayim/transfer/hizli satis +
+ | kategori/depo/tedarikci host sayfasi (ayni island deseni). Veri /api/v2/stok/*
+ | (Bearer); yazmalar STOK_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
+ */
+Route::get('/v2/stok/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.stok', ['salonId' => $salonId]);
+})->whereNumber('sube');
