@@ -48,7 +48,6 @@ class PanelMenu
             ['etiket' => 'Randevular',         'ikon' => 'bi bi-card-heading',     'slug' => 'randevular-liste',  'v2_rota' => '/v2/randevular', 'pageindex' => 3],
             // v2 ekran — eski "Form Yönetimi" (arsivyonetimi) karşılığı.
             ['etiket' => 'Form Yönetimi',      'ikon' => 'bi bi-file-earmark-text','slug' => 'arsivyonetimi',     'v2_rota' => '/v2/formlar', 'pageindex' => 50, 'yetki' => ['form.olustur', 'form.gonder'], 'studyo_gizle' => true],
-            ['etiket' => 'Ajanda',             'ikon' => 'bi bi-calendar-event',   'slug' => 'ajanda',            'pageindex' => 70, 'yetki' => 'randevu.takvim_gor'],
 
             // ───────────── Satış & Finans
             ['etiket' => 'Satış & Tahsilat',   'ikon' => 'bi bi-stars',            'slug' => 'tahsilat-modern',   'pageindex' => 1111,'yetki' => 'satis.tahsilat_al', 'bolum' => 'Satış & Finans'],
@@ -58,7 +57,6 @@ class PanelMenu
             ['etiket' => 'Paket Yönetimi',     'ikon' => 'bi bi-grid-3x3',         'slug' => 'paketsatislari',    'v2_rota' => '/v2/paketler', 'pageindex' => 4,   'yetki' => 'paket.tanim_olustur', 'ozellik' => 'uyelik_turu_paketli'],
             ['etiket' => 'Seans Takibi',       'ikon' => 'bi bi-check2-square',    'slug' => 'seanstakip',        'v2_rota' => '/v2/seans-takibi', 'pageindex' => 30,  'yetki' => 'paket.seans_takip'],
             ['etiket' => 'Stok Yönetimi',      'ikon' => 'bi bi-tags',             'slug' => 'urunler',           'v2_rota' => '/v2/stok', 'pageindex' => 20,  'yetki' => ['urun.tanim_olustur', 'urun.stok_giris', 'urun.stok_sayim', 'urun.tedarikci_yonet']],
-            ['etiket' => 'Senet Takibi',       'ikon' => 'bi bi-clipboard2',       'slug' => 'senetler',          'pageindex' => 40,  'yetki' => 'satis.senet_olustur'],
             ['etiket' => 'Kasa Raporu',        'ikon' => 'bi bi-cash-stack',       'slug' => 'kasadefteri',       'v2_rota' => '/v2/kasa', 'pageindex' => 41,  'yetki' => ['rapor.kasa', 'finans.kasa_giris_cikis', 'finans.masraf_gor', 'finans.masraf_ekle', 'finans.alacak_yonet'], 'studyo_gizle' => true, 'ozellik' => 'uyelik_turu_paketli'],
             ['etiket' => 'İşletme Raporları',  'ikon' => 'bi bi-graph-up-arrow',   'slug' => 'isletmeraporlari',  'v2_rota' => '/v2/isletme-raporlari', 'pageindex' => 42,  'yetki' => 'rapor.satis', 'studyo_gizle' => true, 'rol5_gizle' => true],
             ['etiket' => 'Satış Raporları',    'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'raporlar',          'v2_rota' => '/v2/raporlar', 'pageindex' => 43,  'yetki' => 'rapor.satis', 'studyo_gizle' => true],
