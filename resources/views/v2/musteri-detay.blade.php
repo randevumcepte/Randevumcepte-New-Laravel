@@ -4,9 +4,10 @@
 @section('aktif', 'musteriler')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/musteri-v2.css?v=2">
+    <link rel="stylesheet" href="/css/musteri-v2.css?v=3">
     <link rel="stylesheet" href="/css/seans-v2.css?v=1">
     <link rel="stylesheet" href="/css/formlar-v2.css?v=2">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=12">
 @endpush
 
 @section('icerik')
@@ -18,5 +19,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/musteri-detay-v2.js?v=5"></script>
+    <script type="module" src="/js/musteri-detay-v2.js?v=6"></script>
 @endpush

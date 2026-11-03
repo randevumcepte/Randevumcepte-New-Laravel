@@ -127,6 +127,10 @@ class MusteriController extends MusteriTabanController
             $salonId,
             ['musteri_id' => $id, 'kisit_personel_id' => $kisit],
             ListeIstegi::istekten($request, 10, RandevuListeServisi::SIRALANABILIR, 'tarih', 'desc'),
+            [
+                'onayla'        => $this->yetkiVar($uid, $salonId, 'randevu.onayla'),
+                'duzenle_iptal' => $this->yetkiVar($uid, $salonId, 'randevu.duzenle_iptal'),
+            ],
         ));
     }
 

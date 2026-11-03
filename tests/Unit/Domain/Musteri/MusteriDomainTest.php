@@ -64,4 +64,15 @@ class MusteriDomainTest extends TestCase
         $this->assertSame('musteri_iptal', RandevuDurumu::etiket(3, null)['kod']);
         $this->assertSame('beklemede', RandevuDurumu::etiket(0, null)['kod']);
     }
+
+    public function test_randevu_liste_aksiyonlari_eski_menu_ile_ayni(): void
+    {
+        $this->assertSame(['onayla' => true, 'duzenle' => true, 'iptal' => true], RandevuDurumu::aksiyonlar(0, null, true, true));
+        $this->assertSame(['onayla' => false, 'duzenle' => true, 'iptal' => true], RandevuDurumu::aksiyonlar(0, null, false, true));
+        $this->assertSame(['onayla' => false, 'duzenle' => true, 'iptal' => true], RandevuDurumu::aksiyonlar(1, null, true, true));
+        $this->assertSame(['onayla' => false, 'duzenle' => true, 'iptal' => true], RandevuDurumu::aksiyonlar('1', '0', true, true));
+        $this->assertSame(['onayla' => false, 'duzenle' => false, 'iptal' => false], RandevuDurumu::aksiyonlar(1, 1, true, true));
+        $this->assertSame(['onayla' => false, 'duzenle' => true, 'iptal' => false], RandevuDurumu::aksiyonlar(2, null, true, true));
+        $this->assertSame(['onayla' => true, 'duzenle' => false, 'iptal' => false], RandevuDurumu::aksiyonlar(0, null, true, false));
+    }
 }

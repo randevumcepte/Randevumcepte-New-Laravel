@@ -127,3 +127,11 @@ a.mu-ad:hover { color: #7B2FB8; text-decoration: underline; }
   .sg-cip span { color: #cfcfe0; }
   .sg-alt-izgara { border-color: #34344c; }
 }
+
+/* ───────── Detay: randevu durumu — eski listedeki dolgulu buton renkleri (Bootstrap teması) ───────── */
+.md-durum { display: inline-block; min-width: 92px; text-align: center; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #fff; background: #6c757d; white-space: nowrap; }
+.md-d-geldi { background: #28a745; }
+.md-d-gelmedi { background: #dc3545; }
+.md-d-onayli { background: #5C008E; }
+.md-d-beklemede { background: #ffc107; color: #212529; }
+.md-d-iptal, .md-d-musteri_iptal { background: #343a40; }

@@ -4,7 +4,8 @@
  * Eski /isletmeyonetim/musteridetay/{id} ekranının v2 karşılığı (tasarım: eski "Modern
  * Tema" başlık kartı + sekmeler). Sekmeler ilk açılışta yüklenir:
  *   Genel Bilgiler  : profil kartı + Randevu Notları zaman çizelgesi (GET /musteri/{id}/randevu-notlari)
- *   Randevular      : GET /musteri/{id}/randevular (sunucu sayfalı)
+ *   Randevular      : GET /musteri/{id}/randevular (sunucu sayfalı); satır işlemleri (`aksiyonlar`
+ *                     sunucudan) + detay çekmecesi/form ortak randevu bileşeninden (lib/v2-randevu.js)
  *   Vücut Ölçümü    : stüdyo modu — GET/POST /musteri/{id}/olcumler, DELETE /musteri/olcum/{id}
  *   Satışlar        : mevcut GET /satislar?musteri_id= (satır aksiyonları sunucudan)
  *   Seanslar        : ortak seans bileşeni (lib/v2-seans.js) — GET /seans?musteri_id=
@@ -19,6 +20,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=2';
 import { formArsivi } from '/js/lib/v2-form.js?v=1';
+import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=1';
 
 const kok = document.getElementById('rc-musteri-detay');
 const musteriId = parseInt(kok.dataset.musteri, 10) || 0;
@@ -200,8 +202,9 @@ async function notlarYukle(sayfa) {
 
 function randevularYukle(p) {
   const TELAFI = { telafi_randevusu: 'Telafi Randevusu', telafi_verildi: 'Telafi Verildi' };
+  const satirlar = new Map();
   // Sunucu kaynaklı tablo ilk yüklemeyi kendisi yapmaz (lib/v2-tablo.js) — yenile() şart.
-  veriTablosu(p, {
+  const tablo = veriTablosu(p, {
     anahtar: 'musteri_randevular',
     birim: 'randevu',
     bosMesaj: 'Randevu bulunamadı.',
@@ -210,20 +213,44 @@ function randevularYukle(p) {
     kolonlar: [
       { baslik: 'Tarih', sirala: 'tarih' }, { baslik: 'Saat' }, { baslik: 'Durum' }, { baslik: 'Hizmetler' },
       { baslik: 'Personel / Cihaz / Oda' }, { baslik: 'Randevu Notu' }, { baslik: 'Oluşturan' },
-      { baslik: 'Oluşturulma', sirala: 'olusturulma' },
+      { baslik: 'Oluşturulma', sirala: 'olusturulma' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
     ],
     kaynak: (prm) => api('GET', `/musteri/${musteriId}/randevular`, { params: { ...prm, ...P } }),
-    satir: (r) => `<tr>
+    satir: (r) => {
+      satirlar.set(String(r.id), r);
+      const x = r.aksiyonlar || {};
+      const b = (islem, ikon, baslik, sinif = '') => `<button class="rc-islem ${sinif}" data-rislem="${islem}" data-id="${r.id}" title="${baslik}" aria-label="${baslik}"><i class="bi ${ikon}"></i></button>`;
+      return `<tr>
       <td class="rc-nowrap">${tarihTr(r.tarih)}</td>
       <td>${esc(r.saat || '')}</td>
-      <td><span class="rc-rozet rc-rozet-${esc(r.durum.renk)}">${esc(r.durum.etiket)}</span>${r.telafi ? `<div><span class="rc-rozet rc-rozet-turuncu md-telafi"><i class="bi bi-arrow-counterclockwise"></i> ${TELAFI[r.telafi]}</span></div>` : ''}</td>
+      <td><span class="md-durum md-d-${esc(r.durum.kod)}">${esc(r.durum.etiket)}</span>${r.telafi ? `<div><span class="rc-rozet rc-rozet-turuncu md-telafi"><i class="bi bi-arrow-counterclockwise"></i> ${TELAFI[r.telafi]}</span></div>` : ''}</td>
       <td>${esc(r.hizmetler.join(', ') || '—')}</td>
       <td>${esc(r.kaynaklar.join(', ') || '—')}</td>
       <td class="md-metin">${esc(r.randevu_notu || '')}</td>
       <td>${esc(r.olusturan || '—')}</td>
       <td class="rc-nowrap">${r.olusturulma ? tarihTr(r.olusturulma) + ' <small>' + esc(String(r.olusturulma).slice(11, 16)) + '</small>' : '—'}</td>
-    </tr>`,
-  }).yenile();
+      <td class="rc-orta"><span class="rc-islemler">${[
+        b('detay', 'bi-eye', 'Detay / Diğer İşlemler'),
+        x.onayla ? b('onayla', 'bi-check-lg', 'Onayla', 'rc-olumlu') : '',
+        x.duzenle ? b('duzenle', 'bi-pencil-square', 'Düzenle') : '',
+        x.iptal ? b('iptal', 'bi-x-lg', 'İptal Et', 'rc-tehlike') : '',
+      ].join('')}</span></td>
+    </tr>`;
+    },
+  });
+  tablo.yenile();
+
+  // Çekmece (Geldi/Gelmedi, telafi…), onay/iptal ve düzenleme formu takvimle AYNI bileşen.
+  const islem = randevuIslemleri({ salonId, yenile: () => tablo.yenile(false) });
+  p.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rislem]');
+    if (!b) return;
+    const r = satirlar.get(b.dataset.id);
+    const ad = b.dataset.rislem;
+    if (ad === 'detay') return islem.cekmeceAc(r.id);
+    if (ad === 'duzenle') return islem.randevuFormu({ randevuId: r.id });
+    islem.islemYap({ id: r.id, durum: r.durum.kod === 'beklemede' ? 0 : 1, musteri_ad: m.name }, ad, {});
+  });
 }
 
 // ─────────────────────────── SATIŞLAR ───────────────────────────

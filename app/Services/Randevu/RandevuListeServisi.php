@@ -21,8 +21,9 @@ class RandevuListeServisi
 
     /**
      * @param  array{musteri_id?:?int, kisit_personel_id?:?int}  $f
+     * @param  array{onayla?:bool, duzenle_iptal?:bool}  $yetki  satir `aksiyonlar` icin
      */
-    public function listele(int $salonId, array $f, ListeIstegi $l): array
+    public function listele(int $salonId, array $f, ListeIstegi $l, array $yetki = []): array
     {
         $q = DB::table('randevular as r')->where('r.salon_id', $salonId)
             ->when($f['musteri_id'] ?? null, fn ($q, $uid) => $q->where('r.user_id', $uid))
@@ -45,7 +46,7 @@ class RandevuListeServisi
         $kalemler = $this->kalemler($randevular->pluck('id')->all());
 
         return [
-            'data' => $randevular->map(function ($r) use ($kalemler) {
+            'data' => $randevular->map(function ($r) use ($kalemler, $yetki) {
                 $k = $kalemler[$r->id] ?? ['hizmetler' => [], 'kaynaklar' => [], 'telafi' => null];
 
                 return [
@@ -59,6 +60,8 @@ class RandevuListeServisi
                     'randevu_notu'  => trim((string) $r->personel_notu) === '' ? null : $r->personel_notu,
                     'olusturan'     => (int) $r->web === 1 ? 'Web' : ((int) $r->uygulama === 1 ? 'Uygulama' : $r->olusturan_adi),
                     'olusturulma'   => $r->created_at,
+                    'aksiyonlar'    => RandevuDurumu::aksiyonlar($r->durum, $r->randevuya_geldi,
+                        (bool) ($yetki['onayla'] ?? false), (bool) ($yetki['duzenle_iptal'] ?? false)),
                 ];
             })->all(),
         ] + ListeIstegi::meta($l->sayfa, $l->sayfaBoyu, $toplam);

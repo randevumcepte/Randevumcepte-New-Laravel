@@ -27,4 +27,26 @@ final class RandevuDurumu
 
         return ['kod' => $kod, 'etiket' => $etiket, 'renk' => $renk];
     }
+
+    /**
+     * Liste satirinda izinli islemler — eski randevu_liste_getir islem menusu ile ayni:
+     *   Beklemede     → Duzenle, Onayla (randevu.onayla), Iptal Et
+     *   Onayli/Gelmedi→ Duzenle, Iptal Et
+     *   Geldi         → (durum islemi yok; telafi/not detay cekmecesinde)
+     *   Iptal (2/3)   → Duzenle
+     * Duzenle/Iptal randevu.duzenle_iptal ister.
+     *
+     * @return array{onayla:bool, duzenle:bool, iptal:bool}
+     */
+    public static function aksiyonlar(mixed $durum, mixed $geldi, bool $onaylaYetki, bool $duzenleYetki): array
+    {
+        $durum = (int) $durum;
+        $geldiMi = $durum === 1 && $geldi !== null && $geldi !== '' && (int) $geldi === 1;
+
+        return [
+            'onayla'  => $onaylaYetki && $durum === 0,
+            'duzenle' => $duzenleYetki && ! $geldiMi,
+            'iptal'   => $duzenleYetki && ($durum === 0 || ($durum === 1 && ! $geldiMi)),
+        ];
+    }
 }
