@@ -288,6 +288,13 @@ html, body { margin: 0; padding: 0; }
 .rs-grup { padding: 8px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--rc-sol); }
 .rs-yok { padding: 12px; color: var(--rc-sol); font-size: 13.5px; text-align: center; }
 
+/* ───────────── Telefon: ülke kodu + numara (telefon-ulke.js) — tum v2 ekranlari ───────────── */
+/* Ulke secimi duz <select>; butonu/listeyi arama-select.js cizer (.rs-btn.tel-ulke). */
+.tel-grup { display: flex; gap: 6px; min-width: 0; }
+.tel-grup .tel-num { flex: 1 1 auto; min-width: 0; width: 100%; }
+.tel-grup .rs-btn.tel-ulke { flex: 0 0 auto; width: 118px; height: auto; min-height: 40px; }
+.tel-grup.tel-hatali .tel-num { border-color: var(--rc-kirmizi); }
+
 /* v2 karşılığı olmayan menü öğesi: tıklanamaz, eski panele gitmez. */
 .rc-link.rc-pasif { opacity: .45; cursor: not-allowed; pointer-events: auto; }
 .rc-link.rc-pasif:hover { background: transparent; }

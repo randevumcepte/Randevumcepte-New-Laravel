@@ -7,6 +7,7 @@ use App\Domain\Form\FormLinki;
 use App\Domain\Form\OdemePlani;
 use App\Domain\Form\SabitFormlar;
 use App\Domain\Personel\Telefon;
+use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\Arsiv;
@@ -248,7 +249,7 @@ class ArsivIslemServisi
                 'gecerlilik_tarihi'     => ($g['gecerlilik_tarihi'] ?? null) ?: null,
                 'salon_imza'            => $imza,
                 'salon_yetkili_ad'      => trim((string) ($g['salon_yetkili_ad'] ?? '')) ?: null,
-                'salon_yetkili_telefon' => trim((string) ($g['salon_yetkili_telefon'] ?? '')) ?: null,
+                'salon_yetkili_telefon' => TelefonNumarasi::kanonik($g['salon_yetkili_telefon'] ?? null) ?: null,
                 'salon_imza_ip'         => $ip,
                 'salon_imza_zaman'      => now(),
                 'cevapladi'             => 0,
@@ -308,7 +309,7 @@ class ArsivIslemServisi
     {
         $girilen = trim((string) $girilen);
         if ($girilen !== '' && ! Telefon::maskeliMi($girilen)) {
-            return $girilen;
+            return TelefonNumarasi::kanonik($girilen);
         }
 
         return (string) DB::table('users')->where('id', $userId)->value('cep_telefon');

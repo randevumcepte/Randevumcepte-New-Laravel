@@ -3,6 +3,7 @@
 namespace App\Services\Ayar;
 
 use App\Domain\Ayar\AyarSozluk;
+use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\BulunamadiException;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,9 @@ use Illuminate\Support\Facades\DB;
 class IsletmeBilgiServisi
 {
     /** Duzenlenebilir salonlar kolonlari. */
+    /** Telefon kolonlari — TelefonNumarasi::kanonik ile saklanir. */
+    private const TELEFON_ALANLARI = ['telefon_1', 'whatsapp'];
+
     public const ALANLAR = [
         'salon_adi', 'salon_turu_id', 'adres', 'telefon_1', 'whatsapp', 'aciklama',
         'instagram_sayfa', 'facebook_sayfa', 'vergi_adi', 'vergi_no', 'vergi_dairesi',
@@ -62,6 +66,12 @@ class IsletmeBilgiServisi
         $eski = DB::table('salonlar')->where('id', $salonId)->first(['salon_adi', 'telefon_1', 'whatsapp']);
         if (! $eski) {
             throw new BulunamadiException('İşletme bulunamadı');
+        }
+
+        foreach (self::TELEFON_ALANLARI as $a) {
+            if (array_key_exists($a, $g)) {
+                $g[$a] = TelefonNumarasi::kanonik($g[$a]) ?: null;
+            }
         }
 
         DB::transaction(function () use ($salonId, $g) {

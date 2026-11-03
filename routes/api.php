@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V2\SatisController;
 use App\Http\Controllers\Api\V2\SantralController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
+use App\Http\Controllers\Api\V2\TelefonController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +63,9 @@ Route::prefix('v2')->group(function () {
             'surum'      => 'v2',
         ], $veritabani === 'up' ? 200 : 503);
     });
+
+    // Telefon ulke kodlari + bicimleri (web + Flutter tek kaynak; kisisel veri yok).
+    Route::get('/telefon/ulkeler', [TelefonController::class, 'ulkeler']);
 
     /*
      | KORUMALI — kisisel veri iceren TUM uclar buraya. Kimlik ZORUNLU.

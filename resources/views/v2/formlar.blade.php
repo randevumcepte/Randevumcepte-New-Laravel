@@ -14,5 +14,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/formlar-v2.js?v=2"></script>
+    <script type="module" src="/js/formlar-v2.js?v=3"></script>
 @endpush

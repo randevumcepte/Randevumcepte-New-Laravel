@@ -2,6 +2,7 @@
 
 namespace App\Services\Stok\Tanim;
 
+use App\Domain\Telefon\TelefonNumarasi;
 use App\Models\Tedarikci;
 use App\Services\Stok\StokSunumu;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,6 +36,13 @@ class TedarikciServisi extends TanimServisi
             'adres'    => ['nullable', 'string', 'max:1000'],
             'aciklama' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    protected function hazirla(int $salonId, Model $m, array $veri): void
+    {
+        if (array_key_exists('telefon', $veri)) {
+            $m->telefon = TelefonNumarasi::kanonik($veri['telefon']) ?: null;
+        }
     }
 
     protected function sorgu(int $salonId, array $filtre): Builder

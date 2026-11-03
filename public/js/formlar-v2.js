@@ -299,7 +299,7 @@ function sozlesmeAc() {
       <div class="rc-ipucu">Sözleşme çift taraflı imzalanır. Salon adına aşağıyı doldurup imzalayın; müşteri kendi imzasını SMS ile gelen link üzerinden atacaktır.</div>
       <div class="rc-form-izgara f-aralik">
         <div class="rc-alan"><label>Yetkili Ad Soyad</label><input id="szYetkiliAd" value="${esc(s.yetkili_ad || '')}"></div>
-        <div class="rc-alan"><label>Yetkili Telefon</label><input id="szYetkiliTel" value="${esc(s.yetkili_telefon || '')}"></div>
+        <div class="rc-alan"><label>Yetkili Telefon</label><input id="szYetkiliTel" type="tel" value="${esc(s.yetkili_telefon || '')}"></div>
       </div>
       <div class="f-imza"><canvas id="szImza"></canvas><button type="button" class="rc-btn rc-btn-ikincil" id="szImzaTemizle"><i class="bi bi-eraser"></i> Temizle</button></div>
     </div>`;

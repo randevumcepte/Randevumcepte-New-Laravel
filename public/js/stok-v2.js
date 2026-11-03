@@ -539,7 +539,7 @@ const depolar = () => tanimModali({
 const tedarikciler = () => tanimModali({
   tur: 'tedarikciler', baslik: 'Tedarikçiler', ikon: 'truck', yazabilir: yetki('tedarikci_yonet'),
   alanlar: `<div class="rc-alan"><label>Ad *</label><input data-alan="ad" placeholder="örn. ABC Kozmetik"></div>
-    <div class="rc-alan"><label>Telefon</label><input data-alan="telefon" placeholder="0532…"></div>
+    <div class="rc-alan"><label>Telefon</label><input data-alan="telefon" type="tel"></div>
     <div class="rc-alan"><label>Vergi No</label><input data-alan="vergi_no"></div>
     <div class="rc-alan"><label>E-posta</label><input data-alan="email" type="email"></div>
     <div class="rc-alan rc-tam"><label>Adres</label><textarea data-alan="adres" rows="2"></textarea></div>`,

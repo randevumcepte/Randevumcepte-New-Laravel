@@ -4,8 +4,8 @@ namespace App\Services\Musteri;
 
 use App\Domain\Musteri\DogumTarihi;
 use App\Domain\Musteri\MusteriSozluk;
-use App\Domain\Musteri\MusteriTelefonu;
 use App\Domain\Personel\Telefon;
+use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
@@ -50,7 +50,7 @@ class MusteriYazServisi
         $salonId = (int) $g['salon_id'];
         $yapanId = (int) $g['yapan_id'];
         $musteriId = $g['musteri_id'] ? (int) $g['musteri_id'] : null;
-        $tel = MusteriTelefonu::kanonik($g['telefon'] ?? null);
+        $tel = TelefonNumarasi::kanonik($g['telefon'] ?? null);
 
         return DB::transaction(function () use ($g, $salonId, $yapanId, $musteriId, $tel) {
             if ($musteriId !== null) {
@@ -61,7 +61,7 @@ class MusteriYazServisi
                 throw new GecersizIslemException('Geçerli bir telefon numarası girin.');
             }
 
-            $mevcut = DB::table('users')->whereIn('cep_telefon', MusteriTelefonu::aramaVaryantlari($tel))
+            $mevcut = DB::table('users')->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($tel))
                 ->orderBy('id')->first(['id', 'name']);
 
             return $mevcut
@@ -178,10 +178,10 @@ class MusteriYazServisi
 
         // Maskeli / bos telefon gelirse numara korunur (telefon_gor yetkisizin duzenlemesi).
         $telDegisti = $tel !== '' && ! Telefon::maskeliMi($g['telefon'] ?? '')
-            && $tel !== MusteriTelefonu::kanonik($eski->cep_telefon);
+            && $tel !== TelefonNumarasi::kanonik($eski->cep_telefon);
 
         if ($telDegisti && DB::table('users')->where('id', '!=', $userId)
-            ->whereIn('cep_telefon', MusteriTelefonu::aramaVaryantlari($tel))->exists()) {
+            ->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($tel))->exists()) {
             throw new CakismaException('Bu telefon numarası başka bir müşteri kaydına ait.');
         }
 

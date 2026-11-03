@@ -247,7 +247,7 @@ async function formAc(p) {
       <div class="rc-form-izgara">
         <div class="rc-alan"><label>Ad Soyad *</label><input id="fAd" value="${esc(p?.personel_adi || '')}"></div>
         <div class="rc-alan"><label>Ünvan</label><input id="fUnvan" value="${esc(p?.unvan || '')}"></div>
-        <div class="rc-alan"><label>Cep Telefonu</label><input id="fTel" value="${esc(p?.cep_telefon || '')}" placeholder="05XX XXX XX XX"></div>
+        <div class="rc-alan"><label>Cep Telefonu</label><input id="fTel" type="tel" value="${esc(p?.cep_telefon || '')}"></div>
         <div class="rc-alan"><label>Cinsiyet</label><select id="fCinsiyet"><option value="">Seçiniz</option>${cinsOpt}</select></div>
         <div class="rc-alan"><label>Hesap Türü *</label><select id="fRol"><option value="">Seçiniz</option>${rolOpt}</select></div>
       </div>
