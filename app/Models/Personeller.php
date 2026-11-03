@@ -16,4 +16,10 @@ class Personeller extends Model
     protected $table = 'salon_personelleri';
 
     protected $guarded = [];
+
+    /** Govdeden gelen personel id'si bu salona mi ait? (baska salonun personeli yazilmasin) */
+    public static function salondaMi(?int $personelId, int $salonId): bool
+    {
+        return $personelId !== null && self::where('id', $personelId)->where('salon_id', $salonId)->exists();
+    }
 }

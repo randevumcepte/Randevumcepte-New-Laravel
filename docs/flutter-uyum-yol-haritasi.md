@@ -41,9 +41,9 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Satış / adisyon / tahsilat / alacak | ~30 | 🟡 | liste, adisyon, kalem, tahsilat, alacak var; taksit, senet, kupon/kampanya kodu, müşteri indirim türü yok |
 | Katalog (hizmet/ürün/paket listeleri) | ~8 | 🟡 | `GET /katalog` var; sayfalı yönetim listeleri ve CRUD yok |
 | Müşteri | ~15 | 🟡 | liste+sayaç+seçici, detay, randevu notları, randevular, ekle/güncelle/sil, kara liste, sağlık, ölçüm var (yazma `MUSTERI_V2_YAZMA_AKTIF`); resimler, seanslar, toplu içe aktarma, anket/WhatsApp, harici tahsilat yok |
-| Kasa / masraf / gün sonu | ~8 | ❌ | |
+| Kasa / masraf / gün sonu | ~8 | ✅ | `/kasa/*`, `/masraf/*` — eşleme aşağıda; yazma `KASA_V2_YAZMA_AKTIF` arkasında |
 | Senet | ~5 | ❌ | |
-| Raporlar (satış/personel/müşteri listeleri) | ~8 | ❌ | |
+| Raporlar (satış/personel/müşteri listeleri) | ~8 | ✅ | `/rapor/*` (Satış Raporları + İşletme Raporları) — eşleme aşağıda |
 | Seans takibi | ~4 | ❌ | |
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
@@ -155,6 +155,27 @@ randevu_sayisi, son_randevu_tarihi, odeme_sayisi, profil_resim` + `segment{kod,e
 | `POST /musteri-danisan-turunu-getir` (ham "1"/"2") | detayda `segment{kod,etiket}` | ✅ |
 | `POST /musteriresimleri`, `/musteriresimekle…`, `/check_phone`, `/anket-hizli-gonder`, WhatsApp uçları | — | ❌ sonraki faz |
 
+## Raporlar + Kasa — v1 → v2 eşlemesi
+
+Ayrıntılı sözleşme ve formül kararları: `docs/strangler-rapor-kasa.md`. Dönem tüm uçlarda
+`donem=bugun|dun|hafta|ay|gecen_ay|yil|gecen_yil|ozel` (+ `baslangic`/`bitis` Y-m-d); seçenek
+listesi, sekmeler ve buton yetkileri `GET /rapor/secenekler?ekran=satis|isletme|kasa`'dan.
+
+| v1 (Flutter) | v2 | Durum |
+|---|---|---|
+| `POST /hizmetRaporlari`, `/urunRaporlari`, `/paketRaporlari` {salonId, tarih1, tarih2, personel} | `GET /rapor/satis?salon_id=&sekme=hizmet\|urun\|paket\|tum&donem=ozel&baslangic=&bitis=&personel_id=` | ✅ satır `ad, adet, gelir, indirim, kazanc, alacak` (+ hizmette `birim_maliyet, toplam_maliyet, kar`), `veri.ozet` kartlar; seanslı hizmet `tur:'seans'` olarak paket sekmesinde (v1 ile aynı yer) |
+| `POST /personelRaporlari` | `GET /rapor/satis/personel` | ✅ aynı anahtarlar (`personel_adi, hizmet_geliri, hizmet_primi, …`) + `toplam_gelir/prim`; prim Prim & Hak Ediş formülü (v1 yalnız düz %) |
+| `POST /hizmet-musteri-listes`, `/urun-musteri-listesi`, `/paket-musteri-listesi` | `GET /rapor/satis/{hizmet\|urun\|paket\|seans}/{kalem}/musteriler` | ✅ satır başına `musteri, telefon (maskeli), personel, gelir, odenen, kalan`; personel filtresi KALEM personeli (v1 adisyon oluşturanı) |
+| (rol 5 `SalesReportsPersonelPage`, personel id istemcide) | aynı uçlar | ✅ personel kapsamı SUNUCUDA zorlanır (`secenekler.personel_kapsami`) |
+| (yok — web İşletme Raporları) | `GET /rapor/isletme/{ozet,hizmet,urun,personel,musteri,randevu}` | ✅ yeni ekran yapılabilir |
+| `POST /kasaraporu/{salon}` {tarih1,tarih2,odemeyontemi} | `GET /kasa/ozet?salon_id=&donem=&odeme_yontemi_id=` | ✅ `gelir, gider, net, toplam_kazanc` (v1 `toplamgelir, toplamgider, toplamKasa, toplamCiro`) |
+| `POST /tahsilatraporu/{salon}?page` (5/sayfa, ham model) | `GET /kasa/gelirler?…&page=&per_page=&ara=` | ✅ düz satır (`musteri, tahsil_eden, odeme_yontemi, banka, tutar, bagsiz, para_girisi, sil_turu`); kalemler `GET /kasa/gelir/{id}` |
+| `POST /masrafraporu/{salon}?page` (Bearer yok, "Kasa" masrafları düşüyordu) | `GET /kasa/giderler` | ✅ harcayansız (Kasa) masraflar dahil, `rozet` |
+| `POST /gunsonuraporu/{salon}` (Bearer yok) | `GET /kasa/gun-sonu?donem=` | ✅ aynı anahtarlar (`gelir{nakit,kredikarti,havale,online,diger}`, `satislar[]`, …) |
+| `POST /devredenAylar` {salonId, yil} (ay sonu günü düşüyordu) | `GET /kasa/aylik?yil=` | ✅ `aylar[{ay, ay_adi, gelir, gider, net}]` (v1 `tahsilatlar/masraflar/donem_net_kar`) |
+| `POST /masrafekleduzenle/{salon}`, `/masrafsil/{salon}`, `GET /masrafkategorileri` | `POST /masraf`, `PATCH/DELETE /masraf/{id}`, `GET /masraf/form-verisi` | ✅ salon kapsamlı; tutar sayı |
+| (Flutter'da yok) | `POST /kasa/para-giris`, `POST /kasa/para-cikis/onay-kodu`, `POST /kasa/para-cikis`, `DELETE /kasa/gelir/{id}` | ✅ web Para Ekle / Çek / sil |
+
 ## Bilinen v1 tuhaflıkları (geçişte HTTP katmanında karşılanacak / v2'de düzeltildi)
 
 - `personelekleduzenle` mola anahtarlarını (`mola1..7`) `calisiyor1..7`'den kopyalıyor → mola açık/kapalı fiilen yok sayılıyor. v2 doğru alanları kullanır.
@@ -171,5 +192,5 @@ randevu_sayisi, son_randevu_tarihi, odeme_sayisi, profil_resim` + `segment{kod,e
 1. Personel Faz 3: prim / hak ediş / ödeme (Flutter `prim_hakedis`, `hakedislerim`, `personeldetay`).
 2. Randevu boşlukları: randevu listesi (`/randevular?page`), randevu-sonrası not, grup dersi.
 3. Satış boşlukları: taksit, senet, kupon/kampanya kodu, müşteri indirim türü.
-4. Müşteri kalanları (resimler, seanslar, toplu içe aktarma) → Kasa/Rapor → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
+4. Müşteri kalanları (resimler, seanslar, toplu içe aktarma) → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
 5. En son: Flutter HTTP katmanı geçişi (kullanıcı "geçiş" dediğinde).

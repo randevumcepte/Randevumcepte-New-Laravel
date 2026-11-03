@@ -55,6 +55,12 @@ abstract class V2Controller extends Controller
         return [(int) $user->id, $salonId];
     }
 
+    /** Kullanicinin bu salonda yetki anahtari var mi (buton/alan gorunurlugu icin; 403 atmaz). */
+    protected function yetkiVar(int $yetkiliId, int $salonId, string $anahtar): bool
+    {
+        return app(\App\Services\Yetki\YetkiServisi::class)->yetkiliYetkiVar($yetkiliId, $salonId, $anahtar);
+    }
+
     /** Kaydin salonu cozulemediyse 404 (kapsam sizintisi yok); cozulduyse salon_id. */
     protected function bulundu(?int $salonId, string $mesaj = 'Kayıt bulunamadı'): int
     {

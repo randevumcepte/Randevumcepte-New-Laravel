@@ -126,6 +126,7 @@ class PanelKabukServisi
             'santral_aktif'       => (int) ($salon->santral_aktif ?? 0) === 1,
             'grup_dersi_aktif'    => (int) ($salon->grup_dersi_aktif ?? 0) === 1,
             'uyelik_turu_premium' => (int) ($salon->uyelik_turu ?? 0) > 2,
+            'uyelik_turu_paketli' => (int) ($salon->uyelik_turu ?? 0) > 1,   // eski menu: Kasa Raporu
             default               => true,
         };
     }

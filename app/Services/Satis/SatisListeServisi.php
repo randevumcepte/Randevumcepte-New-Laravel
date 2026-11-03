@@ -254,7 +254,7 @@ class SatisListeServisi
             : collect();
 
         // Kalem bazli prim haritasi: [personel_id][tur][kalem_id] => yuzde.
-        $primHarita = $this->primHaritasi($salonId);
+        $primHarita = PersonelPrimOrani::harita($salonId);
 
         // Satir aksiyonlari icin cagiranin (controller) yetki ozeti; verilmezse hic yazma butonu yok.
         $yetkiler = (array) ($o['yetkiler'] ?? []);
@@ -380,17 +380,6 @@ class SatisListeServisi
         }
 
         return ['hizmetler' => $hizmetler, 'urunler' => $urunler, 'paketler' => $paketler];
-    }
-
-    /** personel_prim_oranlari -> [personel_id][tur][kalem_id] => yuzde (eski detayliPrimHaritasi). */
-    private function primHaritasi(int $salonId): array
-    {
-        $harita = [];
-        foreach (PersonelPrimOrani::where('salon_id', $salonId)->get() as $s) {
-            $harita[$s->personel_id][$s->tur][$s->kalem_id] = (float) $s->yuzde;
-        }
-
-        return $harita;
     }
 
     /** Kaleme uygulanacak prim yuzdesi: {tur}_prim_detayli ise kalem orani, degilse genel yuzde. */

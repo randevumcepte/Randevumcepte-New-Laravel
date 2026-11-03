@@ -161,6 +161,9 @@ Route::prefix('v2')->group(function () {
         // STOK YONETIMI (urun, tanim, hareket, alis, transfer, sayim, hizli satis) — routes/v2/stok.php
         require __DIR__.'/v2/stok.php';
 
+        // RAPORLAR (satis / isletme) + KASA + MASRAF — routes/v2/rapor.php
+        require __DIR__.'/v2/rapor.php';
+
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 

@@ -18,7 +18,7 @@ namespace App\Support;
  *   ek_sorgu    : sabit ekstra query (örn. ayarlar?p=temelbilgiler)
  *   pageindex   : aktif-vurgu eşleştirme (opsiyonel; v2 sayfası $aktif slug ile de vurgular)
  *   yetki       : gereken menuYetki anahtar(lar)ı (OR-gate; boşsa herkese açık)
- *   ozellik     : salon özelliği bayrağı (santral_aktif/grup_dersi_aktif/uyelik_turu_premium)
+ *   ozellik     : salon özelliği bayrağı (santral_aktif/grup_dersi_aktif/uyelik_turu_premium/uyelik_turu_paketli)
  *   studyo_gizle: studyo_modu açıksa gizle
  *   rol5_gizle  : rol 5 (personel) kullanıcıdan gizle
  *   bolum       : görsel gruplama başlığı (modern menüde bölüm etiketi)
@@ -58,9 +58,9 @@ class PanelMenu
             ['etiket' => 'Seans Takibi',       'ikon' => 'bi bi-check2-square',    'slug' => 'seanstakip',        'pageindex' => 30,  'yetki' => 'paket.seans_takip'],
             ['etiket' => 'Stok Yönetimi',      'ikon' => 'bi bi-tags',             'slug' => 'urunler',           'v2_rota' => '/v2/stok', 'pageindex' => 20,  'yetki' => ['urun.tanim_olustur', 'urun.stok_giris', 'urun.stok_sayim', 'urun.tedarikci_yonet']],
             ['etiket' => 'Senet Takibi',       'ikon' => 'bi bi-clipboard2',       'slug' => 'senetler',          'pageindex' => 40,  'yetki' => 'satis.senet_olustur'],
-            ['etiket' => 'Kasa Raporu',        'ikon' => 'bi bi-cash-stack',       'slug' => 'kasadefteri',       'pageindex' => 41,  'yetki' => 'rapor.kasa'],
-            ['etiket' => 'İşletme Raporları',  'ikon' => 'bi bi-graph-up-arrow',   'slug' => 'isletmeraporlari',  'pageindex' => 42,  'yetki' => 'rapor.satis'],
-            ['etiket' => 'Raporlar',           'ikon' => 'bi bi-pie-chart',        'slug' => 'raporlar',          'pageindex' => 43,  'yetki' => 'rapor.satis'],
+            ['etiket' => 'Kasa Raporu',        'ikon' => 'bi bi-cash-stack',       'slug' => 'kasadefteri',       'v2_rota' => '/v2/kasa', 'pageindex' => 41,  'yetki' => ['rapor.kasa', 'finans.kasa_giris_cikis', 'finans.masraf_gor', 'finans.masraf_ekle', 'finans.alacak_yonet'], 'studyo_gizle' => true, 'ozellik' => 'uyelik_turu_paketli'],
+            ['etiket' => 'İşletme Raporları',  'ikon' => 'bi bi-graph-up-arrow',   'slug' => 'isletmeraporlari',  'v2_rota' => '/v2/isletme-raporlari', 'pageindex' => 42,  'yetki' => 'rapor.satis', 'studyo_gizle' => true, 'rol5_gizle' => true],
+            ['etiket' => 'Satış Raporları',    'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'raporlar',          'v2_rota' => '/v2/raporlar', 'pageindex' => 43,  'yetki' => 'rapor.satis', 'studyo_gizle' => true],
 
             // ───────────── Müşteri & Ekip
             ['etiket' => 'Müşteriler',         'ikon' => 'bi bi-people',           'slug' => 'musteriler',        'v2_rota' => '/v2/musteriler', 'pageindex' => 10,  'yetki' => 'musteri.liste_gor', 'bolum' => 'Müşteri & Ekip'],

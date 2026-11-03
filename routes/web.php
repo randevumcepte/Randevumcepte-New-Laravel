@@ -62,15 +62,14 @@ Route::get('/v2/asistan/{sube?}', function ($sube = null) {
 })->whereNumber('sube');
 
 /*
- | Santral v2 — cagri raporu (gelen/giden/cevapsiz) + dakika karti + santral ayarlari
- | host sayfasi (ayni island deseni). Veri /api/v2/santral/* (Bearer) ile yuklenir;
- | ayar yazma SANTRAL_V2_YAZMA_AKTIF kapaliyken 409 doner (UI toast gosterir).
+ | Raporlar v2 — Satis Raporlari, Isletme Raporlari (Performans Panosu), Kasa Raporu host
+ | sayfalari (ayni island deseni). Veri /api/v2/rapor/*, /api/v2/kasa/*, /api/v2/masraf/*
+ | (Bearer); kasa yazmalari KASA_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
  */
-Route::get('/v2/santral/{sube?}', function ($sube = null) {
-    $salonId = (int) ($sube ?: request('sube', 0));
-
-    return view('v2.santral', ['salonId' => $salonId]);
-})->whereNumber('sube');
+foreach (['raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa'] as $yol => $gorunum) {
+    Route::get('/v2/'.$yol.'/{sube?}', fn ($sube = null) => view($gorunum, ['salonId' => (int) ($sube ?: request('sube', 0))]))
+        ->whereNumber('sube');
+}
 
 /*
  | Form Yonetimi v2 — arsiv (form/sozlesme/harici belge) listesi + Form Gonder /
@@ -81,6 +80,17 @@ Route::get('/v2/formlar/{sube?}', function ($sube = null) {
     $salonId = (int) ($sube ?: request('sube', 0));
 
     return view('v2.formlar', ['salonId' => $salonId]);
+})->whereNumber('sube');
+
+/*
+ | Santral v2 — cagri raporu (gelen/giden/cevapsiz) + dakika karti + santral ayarlari
+ | host sayfasi (ayni island deseni). Veri /api/v2/santral/* (Bearer) ile yuklenir;
+ | ayar yazma SANTRAL_V2_YAZMA_AKTIF kapaliyken 409 doner (UI toast gosterir).
+ */
+Route::get('/v2/santral/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.santral', ['salonId' => $salonId]);
 })->whereNumber('sube');
 
 /*

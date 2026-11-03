@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  *         personel_sifre (payload: personel_id, yeni_hesap), yetki_degisti,
  *         personel_pasif (payload: personel_id; randevu_id null),
  *         musteri_kayit (payload: user_id, yeni_hesap, cinsiyet_tahmin),
- *         kara_liste_bildirim (payload: user_id).
+ *         kara_liste_bildirim (payload: user_id),
+ *         sms (payload: mesajlar[{to,message}], dogrulama; randevu_id null — kasa bildirimleri / onay kodlari).
  */
 class BildirimKuyrugu
 {
@@ -52,5 +53,21 @@ class BildirimKuyrugu
             'sync' => array_values(array_map('intval', $sync)),
             'sil'  => array_values(array_map('intval', $sil)),
         ]));
+    }
+
+    /**
+     * Duz SMS (eski sms_gonder_bildirimli). dogrulama=true: onay kodu — SMS iletim raporuna
+     * yazilmaz (eskiyle ayni). Bos/numarasiz mesajlar elenir; hic kalmazsa kayit acilmaz.
+     *
+     * @param  array<int, array{to:?string, message:string}>  $mesajlar
+     */
+    public static function sms(int $salonId, ?int $yetkiliId, array $mesajlar, bool $dogrulama = false): int
+    {
+        $mesajlar = array_values(array_filter($mesajlar, fn ($m) => trim((string) ($m['to'] ?? '')) !== '' && trim((string) ($m['message'] ?? '')) !== ''));
+        if ($mesajlar) {
+            self::yaz($salonId, 'sms', null, $yetkiliId, ['mesajlar' => $mesajlar, 'dogrulama' => $dogrulama]);
+        }
+
+        return count($mesajlar);
     }
 }
