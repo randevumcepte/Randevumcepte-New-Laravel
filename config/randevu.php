@@ -3,7 +3,7 @@
 return [
     /*
      | Randevu v2 YAZMA (durum, telafi, saat kapama, surukle-birak, olustur/guncelle;
-     | dry_run=false) ETKIN mi? Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir) → yalnizca DRY-RUN (plan) doner,
+     | dry_run=false) ETKIN mi? Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir); kapaliyken yalnizca DRY-RUN (plan) doner,
      | dry_run=false istekleri 409 alir.
      |
      | yazma_aktif      : TUM salonlarda acar (genel acilis).
