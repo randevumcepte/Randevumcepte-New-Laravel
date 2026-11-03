@@ -3,12 +3,12 @@
 return [
     /*
      | Form Yönetimi (arşiv / form şablonu / sözleşme) gerçek YAZMA ETKİN mi?
-     | Varsayılan KAPALI. Açılması bilinçli bir adımdır: .env'de FORM_V2_YAZMA_AKTIF=true
+     | Varsayılan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir). Açılması bilinçli bir adımdır: .env'de FORM_V2_YAZMA_AKTIF=true
      | + kontrollü test sonrası. Kapalıyken yazma uçları 409 döner (hiçbir şey yazılmaz).
      | SMS/WhatsApp v2'den gönderilmez: v2_bildirim_kuyrugu 'form_link' türüne yazılır,
      | eski monolitin `v2:bildirim-isle` komutu gönderir.
      */
-    'yazma_aktif' => (bool) env('FORM_V2_YAZMA_AKTIF', false),
+    'yazma_aktif' => (bool) env('FORM_V2_YAZMA_AKTIF', true),
 
     /*
      | Harici belge dosyaları ESKİ monolitin public/formlar dizinine yazılır; arsiv.uzanti

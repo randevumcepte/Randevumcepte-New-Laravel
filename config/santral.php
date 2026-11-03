@@ -24,7 +24,7 @@ return [
 
     /*
      | Santral AYAR yazma (hatirlatma aramasi, ozel karsilama menusu) ETKIN mi?
-     | Varsayilan KAPALI; kapaliyken yazma uclari 409 doner (hicbir sey yazilmaz).
+     | Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir); kapaliyken yazma uclari 409 doner (hicbir sey yazilmaz).
      */
-    'yazma_aktif' => (bool) env('SANTRAL_V2_YAZMA_AKTIF', false),
+    'yazma_aktif' => (bool) env('SANTRAL_V2_YAZMA_AKTIF', true),
 ];

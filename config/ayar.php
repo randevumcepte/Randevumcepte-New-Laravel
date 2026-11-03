@@ -4,10 +4,10 @@ return [
     /*
      | Ayarlar (isletme bilgileri, logo/galeri, calisma saatleri, randevu ayarlari,
      | online randevu saatleri, musteri indirimleri, tema) gercek YAZMA ETKIN mi?
-     | Varsayilan KAPALI. Acilmasi bilincli bir adimdir: .env'de AYAR_V2_YAZMA_AKTIF=true
+     | Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir). Acilmasi bilincli bir adimdir: .env'de AYAR_V2_YAZMA_AKTIF=true
      | + kontrollu test sonrasi. Kapaliyken yazma uclari 409 doner (hicbir sey yazilmaz).
      */
-    'yazma_aktif' => (bool) env('AYAR_V2_YAZMA_AKTIF', false),
+    'yazma_aktif' => (bool) env('AYAR_V2_YAZMA_AKTIF', true),
 
     /*
      | Logo + galeri ESKI monolitin public/salon_gorselleri dizinine yazilir; DB'deki yol

@@ -3,7 +3,7 @@
 return [
     /*
      | Personel domaini gercek YAZMA (ekle/duzenle, durum, siralama, takvim,
-     | saat, arsivle, yetki kaydet) ETKIN mi? Varsayilan KAPALI.
+     | saat, arsivle, yetki kaydet) ETKIN mi? Varsayilan ACIK (3 Kas 2026: yeni panel kullanimda degil; env ile kapatilabilir).
      | Acilmasi bilincli bir adimdir: .env'de PERSONEL_V2_YAZMA_AKTIF=true +
      | kontrollu test sonrasi. Kapaliyken yazma uclari 409 doner (hicbir sey yazilmaz).
      |
@@ -11,5 +11,5 @@ return [
      | force_logout FCM push'u ve WhatsApp/SMS koprusu bu projede kurulana kadar
      | bu flag acilsa bile ayrica dikkat ister (bkz. YetkiYonetimServisi::kaydet).
      */
-    'yazma_aktif' => (bool) env('PERSONEL_V2_YAZMA_AKTIF', false),
+    'yazma_aktif' => (bool) env('PERSONEL_V2_YAZMA_AKTIF', true),
 ];
