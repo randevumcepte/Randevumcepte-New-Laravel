@@ -2,7 +2,9 @@
  * Ayarlar (v2) — yalnız bu ekrana özgü kurallar (.ay-*). Ortak form/anahtar/buton/sekme
  * stilleri v2-bilesen.css'te (.rc-*), tablo/yükleniyor panel.css'te.
  */
-.ay-kabuk { max-width: 1100px; }
+.ay-kabuk { width: 100%; }
+/* display kurali olan ogelerde [hidden] ezilmesin (orn. logo varken bos kutu) */
+.ay-kabuk [hidden] { display: none !important; }
 .ay-form { display: flex; flex-direction: column; gap: 16px; }
 
 /* ── Kart ── */

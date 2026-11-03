@@ -4,7 +4,7 @@
 @section('aktif', 'ayarlar')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/ayarlar-v2.css?v=3">
+    <link rel="stylesheet" href="/css/ayarlar-v2.css?v=4">
 @endpush
 
 @section('icerik')
