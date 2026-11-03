@@ -44,7 +44,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Kasa / masraf / gün sonu | ~8 | ✅ | `/kasa/*`, `/masraf/*` — eşleme aşağıda; yazma `KASA_V2_YAZMA_AKTIF` arkasında |
 | Senet | ~5 | ❌ | |
 | Raporlar (satış/personel/müşteri listeleri) | ~8 | ✅ | `/rapor/*` (Satış Raporları + İşletme Raporları) — eşleme aşağıda |
-| Seans takibi | ~4 | ❌ | |
+| Seans takibi | ~4 | 🟡 | liste + kartlar + seans ekle/durum + lazer cihaz bilgisi var (yazma `SEANS_V2_YAZMA_AKTIF`); dökümü PDF eski panelde, müşteri paneli (`musteriMi`) v1'de |
 | Stok | ~20 | ✅ | `/stok/*` — eşleme aşağıda; yazma `STOK_V2_YAZMA_AKTIF` arkasında |
 | Arşiv / form / sözleşme | ~12 | ❌ | |
 | Ayar (salon, saatler, cihaz, oda, hizmet, renk) | ~30 | ❌ | |
@@ -154,6 +154,28 @@ randevu_sayisi, son_randevu_tarihi, odeme_sayisi, profil_resim` + `segment{kod,e
 | `POST /musteri-olcum-liste / -ekle / -sil` | `GET/POST /musteri/{id}/olcumler`, `DELETE /musteri/olcum/{id}` | ✅ VKİ sunucuda; `vki_sinif` dahil |
 | `POST /musteri-danisan-turunu-getir` (ham "1"/"2") | detayda `segment{kod,etiket}` | ✅ |
 | `POST /musteriresimleri`, `/musteriresimekle…`, `/check_phone`, `/anket-hizli-gonder`, WhatsApp uçları | — | ❌ sonraki faz |
+
+## Seans takibi — v1 → v2 eşlemesi
+
+v1 `Backend/backend.dart` (`seanslarigetir`, `seansEkleApi`, `seansGuncelleApi`, `seansCihazVeriGetir/Kaydet`)
+→ `https://app…/api/v1/*` (kimliksiz JSON). v2: Bearer + `paket.seans_takip`; seans/kalem id'li uçlarda
+salon kayıttan çözülür (başka salonun kaydı 403/404). Ekran: `yonetici/diger/menu/seanstakibi/seanstakibiyeni.dart`.
+
+| v1 (Flutter) | v2 | Not |
+|---|---|---|
+| `POST /seanslar?page=` {salonId, arama, musteri_id} | `GET /seans?salon_id=&musteri_id=&ara=&page=&per_page=&sirala=tarih\|musteri\|ad\|baslangic&yon=` | ListeIstegi; arama ad/telefon/paket-hizmet adı |
+| ↳ satır `id, adisyon, musteri{users satırı}, paket "(P)/(H)", tip, paketHizmetId` | `anahtar ("paket_12"), tur, id, adisyon_id, musteri{id, ad}, ad` | **KVKK:** müşteri yalnız `{id, ad}`; "(P)/(H)" eki yerine `tur` |
+| ↳ `toplamSeansSayisi, bekleyen/gelinen/gelinmeyenSeansSayisi` | `sayac{toplam, bekleyen, kullanilan, kullanilmayan, telafi}` | web kuralı: paket toplamı = seans_sayisi × hizmet sayısı; telafi ayrı sayılır; v1 `bekleyen` eksi çıkıyordu |
+| ↳ `seanslar[]` (düz, istemci hizmete göre grupluyordu) + `hizmetler[]` | `hizmetler[]{hizmet_id, ad, lazer, sayac, bos_hak, seanslar[]{id, seans_no, tarih, saat, geldi, durum}}` | gruplama + boş daire sayısı sunucuda (`_HizmetGroup` gereksiz) |
+| istemci "lazer" tespiti + PDF parametreleri | `lazer`, `dokum_url` (yalnız cihaz verisi varsa dolu) | — |
+| — | `durumlar[]{kod, geldi, etiket}`, `ayarlar.grup_dersi_aktif` | telafi sorusu ("derse katıldı mı / randevuya geldi mi") |
+| `POST /seansEkle` {paketId, hizmetId, paket 0/1, geldi, seansTarihi} | `POST /seans` {tur: paket\|hizmet, kalem_id, hizmet_id, geldi 0\|1\|2, tarih Y-m-d} | hizmet satışta olmalı + hak dolmamış olmalı (422); cevapta güncel `satir` |
+| `POST /seansGuncelle` {seansId, geldi} | `PATCH /seans/{id}` {geldi: 0\|1\|2\|null} | `null` = Beklemede: randevuya bağlıysa işaret kaldırılır, değilse satır silinir; cevapta `silindi` + `satir` |
+| `POST /seansCihazVeriGetir` {seansId} | `GET /seans/{id}/cihaz` | `personeller[]{id, ad}` (v1 `personel_adi`); lazer değilse 422 |
+| `POST /seansCihazVeriKaydet` {seansId, bolgeler(JSON metin)} | `PUT /seans/{id}/cihaz` {bolgeler: [{uygulama_bolgesi, enerji, hiz, ms, atis_sayisi, personel_id, notlar}]} | gövde JSON dizi; personel salonda olmalı |
+| `GET /seansDokumuPdf` | satırdaki `dokum_url` | PDF üretimi eski panelde (v2'de PDF motoru yok) |
+
+Kapsam dışı: müşteri uygulaması (`musteriMi=true`, users guard) v1'de kalır.
 
 ## Raporlar + Kasa — v1 → v2 eşlemesi
 

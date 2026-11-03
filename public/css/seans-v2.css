@@ -1,0 +1,87 @@
+/*
+ * Seans Takibi (v2) — yalnız ekrana özgü kurallar (lib/v2-seans.js). Tablo, sayfa başlığı,
+ * modal, rozet, buton ortak: panel.css + v2-bilesen.css. Renkler eski ekranla aynı
+ * (Toplam mor, Beklemede amber, Geldi yeşil, Gelmedi kırmızı, Telafi #FDA172).
+ */
+.st-kok, .rc-modal {
+  --st-toplam: linear-gradient(135deg, #5C008E, #9D5DC8);
+  --st-beklemede: #f59e0b;
+  --st-geldi: #16a34a;
+  --st-gelmedi: #dc2626;
+  --st-telafi: #FDA172;
+}
+
+/* ── Lejant ── */
+.st-lejant { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 12px 16px; margin-bottom: 14px; background: #fff; border: 1px solid #eef0f4; border-radius: 12px; font-size: 13px; color: #1f2937; }
+.st-lejant > i { color: #5C008E; font-size: 16px; }
+.st-lejant b { color: #5C008E; }
+
+/* ── Sayaç hapları (satır + lejant) ── */
+.st-haplar { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.st-hap { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 52px; padding: 5px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; }
+.st-hap.st-toplam { background: var(--st-toplam); }
+.st-hap.st-beklemede { background: var(--st-beklemede); }
+.st-hap.st-geldi { background: var(--st-geldi); }
+.st-hap.st-gelmedi { background: var(--st-gelmedi); }
+.st-hap.st-telafi { background: var(--st-telafi); }
+.st-pdf { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #5C008E; color: #fff; text-decoration: none; font-size: 15px; box-shadow: 0 2px 6px rgba(92, 0, 142, .25); }
+
+/* ── Satır ── */
+.st-tablosu td.st-musteri { font-weight: 700; }
+.st-tablosu td.st-ad { font-weight: 600; }
+.st-tablosu tr.st-satir.acik td { background: #f7f1fd; }
+.st-ac { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; color: #fff; font-size: 15px; background: var(--st-toplam); box-shadow: 0 4px 12px rgba(92, 0, 142, .22); transition: transform .15s; }
+.st-ac:hover { transform: scale(1.08); }
+.st-tablosu tr.st-detay > td { background: #f8f9fa; padding: 14px !important; white-space: normal; }
+
+/* ── Hizmet (bölge) kartları ── */
+.st-kartlar { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.st-kart { background: #fff; border: 1px solid rgba(0, 0, 0, .06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.st-kart-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.st-kart-bas h6 { margin: 0; font-size: 14px; font-weight: 700; color: #1f2937; }
+.st-daireler { display: flex; flex-wrap: wrap; gap: 2px; min-height: 40px; align-items: center; }
+.st-daire { border: none; background: none; padding: 2px; cursor: pointer; font-size: 20px; line-height: 1; color: #adb5bd; transition: transform .15s; }
+.st-daire:hover { transform: scale(1.5); }
+.st-daire.st-geldi { color: var(--st-geldi); }
+.st-daire.st-gelmedi { color: var(--st-gelmedi); }
+.st-daire.st-telafi { color: var(--st-telafi); }
+.st-mini { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; gap: 4px; }
+.st-mini small { display: block; font-size: 11px; color: #6b7280; }
+.st-mini strong { font-size: 15px; }
+.st-y-geldi { color: var(--st-geldi); }
+.st-y-beklemede { color: var(--st-beklemede); }
+.st-y-gelmedi { color: var(--st-gelmedi); }
+.st-y-telafi { color: var(--st-telafi); }
+.st-cihaz-btn { width: 100%; background: #4f46e5; color: #fff; padding: 9px 8px; font-size: 12.5px; }
+.st-bos { color: #6b7280; font-size: 13px; padding: 6px 0; }
+
+/* ── Modallar ── */
+.st-bilgi { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.st-bilgi > div { background: #f5f7fa; padding: 11px 13px; border-radius: 10px; font-size: 15px; color: #2d3748; }
+.st-bilgi i { color: #667eea; width: 20px; display: inline-block; }
+.st-not { color: #6b7280; font-size: 13px; margin: 0 0 14px; }
+.st-tarih { margin-bottom: 14px; }
+.st-btnlar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.st-btn { color: #fff; padding: 9px 14px; font-size: 13px; border-radius: 999px; }
+.st-btn.st-geldi { background: var(--st-geldi); }
+.st-btn.st-gelmedi { background: var(--st-gelmedi); }
+.st-btn.st-telafi { background: var(--st-telafi); }
+.st-btn.st-beklemede { background: var(--st-beklemede); }
+.st-cihaz-bilgi { font-size: 13px; color: #334155; background: #f8fafc; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+.st-bolge { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 10px 14px; margin: 14px 0; }
+.st-bolge small { display: block; font-size: 10.5px; font-weight: 700; color: #4f46e5; text-transform: uppercase; letter-spacing: .03em; }
+.st-bolge strong { font-size: 15px; color: #312e81; }
+.st-hata { color: #dc2626; }
+
+@media (prefers-color-scheme: dark) {
+  .st-lejant, .st-kart { background: #22222e; border-color: #34344c; color: #ededf5; }
+  .st-kart-bas h6 { color: #ededf5; }
+  .st-tablosu tr.st-detay > td { background: #1b1b26; }
+  .st-tablosu tr.st-satir.acik td { background: #2d2340; }
+  .st-bilgi > div, .st-cihaz-bilgi { background: #1b1b26; color: #ededf5; }
+}
+
+@media (max-width: 560px) {
+  .st-kartlar { grid-template-columns: 1fr; }
+  .st-hap { min-width: 44px; padding: 5px 8px; }
+}

@@ -170,6 +170,9 @@ Route::prefix('v2')->group(function () {
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 
+        // SEANS TAKIBI (liste + seans ekle/durum + lazer cihaz bilgisi) — routes/v2/seans.php
+        require __DIR__.'/v2/seans.php';
+
         /*
          | FORM YONETIMI (arsiv / form sablonu / sozlesme). v1'de bu uclarin hicbirinde
          | kimlik/kapsam/yetki yoktu. Sayfa: form.olustur VEYA form.gonder; gonderim

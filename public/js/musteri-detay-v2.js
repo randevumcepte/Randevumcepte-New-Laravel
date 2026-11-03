@@ -7,6 +7,7 @@
  *   Randevular      : GET /musteri/{id}/randevular (sunucu sayfalı)
  *   Vücut Ölçümü    : stüdyo modu — GET/POST /musteri/{id}/olcumler, DELETE /musteri/olcum/{id}
  *   Satışlar        : mevcut GET /satislar?musteri_id= (satır aksiyonları sunucudan)
+ *   Seanslar        : ortak seans bileşeni (lib/v2-seans.js) — GET /seans?musteri_id=
  *   Sağlık Bilgileri: PATCH /musteri/{id}/saglik (sorular API'den)
  *   Sözleşmeler/Belgeler: v2 Form Yönetimi ekranı (?musteri_id=) — kopya yok.
  * Görünürlük/izin kararları SUNUCUDAN (`yetkiler`, `ayarlar`); UI yeniden hesaplamaz.
@@ -15,6 +16,7 @@ import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
+import { seansTakibi } from '/js/lib/v2-seans.js?v=1';
 
 const kok = document.getElementById('rc-musteri-detay');
 const musteriId = parseInt(kok.dataset.musteri, 10) || 0;
@@ -34,6 +36,7 @@ const sekmeTanimlari = () => [
   { ad: 'randevular', etiket: 'Randevular', ikon: 'bi-calendar-check', goster: true, yukle: randevularYukle },
   { ad: 'olcum', etiket: 'Vücut Ölçümü', ikon: 'bi-heart-pulse', goster: a.studyo_modu && y.olcum_gor, yukle: olcumYukle },
   { ad: 'satislar', etiket: 'Satışlar', ikon: 'bi-receipt', goster: y.satis_gor, yukle: satislarYukle },
+  { ad: 'seanslar', etiket: 'Seanslar', ikon: 'bi-check2-square', goster: y.seans_gor, yukle: (p) => seansTakibi(p, { salonId, musteriId }) },
   { ad: 'saglik', etiket: 'Sağlık Bilgileri', ikon: 'bi-clipboard2-pulse', goster: !!m.saglik, yukle: saglikYukle },
 ];
 

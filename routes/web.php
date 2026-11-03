@@ -121,3 +121,15 @@ Route::get('/v2/musteriler/{sube?}', function ($sube = null) {
 Route::get('/v2/musteri/{musteri}', function ($musteri) {
     return view('v2.musteri-detay', ['musteriId' => (int) $musteri, 'salonId' => (int) request('sube', 0)]);
 })->whereNumber('musteri');
+
+/*
+ | Seans Takibi v2 — seansli paket/hizmet satislari tablosu + hizmet kartlari (seans
+ | daireleri) + lazer cihaz bilgisi host sayfasi (ayni island deseni). Ayni bilesen
+ | musteri detay "Seanslar" sekmesinde de kullanilir. Veri /api/v2/seans/* (Bearer);
+ | yazmalar SEANS_V2_YAZMA_AKTIF kapaliyken 409 (UI toast gosterir).
+ */
+Route::get('/v2/seans-takibi/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.seans-takibi', ['salonId' => $salonId]);
+})->whereNumber('sube');
