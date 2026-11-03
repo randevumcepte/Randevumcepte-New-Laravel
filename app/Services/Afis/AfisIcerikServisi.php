@@ -6,6 +6,7 @@ use App\Domain\Afis\AfisIcerigi;
 use App\Domain\Afis\MagazaLinkleri;
 use App\Exceptions\BulunamadiException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Salon kaydından afiş içeriğini + mağaza linklerini okur (SALT OKUMA). Veri kaynağı bilgisi
@@ -16,9 +17,13 @@ class AfisIcerikServisi
     /** @return array{0: AfisIcerigi, 1: MagazaLinkleri} */
     public function getir(int $salonId): array
     {
-        $salon = DB::table('salonlar')->where('id', $salonId)->first([
-            'id', 'salon_adi', 'isletme_adi', 'logo', 'android_uygulama', 'ios_uygulama', 'huawei_uygulama',
-        ]);
+        // NOT: salonlar'da 'isletme_adi' kolonu YOK (eski kod Eloquent'te null'a düşüp salon_adi
+        // kullanıyordu); seçilirse "Unknown column" → 500. Huawei linki opsiyonel kolon.
+        $kolonlar = ['id', 'salon_adi', 'logo', 'android_uygulama', 'ios_uygulama'];
+        if (Schema::hasColumn('salonlar', 'huawei_uygulama')) {
+            $kolonlar[] = 'huawei_uygulama';
+        }
+        $salon = DB::table('salonlar')->where('id', $salonId)->first($kolonlar);
         if (! $salon) {
             throw new BulunamadiException('İşletme bulunamadı');
         }
@@ -26,13 +31,13 @@ class AfisIcerikServisi
         $logo = $this->logoDosyasi($salon->logo);
         $icerik = new AfisIcerigi(
             salonId: (int) $salon->id,
-            ad: trim((string) $salon->isletme_adi) !== '' ? $salon->isletme_adi : $salon->salon_adi,
+            ad: $salon->salon_adi,
             indirLinki: $this->indirLinki((int) $salon->id),
             logoDosyasi: $logo,
             logoSurumu: $logo !== null ? (int) @filemtime($logo) : 0,
         );
 
-        return [$icerik, new MagazaLinkleri($salon->android_uygulama, $salon->ios_uygulama, $salon->huawei_uygulama)];
+        return [$icerik, new MagazaLinkleri($salon->android_uygulama, $salon->ios_uygulama, $salon->huawei_uygulama ?? null)];
     }
 
     /** QR hedefi = eski monolitin herkese açık akıllı yönlendirmesi (cihaza göre mağaza). */
