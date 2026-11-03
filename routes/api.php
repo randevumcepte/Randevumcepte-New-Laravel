@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V2\RandevuKayitController;
 use App\Http\Controllers\Api\V2\RandevuTakvimController;
 use App\Http\Controllers\Api\V2\RandevuTelafiController;
 use App\Http\Controllers\Api\V2\SatisController;
+use App\Http\Controllers\Api\V2\SantralController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,17 @@ Route::prefix('v2')->group(function () {
             ->whereIn('tur', GorevTuru::iptalEdilebilenler())->whereNumber('id');
         Route::get('/asistan/ayarlar', [AsistanController::class, 'ayarlar']);
         Route::patch('/asistan/ayarlar', [AsistanController::class, 'ayarKaydet']);
+
+        /*
+         | SANTRAL (eski "Santral Sistemi & Aramalar" + Flutter santralraporlari — tek uc kumesi).
+         | Okuma her rolde (personel yalniz kendi dahilisi); ayarlar yalniz yonetici (rol 5 degil).
+         | Ayar yazma config('santral.yazma_aktif') kill-switch arkasinda (kapaliyken 409).
+         */
+        Route::get('/santral/ozet', [SantralController::class, 'ozet']);
+        Route::get('/santral/cagrilar', [SantralController::class, 'cagrilar']);
+        Route::get('/santral/ayarlar', [SantralController::class, 'ayarlar']);
+        Route::put('/santral/ayarlar/hatirlatma', [SantralController::class, 'hatirlatmaKaydet']);
+        Route::put('/santral/ayarlar/ozel-menu', [SantralController::class, 'ozelMenuKaydet']);
     });
 
 });

@@ -60,3 +60,14 @@ Route::get('/v2/asistan/{sube?}', function ($sube = null) {
 
     return view('v2.asistan', ['salonId' => $salonId]);
 })->whereNumber('sube');
+
+/*
+ | Santral v2 — cagri raporu (gelen/giden/cevapsiz) + dakika karti + santral ayarlari
+ | host sayfasi (ayni island deseni). Veri /api/v2/santral/* (Bearer) ile yuklenir;
+ | ayar yazma SANTRAL_V2_YAZMA_AKTIF kapaliyken 409 doner (UI toast gosterir).
+ */
+Route::get('/v2/santral/{sube?}', function ($sube = null) {
+    $salonId = (int) ($sube ?: request('sube', 0));
+
+    return view('v2.santral', ['salonId' => $salonId]);
+})->whereNumber('sube');

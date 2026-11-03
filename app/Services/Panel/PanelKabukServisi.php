@@ -28,7 +28,7 @@ class PanelKabukServisi
     {
         $tabanUrl = rtrim(config('panel.eski_panel_url', 'https://app.randevumcepte.com.tr'), '/');
         $salon = $this->salonGetir($salonId);
-        $roller = $this->salonRolleri($yetkiliId, $salonId);
+        $roller = $this->kapsam->salonRolleri($yetkiliId, $salonId);
         $rol5 = in_array(5, $roller, true);
 
         return [
@@ -166,17 +166,6 @@ class PanelKabukServisi
         }
 
         return (int) round(($to - time()) / 86400);
-    }
-
-    /** Bu kullanıcının bu salondaki rolleri (rol 5 = personel tespiti için). */
-    private function salonRolleri(int $yetkiliId, int $salonId): array
-    {
-        return DB::table('model_has_roles')
-            ->where('model_id', $yetkiliId)
-            ->where('salon_id', $salonId)
-            ->pluck('role_id')
-            ->map(fn ($r) => (int) $r)
-            ->all();
     }
 
     private function salonGetir(int $salonId)
