@@ -83,7 +83,7 @@ class PanelMenu
             ['etiket' => 'Atanan Aramalar',    'ikon' => 'bi bi-telephone-outbound','slug' => 'arama-listelerim',     'pageindex' => 103, 'ozellik' => 'santral_aktif'],
 
             // ───────────── Sistem
-            ['etiket' => 'Ayarlar',            'ikon' => 'bi bi-gear',             'slug' => 'ayarlar', 'ek_sorgu' => 'p=temelbilgiler', 'pageindex' => 9, 'yetki' => 'ayar.salon_bilgi', 'bolum' => 'Sistem'],
+            ['etiket' => 'Ayarlar',            'ikon' => 'bi bi-gear',             'slug' => 'ayarlar', 'ek_sorgu' => 'p=temelbilgiler', 'v2_rota' => '/v2/ayarlar', 'pageindex' => 9, 'yetki' => 'ayar.salon_bilgi', 'bolum' => 'Sistem'],
             ['etiket' => 'Log Hareketleri',    'ikon' => 'bi bi-clock-history',    'slug' => 'log-hareketleri',   'pageindex' => 110, 'yetki' => 'ayar.salon_bilgi'],
         ];
     }
