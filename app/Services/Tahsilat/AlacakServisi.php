@@ -20,6 +20,20 @@ use Illuminate\Support\Facades\DB;
  */
 class AlacakServisi
 {
+    /**
+     * AÇIK alacak sorgusu — TEK KURAL (Özet "Alacaklılar" sekmesi + karşılaştırma kartı;
+     * mobil alacaklar_v2 ile aynı): tutar > 0 ve bağlı taksit/senet vadesi ÖDENMEMİŞ
+     * (ödenen vade kalıntısı sayılmaz). Tarih sınırı çağıranda.
+     */
+    public static function acikSorgu(int $salonId): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('alacaklar')
+            ->where('alacaklar.salon_id', $salonId)
+            ->where('alacaklar.tutar', '>', 0)
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM taksit_vadeleri tv WHERE tv.id = alacaklar.taksit_vade_id AND tv.odendi = 1)')
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM senet_vadeleri sv WHERE sv.id = alacaklar.senet_vade_id AND sv.odendi = 1)');
+    }
+
     /** Bu adisyon için planlanan alacakları listele (minimum alan). */
     public function listele(int $adisyonId): array
     {

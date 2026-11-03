@@ -6,6 +6,7 @@
  * aktif v2 sayfalarına gider; v2 karşılığı olmayan öğe pasif ("Yakında") çizilir.
  * Şube değişimi aynı v2 sayfasında ?sube= ile yapılır. Eski panele yönlendirme YOK.
  *
+ * Dışa açılan kanca: window.rcPanel.veri + 'rc:kabuk' olayı (kabuk verisi yüklendi).
  * Dışa açılan kanca: window.rcPanel.salonAyarla(salonId) — sayfa (örn. tahsilat)
  * adisyondan salon'u öğrenince kabuğu o salona göre tazeler.
  */
@@ -108,6 +109,9 @@ async function yukle(salonId) {
   _kabukSalon = veri.salon?.id || null;
   menuCiz(veri.menu, aktifSlug);
   headerCiz(veri);
+  // Sayfalar kabuk verisini (kullanici adi, salon) ikinci istek atmadan kullanabilsin.
+  window.rcPanel.veri = veri;
+  document.dispatchEvent(new CustomEvent('rc:kabuk', { detail: veri }));
 }
 
 /* ───────────── Header müşteri araması (GET /musteri/ara → /v2/musteri/{id}) ───────────── */

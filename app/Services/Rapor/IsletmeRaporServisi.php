@@ -36,12 +36,7 @@ class IsletmeRaporServisi
         $adisyon = SatisKalemSorgusu::donemFiltresi(DB::table('adisyonlar as a')->where('a.salon_id', $salonId), $d)->count();
         $randevu = $this->randevuSorgusu($salonId, $d, 'r', true)->count(); // Randevu sekmesi "Toplam" ile ayni
 
-        $kova = OdemeKovasi::topla(DB::table('tahsilatlar')
-            ->where('salon_id', $salonId)
-            ->whereBetween('odeme_tarihi', [$d->basSaat(), $d->bitSaat()])
-            ->groupBy('odeme_yontemi_id')
-            ->selectRaw('odeme_yontemi_id, SUM(tutar) as toplam')
-            ->get());
+        $kova = $this->tahsilatKovalari($salonId, $d);
 
         return [
             'toplam_randevu'   => $randevu,
@@ -172,8 +167,31 @@ class IsletmeRaporServisi
         ];
     }
 
-    /** Randevu sekmesi: durum kartlari + kaynak + saatlik / gunluk dagilim (tek toplama sorgusu). */
+    /** Randevu sekmesi: durum kartlari + kaynak + saatlik / gunluk dagilim. */
     public function randevular(int $salonId, RaporDonemi $d): array
+    {
+        $durum = $this->randevuDurumlari($salonId, $d);
+
+        $saat = $this->randevuSorgusu($salonId, $d, 'r', true)->groupByRaw('HOUR(r.saat)')
+            ->selectRaw('HOUR(r.saat) as h, COUNT(*) as adet')->pluck('adet', 'h');
+        $gun = $this->randevuSorgusu($salonId, $d, 'r', true)->groupByRaw('DAYOFWEEK(r.tarih)')
+            ->selectRaw('DAYOFWEEK(r.tarih) as g, COUNT(*) as adet')->pluck('adet', 'g');
+
+        $gunler = ['Pts' => 2, 'Sal' => 3, 'Çar' => 4, 'Per' => 5, 'Cum' => 6, 'Cts' => 7, 'Paz' => 1];
+
+        return $durum + [
+            'saat_dagilim' => array_map(fn ($h) => ['saat' => str_pad((string) $h, 2, '0', STR_PAD_LEFT), 'adet' => (int) ($saat[$h] ?? 0)], range(0, 23)),
+            'gun_dagilim'  => array_map(fn ($ad, $no) => ['gun' => $ad, 'adet' => (int) ($gun[$no] ?? 0)], array_keys($gunler), $gunler),
+            'donem'        => $d->dizi(),
+        ];
+    }
+
+    /**
+     * Donem randevu durum kartlari + olusturma kaynagi (TEK toplama sorgusu) — Isletme Raporlari
+     * Randevu sekmesi ve Ozet "Randevu Ayrintilari" karti AYNI sayimi kullanir.
+     * toplam = sonuclanan + gelmedi + onayli + iptal + bekleyen (kapali saat bloklari haric).
+     */
+    public function randevuDurumlari(int $salonId, RaporDonemi $d): array
     {
         $onay = Randevular::ONAYLANDI;
         $iptal = implode(',', self::IPTAL);
@@ -186,13 +204,6 @@ class IsletmeRaporServisi
             SUM(r.durum = ".Randevular::BEKLENIYOR.') as bekleyen,
             SUM(r.salon = 1) as isletme, SUM(r.web = 1) as web, SUM(r.uygulama = 1) as uygulama')->first();
 
-        $saat = $this->randevuSorgusu($salonId, $d, 'r', true)->groupByRaw('HOUR(r.saat)')
-            ->selectRaw('HOUR(r.saat) as h, COUNT(*) as adet')->pluck('adet', 'h');
-        $gun = $this->randevuSorgusu($salonId, $d, 'r', true)->groupByRaw('DAYOFWEEK(r.tarih)')
-            ->selectRaw('DAYOFWEEK(r.tarih) as g, COUNT(*) as adet')->pluck('adet', 'g');
-
-        $gunler = ['Pts' => 2, 'Sal' => 3, 'Çar' => 4, 'Per' => 5, 'Cum' => 6, 'Cts' => 7, 'Paz' => 1];
-
         return [
             'toplam'     => (int) $k->toplam,
             'sonuclanan' => (int) $k->sonuclanan,
@@ -201,14 +212,28 @@ class IsletmeRaporServisi
             'iptal'      => (int) $k->iptal,
             'bekleyen'   => (int) $k->bekleyen,
             'kaynak'     => ['isletme' => (int) $k->isletme, 'web' => (int) $k->web, 'uygulama' => (int) $k->uygulama],
-            'saat_dagilim' => array_map(fn ($h) => ['saat' => str_pad((string) $h, 2, '0', STR_PAD_LEFT), 'adet' => (int) ($saat[$h] ?? 0)], range(0, 23)),
-            'gun_dagilim'  => array_map(fn ($ad, $no) => ['gun' => $ad, 'adet' => (int) ($gun[$no] ?? 0)], array_keys($gunler), $gunler),
-            'donem'        => $d->dizi(),
         ];
     }
 
-    /** Salonun donemdeki gercek randevulari (kapali saat bloklari haric; istenirse iptal dahil). */
-    private function randevuSorgusu(int $salonId, RaporDonemi $d, string $a = 'r', bool $iptalDahil = false)
+    /**
+     * Donem tahsilati odeme yontemi kovalarina (id esasli) — Isletme ozeti + Ozet kasa karti.
+     * $tahsilatIdleri: personel kapsami icin alt sorgu (yalniz o tahsilatlar); null = tumu.
+     *
+     * @return array<string,float>
+     */
+    public function tahsilatKovalari(int $salonId, RaporDonemi $d, $tahsilatIdleri = null): array
+    {
+        return OdemeKovasi::topla(DB::table('tahsilatlar')
+            ->where('salon_id', $salonId)
+            ->whereBetween('odeme_tarihi', [$d->basSaat(), $d->bitSaat()])
+            ->when($tahsilatIdleri, fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->groupBy('odeme_yontemi_id')
+            ->selectRaw('odeme_yontemi_id, SUM(tutar) as toplam')
+            ->get());
+    }
+
+    /** Salonun donemdeki gercek randevulari (kapali saat bloklari haric; istenirse iptal dahil) — Ozet de kullanir. */
+    public function randevuSorgusu(int $salonId, RaporDonemi $d, string $a = 'r', bool $iptalDahil = false)
     {
         return DB::table('randevular as '.$a)
             ->where("{$a}.salon_id", $salonId)

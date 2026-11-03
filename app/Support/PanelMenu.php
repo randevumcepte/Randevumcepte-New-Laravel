@@ -34,7 +34,7 @@ class PanelMenu
     {
         return [
             // ───────────── Genel
-            ['etiket' => 'Özet',               'ikon' => 'bi bi-grid-1x2-fill',    'slug' => '',                  'pageindex' => 0,  'rol5_gizle' => true, 'bolum' => 'Genel'],
+            ['etiket' => 'Özet',               'ikon' => 'bi bi-grid-1x2-fill',    'slug' => 'ozet',              'v2_rota' => '/v2/ozet', 'pageindex' => 0,  'rol5_gizle' => true, 'bolum' => 'Genel'],
             ['etiket' => 'Asistanım',          'ikon' => 'bi bi-card-checklist',   'slug' => 'e_asistan',         'v2_rota' => '/v2/asistan', 'pageindex' => 60, 'ozellik' => 'uyelik_turu_premium', 'rol5_gizle' => true],
             ['etiket' => 'Santral',            'ikon' => 'bi bi-phone',            'slug' => 'santral',           'v2_rota' => '/v2/santral', 'pageindex' => 43, 'ozellik' => 'santral_aktif',      'rol5_gizle' => true],
 
@@ -86,5 +86,32 @@ class PanelMenu
             ['etiket' => 'Ayarlar',            'ikon' => 'bi bi-gear',             'slug' => 'ayarlar', 'ek_sorgu' => 'p=temelbilgiler', 'v2_rota' => '/v2/ayarlar', 'pageindex' => 9, 'yetki' => 'ayar.salon_bilgi', 'bolum' => 'Sistem'],
             ['etiket' => 'Log Hareketleri',    'ikon' => 'bi bi-clock-history',    'slug' => 'log-hareketleri',   'pageindex' => 110, 'yetki' => 'ayar.salon_bilgi'],
         ];
+    }
+
+    /**
+     * Menu ogesinin v2 linki (ayni host, goreli) — kabuk menusu ve Ozet hizli eylemleri
+     * AYNI kural. v2 karsiligi yoksa null (eski panele yonlendirme yapilmaz).
+     *
+     * @param  array<string,string>  $ekSorgu
+     */
+    public static function url(array $m, int $salonId, array $ekSorgu = []): ?string
+    {
+        if (empty($m['v2_rota'])) {
+            return null;
+        }
+
+        return $m['v2_rota'].'?'.http_build_query(['sube' => $salonId] + $ekSorgu);
+    }
+
+    /** Slug ile menu ogesi (yoksa null). */
+    public static function bul(string $slug): ?array
+    {
+        foreach (self::tanim() as $m) {
+            if ($m['slug'] === $slug) {
+                return $m;
+            }
+        }
+
+        return null;
     }
 }

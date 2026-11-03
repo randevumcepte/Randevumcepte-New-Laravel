@@ -10,6 +10,7 @@ use App\Exceptions\GecersizIslemException;
  * gonderir:
  *
  *   donem     : bugun | dun | hafta | ay | gecen_ay | yil | gecen_yil | ozel
+ *               | son7 | son30 | son90 (KAYAN: bugun dahil geriye N gun — Ozet kartlari)
  *   baslangic : Y-m-d (yalniz donem=ozel)
  *   bitis     : Y-m-d (yalniz donem=ozel; bos → baslangic)
  *
@@ -30,6 +31,14 @@ final class RaporDonemi
         'ozel'      => 'Özel Aralık',
     ];
 
+    /**
+     * Kayan donemler (bugun dahil geriye N gun) — eski Ozet kartlarinin "Son 7 / 30 / 90 gün"
+     * secenekleri. Rapor ekranlarinin varsayilan listesinde YOK (secenekListesi alt-kume alir).
+     */
+    public const KAYAN = ['son7' => 7, 'son30' => 30, 'son90' => 90];
+
+    private const KAYAN_ETIKET = ['son7' => 'Son 7 Gün', 'son30' => 'Son 30 Gün', 'son90' => 'Son 90 Gün'];
+
     private function __construct(
         public readonly string $anahtar,
         public readonly string $baslangic,
@@ -45,10 +54,14 @@ final class RaporDonemi
     public static function coz(?string $donem, ?string $baslangic, ?string $bitis, string $varsayilan = 'ay', ?string $bugun = null): self
     {
         $donem = trim((string) $donem) ?: $varsayilan;
-        if (! array_key_exists($donem, self::SECENEKLER)) {
-            throw new GecersizIslemException('donem şunlardan biri olmalı: '.implode(', ', array_keys(self::SECENEKLER)));
+        if (! isset(self::etiketler()[$donem])) {
+            throw new GecersizIslemException('donem şunlardan biri olmalı: '.implode(', ', array_keys(self::etiketler())));
         }
         $g = new \DateTimeImmutable($bugun ?? 'today');
+
+        if (isset(self::KAYAN[$donem])) {
+            return new self($donem, $g->modify('-'.(self::KAYAN[$donem] - 1).' days')->format('Y-m-d'), $g->format('Y-m-d'));
+        }
 
         if ($donem === 'ozel') {
             $bas = self::tarih($baslangic, 'baslangic');
@@ -95,17 +108,69 @@ final class RaporDonemi
     {
         return [
             'donem'     => $this->anahtar,
-            'etiket'    => self::SECENEKLER[$this->anahtar],
+            'etiket'    => self::etiketler()[$this->anahtar],
             'baslangic' => $this->baslangic,
             'bitis'     => $this->bitis,
             'tek_gun'   => $this->tekGun(),
         ];
     }
 
-    /** Secenek listesi (UI sabit liste tutmaz): [{kod, ad}]. */
-    public static function secenekListesi(): array
+    /**
+     * Ayni uzunlukta komsu donem: $adim=-1 onceki, -6 alti donem once. Takvim donemleri
+     * birim kaydirir (gun / hafta / ay / yil — ay tasmasi YOK: 31 Mart'ta "onceki ay" Subat'tir),
+     * kayan ve ozel donemler gun sayisi kadar kayar. Sonuc anahtari 'ozel'dir.
+     */
+    public function kaydir(int $adim): self
     {
-        return array_map(fn ($kod, $ad) => ['kod' => $kod, 'ad' => $ad], array_keys(self::SECENEKLER), self::SECENEKLER);
+        $bas = new \DateTimeImmutable($this->baslangic);
+        [$yeniBas, $yeniBit] = match ($this->anahtar) {
+            'bugun', 'dun' => [$bas->modify("{$adim} day"), null],
+            'hafta'        => [$bas->modify(($adim * 7).' day'), null],
+            'ay', 'gecen_ay' => [$b = $bas->modify("first day of {$adim} month"), $b->modify('last day of this month')],
+            'yil', 'gecen_yil' => [$b = $bas->setDate((int) $bas->format('Y') + $adim, 1, 1), $b->setDate((int) $b->format('Y'), 12, 31)],
+            default        => [$bas->modify(($adim * $this->gunSayisi()).' day'), null],
+        };
+        $yeniBit ??= $yeniBas->modify('+'.($this->gunSayisi() - 1).' day');
+
+        return new self('ozel', $yeniBas->format('Y-m-d'), $yeniBit->format('Y-m-d'));
+    }
+
+    /** Onceki donemin kullanici etiketi (karsilastirma kartlari). */
+    public function oncekiEtiket(): string
+    {
+        return match ($this->anahtar) {
+            'bugun'  => 'Dün',
+            'hafta'  => 'Geçen Hafta',
+            'ay'     => 'Geçen Ay',
+            'yil'    => 'Geçen Yıl',
+            default  => 'Önceki '.$this->gunSayisi().' Gün',
+        };
+    }
+
+    /** Gun sayisi (kapsayici). */
+    public function gunSayisi(): int
+    {
+        return (int) (new \DateTimeImmutable($this->baslangic))->diff(new \DateTimeImmutable($this->bitis))->days + 1;
+    }
+
+    /**
+     * Secenek listesi (UI sabit liste tutmaz): [{kod, ad}]. $kodlar verilirse o sirayla
+     * alt-kume (ornegin Ozet kartlari: ['bugun','son7','son30']); yoksa rapor ekranlari listesi.
+     *
+     * @param  ?array<string>  $kodlar
+     */
+    public static function secenekListesi(?array $kodlar = null): array
+    {
+        $ad = self::etiketler();
+        $kodlar ??= array_keys(self::SECENEKLER);
+
+        return array_values(array_map(fn ($kod) => ['kod' => $kod, 'ad' => $ad[$kod]], array_filter($kodlar, fn ($k) => isset($ad[$k]))));
+    }
+
+    /** @return array<string,string> tum gecerli donemler (takvim + kayan) */
+    private static function etiketler(): array
+    {
+        return self::SECENEKLER + self::KAYAN_ETIKET;
     }
 
     private static function tarih(?string $v, string $alan): string

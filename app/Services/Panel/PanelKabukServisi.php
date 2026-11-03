@@ -37,7 +37,7 @@ class PanelKabukServisi
             'salon'     => [
                 'id'          => $salonId,
                 'ad'          => trim((string) ($salon->salon_adi ?? '')),
-                'lisans_gun'  => $this->lisansGun($salon),
+                'lisans_gun'  => self::lisansGun($salon),
                 'uyelik_turu' => (int) ($salon->uyelik_turu ?? 0),
             ],
             'subeler' => $this->subeler($yetkiliId, $salonId, $tabanUrl),
@@ -148,14 +148,11 @@ class PanelKabukServisi
      */
     private function menuUrl(array $m, int $salonId, string $tabanUrl): ?string
     {
-        if (empty($m['v2_rota'])) {
-            return null;
-        }
-
-        return $m['v2_rota'].'?'.http_build_query(['sube' => $salonId]);
+        return PanelMenu::url($m, $salonId);
     }
 
-    private function lisansGun($salon): ?int
+    /** Lisans bitisine kalan gun (kabuk basligi + Ozet) — tek kural. */
+    public static function lisansGun($salon): ?int
     {
         $bitis = $salon->uyelik_bitis_tarihi ?? null;
         if (! $bitis) {

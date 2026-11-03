@@ -64,9 +64,15 @@ class RaporSecenekServisi
         if (! in_array(5, $this->kapsam->salonRolleri($yetkiliId, $salonId), true)) {
             return null;
         }
+        return $this->bagliPersonel($yetkiliId, $salonId);
+    }
+
+    /** Yetkilinin bu salondaki personel kaydi; yoksa -1 (hicbir kayit eslesmez). */
+    public function bagliPersonel(int $yetkiliId, int $salonId): int
+    {
         $id = DB::table('salon_personelleri')->where('salon_id', $salonId)->where('yetkili_id', $yetkiliId)->value('id');
 
-        return $id ? (int) $id : -1; // bagli personel kaydi yoksa hicbir satis gorunmez
+        return $id ? (int) $id : -1;
     }
 
     private function satis(int $yetkiliId, int $salonId, callable $var): array

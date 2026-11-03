@@ -103,11 +103,11 @@ class RandevuListeServisi
 
     /**
      * Sayfadaki randevularin kalemleri tek sorguda: hizmet adlari (dusum xN), personel /
-     * cihaz / oda adlari, telafi rozeti (telafi randevusu | telafi verildi).
+     * cihaz / oda adlari, telafi rozeti (telafi randevusu | telafi verildi). Ozet listeleri de kullanir.
      *
      * @param  int[]  $ids
      */
-    private function kalemler(array $ids): array
+    public function kalemler(array $ids): array
     {
         if (! $ids) {
             return [];

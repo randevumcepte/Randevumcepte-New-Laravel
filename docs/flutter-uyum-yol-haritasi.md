@@ -53,7 +53,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Kampanya / anket / çark / reklam / yorum | ~40 | ❌ | |
 | SMS / WhatsApp | ~20 | ❌ | |
 | E-asistan (Asistanım) | 2 | ✅ | `/asistan/*` — eşleme aşağıda |
-| Dashboard / hatırlatma / bildirim | ~13 | ❌ | (dashboard `easistandatadashboard` henüz v1) |
+| Dashboard / hatırlatma / bildirim | ~13 | ◐ | Özet `GET /ozet/acilis`, `/ozet/kart/{kod}`, `/ozet/sekme/{kod}` ✅ (v1 `dashboard` + `dashboardKarsilastirma`; eşleme docs/strangler-ozet.md) — bildirim, hatırlatma, `easistandatadashboard`, boş saat kampanyası henüz v1 |
 | Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |
 | Çağrı merkezi / santral | ~30 | ❌ | (v1'de Bearer'lı `CagriApi`) |
 

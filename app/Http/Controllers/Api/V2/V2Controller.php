@@ -38,7 +38,7 @@ abstract class V2Controller extends Controller
     }
 
     /**
-     * Istekteki salon_id + KAPSAM + YETKI (OR-gate) tek adimda.
+     * Istekteki salon_id + KAPSAM + YETKI (OR-gate) tek adimda. $yetkiler = [] → yalniz kapsam.
      *
      * @param  array<string>|string  $yetkiler
      * @return array{0:int,1:int} [yetkili id, salon id]
@@ -50,7 +50,9 @@ abstract class V2Controller extends Controller
         if (! $salonId) {
             throw new GecersizIslemException('salon_id zorunlu');
         }
-        app(GuvenlikKapisi::class)->denetle($user->id, $salonId, $yetkiler);
+        $yetkiler === []
+            ? app(GuvenlikKapisi::class)->kapsamDenetle($user->id, $salonId)   // salonun her uyesi (yetki anahtari aranmaz)
+            : app(GuvenlikKapisi::class)->denetle($user->id, $salonId, $yetkiler);
 
         return [(int) $user->id, $salonId];
     }

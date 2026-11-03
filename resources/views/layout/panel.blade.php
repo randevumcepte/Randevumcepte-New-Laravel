@@ -83,7 +83,7 @@
     <script type="module" src="/js/arama-select.js?v=1"></script>
     {{-- Telefon: TUM input[type=tel]'lere ulke kodu secici + ulkeye gore bicim (sonradan eklenenler dahil). --}}
     <script type="module" src="/js/telefon-ulke.js?v=1"></script>
-    <script type="module" src="/js/panel-kabuk.js?v=6"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=7"></script>
     @stack('betik')
 </body>
 </html>

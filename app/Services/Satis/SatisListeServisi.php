@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\DB;
 class SatisListeServisi
 {
     /** NET (per adisyonlar.id) — opsiyonel personel filtreli ($pf). */
-    private static function netSql(string $pf): string
+    public static function netSql(string $pf = ''): string
     {
         return '(COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_hizmetler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
             .'+COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_urunler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
@@ -43,7 +43,7 @@ class SatisListeServisi
     }
 
     /** ODENEN (per adisyonlar.id) — kalem tahsilat tablolari, opsiyonel $pf. */
-    private static function odenenSql(string $pf): string
+    public static function odenenSql(string $pf = ''): string
     {
         return '(COALESCE((SELECT SUM(t.tutar) FROM tahsilat_hizmetler t WHERE t.adisyon_hizmet_id IN (SELECT id FROM adisyon_hizmetler WHERE adisyon_id=adisyonlar.id'.$pf.')),0)'
             .'+COALESCE((SELECT SUM(t.tutar) FROM tahsilat_urunler t WHERE t.adisyon_urun_id IN (SELECT id FROM adisyon_urunler WHERE adisyon_id=adisyonlar.id'.$pf.')),0)'

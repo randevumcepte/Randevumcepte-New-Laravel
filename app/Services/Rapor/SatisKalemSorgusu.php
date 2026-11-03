@@ -129,6 +129,24 @@ class SatisKalemSorgusu
         return $sonuc;
     }
 
+    /**
+     * Personelin KENDI kalemlerinden gelen tahsilat id'leri (alt sorgu, tum kalem turleri) —
+     * "personel.kendi_ciro_gor" kapsami: tahsilatlar.id IN (...) ile kullanilir.
+     */
+    public static function personelTahsilatIdleri(int $personelId): Builder
+    {
+        $q = null;
+        foreach (KalemTuru::cases() as $tur) {
+            $alt = DB::table($tur->tahsilatTablosu().' as th')
+                ->join($tur->kalemTablosu().' as k', 'k.id', '=', 'th.'.$tur->tahsilatFk())
+                ->where('k.personel_id', $personelId)
+                ->select('th.tahsilat_id');
+            $q = $q ? $q->union($alt) : $alt;
+        }
+
+        return $q;
+    }
+
     /** Katalog adlari (tek sorgu): kalem_id => ad. */
     public function adlar(KalemTuru $tur, array $idler): array
     {

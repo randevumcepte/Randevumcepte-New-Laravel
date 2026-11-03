@@ -68,7 +68,7 @@ Route::get('/v2/asistan/{sube?}', function ($sube = null) {
  | Paket Yonetimi v2 — paket tanimi tablosu + ekle/duzenle/sil + "Satis Yap"; veri
  | /api/v2/paket/* (Bearer); yazmalar PAKET_V2_YAZMA_AKTIF kapaliyken 409.
  */
-foreach (['raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler'] as $yol => $gorunum) {
+foreach (['ozet' => 'v2.ozet', 'raporlar' => 'v2.raporlar', 'isletme-raporlari' => 'v2.isletme-raporlari', 'kasa' => 'v2.kasa', 'paketler' => 'v2.paketler'] as $yol => $gorunum) {
     Route::get('/v2/'.$yol.'/{sube?}', fn ($sube = null) => view($gorunum, ['salonId' => (int) ($sube ?: request('sube', 0))]))
         ->whereNumber('sube');
 }
