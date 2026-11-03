@@ -180,6 +180,9 @@ Route::prefix('v2')->group(function () {
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 
+        // RANDEVULAR LISTESI (filtreli liste + filtre secenekleri) — routes/v2/randevu-liste.php
+        require __DIR__.'/v2/randevu-liste.php';
+
         // AYARLAR (isletme bilgileri, logo/galeri, calisma saatleri, randevu + online saatler, indirim, tema) — routes/v2/ayar.php
         require __DIR__.'/v2/ayar.php';
 

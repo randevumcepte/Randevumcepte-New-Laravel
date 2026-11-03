@@ -44,7 +44,8 @@ class PanelMenu
             ['etiket' => 'Ders Programı',      'ikon' => 'bi bi-grid-3x3-gap-fill','slug' => 'ders-programi',     'pageindex' => 205,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Grup Dersi Raporu',  'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'grup-dersi-raporu', 'pageindex' => 206,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Ön Görüşmeler',      'ikon' => 'bi bi-chat-left-text',   'slug' => 'ongorusmeler',      'pageindex' => 12, 'yetki' => 'gorusme.liste_gor', 'studyo_gizle' => true],
-            ['etiket' => 'Randevular',         'ikon' => 'bi bi-card-heading',     'slug' => 'randevular-liste',  'pageindex' => 3],
+            // v2 ekran — eski "Randevular" (randevular-liste) karşılığı.
+            ['etiket' => 'Randevular',         'ikon' => 'bi bi-card-heading',     'slug' => 'randevular-liste',  'v2_rota' => '/v2/randevular', 'pageindex' => 3],
             // v2 ekran — eski "Form Yönetimi" (arsivyonetimi) karşılığı.
             ['etiket' => 'Form Yönetimi',      'ikon' => 'bi bi-file-earmark-text','slug' => 'arsivyonetimi',     'v2_rota' => '/v2/formlar', 'pageindex' => 50, 'yetki' => ['form.olustur', 'form.gonder'], 'studyo_gizle' => true],
             ['etiket' => 'Ajanda',             'ikon' => 'bi bi-calendar-event',   'slug' => 'ajanda',            'pageindex' => 70, 'yetki' => 'randevu.takvim_gor'],

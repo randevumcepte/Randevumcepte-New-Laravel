@@ -37,7 +37,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 |---|---|---|---|
 | Personel (CRUD, saat, yetki) | 15 | ✅ | aşağıda detay; yazma `PERSONEL_V2_YAZMA_AKTIF` arkasında |
 | Personel prim / hak ediş | 7 | ❌ | Faz 3 (`primHakedisToplu`, `personelPrimHesaplaAyYil`, `primOde*`, `primHareket*`) |
-| Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı var; randevu **listesi**, randevu-sonrası not, sesli randevu, grup dersi yok |
+| Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı, randevu **listesi** (`GET /randevu/liste` + `/liste/secenekler`: zaman/kaynak/durum/hizmet filtresi, satır `aksiyonlar`) var; randevu-sonrası not, sesli randevu, grup dersi yok |
 | Satış / adisyon / tahsilat / alacak | ~30 | 🟡 | liste, adisyon, kalem, tahsilat, alacak var; taksit, senet, kupon/kampanya kodu, müşteri indirim türü yok |
 | Katalog (hizmet/ürün/paket listeleri) | ~8 | 🟡 | `GET /katalog` var; sayfalı yönetim listeleri ve CRUD yok |
 | Müşteri | ~15 | 🟡 | liste+sayaç+seçici, detay, randevu notları, randevular, ekle/güncelle/sil, kara liste, sağlık, ölçüm var (yazma `MUSTERI_V2_YAZMA_AKTIF`); resimler, seanslar, toplu içe aktarma, anket/WhatsApp, harici tahsilat yok |

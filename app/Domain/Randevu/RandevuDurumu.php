@@ -35,6 +35,32 @@ final class RandevuDurumu
     ];
 
     /**
+     * Liste "Durum" filtresi — eski randevular_liste secenekleri (geldi / gelmedi / onay
+     * bekleyen / onayli / reddedilen / musteri iptali). Deger: [durum, geldi] (etiket()
+     * ile ayni kodlama; null = geldi farketmez).
+     */
+    public const FILTRELER = [
+        'geldi'         => ['Geldi', [1, 1]],
+        'gelmedi'       => ['Gelmedi', [1, 0]],
+        'beklemede'     => ['Onay Bekleyen', [0, null]],
+        'onayli'        => ['Onaylı', [1, null]],
+        'iptal'         => ['İptal / Reddedilen', [2, null]],
+        'musteri_iptal' => ['Müşteri Tarafından İptal', [3, null]],
+    ];
+
+    /** @return ?array{0:int, 1:int|false|null} */
+    public static function filtre(?string $kod): ?array
+    {
+        return self::FILTRELER[(string) $kod][1] ?? null;
+    }
+
+    /** API secenek listesi. */
+    public static function filtreSecenekleri(): array
+    {
+        return array_map(fn ($kod, $f) => ['kod' => $kod, 'ad' => $f[0]], array_keys(self::FILTRELER), self::FILTRELER);
+    }
+
+    /**
      * Arama metninin gectigi durum etiketleri (tablo aramasi icin, Turkce kucuk harf).
      *
      * @return list<array{0:int, 1:int|false|null}>

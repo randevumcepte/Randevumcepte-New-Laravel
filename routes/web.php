@@ -125,6 +125,14 @@ Route::get('/v2/musteri/{musteri}', function ($musteri) {
 })->whereNumber('musteri');
 
 /*
+ | Randevular v2 (eski /isletmeyonetim/randevular-liste) — filtreli randevu listesi; satir
+ | islemleri + randevu formu takvimle ortak (lib/v2-randevu.js). Veri /api/v2/randevu/liste.
+ */
+Route::get('/v2/randevular/{sube?}', function ($sube = null) {
+    return view('v2.randevular', ['salonId' => (int) ($sube ?: request('sube', 0))]);
+})->whereNumber('sube');
+
+/*
  | Seans Takibi v2 — seansli paket/hizmet satislari tablosu + hizmet kartlari (seans
  | daireleri) + lazer cihaz bilgisi host sayfasi (ayni island deseni). Ayni bilesen
  | musteri detay "Seanslar" sekmesinde de kullanilir. Veri /api/v2/seans/* (Bearer);

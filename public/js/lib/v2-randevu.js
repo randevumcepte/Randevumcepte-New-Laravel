@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=2';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -17,8 +17,14 @@
  *     secili    : (randevuId|null) → çekmece açık randevu vurgusu
  *   r.cekmeceAc(id) / r.cekmeceKapat() / r.islemYap(v, islem) / r.randevuFormu({...})
  *   r.modal(html) / r.yazVeyaOnizle(yontem, yol, govde)
+ *
+ * randevuTablosu(): Randevular listesi (/v2/randevular) ve müşteri kartı "Randevular"
+ * sekmesinin ORTAK tablosu — kolonlar eski ekranlarla aynı, satır işlemleri sunucudan
+ * (`aksiyonlar`), durum rozeti v2-bilesen.css .rc-rdurum (eski dolgulu renkler).
  */
 import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { tarihTr } from '/js/lib/v2-musteri.js?v=1';
 
 export const normalTR = (x) => String(x ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 export const saatStr = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -975,4 +981,85 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
   }
 
   return { cekmeceAc, cekmeceKapat, islemYap, telafiFormu, randevuFormu, modal, yazVeyaOnizle };
+}
+
+const TELAFI = { telafi_randevusu: 'Telafi Randevusu', telafi_verildi: 'Telafi Verildi' };
+
+/**
+ * @param {HTMLElement} kap
+ * @param {{salonId:number, yol:string, params?:Function, musteri?:{id:number, ad:string}, cizildi?:Function}} opt
+ *   yol     : '/randevu/liste' (tüm randevular) | '/musteri/{id}/randevular' (müşteri kartı)
+ *   params  : () => ek filtre parametreleri (donem, kaynak, durum, hizmet_id)
+ *   musteri : verilirse müşteri kartı kolon seti (Müşteri/Telefon yerine Not + Oluşturulma)
+ * @returns {{tablo:object, islem:object}}  tablo.yenile() · islem.randevuFormu({}) …
+ */
+export function randevuTablosu(kap, { salonId, yol, params = () => ({}), musteri = null, cizildi }) {
+  const satirlar = new Map();
+  let tablo = null;
+  const islem = randevuIslemleri({ salonId, yenile: () => tablo.yenile(false) });
+
+  const durumHucre = (r) => `<span class="rc-rdurum rc-rd-${esc(r.durum.kod)}">${esc(r.durum.etiket)}</span>`
+    + (r.telafi ? `<div><span class="rc-rozet rc-rozet-turuncu rc-rd-telafi"><i class="bi bi-arrow-counterclockwise"></i> ${TELAFI[r.telafi]}</span></div>` : '');
+  const islemHucre = (r) => {
+    const x = r.aksiyonlar || {};
+    const b = (ad, ikon, baslik, sinif = '') => `<button class="rc-islem ${sinif}" data-rislem="${ad}" data-id="${r.id}" title="${baslik}" aria-label="${baslik}"><i class="bi ${ikon}"></i></button>`;
+    return `<td class="rc-orta"><span class="rc-islemler">${[
+      b('detay', 'bi-eye', 'Detay / Diğer İşlemler'),
+      x.onayla ? b('onayla', 'bi-check-lg', 'Onayla', 'rc-olumlu') : '',
+      x.duzenle ? b('duzenle', 'bi-pencil-square', 'Düzenle') : '',
+      x.iptal ? b('iptal', 'bi-x-lg', 'İptal Et', 'rc-tehlike') : '',
+    ].join('')}</span></td>`;
+  };
+  const liste = (a) => esc(a.join(', ') || '—');
+  const tarih = (r) => `<td class="rc-nowrap">${tarihTr(r.tarih)}</td><td>${esc(r.saat || '')}</td>`;
+
+  // Kolon setleri eski ekranlarla aynı sırada.
+  const kolonlar = musteri ? [
+    { baslik: 'Tarih', sirala: 'tarih' }, { baslik: 'Saat' }, { baslik: 'Durum' }, { baslik: 'Hizmetler' },
+    { baslik: 'Personel / Cihaz / Oda' }, { baslik: 'Randevu Notu' }, { baslik: 'Oluşturan' },
+    { baslik: 'Oluşturulma', sirala: 'olusturulma' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
+  ] : [
+    { baslik: 'Müşteri', sirala: 'musteri' }, { baslik: 'Telefon' }, { baslik: 'Hizmetler' },
+    { baslik: 'Personel / Cihaz / Oda' }, { baslik: 'Tarih', sirala: 'tarih' }, { baslik: 'Saat' },
+    { baslik: 'Durum' }, { baslik: 'Oluşturan' }, { baslik: 'İşlemler', sinif: 'rc-orta' },
+  ];
+  const satir = (r) => {
+    satirlar.set(String(r.id), r);
+    if (musteri) {
+      return `<tr>${tarih(r)}<td>${durumHucre(r)}</td><td>${liste(r.hizmetler)}</td><td>${liste(r.kaynaklar)}</td>
+        <td class="rc-rd-metin">${esc(r.randevu_notu || '')}</td><td>${esc(r.olusturan || '—')}</td>
+        <td class="rc-nowrap">${r.olusturulma ? tarihTr(r.olusturulma) + ' <small>' + esc(String(r.olusturulma).slice(11, 16)) + '</small>' : '—'}</td>
+        ${islemHucre(r)}</tr>`;
+    }
+    const m = r.musteri || {};
+    return `<tr><td><a class="rc-rd-musteri" href="/v2/musteri/${m.id}?sube=${salonId}">${esc(m.ad || '—')}</a></td>
+      <td class="rc-nowrap">${esc(m.telefon || '—')}</td><td>${liste(r.hizmetler)}</td><td>${liste(r.kaynaklar)}</td>
+      ${tarih(r)}<td>${durumHucre(r)}</td><td>${esc(r.olusturan || '—')}</td>${islemHucre(r)}</tr>`;
+  };
+
+  tablo = veriTablosu(kap, {
+    anahtar: musteri ? 'musteri_randevular' : 'randevular',
+    birim: 'randevu',
+    bosMesaj: 'Randevu bulunamadı.',
+    araIpucu: musteri ? 'Tabloda ara…' : 'Müşteri, telefon, hizmet, personel…',
+    sirala: { alan: 'tarih', yon: 'desc' },
+    kolonlar,
+    kaynak: (p) => api('GET', yol, { params: { ...p, salon_id: salonId, ...params() } }),
+    satir,
+    cizildi,
+  });
+
+  kap.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rislem]');
+    if (!b) return;
+    const r = satirlar.get(b.dataset.id);
+    const ad = b.dataset.rislem;
+    if (ad === 'detay') return islem.cekmeceAc(r.id);
+    if (ad === 'duzenle') return islem.randevuFormu({ randevuId: r.id });
+    islem.islemYap({ id: r.id, durum: r.durum.kod === 'beklemede' ? 0 : 1, musteri_ad: musteri?.ad || r.musteri?.ad }, ad, {});
+  });
+
+  // Sunucu kaynaklı tablo ilk yüklemeyi kendisi yapmaz (lib/v2-tablo.js) — yenile() şart.
+  tablo.yenile();
+  return { tablo, islem };
 }

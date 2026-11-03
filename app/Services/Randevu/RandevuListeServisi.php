@@ -3,13 +3,20 @@
 namespace App\Services\Randevu;
 
 use App\Domain\Randevu\RandevuDurumu;
+use App\Domain\Randevu\RandevuZamani;
+use App\Services\Musteri\PortfoyKapsami;
+use App\Services\Yetki\YetkiServisi;
 use App\Support\ListeIstegi;
+use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Randevu LISTESI (salt-okuma, sayfali) — eski StoreAdminController::randevu_liste_getir
  * sutunlariyla: tarih, saat, durum, hizmetler, personel/cihaz/oda, randevu notu,
- * olusturan, olusturulma. Ilk tuketici: musteri detay "Randevular" sekmesi.
+ * olusturan, olusturulma (+ musteri / telefon). Tuketiciler: Randevular listesi
+ * (/v2/randevular — eski /isletmeyonetim/randevular-liste) ve musteri detay "Randevular".
+ * Filtreler eski randevu_liste_filtre ile ayni: zaman (RandevuZamani), kaynak
+ * (salon/web/uygulama), durum (RandevuDurumu::FILTRELER), hizmet.
  *
  * Eskiden farki: HTML uretmez (durum = {kod, etiket, renk}); musteri kartinda "son 300"
  * siniri yerine sunucu sayfalamasi. Tablo aramasi (ara) satirda GORUNEN icerikte: tarih
@@ -18,16 +25,65 @@ use Illuminate\Support\Facades\DB;
  */
 class RandevuListeServisi
 {
-    public const SIRALANABILIR = ['tarih', 'olusturulma'];
+    public const SIRALANABILIR = ['tarih', 'olusturulma', 'musteri'];
+
+    /** Olusturma kaynagi filtresi: randevular.<kolon> = 1 (eski: salon / web / uygulama). */
+    public const KAYNAKLAR = ['salon' => 'Salon', 'web' => 'Web', 'uygulama' => 'Uygulama'];
+
+    public function __construct(private YetkiServisi $yetki, private PortfoyKapsami $portfoy) {}
 
     /**
-     * @param  array{musteri_id?:?int, kisit_personel_id?:?int}  $f
-     * @param  array{onayla?:bool, duzenle_iptal?:bool}  $yetki  satir `aksiyonlar` icin
+     * Kullanicinin liste kapsami ve satir yetkileri — TEK yer (Randevular listesi ve
+     * musteri karti ayni kurali kullanir). Eski: randevu.tum_personel_gor yoksa yalniz
+     * kendi kalemleri; telefon musteri.telefon_gor yoksa maskeli.
+     *
+     * @return array{kisit_personel_id:?int, yetki:array{onayla:bool, duzenle_iptal:bool, telefon_gor:bool}}
+     */
+    public function kapsam(int $yetkiliId, int $salonId): array
+    {
+        $var = fn (string $k) => $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, $k);
+
+        return [
+            'kisit_personel_id' => $var('randevu.tum_personel_gor') ? null : $this->portfoy->personelId($yetkiliId, $salonId),
+            'yetki'             => [
+                'onayla'        => $var('randevu.onayla'),
+                'duzenle_iptal' => $var('randevu.duzenle_iptal'),
+                'telefon_gor'   => $var('musteri.telefon_gor'),
+            ],
+        ];
+    }
+
+    /** Filtre secenekleri (web + Flutter ayni liste; tarih araligi sunucuda cozulur). */
+    public function secenekler(int $salonId): array
+    {
+        return [
+            'zamanlar'          => RandevuZamani::secenekListesi(),
+            'varsayilan_zaman'  => RandevuZamani::VARSAYILAN,
+            'durumlar'          => RandevuDurumu::filtreSecenekleri(),
+            'kaynaklar'         => array_map(fn ($k, $a) => ['kod' => $k, 'ad' => $a], array_keys(self::KAYNAKLAR), self::KAYNAKLAR),
+            'hizmetler'         => DB::table('salon_sunulan_hizmetler as ss')->join('hizmetler as h', 'h.id', '=', 'ss.hizmet_id')
+                ->where('ss.salon_id', $salonId)->where('ss.aktif', 1)
+                ->groupBy('h.id', 'h.hizmet_adi')->orderBy('h.hizmet_adi')
+                ->get(['h.id', 'h.hizmet_adi as ad'])->map(fn ($h) => ['id' => (int) $h->id, 'ad' => $h->ad])->all(),
+        ];
+    }
+
+    /**
+     * @param  array{musteri_id?:?int, kisit_personel_id?:?int, zaman?:?array, kaynak?:?string, durum?:?string, hizmet_id?:?int}  $f
+     * @param  array{onayla?:bool, duzenle_iptal?:bool, telefon_gor?:bool}  $yetki  satir `aksiyonlar` + telefon
      */
     public function listele(int $salonId, array $f, ListeIstegi $l, array $yetki = []): array
     {
-        $q = DB::table('randevular as r')->where('r.salon_id', $salonId)
+        $kaynak = isset(self::KAYNAKLAR[$f['kaynak'] ?? '']) ? $f['kaynak'] : null;
+        $durum = RandevuDurumu::filtre($f['durum'] ?? null);
+
+        $q = DB::table('randevular as r')->leftJoin('users as u', 'u.id', '=', 'r.user_id')->where('r.salon_id', $salonId)
             ->when($f['musteri_id'] ?? null, fn ($q, $uid) => $q->where('r.user_id', $uid))
+            ->when($f['zaman'] ?? null, fn ($q, $z) => $q->whereBetween('r.tarih', [$z['baslangic'], $z['bitis']]))
+            ->when($kaynak, fn ($q, $k) => $q->where('r.'.$k, 1))
+            ->when($durum, fn ($q, $d) => $this->durumKosulu($q, $d))
+            ->when($f['hizmet_id'] ?? null, fn ($q, $hid) => $q->whereExists(fn ($e) => $e->selectRaw('1')
+                ->from('randevu_hizmetler as fh')->whereColumn('fh.randevu_id', 'r.id')->where('fh.hizmet_id', $hid)))
             ->when($f['kisit_personel_id'] ?? null, fn ($q, $pid) => $q->whereExists(fn ($e) => $e->selectRaw('1')
                 ->from('randevu_hizmetler as rk')->whereColumn('rk.randevu_id', 'r.id')
                 ->where('rk.personel_id', $pid)->whereRaw('COALESCE(rk.yardimci_personel,0) != 1')))
@@ -36,23 +92,28 @@ class RandevuListeServisi
         $toplam = (clone $q)->count();
 
         $yon = $l->yon;
-        $l->sirala === 'olusturulma'
-            ? $q->orderBy('r.created_at', $yon)
-            : $q->orderBy('r.tarih', $yon)->orderBy('r.saat', $yon);
+        match ($l->sirala) {
+            'olusturulma' => $q->orderBy('r.created_at', $yon),
+            'musteri'     => $q->orderBy('u.name', $yon),
+            default       => $q->orderBy('r.tarih', $yon)->orderBy('r.saat', $yon),
+        };
 
         $randevular = $q->orderBy('r.id', $yon)->forPage($l->sayfa, $l->sayfaBoyu)
             ->leftJoin('isletmeyetkilileri as y', 'y.id', '=', 'r.olusturan_personel_id')
             ->get(['r.id', 'r.tarih', 'r.saat', 'r.durum', 'r.randevuya_geldi', 'r.personel_notu', 'r.web', 'r.uygulama',
-                'r.created_at', 'y.name as olusturan_adi']);
+                'r.created_at', 'y.name as olusturan_adi', 'r.user_id', 'u.name as musteri_adi', 'u.cep_telefon']);
+        $telGor = (bool) ($yetki['telefon_gor'] ?? false);
 
         $kalemler = $this->kalemler($randevular->pluck('id')->all());
 
         return [
-            'data' => $randevular->map(function ($r) use ($kalemler, $yetki) {
+            'data' => $randevular->map(function ($r) use ($kalemler, $yetki, $telGor) {
                 $k = $kalemler[$r->id] ?? ['hizmetler' => [], 'kaynaklar' => [], 'telafi' => null];
 
                 return [
                     'id'            => (int) $r->id,
+                    'musteri'       => ['id' => (int) $r->user_id, 'ad' => $r->musteri_adi,
+                        'telefon' => $telGor || ! $r->cep_telefon ? $r->cep_telefon : YetkiSabitleri::telefonMaskele((string) $r->cep_telefon)],
                     'tarih'         => $r->tarih,
                     'saat'          => $r->saat ? substr((string) $r->saat, 0, 5) : null,
                     'durum'         => RandevuDurumu::etiket($r->durum, $r->randevuya_geldi),
@@ -78,6 +139,8 @@ class RandevuListeServisi
             $w->whereRaw("DATE_FORMAT(r.tarih, '%d.%m.%Y') LIKE ?", [$like])
                 ->orWhereRaw("TIME_FORMAT(r.saat, '%H:%i') LIKE ?", [$like])
                 ->orWhere('r.personel_notu', 'like', $like)
+                ->orWhere('u.name', 'like', $like)
+                ->orWhere('u.cep_telefon', 'like', $like)
                 ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('isletmeyetkilileri as oy')
                     ->whereColumn('oy.id', 'r.olusturan_personel_id')->where('oy.name', 'like', $like))
                 ->orWhereExists(fn ($e) => $e->selectRaw('1')->from('randevu_hizmetler as ak')
@@ -88,17 +151,22 @@ class RandevuListeServisi
                     ->whereColumn('ak.randevu_id', 'r.id')
                     ->where(fn ($x) => $x->where('ah.hizmet_adi', 'like', $like)->orWhere('ap.personel_adi', 'like', $like)
                         ->orWhere('ac.cihaz_adi', 'like', $like)->orWhere('ao.oda_adi', 'like', $like)));
-            foreach ($durumlar as [$durum, $geldi]) {
-                $w->orWhere(function ($d) use ($durum, $geldi) {
-                    $d->where('r.durum', $durum);
-                    if ($geldi === false) {
-                        $d->whereNull('r.randevuya_geldi');
-                    } elseif ($geldi !== null) {
-                        $d->where('r.randevuya_geldi', $geldi);
-                    }
-                });
+            foreach ($durumlar as $d) {
+                $w->orWhere(fn ($x) => $this->durumKosulu($x, $d));
             }
         });
+    }
+
+    /** [durum, geldi] kosulu (RandevuDurumu kodlamasi: geldi false=NULL, null=farketmez). */
+    private function durumKosulu($q, array $d): void
+    {
+        [$durum, $geldi] = $d;
+        $q->where('r.durum', $durum);
+        if ($geldi === false) {
+            $q->whereNull('r.randevuya_geldi');
+        } elseif ($geldi !== null) {
+            $q->where('r.randevuya_geldi', $geldi);
+        }
     }
 
     /**

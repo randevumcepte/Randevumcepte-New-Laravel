@@ -120,17 +120,13 @@ class MusteriController extends MusteriTabanController
     public function randevular(Request $request, int $id, RandevuListeServisi $randevu)
     {
         [$uid, $salonId] = $this->musteriDenetle($request, $id, self::DETAY);
-        // Eski randevu_liste_getir: randevu.tum_personel_gor yoksa yalniz kendi kalemleri.
-        $kisit = $this->yetkiVar($uid, $salonId, 'randevu.tum_personel_gor') ? null : $this->portfoy()->personelId($uid, $salonId);
+        $k = $randevu->kapsam($uid, $salonId);
 
         return ApiCevap::basarili($randevu->listele(
             $salonId,
-            ['musteri_id' => $id, 'kisit_personel_id' => $kisit],
+            ['musteri_id' => $id, 'kisit_personel_id' => $k['kisit_personel_id']],
             ListeIstegi::istekten($request, 10, RandevuListeServisi::SIRALANABILIR, 'tarih', 'desc'),
-            [
-                'onayla'        => $this->yetkiVar($uid, $salonId, 'randevu.onayla'),
-                'duzenle_iptal' => $this->yetkiVar($uid, $salonId, 'randevu.duzenle_iptal'),
-            ],
+            $k['yetki'],
         ));
     }
 

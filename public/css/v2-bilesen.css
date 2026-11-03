@@ -138,3 +138,17 @@
   .rc-ms-sonuclar button { color: #ededf5; }
   .rc-ms-secili { background: #22222e; border-color: #34344c; }
 }
+
+/* ───────── Randevu tabloları (lib/v2-randevu.js randevuTablosu) — durum rozeti eski listedeki
+   dolgulu buton renkleri (Bootstrap teması: Onaylı #5C008E, Beklemede sarı, İptal koyu) ───────── */
+.rc-rdurum { display: inline-block; min-width: 92px; text-align: center; padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #fff; background: #6c757d; white-space: nowrap; }
+.rc-rd-geldi { background: #28a745; }
+.rc-rd-gelmedi { background: #dc3545; }
+.rc-rd-onayli { background: #5C008E; }
+.rc-rd-beklemede { background: #ffc107; color: #212529; }
+.rc-rd-iptal, .rc-rd-musteri_iptal { background: #343a40; }
+.rc-rd-telafi { margin-top: 4px; padding: 2px 8px; font-size: 11px; }
+.rc-rd-metin { max-width: 320px; white-space: normal; word-break: break-word; }
+.rc-rd-musteri { font-weight: 700; color: #5C008E; text-decoration: none; }
+.rc-rd-musteri:hover { text-decoration: underline; }
+@media (prefers-color-scheme: dark) { .rc-rd-musteri { color: #c9a6ec; } }
