@@ -9,7 +9,8 @@
  *   Satışlar        : mevcut GET /satislar?musteri_id= (satır aksiyonları sunucudan)
  *   Seanslar        : ortak seans bileşeni (lib/v2-seans.js) — GET /seans?musteri_id=
  *   Sağlık Bilgileri: PATCH /musteri/{id}/saglik (sorular API'den)
- *   Sözleşmeler/Belgeler: v2 Form Yönetimi ekranı (?musteri_id=) — kopya yok.
+ *   Sözleşmeler/Belgeler: ortak form arşivi bileşeni (lib/v2-form.js) — Form Yönetimi ile aynı, müşteri sabit.
+ * Kartta hiçbir sekme ayrı sayfaya gitmez.
  * Görünürlük/izin kararları SUNUCUDAN (`yetkiler`, `ayarlar`); UI yeniden hesaplamaz.
  */
 import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
@@ -17,6 +18,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=2';
+import { formArsivi } from '/js/lib/v2-form.js?v=1';
 
 const kok = document.getElementById('rc-musteri-detay');
 const musteriId = parseInt(kok.dataset.musteri, 10) || 0;
@@ -38,6 +40,8 @@ const sekmeTanimlari = () => [
   { ad: 'satislar', etiket: 'Satışlar', ikon: 'bi-receipt', goster: y.satis_gor, yukle: satislarYukle },
   { ad: 'seanslar', etiket: 'Seanslar', ikon: 'bi-check2-square', goster: y.seans_gor, yukle: (p) => seansTakibi(p, { salonId, musteriId }) },
   { ad: 'saglik', etiket: 'Sağlık Bilgileri', ikon: 'bi-clipboard2-pulse', goster: !!m.saglik, yukle: saglikYukle },
+  { ad: 'belgeler', etiket: 'Sözleşmeler/Belgeler', ikon: 'bi-file-earmark-text', goster: y.belgeler && !a.studyo_modu,
+    yukle: (p) => formArsivi(p, { salonId, musteri: { id: m.id, ad: m.name, telefon: m.cep_telefon } }) },
 ];
 
 // ─────────────────────────── BAŞLIK + SEKMELER ───────────────────────────
@@ -59,9 +63,7 @@ async function baslat() {
   const gorunur = sekmeTanimlari().filter((s) => s.goster);
   if (!gorunur.some((s) => s.ad === sekme)) sekme = 'genel';
   el('#mdSekmeler').innerHTML = gorunur.map((s) => `
-      <button class="rc-sekme" data-sekme="${s.ad}" role="tab"><i class="bi ${s.ikon}"></i> ${esc(s.etiket)}</button>`).join('')
-    + (y.belgeler && !a.studyo_modu
-      ? `<a class="rc-sekme" href="/v2/formlar?sube=${salonId}&musteri_id=${musteriId}"><i class="bi bi-file-earmark-text"></i> Sözleşmeler/Belgeler <i class="bi bi-box-arrow-up-right md-dis"></i></a>` : '');
+      <button class="rc-sekme" data-sekme="${s.ad}" role="tab"><i class="bi ${s.ikon}"></i> ${esc(s.etiket)}</button>`).join('');
   el('#mdSekmeler').addEventListener('click', (e) => {
     const b = e.target.closest('[data-sekme]');
     if (b) sekmeAc(b.dataset.sekme);
@@ -357,33 +359,62 @@ async function saglikYukle(p) {
   const fv = await formVerisi(salonId);
   const s = m.saglik || {};
   const kilit = y.saglik ? '' : 'disabled';
-  const evetHayir = (ad, v) => {
-    const evet = String(v) === '1';
-    return `<select name="${ad}" ${kilit}>
-      <option value="0"${evet ? '' : ' selected'}>Hayır</option><option value="1"${evet ? ' selected' : ''}>Evet</option></select>`;
-  };
-
-  p.innerHTML = `
-    <div class="md-kutu">
-      <h3>Sağlık Bilgileri</h3>
-      <form id="sgForm" class="rc-form-izgara">
-        ${fv.saglik_sorulari.map((q) => `
-          <div class="rc-alan"><label>${esc(q.soru)}</label>${evetHayir(q.alan, s[q.alan])}
-            ${q.aciklama_alani ? `<input name="${q.aciklama_alani}" placeholder="Açıklama" maxlength="2000" value="${esc(s[q.aciklama_alani] || '')}" ${kilit}>` : ''}
-          </div>`).join('')}
-        <div class="rc-alan"><label>Cilt Tipi</label><select name="cilt_tipi" ${kilit}><option value="">Seçiniz</option>
-          ${fv.cilt_tipleri.map((c) => `<option value="${c.id}"${String(c.id) === String(s.cilt_tipi ?? '') ? ' selected' : ''}>${esc(c.ad)}</option>`).join('')}</select></div>
-        <div class="rc-alan rc-tam"><label>Ek sağlık sorunları</label><textarea name="ek_saglik_sorunu" rows="3" maxlength="2000" ${kilit}>${esc(s.ek_saglik_sorunu || '')}</textarea></div>
-      </form>
-      ${y.saglik ? '<div class="md-kaydet"><button class="rc-btn rc-btn-birincil" type="submit" form="sgForm" id="sgKaydet"><i class="bi bi-check2"></i> Formu Kaydet</button></div>' : ''}
+  const evet = (alan) => String(s[alan]) === '1';
+  // Soru: metin solda, Hayır/Evet anahtarı sağda; Evet'te satır vurgulanır, açıklama alanı açılır.
+  const soru = (q) => `
+    <div class="sg-soru${evet(q.alan) ? ' sg-evet' : ''}" data-alan="${q.alan}">
+      <div class="sg-soru-ust">
+        <span class="sg-metin">${esc(q.soru)}</span>
+        <span class="sg-anahtar" role="radiogroup" aria-label="${esc(q.soru)}">
+          <label><input type="radio" name="${q.alan}" value="0"${evet(q.alan) ? '' : ' checked'} ${kilit}><span>Hayır</span></label>
+          <label><input type="radio" name="${q.alan}" value="1"${evet(q.alan) ? ' checked' : ''} ${kilit}><span>Evet</span></label>
+        </span>
+      </div>
+      ${q.aciklama_alani ? `<input class="sg-aciklama" name="${q.aciklama_alani}" placeholder="Açıklama yazın…" maxlength="2000" value="${esc(s[q.aciklama_alani] || '')}" ${evet(q.alan) ? '' : 'hidden'} ${kilit}>` : ''}
     </div>`;
 
-  el('#sgForm', p).onsubmit = async (e) => {
+  p.innerHTML = `
+    <form id="sgForm" class="md-kutu sg-kutu">
+      <div class="sg-bas">
+        <div><h3>Sağlık Bilgileri</h3><div class="sg-alt">Uygulama öncesi sağlık beyanı</div></div>
+        <div class="sg-ozet" id="sgOzet"></div>
+      </div>
+      <div class="sg-sorular">${fv.saglik_sorulari.map(soru).join('')}</div>
+      <div class="sg-alt-izgara">
+        <div class="rc-alan"><label>Cilt Tipi</label>
+          <div class="sg-cipler">
+            <label class="sg-cip"><input type="radio" name="cilt_tipi" value=""${s.cilt_tipi == null || s.cilt_tipi === '' ? ' checked' : ''} ${kilit}><span>Belirtilmemiş</span></label>
+            ${fv.cilt_tipleri.map((c) => `<label class="sg-cip"><input type="radio" name="cilt_tipi" value="${c.id}"${String(c.id) === String(s.cilt_tipi ?? '') ? ' checked' : ''} ${kilit}><span>${esc(c.ad)}</span></label>`).join('')}
+          </div></div>
+        <div class="rc-alan"><label>Ek Sağlık Sorunları</label><textarea name="ek_saglik_sorunu" rows="3" maxlength="2000" placeholder="Belirtmek istediğiniz diğer sağlık durumları…" ${kilit}>${esc(s.ek_saglik_sorunu || '')}</textarea></div>
+      </div>
+      ${y.saglik ? '<div class="md-kaydet"><button class="rc-btn rc-btn-birincil" type="submit" id="sgKaydet"><i class="bi bi-check2"></i> Kaydet</button></div>' : ''}
+    </form>`;
+
+  const f = el('#sgForm', p);
+  const ozetCiz = () => {
+    const n = f.querySelectorAll('.sg-evet').length;
+    el('#sgOzet', p).innerHTML = n
+      ? `<span class="rc-rozet rc-rozet-turuncu"><i class="bi bi-exclamation-triangle"></i> ${n} soruya "Evet"</span>`
+      : '<span class="rc-rozet rc-rozet-yesil"><i class="bi bi-check-circle"></i> Bildirilen sağlık sorunu yok</span>';
+  };
+  f.addEventListener('change', (e) => {
+    const kutu = e.target.closest('.sg-soru');
+    if (!kutu || e.target.type !== 'radio') return;
+    const acik = e.target.value === '1';
+    kutu.classList.toggle('sg-evet', acik);
+    const ac = kutu.querySelector('.sg-aciklama');
+    if (ac) { ac.hidden = !acik; if (acik) ac.focus(); }
+    ozetCiz();
+  });
+  ozetCiz();
+
+  f.onsubmit = async (e) => {
     e.preventDefault();
-    const body = { ...P, ...Object.fromEntries(new FormData(e.target).entries()) };
-    el('#sgKaydet').disabled = true;
+    const body = { ...P, ...Object.fromEntries(new FormData(f).entries()) };
+    el('#sgKaydet', p).disabled = true;
     const r = await api('PATCH', `/musteri/${musteriId}/saglik`, { body });
-    el('#sgKaydet').disabled = false;
+    el('#sgKaydet', p).disabled = false;
     if (yazSonuc(r, r.govde?.mesaj)) {
       Object.keys(body).forEach((k) => { if (k !== 'salon_id') s[k] = body[k]; });
       m.saglik = s;

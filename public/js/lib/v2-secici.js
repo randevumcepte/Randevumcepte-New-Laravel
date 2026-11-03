@@ -1,28 +1,29 @@
 /**
  * v2 ORTAK sunucu-aramalı MÜŞTERİ SEÇİCİ — TEK KAYNAK (stil: css/v2-bilesen.css .rc-ms-*).
  * Import yolu her yerde AYNI olmalı:
- *   import { musteriSecici } from '/js/lib/v2-secici.js?v=1';
+ *   import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
  *
  * En az 2 karakterde (300 ms gecikmeli) `yol`a {salon_id, q} ile sorar; cevap
  * [{id, ad, telefon}] (RandevuFormServisi::musteriAra sözleşmesi — telefon yetkiye göre
  * maskeli gelir). Seçilince ad + telefon kartı ve "Değiştir" gösterir.
  *
  *   const s = musteriSecici(el('#kap'), { salonId, yol: '/form/musteri-ara', onSec: (m) => {} });
+ *   baslangic: {id, ad, telefon} → seçili başlar (onSec bir kez çağrılır); sabit: true → "Değiştir" yok
  *   s.secili()   // {id, ad, telefon} | null
  *   s.temizle()
  */
 import { api, esc } from '/js/lib/v2-ortak.js?v=1';
 
-export function musteriSecici(kap, { salonId, yol, onSec = () => {}, ipucu = 'Ad veya telefon ile arayın' }) {
-  let secili = null;
+export function musteriSecici(kap, { salonId, yol, onSec = () => {}, ipucu = 'Ad veya telefon ile arayın', baslangic = null, sabit = false }) {
+  let secili = baslangic;
   let zaman, istekNo = 0;
 
   function ciz() {
     if (secili) {
       kap.innerHTML = `<div class="rc-ms-secili"><span class="rc-ms-avatar">${esc((secili.ad || '?').charAt(0))}</span>
         <div><b>${esc(secili.ad)}</b><small>${esc(secili.telefon || '')}</small></div>
-        <button type="button" class="rc-ms-degistir">Değiştir</button></div>`;
-      kap.querySelector('.rc-ms-degistir').onclick = () => { secili = null; ciz(); onSec(null); };
+        ${sabit ? '' : '<button type="button" class="rc-ms-degistir">Değiştir</button>'}</div>`;
+      if (!sabit) kap.querySelector('.rc-ms-degistir').onclick = () => { secili = null; ciz(); onSec(null); };
       return;
     }
     kap.innerHTML = `<div class="rc-ms-ara"><i class="bi bi-search"></i><input placeholder="${esc(ipucu)}" autocomplete="off"></div><div class="rc-ms-sonuclar"></div>`;
@@ -48,6 +49,7 @@ export function musteriSecici(kap, { salonId, yol, onSec = () => {}, ipucu = 'Ad
     };
   }
   ciz();
+  if (secili) onSec(secili);
 
   return {
     secili: () => secili,

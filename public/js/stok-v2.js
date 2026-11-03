@@ -16,7 +16,7 @@ import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=1';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 
 const kok = document.getElementById('rc-stok');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

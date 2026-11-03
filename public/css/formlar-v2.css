@@ -54,3 +54,6 @@
   .f-eleman-yan { flex-direction: row; align-items: center; justify-content: space-between; }
   .f-iki { grid-column: auto; }
 }
+
+/* Gömülü kullanım (müşteri detay): sayfa başlığı yok, butonlar sekmelerin üstünde */
+.f-arac { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 12px; }

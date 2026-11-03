@@ -94,3 +94,36 @@ a.mu-ad:hover { color: #7B2FB8; text-decoration: underline; }
 .md-kutu .rc-alan input + input, .md-kutu .rc-alan select + input { margin-top: 6px; }
 .md-kaydet { margin-top: 18px; display: flex; justify-content: flex-end; }
 .mf-dogum { display: grid; grid-template-columns: 1fr 1.4fr 1.2fr; gap: 8px; }
+
+/* ───────── Detay: Sağlık Bilgileri ───────── */
+.sg-bas { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.sg-alt { font-size: 13px; color: #7b8294; margin-top: 3px; }
+.sg-sorular { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 10px; }
+.sg-soru { border: 1px solid #eceef4; border-radius: 12px; padding: 11px 14px; background: #fff; transition: border-color .15s, background .15s; }
+.sg-soru.sg-evet { border-color: #fcd34d; background: #fffbeb; }
+.sg-soru-ust { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sg-metin { font-size: 14px; font-weight: 600; color: #2a2140; }
+.sg-anahtar { display: inline-flex; flex: 0 0 auto; background: #f4f2f8; border-radius: 10px; padding: 3px; }
+.sg-anahtar label { position: relative; margin: 0; cursor: pointer; }
+.sg-anahtar input, .sg-cip input { position: absolute; opacity: 0; pointer-events: none; }
+.sg-anahtar span { display: block; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #7b8294; }
+.sg-anahtar input[value="0"]:checked + span { background: #fff; color: #1f2533; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.sg-anahtar input[value="1"]:checked + span { background: #f59e0b; color: #fff; }
+.sg-anahtar input:focus-visible + span, .sg-cip input:focus-visible + span { outline: 2px solid #9D5DC8; outline-offset: 1px; }
+.sg-anahtar input:disabled + span, .sg-cip input:disabled + span { cursor: default; }
+.sg-aciklama { width: 100%; box-sizing: border-box; margin-top: 10px; }
+.sg-alt-izgara { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #eceef4; }
+@media (max-width: 800px) { .sg-alt-izgara { grid-template-columns: 1fr; } }
+.sg-cipler { display: flex; flex-wrap: wrap; gap: 8px; }
+.sg-cip { position: relative; margin: 0; cursor: pointer; font-size: inherit !important; text-transform: none !important; letter-spacing: 0 !important; }
+.sg-cip span { display: inline-block; padding: 8px 14px; border: 1px solid #e2dcef; border-radius: 999px; font-size: 13px; font-weight: 600; color: #4b3c66; background: #fff; }
+.sg-cip input:checked + span { background: #5C008E; border-color: #5C008E; color: #fff; }
+@media (prefers-color-scheme: dark) {
+  .sg-soru, .sg-cip span { background: #22222e; border-color: #34344c; }
+  .sg-soru.sg-evet { background: #33290f; border-color: #8a6a12; }
+  .sg-metin { color: #ededf5; }
+  .sg-anahtar { background: #1b1b26; }
+  .sg-anahtar input[value="0"]:checked + span { background: #34344c; color: #ededf5; }
+  .sg-cip span { color: #cfcfe0; }
+  .sg-alt-izgara { border-color: #34344c; }
+}
