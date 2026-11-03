@@ -143,7 +143,7 @@ class RandevuDurumServisi
             return $this->dakika->dusumUygula($randevuId, $dakikaPlan, $this->personelId($salonId, $yetkiliId));
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_geldi', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, 'randevu_geldi', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu "geldi" olarak işaretlendi');
 
         $plan['dakika_dusum'] = $dakikaSonuc;
@@ -189,7 +189,7 @@ class RandevuDurumServisi
             $this->dakika->iadeUygula($randevuId, $plan['dakika_iade'], $this->personelId($salonId, $yetkiliId));
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_gelmedi', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, 'randevu_gelmedi', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu "gelmedi" olarak işaretlendi');
 
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true);
@@ -213,7 +213,7 @@ class RandevuDurumServisi
             $this->seansPlaniUygula($randevuId, $seansPlan);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_geldi_iptal', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, 'randevu_geldi_iptal', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu geldi/gelmedi isareti kaldirildi');
 
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true);
@@ -249,7 +249,7 @@ class RandevuDurumServisi
             $this->seansPlaniUygula($randevuId, $seansPlan);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, 'randevu_telafi', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Seans telafisi: randevunun seansları telafi hakkına alındı');
 
         return $this->sonuc(['telafi' => true, 'mesaj' => 'Seans telafisi kaydedildi'], $plan, true);
@@ -281,7 +281,7 @@ class RandevuDurumServisi
             $this->kuyruga($salonId, 'randevu_iptal', $randevuId, $yetkiliId, ['red' => $red]);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, $red ? 'randevu_red' : 'randevu_iptal', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, $red ? 'randevu_red' : 'randevu_iptal', 'randevu', $randevuId,
             $this->musteriAdi($randevu), $red ? 'Randevu talebi reddedildi' : 'Randevu iptal edildi');
 
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bildirimler);
@@ -307,7 +307,7 @@ class RandevuDurumServisi
             $this->kuyruga($salonId, 'randevu_onay', $randevuId, $yetkiliId);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_onayla', 'randevu', $randevuId,
+        AktiviteLog::yaz($salonId, 'randevu_onayla', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu talebi onaylandı');
 
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bildirimler);

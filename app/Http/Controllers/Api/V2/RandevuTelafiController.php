@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Services\Randevu\RandevuOrtak;
 use App\Services\Randevu\TelafiRandevuServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
@@ -42,16 +43,13 @@ class RandevuTelafiController extends V2Controller
     public function olustur(Request $request, int $rh)
     {
         $user = $this->kimlik();
-        $salonId = $this->servis->salonIdGetir($rh);
+        $salonId = RandevuOrtak::kalemSalonId($rh);
         if (! $salonId) {
             return ApiCevap::hata('Randevu kaydı bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, ['randevu.olustur']);
 
-        $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! RandevuYazma::acik($salonId)) {
-            return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
-        }
+        $yaz = RandevuYazma::yazilacakMi($request, $salonId);
 
         $sonuc = $this->servis->olustur($rh, $request->only(['tarih', 'saat', 'personel_id', 'oda_id', 'cihaz_id', 'sure_dk', 'not']), (int) $user->id, $yaz);
 

@@ -82,10 +82,7 @@ class RandevuDurumController extends V2Controller
 
         $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
-        $yaz = ! $request->boolean('dry_run', true);
-        if ($yaz && ! RandevuYazma::acik($salonId)) {
-            return ApiCevap::hata('Randevu v2 yazma şu an kapalı (yalnızca dry_run)', 409);
-        }
+        $yaz = RandevuYazma::yazilacakMi($request, $salonId);
 
         $sonuc = $islem((int) $user->id, $yaz);
 

@@ -33,15 +33,6 @@ class RandevuTakvimYazServisi
 {
     private const KAYNAK_KOLON = [1 => 'personel_id', 2 => 'cihaz_id', 3 => 'oda_id'];
 
-    /** Kapsam denetimi icin: kalemin salonu. */
-    public function kalemSalonId(int $rhId): ?int
-    {
-        $v = DB::table('randevu_hizmetler as rh')->join('randevular as r', 'r.id', '=', 'rh.randevu_id')
-            ->where('rh.id', $rhId)->value('r.salon_id');
-
-        return $v !== null ? (int) $v : null;
-    }
-
     // ─────────────────────────── SAAT KAPAMA ───────────────────────────
 
     /**
@@ -57,7 +48,7 @@ class RandevuTakvimYazServisi
         if (! array_filter($kaynak)) {
             throw new GecersizIslemException('Kapatılacak personel, oda veya cihaz seçin.');
         }
-        $this->kaynaklarSalonaAit($salonId, $kaynak);
+        RandevuOrtak::kaynaklarSalonaAit($salonId, $kaynak);
 
         try {
             $tarihler = SaatKapama::tarihler((string) ($g['tarih'] ?? ''), (int) ($g['tekrar_sayisi'] ?? 1), $g['tekrar_sikligi'] ?? null);
@@ -111,7 +102,7 @@ class RandevuTakvimYazServisi
             return $idler;
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'saat_kapama_ekle', 'randevu', $randevuIdler[0] ?? null,
+        AktiviteLog::yaz($salonId, 'saat_kapama_ekle', 'randevu', $randevuIdler[0] ?? null,
             count($randevuIdler).' kayit', 'Takvimde saat kapama eklendi.', ['randevu_idler' => $randevuIdler]);
 
         return ['yazildi' => true, 'mesaj' => 'Saat kapama eklendi ('.count($randevuIdler).' kayıt)', 'plan' => $plan, 'randevu_idler' => $randevuIdler];
@@ -140,7 +131,7 @@ class RandevuTakvimYazServisi
             BildirimKuyrugu::googleTakvim($salonId, $randevuId, [], $rhIdler);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'saat_kapama_sil', 'randevu', $randevuId, null, 'Takvimde saat kapama kaldırıldı.');
+        AktiviteLog::yaz($salonId, 'saat_kapama_sil', 'randevu', $randevuId, null, 'Takvimde saat kapama kaldırıldı.');
 
         return ['yazildi' => true, 'mesaj' => 'Saat kapama kaldırıldı', 'plan' => $plan];
     }
@@ -181,7 +172,7 @@ class RandevuTakvimYazServisi
         $yeniKaynak = $kolon && ($g['resource_id'] ?? '') !== '' ? (int) $g['resource_id'] : null;
         $kalemDegisim = ['saat' => $yeniSaat, 'saat_bitis' => $yeniBitis, 'sure_dk' => $sure];
         if ($kolon && $yeniKaynak && $yeniKaynak !== (int) $rh->{$kolon}) {
-            $this->kaynaklarSalonaAit($salonId, [$kolon => $yeniKaynak]);
+            RandevuOrtak::kaynaklarSalonaAit($salonId, [$kolon => $yeniKaynak]);
             $kalemDegisim[$kolon] = $yeniKaynak;
         }
 
@@ -232,7 +223,7 @@ class RandevuTakvimYazServisi
             BildirimKuyrugu::googleTakvim($salonId, (int) $rh->randevu_id, [$rhId]);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_tasi', 'randevu', (int) $rh->randevu_id, null,
+        AktiviteLog::yaz($salonId, 'randevu_tasi', 'randevu', (int) $rh->randevu_id, null,
             'Randevu sürükle-bırak ile taşındı/güncellendi', ['rh_id' => $rhId, 'degisim' => $kalemDegisim]);
 
         return ['yazildi' => true, 'mesaj' => 'Randevu güncellendi', 'plan' => $plan, 'bildirimler' => $bildirimler];
@@ -266,17 +257,6 @@ class RandevuTakvimYazServisi
             return [$m[1], SaatKapama::saat($m[2])];
         } catch (InvalidArgumentException $e) {
             throw new GecersizIslemException($e->getMessage());
-        }
-    }
-
-    /** @param  array<string,?int>  $kaynak  personel_id / cihaz_id / oda_id */
-    private function kaynaklarSalonaAit(int $salonId, array $kaynak): void
-    {
-        $tablolar = ['personel_id' => ['salon_personelleri', 'personel'], 'cihaz_id' => ['cihazlar', 'cihaz'], 'oda_id' => ['odalar', 'oda']];
-        foreach ($kaynak as $kolon => $id) {
-            if ($id && ! DB::table($tablolar[$kolon][0])->where('id', $id)->where('salon_id', $salonId)->exists()) {
-                throw new GecersizIslemException('Seçilen '.$tablolar[$kolon][1].' bu işletmeye ait değil.');
-            }
         }
     }
 }

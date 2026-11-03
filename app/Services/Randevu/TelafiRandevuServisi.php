@@ -30,15 +30,6 @@ use Illuminate\Support\Facades\Schema;
  */
 class TelafiRandevuServisi
 {
-    /** Kapsam denetimi icin: kalemin (randevu_hizmetler) salonu. */
-    public function salonIdGetir(int $rhId): ?int
-    {
-        $v = DB::table('randevu_hizmetler as rh')->join('randevular as r', 'r.id', '=', 'rh.randevu_id')
-            ->where('rh.id', $rhId)->value('r.salon_id');
-
-        return $v !== null ? (int) $v : null;
-    }
-
     /** Telafi formu secenekleri — eski telafiDropdownVerisiApi ile ayni alanlar. */
     public function secenekler(int $salonId): array
     {
@@ -70,7 +61,7 @@ class TelafiRandevuServisi
         $yeniPersonelId = (int) ($g['personel_id'] ?? 0) ?: (int) $orig->personel_id;
         $odaId = (int) ($g['oda_id'] ?? 0) ?: null;
         $cihazId = (int) ($g['cihaz_id'] ?? 0) ?: null;
-        $this->salonaAitMi($salonId, $yeniPersonelId, $odaId, $cihazId);
+        RandevuOrtak::kaynaklarSalonaAit($salonId, ['personel_id' => $yeniPersonelId, 'oda_id' => $odaId, 'cihaz_id' => $cihazId]);
 
         $sure = (int) ($g['sure_dk'] ?? 0) ?: ((int) $orig->sure_dk ?: 15);
         $saatBitis = date('H:i', strtotime('+'.$sure.' minutes', strtotime($saat)));
@@ -134,7 +125,7 @@ class TelafiRandevuServisi
             return ['randevu_id' => $randevuId, 'randevu_hizmet_id' => $rhId, 'prim' => $prim];
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi_olustur', 'randevu', $yeniRh['randevu_id'],
+        AktiviteLog::yaz($salonId, 'randevu_telafi_olustur', 'randevu', $yeniRh['randevu_id'],
             DB::table('users')->where('id', $orig->user_id)->value('name'),
             'Telafi randevusu oluşturuldu (orijinal #'.$orig->randevu_id.')', ['orijinal_rh_id' => $orig->id]);
 
@@ -172,19 +163,6 @@ class TelafiRandevuServisi
         }
 
         return $o;
-    }
-
-    private function salonaAitMi(int $salonId, int $personelId, ?int $odaId, ?int $cihazId): void
-    {
-        if (! DB::table('salon_personelleri')->where('id', $personelId)->where('salon_id', $salonId)->exists()) {
-            throw new GecersizIslemException('Seçilen personel bu işletmeye ait değil.');
-        }
-        if ($odaId && ! DB::table('odalar')->where('id', $odaId)->where('salon_id', $salonId)->exists()) {
-            throw new GecersizIslemException('Seçilen oda bu işletmeye ait değil.');
-        }
-        if ($cihazId && ! DB::table('cihazlar')->where('id', $cihazId)->where('salon_id', $salonId)->exists()) {
-            throw new GecersizIslemException('Seçilen cihaz bu işletmeye ait değil.');
-        }
     }
 
     /**

@@ -88,14 +88,13 @@ class RandevuFormServisi
         if (! DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $userId)->exists()) {
             throw new GecersizIslemException('Müşteri bu işletmenin portföyünde değil.');
         }
-        $otoDegil = fn ($q, string $t) => $q->where(fn ($w) => $w->whereNull($t.'.otomatik_randevu_olusturuldu')->orWhere($t.'.otomatik_randevu_olusturuldu', '!=', 1));
         $salonSure = $this->salonHizmetSureleri($salonId);
         $sonuc = [];
 
         // Tek hizmet satislari
         $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'a.id', '=', 'ah.adisyon_id')->join('hizmetler as h', 'h.id', '=', 'ah.hizmet_id')
             ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
-        $ahlar = $otoDegil($q, 'ah')->orderBy('a.tarih')->orderBy('ah.id')
+        $ahlar = RandevuOrtak::otomatikRandevuDegil($q, 'ah')->orderBy('a.tarih')->orderBy('ah.id')
             ->get(['ah.id', 'ah.hizmet_id', 'ah.seans_sayisi', 'ah.sure', 'h.hizmet_adi', 'a.tarih']);
         $kullanilanAh = DB::table('adisyon_paket_seanslar')->whereIn('adisyon_hizmet_id', $ahlar->pluck('id'))
             ->groupBy('adisyon_hizmet_id')->selectRaw('adisyon_hizmet_id, COUNT(*) as n')->pluck('n', 'adisyon_hizmet_id');
@@ -117,7 +116,7 @@ class RandevuFormServisi
         $pSure = Schema::hasColumn('paketler', 'sure');
         $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'a.id', '=', 'ap.adisyon_id')->join('paketler as p', 'p.id', '=', 'ap.paket_id')
             ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
-        $aplar = $otoDegil($q, 'ap')->orderBy('a.tarih')->orderBy('ap.id')
+        $aplar = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->orderBy('a.tarih')->orderBy('ap.id')
             ->get(array_merge(['ap.id', 'ap.paket_id', 'ap.seans_sayisi', 'p.paket_adi', 'a.tarih'], $pSure ? ['p.sure as paket_sure'] : []));
         foreach ($aplar as $ap) {
             $bolgeler = DB::table('paket_hizmetler as ph')->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')->where('ph.paket_id', $ap->paket_id)

@@ -72,7 +72,7 @@ class RandevuKayitServisi
             return $this->uygula($salonId, $girdi, $plan, $yetkiliId);
         });
 
-        AktiviteLog::yaz($salonId, $yetkiliId, $eski ? 'randevu_guncelle' : 'randevu_ekle', 'randevu', $sonuc['randevu_idler'][0] ?? null,
+        AktiviteLog::yaz($salonId, $eski ? 'randevu_guncelle' : 'randevu_ekle', 'randevu', $sonuc['randevu_idler'][0] ?? null,
             $girdi['tarihler'][0].' '.$girdi['saat'], $eski ? 'Randevu güncellendi' : 'Yeni randevu oluşturuldu',
             ['randevu_idler' => $sonuc['randevu_idler']]);
 
@@ -125,7 +125,7 @@ class RandevuKayitServisi
             if (! $h['hizmet_id'] || ! DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $h['hizmet_id'])->exists()) {
                 throw new GecersizIslemException('Hizmet '.($i + 1).' bu işletmede tanımlı değil.');
             }
-            $this->kaynakSalonaAit($salonId, array_intersect_key($h, self::KAYNAK_TABLO));
+            RandevuOrtak::kaynaklarSalonaAit($salonId, array_intersect_key($h, self::KAYNAK_TABLO));
         }
         unset($h);
 
@@ -135,7 +135,7 @@ class RandevuKayitServisi
             if (! $pid) {
                 continue;
             }
-            $this->kaynakSalonaAit($salonId, ['personel_id' => $pid]);
+            RandevuOrtak::kaynaklarSalonaAit($salonId, ['personel_id' => $pid]);
             $yardimcilar[] = ['hizmet_id' => (int) ($y['randevuhizmetid'] ?? 0), 'index' => (int) ($y['index'] ?? -1), 'personel_id' => $pid];
         }
 
@@ -178,15 +178,6 @@ class RandevuKayitServisi
             'zaman_degisti' => $zamanDegisti, 'hizmet_degisti' => $hizmetDegisti,
             'override' => (string) ($g['cakisanrandevuekle'] ?? '') === '1',
         ];
-    }
-
-    private function kaynakSalonaAit(int $salonId, array $kaynak): void
-    {
-        foreach ($kaynak as $kolon => $id) {
-            if ($id && ! DB::table(self::KAYNAK_TABLO[$kolon][0])->where('id', $id)->where('salon_id', $salonId)->exists()) {
-                throw new GecersizIslemException('Seçilen '.self::KAYNAK_TABLO[$kolon][1].' bu işletmeye ait değil.');
-            }
-        }
     }
 
     // ═════════════════════════════ CAKISMA ═════════════════════════════
@@ -538,14 +529,12 @@ class RandevuKayitServisi
     private function tercihEdilenSeans(int $salonId, int $userId, array $h, array &$rezerve): ?array
     {
         $hz = $h['hizmet_id'];
-        $otoDegil = fn ($q, string $t) => $q->where(fn ($w) => $w->whereNull($t.'.otomatik_randevu_olusturuldu')->orWhere($t.'.otomatik_randevu_olusturuldu', '!=', 1));
-
         if ($h['adisyon_paket_id']) {
             $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'ap.adisyon_id', '=', 'a.id')
                 ->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
                 ->where('ap.id', $h['adisyon_paket_id'])->where('ph.hizmet_id', $hz)
                 ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
-            $ap = $otoDegil($q, 'ap')->first(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans']);
+            $ap = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->first(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans']);
             $anahtar = 'AP:'.($ap->id ?? 0).':'.$hz;
             if ($ap && DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi) {
                 $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
@@ -558,7 +547,7 @@ class RandevuKayitServisi
             $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'ah.adisyon_id', '=', 'a.id')
                 ->where('ah.id', $h['adisyon_hizmet_id'])->where('ah.hizmet_id', $hz)
                 ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
-            $ah = $otoDegil($q, 'ah')->first(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans']);
+            $ah = RandevuOrtak::otomatikRandevuDegil($q, 'ah')->first(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans']);
             $anahtar = 'AH:'.($ah->id ?? 0);
             if ($ah && DB::table('adisyon_paket_seanslar')->where('adisyon_hizmet_id', $ah->id)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ah->seans_sayisi) {
                 $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
@@ -578,12 +567,10 @@ class RandevuKayitServisi
      */
     private function yeniSeansAdayi(int $salonId, int $userId, int $hizmetId, array &$rezerve): ?array
     {
-        $otoDegil = fn ($q, $t) => $q->where(fn ($w) => $w->whereNull($t.'.otomatik_randevu_olusturuldu')->orWhere($t.'.otomatik_randevu_olusturuldu', '!=', 1));
-
         $hizmet = null;
         $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'ah.adisyon_id', '=', 'a.id')
             ->where('ah.hizmet_id', $hizmetId)->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
-        foreach ($otoDegil($q, 'ah')->orderBy('a.tarih')->get(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans', 'a.tarih']) as $x) {
+        foreach (RandevuOrtak::otomatikRandevuDegil($q, 'ah')->orderBy('a.tarih')->get(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans', 'a.tarih']) as $x) {
             $kul = DB::table('adisyon_paket_seanslar')->where('adisyon_hizmet_id', $x->id)->count() + ($rezerve['AH:'.$x->id] ?? 0);
             if ($kul < (int) $x->seans_sayisi) {
                 $hizmet = $x;
@@ -595,7 +582,7 @@ class RandevuKayitServisi
         $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'ap.adisyon_id', '=', 'a.id')
             ->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
             ->where('ph.hizmet_id', $hizmetId)->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
-        foreach ($otoDegil($q, 'ap')->orderBy('a.tarih')->distinct()->get(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans', 'a.tarih']) as $x) {
+        foreach (RandevuOrtak::otomatikRandevuDegil($q, 'ap')->orderBy('a.tarih')->distinct()->get(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans', 'a.tarih']) as $x) {
             $kul = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $x->id)->where('hizmet_id', $hizmetId)->count()
                 + ($rezerve['AP:'.$x->id.':'.$hizmetId] ?? 0);
             if ($kul < (int) $x->seans_sayisi) {
