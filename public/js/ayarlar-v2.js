@@ -7,6 +7,7 @@
  * eski paneldeki aynı sekmeye link verir. Seçili sekme ?p= ile adres çubuğunda tutulur.
  */
 import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { YUKLENIYOR } from '/js/ayarlar/ortak.js?v=4';
 
 const kok = document.getElementById('rc-ayarlar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -14,15 +15,15 @@ if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 /** Sekme kodu → modül (yalnız görsel/çizim; hangi sekmenin açık olduğu API'den). */
 const MODULLER = {
-  isletme: () => import('/js/ayarlar/isletme.js?v=3'),
-  subeler: () => import('/js/ayarlar/subeler.js?v=3'),
-  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=3'),
-  randevu: () => import('/js/ayarlar/randevu.js?v=3'),
-  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=3'),
-  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=3'),
-  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=3'),
-  odalar: () => import('/js/ayarlar/odalar.js?v=3'),
-  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=3'),
+  isletme: () => import('/js/ayarlar/isletme.js?v=4'),
+  subeler: () => import('/js/ayarlar/subeler.js?v=4'),
+  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=4'),
+  randevu: () => import('/js/ayarlar/randevu.js?v=4'),
+  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=4'),
+  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=4'),
+  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=4'),
+  odalar: () => import('/js/ayarlar/odalar.js?v=4'),
+  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=4'),
 };
 
 let ozet = null;
@@ -35,7 +36,7 @@ async function baslat() {
         <div><h1>Ayarlar</h1><div class="rc-sayfa-alt" id="ayAlt">İşletme, çalışma saatleri ve randevu ayarları</div></div>
       </div></div>
       <nav class="rc-sekmeler" id="aySekmeler" role="tablist"></nav>
-      <div id="ayIcerik"><div class="rc-yukleniyor">Yükleniyor…</div></div>
+      <div id="ayIcerik">${YUKLENIYOR}</div>
     </div>`;
   if (!salonId) { el('#ayIcerik').innerHTML = '<div class="ay-bos">Şube seçili değil (?sube=... bekleniyor).</div>'; return; }
 

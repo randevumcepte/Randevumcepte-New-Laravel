@@ -7,9 +7,12 @@
  */
 import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
 
+/** Yükleniyor görünümü (dönen çember + sabit metin) — rc-yukleniyor yalnız çemberdir, içine metin konmaz. */
+export const YUKLENIYOR = '<div class="ay-bekle"><span class="rc-yukleniyor"></span> Yükleniyor…</div>';
+
 /** GET /ayar/<yol>?salon_id= → veri; hata olursa kap'a mesaj çizer ve null döner. */
 export async function yukle(kap, yol, salonId) {
-  kap.innerHTML = '<div class="rc-yukleniyor">Yükleniyor…</div>';
+  kap.innerHTML = YUKLENIYOR;
   const r = await api('GET', yol, { params: { salon_id: salonId } });
   if (r.ok && r.govde && r.govde.basarili) return r.govde.veri;
   kap.innerHTML = `<div class="ay-bos">${esc((r.govde && r.govde.mesaj) || `Yüklenemedi (${r.kod})`)}</div>`;

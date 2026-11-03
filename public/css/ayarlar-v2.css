@@ -122,3 +122,6 @@
 .ay-havuz section[hidden] { display: none; }
 .ay-havuz-kalem { margin-bottom: 12px; }
 .ay-kopya [data-kat-yeni], [data-kat-yeni] { margin-top: 6px; }
+
+/* ── Yükleniyor ── */
+.ay-bekle { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 48px 16px; color: #8a8a9a; font-size: 14px; }

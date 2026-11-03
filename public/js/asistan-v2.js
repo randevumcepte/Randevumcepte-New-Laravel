@@ -41,7 +41,7 @@ function iskeletCiz() {
     </button>`;
   const gorevPanel = (ad) => `
     <section class="as-panel" data-panel="${ad}" hidden>
-      <div class="as-akis" id="asAkis-${ad}"><div class="rc-yukleniyor">Yükleniyor…</div></div>
+      <div class="as-akis" id="asAkis-${ad}"><div class="as-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</div></div>
       <div class="rc-sayfalama" id="asSayfa-${ad}"></div>
     </section>`;
 
@@ -62,7 +62,7 @@ function iskeletCiz() {
       ${gorevPanel('bugun')}
       ${gorevPanel('yarin')}
       <section class="as-panel" data-panel="ayarlar" hidden>
-        <div id="asAyarlar"><div class="rc-yukleniyor">Yükleniyor…</div></div>
+        <div id="asAyarlar"><div class="as-bos"><span class="rc-yukleniyor"></span> Yükleniyor…</div></div>
       </section>
     </div>`;
 

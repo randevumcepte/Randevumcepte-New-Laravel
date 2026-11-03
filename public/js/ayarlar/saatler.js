@@ -3,7 +3,7 @@
  * çalışıyor + başlangıç/bitiş, mola var + mola başlangıç/bitiş. 7 gün listesi SUNUCUDAN gelir.
  * Plan tablosu ortak.js'te (cihaz formu ile aynı). Uçlar: GET/PUT /ayar/calisma-saatleri.
  */
-import { yukle, kaydet, kart, kaydetCubugu, gonderBagla, planTablosu, planBagla, planOku } from '/js/ayarlar/ortak.js?v=3';
+import { yukle, kaydet, kart, kaydetCubugu, gonderBagla, planTablosu, planBagla, planOku } from '/js/ayarlar/ortak.js?v=4';
 
 export async function ciz(kap, ctx) {
   const v = await yukle(kap, '/ayar/calisma-saatleri', ctx.salonId);

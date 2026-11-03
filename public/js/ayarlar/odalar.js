@@ -4,8 +4,8 @@
  * kolonları. Seçenekler GET /ayar/odalar/form-verisi'nden.
  */
 import { esc, el } from '/js/lib/v2-ortak.js?v=1';
-import { kaynakSekmesi } from '/js/ayarlar/kaynak.js?v=3';
-import { secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=3';
+import { kaynakSekmesi } from '/js/ayarlar/kaynak.js?v=4';
+import { secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=4';
 
 const rozetler = (liste, alan) => (liste.length
   ? `<div class="ay-rozetler">${liste.map((x) => `<span class="rc-rozet rc-rozet-mor">${esc(x[alan])}</span>`).join('')}</div>`

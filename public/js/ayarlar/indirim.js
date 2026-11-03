@@ -3,7 +3,7 @@
  * Aktif müşteri için aç/kapa + yüzde. Kapalı = %0 (sunucu kuralı). Uçlar: GET/PUT /ayar/musteri-indirimleri.
  */
 import { esc } from '/js/lib/v2-ortak.js?v=1';
-import { yukle, kaydet, kart, anahtar, kaydetCubugu, gonderBagla, isaretli, deger } from '/js/ayarlar/ortak.js?v=3';
+import { yukle, kaydet, kart, anahtar, kaydetCubugu, gonderBagla, isaretli, deger } from '/js/ayarlar/ortak.js?v=4';
 
 const TURLER = [
   { kod: 'sadik', ad: 'Sadık müşteri indirimi', ikon: 'bi-heart', ipucu: 'Sadık segmentteki müşterilerin satışlarına otomatik uygulanır.' },
