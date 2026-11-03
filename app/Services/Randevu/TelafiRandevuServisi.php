@@ -125,7 +125,7 @@ class TelafiRandevuServisi
             return ['randevu_id' => $randevuId, 'randevu_hizmet_id' => $rhId, 'prim' => $prim];
         });
 
-        AktiviteLog::yaz($salonId, 'randevu_telafi_olustur', 'randevu', $yeniRh['randevu_id'],
+        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi_olustur', 'randevu', $yeniRh['randevu_id'],
             DB::table('users')->where('id', $orig->user_id)->value('name'),
             'Telafi randevusu oluşturuldu (orijinal #'.$orig->randevu_id.')', ['orijinal_rh_id' => $orig->id]);
 

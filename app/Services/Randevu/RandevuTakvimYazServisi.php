@@ -102,7 +102,7 @@ class RandevuTakvimYazServisi
             return $idler;
         });
 
-        AktiviteLog::yaz($salonId, 'saat_kapama_ekle', 'randevu', $randevuIdler[0] ?? null,
+        AktiviteLog::yaz($salonId, $yetkiliId, 'saat_kapama_ekle', 'randevu', $randevuIdler[0] ?? null,
             count($randevuIdler).' kayit', 'Takvimde saat kapama eklendi.', ['randevu_idler' => $randevuIdler]);
 
         return ['yazildi' => true, 'mesaj' => 'Saat kapama eklendi ('.count($randevuIdler).' kayıt)', 'plan' => $plan, 'randevu_idler' => $randevuIdler];
@@ -131,7 +131,7 @@ class RandevuTakvimYazServisi
             BildirimKuyrugu::googleTakvim($salonId, $randevuId, [], $rhIdler);
         });
 
-        AktiviteLog::yaz($salonId, 'saat_kapama_sil', 'randevu', $randevuId, null, 'Takvimde saat kapama kaldırıldı.');
+        AktiviteLog::yaz($salonId, $yetkiliId, 'saat_kapama_sil', 'randevu', $randevuId, null, 'Takvimde saat kapama kaldırıldı.');
 
         return ['yazildi' => true, 'mesaj' => 'Saat kapama kaldırıldı', 'plan' => $plan];
     }
@@ -223,7 +223,7 @@ class RandevuTakvimYazServisi
             BildirimKuyrugu::googleTakvim($salonId, (int) $rh->randevu_id, [$rhId]);
         });
 
-        AktiviteLog::yaz($salonId, 'randevu_tasi', 'randevu', (int) $rh->randevu_id, null,
+        AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_tasi', 'randevu', (int) $rh->randevu_id, null,
             'Randevu sürükle-bırak ile taşındı/güncellendi', ['rh_id' => $rhId, 'degisim' => $kalemDegisim]);
 
         return ['yazildi' => true, 'mesaj' => 'Randevu güncellendi', 'plan' => $plan, 'bildirimler' => $bildirimler];

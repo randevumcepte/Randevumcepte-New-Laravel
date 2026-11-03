@@ -185,7 +185,7 @@ html, body { margin: 0; padding: 0; }
 
 /* ───────────────── Toast (modern bildirim) ───────────────── */
 .rc-toast-kap {
-  position: fixed; top: 18px; right: 18px; z-index: 9000;
+  position: fixed; top: 18px; right: 18px; z-index: 9800; /* modal (9000) + onay (9100) + flatpickr (9700) üstünde — hata pencerenin arkasında kalmasın */
   display: flex; flex-direction: column; gap: 10px; pointer-events: none;
 }
 .rc-toast {

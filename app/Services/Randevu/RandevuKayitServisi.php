@@ -72,7 +72,7 @@ class RandevuKayitServisi
             return $this->uygula($salonId, $girdi, $plan, $yetkiliId);
         });
 
-        AktiviteLog::yaz($salonId, $eski ? 'randevu_guncelle' : 'randevu_ekle', 'randevu', $sonuc['randevu_idler'][0] ?? null,
+        AktiviteLog::yaz($salonId, $yetkiliId, $eski ? 'randevu_guncelle' : 'randevu_ekle', 'randevu', $sonuc['randevu_idler'][0] ?? null,
             $girdi['tarihler'][0].' '.$girdi['saat'], $eski ? 'Randevu güncellendi' : 'Yeni randevu oluşturuldu',
             ['randevu_idler' => $sonuc['randevu_idler']]);
 
