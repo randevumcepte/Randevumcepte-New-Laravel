@@ -130,8 +130,9 @@ export function gorusmeKokpiti(kap, ctx, k, opt = {}) {
   const temel = sozluk.filter((s) => s.agent_secebilir && !HEDEF.includes(s.kod));
   const hedef = sozluk.filter((s) => HEDEF.includes(s.kod));
   const personelSec = e.yonetici && ctx.acilis.personeller.length > 0;
-  const zaman = k.not_tarih && k.not_saat ? `<div class="cm-k-zaman"><i class="bi bi-calendar-check"></i> Randevu: ${esc(k.not_tarih.split('-').reverse().join('.'))} ${esc(k.not_saat)}</div>` : '';
-  const btn = (s) => `<button type="button" class="cm-sonuc cm-s-${esc(s.renk)}" data-sonuc="${s.kod}"><i class="bi ${IKON[s.kod] || 'bi-dot'}"></i>${esc(s.ad)}</button>`;
+  const zaman = k.not_tarih && k.not_saat ? `<span class="cm-k-zaman"><i class="bi bi-calendar-check"></i> Randevu: ${esc(k.not_tarih.split('-').reverse().join('.'))} ${esc(k.not_saat)}</span>` : '';
+  // Hedef (dönüşüm) sonuçları aynı ızgarada, kalın kenar + 🎯 ile ayrışır (eski ayrı satır dikey yer kaplıyordu).
+  const btn = (s, hedefMi = false) => `<button type="button" class="cm-sonuc cm-s-${esc(s.renk)}${hedefMi ? ' cm-hedef' : ''}" data-sonuc="${s.kod}" title="${hedefMi ? 'Sonuç (hedef)' : ''}"><i class="bi ${IKON[s.kod] || 'bi-dot'}"></i><span>${esc(s.ad)}</span></button>`;
   const takvimBolum = opt.takvim && !opt.takvim.islenmis ? `
     <div class="cm-kart cm-takvim-islem">
       <div class="cm-kart-bas"><i class="bi bi-calendar-event"></i> Arama Randevusu</div>
@@ -151,13 +152,12 @@ export function gorusmeKokpiti(kap, ctx, k, opt = {}) {
           <div class="cm-k-ad">${esc(k.ad || 'Müşteri')}</div>
           <div class="cm-k-alt"><i class="bi bi-telephone"></i> ${esc(k.telefonGizlenmis || 'gizli')} <span id="kRozet">${sonucRozeti(ctx, k.durum_kod)}</span>
             ${Number(k.randevu_olusturuldu) === 1 ? '<span class="cm-cip cm-cip-mavi"><i class="bi bi-calendar2-check"></i> Randevu Verildi</span>' : ''}</div>
-          ${opt.listeBaslik ? `<div class="cm-k-liste"><i class="bi bi-megaphone"></i> ${esc(opt.listeBaslik)}</div>` : ''}
-          ${zaman}
+          ${opt.listeBaslik || zaman ? `<div class="cm-k-meta">${opt.listeBaslik ? `<span><i class="bi bi-megaphone"></i> ${esc(opt.listeBaslik)}</span>` : ''}${zaman}</div>` : ''}
         </div>
         <div class="cm-k-aksiyon">
-          ${k.user_id ? `<a class="rc-btn rc-btn-ikincil" href="/v2/musteri/${k.user_id}?sube=${ctx.salonId}" target="_blank" rel="noopener"><i class="bi bi-person-vcard"></i> Müşteri Detayı</a>
-            <button type="button" class="rc-btn rc-btn-ikincil" id="kGecmisRandevu"><i class="bi bi-clock-history"></i> Randevu Geçmişi</button>
-            <button type="button" class="rc-btn rc-btn-mavi" id="kYeniRandevu"><i class="bi bi-calendar-plus"></i> Yeni Randevu</button>` : ''}
+          ${k.user_id ? `<a class="rc-btn rc-btn-ikincil" href="/v2/musteri/${k.user_id}?sube=${ctx.salonId}" target="_blank" rel="noopener" title="Müşteri Detayı"><i class="bi bi-person-vcard"></i><span class="cm-btn-metin">Müşteri Detayı</span></a>
+            <button type="button" class="rc-btn rc-btn-ikincil" id="kGecmisRandevu" title="Randevu Geçmişi"><i class="bi bi-clock-history"></i><span class="cm-btn-metin">Randevu Geçmişi</span></button>
+            <button type="button" class="rc-btn rc-btn-mavi" id="kYeniRandevu" title="Yeni Randevu"><i class="bi bi-calendar-plus"></i><span class="cm-btn-metin">Yeni Randevu</span></button>` : ''}
           <button type="button" class="cm-ara-btn" id="kAra" ${e.dahili_var ? '' : 'disabled title="Size dahili numara atanmamış"'}><i class="bi bi-telephone-fill"></i> ARA</button>
         </div>
       </div>
@@ -168,13 +168,11 @@ export function gorusmeKokpiti(kap, ctx, k, opt = {}) {
         ${takvimBolum}
         <div class="cm-kart">
           <div class="cm-kart-bas"><i class="bi bi-check2-circle"></i> Görüşme Sonucu</div>
-          <div class="cm-sonuc-izgara">${temel.map(btn).join('')}</div>
-          <div class="cm-etiket">🎯 Sonuç (hedef)</div>
-          <div class="cm-hedef-izgara">${hedef.map(btn).join('')}</div>
+          <div class="cm-sonuc-izgara">${temel.map((x) => btn(x)).join('')}${hedef.map((x) => btn(x, true)).join('')}</div>
           ${ctx.acilis.kategoriler.length ? `<div class="cm-iki">
             <select id="kKat">${secenekler(ctx.acilis.kategoriler, null, 'Kategori seçin (opsiyonel)')}</select>
             <select id="kAltKat" hidden></select></div>` : ''}
-          <textarea id="kNot" rows="3" placeholder="Görüşme notu (müşteri ne dedi, talep, vb.)…"></textarea>
+          <textarea id="kNot" rows="2" placeholder="Görüşme notu (müşteri ne dedi, talep, vb.)…"></textarea>
           <div class="cm-satis-alan" id="kSatisAlan" hidden>
             <label>Satış tutarı (₺) <input type="number" min="0" step="0.01" id="kSatisTutar" placeholder="örn: 1500"></label>
             ${y.satis ? '<button type="button" class="rc-btn rc-btn-yesil" id="kKasa"><i class="bi bi-cash-coin"></i> Satış Oluştur (Kasaya İşle)</button>' : ''}

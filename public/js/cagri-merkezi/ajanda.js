@@ -8,7 +8,7 @@ import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { gorusmeKokpiti, aramaBaslat, harf } from '/js/cagri-merkezi/ortak.js?v=2';
+import { gorusmeKokpiti, aramaBaslat, harf } from '/js/cagri-merkezi/ortak.js?v=3';
 
 const DURUM = { bekliyor: ['Bekliyor', 'mavi'], gecikti: ['Gecikti', 'kirmizi'], zamaninda: ['Zamanında arandı', 'yesil'], gec: ['Geç arandı', 'turuncu'] };
 

@@ -379,23 +379,24 @@ html, body { margin: 0; padding: 0; }
   .rc-tablo thead th, .rc-tablo tbody td { padding: 11px 12px; }
 }
 
-/* ───────────────── Header rozetleri: kalan SMS + WhatsApp + softphone (header-araclar.js) ───────────────── */
+/* ───────────────── Header rozetleri: kalan SMS + WhatsApp + softphone (header-araclar.js) ─────────────────
+   .rc-header-araclar altında KAPSAMLI: global .rc-rozet (v2-bilesen.css durum rozeti) ile çakışmasın. */
 .rc-header-araclar { display: flex; align-items: center; gap: 8px; }
 .rc-header-araclar:empty, .rc-header-araclar > div:empty { display: none; }
-.rc-rozet {
+.rc-header-araclar .rc-rozet {
   display: inline-flex; align-items: center; gap: 7px;
   height: 40px; padding: 0 12px; border-radius: 11px; border: 0;
   font: inherit; font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap;
   text-decoration: none; cursor: default; transition: filter .15s;
 }
-a.rc-rozet, button.rc-rozet { cursor: pointer; }
-a.rc-rozet:hover, button.rc-rozet:hover { filter: brightness(1.07); }
-.rc-rozet i { font-size: 16px; }
-.rc-rozet-sms { background: #f0a020; }
-.rc-rozet-wa.bagli { background: #25D366; }
-.rc-rozet-wa.kopuk { background: #DC2626; }
-.rc-rozet-kontor { background: rgba(255,255,255,.3); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 800; }
-.rc-rozet-kontor.kritik { background: #DC2626; box-shadow: 0 0 0 1px #fff; }
+.rc-header-araclar a.rc-rozet, .rc-header-araclar button.rc-rozet { cursor: pointer; }
+.rc-header-araclar a.rc-rozet:hover, .rc-header-araclar button.rc-rozet:hover { filter: brightness(1.07); }
+.rc-header-araclar .rc-rozet i { font-size: 16px; }
+.rc-header-araclar .rc-rozet-sms { background: #f0a020; }
+.rc-header-araclar .rc-rozet-wa.bagli { background: #25D366; }
+.rc-header-araclar .rc-rozet-wa.kopuk { background: #DC2626; }
+.rc-header-araclar .rc-rozet-kontor { background: rgba(255,255,255,.3); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 800; }
+.rc-header-araclar .rc-rozet-kontor.kritik { background: #DC2626; box-shadow: 0 0 0 1px #fff; }
 
 /* Softphone */
 .rc-sp { position: relative; }
@@ -444,6 +445,6 @@ a.rc-rozet:hover, button.rc-rozet:hover { filter: brightness(1.07); }
 }
 @media (max-width: 860px) {
   .rc-rozet-sms, .rc-rozet-wa { display: none; }
-  .rc-rozet { padding: 0 10px; }
+  .rc-header-araclar .rc-rozet { padding: 0 10px; }
   .rc-sp-panel { position: fixed; top: calc(var(--rc-header-y) + 6px); right: 10px; left: 10px; width: auto; }
 }

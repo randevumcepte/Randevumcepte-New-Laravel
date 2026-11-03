@@ -7,7 +7,7 @@
     {{-- Kokpit içindeki ortak formlar: randevu formu (takvim-v2.css .t-* / .rf-*), ön görüşme formu (ongorusmeler-v2.css .og-*) --}}
     <link rel="stylesheet" href="/css/takvim-v2.css?v=12">
     <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=1">
-    <link rel="stylesheet" href="/css/cagri-merkezi-v2.css?v=2">
+    <link rel="stylesheet" href="/css/cagri-merkezi-v2.css?v=3">
 @endpush
 
 @section('icerik')
@@ -16,5 +16,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/cagri-merkezi-v2.js?v=2"></script>
+    <script type="module" src="/js/cagri-merkezi-v2.js?v=3"></script>
 @endpush

@@ -209,3 +209,72 @@
 .cm-lo-satir:hover { background: #faf9fe; }
 .cm-lo-satir small { color: #6b7280; }
 .cm-lo-sira { width: 38px; color: #9a95ab; font-size: 11.5px; text-align: right; }
+
+/* ═════════ Yoğun yerleşim (laptop ekranında kaydırmasız çalışma) ═════════
+   Sayfa başlığı + sekmeler + hero ince; çalışma ızgarası kalan yüksekliği doldurur,
+   kuyruk ve kokpit kendi içinde kayar. */
+.cm-kabuk .rc-sayfa-ust { margin-bottom: 8px; }
+.cm-kabuk .rc-sayfa-ikon { width: 36px; height: 36px; font-size: 18px; border-radius: 11px; }
+.cm-kabuk .rc-sayfa-baslik h1 { font-size: 19px; }
+.cm-kabuk .rc-sayfa-alt { display: none; }
+.cm-kabuk .rc-sekmeler { margin-bottom: 10px; }
+.cm-kabuk .rc-sekme { padding-top: 7px; padding-bottom: 7px; }
+.cm-hatirlatma { margin-bottom: 8px; padding: 7px 12px; }
+
+.cm-hero { padding: 7px 12px; gap: 8px; margin-bottom: 10px; border-radius: 12px; }
+.cm-hstat { flex-direction: row; align-items: baseline; gap: 6px; padding: 4px 11px; min-width: 0; border-radius: 9px; }
+.cm-hstat b { font-size: 16px; }
+.cm-hstat span { font-size: 11.5px; }
+.cm-hero-not { font-size: 11.5px; max-width: 520px; }
+
+@media (min-width: 992px) {
+  .cm-izgara { height: calc(100vh - var(--rc-header-y, 66px) - 205px); min-height: 440px; gap: 12px; grid-template-columns: 340px 1fr; }
+}
+.cm-panel-bas { padding: 9px 14px; }
+.cm-listeler { padding: 8px 12px 4px; gap: 6px; }
+.cm-liste { padding: 5px 10px; font-size: 12px; }
+.cm-ara { padding: 6px 12px; }
+.cm-ara .bi { left: 24px; }
+.cm-ara input { padding: 6px 10px 6px 30px; }
+.cm-sol .cm-ciplar { padding: 0 12px 6px; gap: 5px; }
+.cm-cip-btn { padding: 3px 9px; font-size: 11.5px; }
+.cm-musteri { padding: 6px 8px; gap: 9px; }
+.cm-musteri .cm-avatar { width: 30px; height: 30px; flex-basis: 30px; font-size: 13px; }
+.cm-mus-orta b { font-size: 13px; }
+.cm-musteri .rc-rozet { padding: 2px 9px; font-size: 11px; }
+
+.cm-k-bas { padding: 10px 14px; gap: 10px; flex-wrap: nowrap; }
+.cm-avatar-b { width: 40px; height: 40px; flex-basis: 40px; font-size: 17px; }
+.cm-k-kim { flex: 1 1 auto; }
+.cm-k-ad { font-size: 16.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm-k-alt { margin-top: 2px; font-size: 12.5px; }
+.cm-k-alt .rc-rozet { padding: 2px 9px; font-size: 11px; }
+.cm-k-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #6b7280; margin-top: 3px; }
+.cm-k-zaman { margin: 0; }
+.cm-k-aksiyon { flex: 0 0 auto; gap: 6px; flex-wrap: nowrap; }
+.cm-k-aksiyon .rc-btn { padding: 7px 11px; font-size: 12.5px; border-radius: 9px; box-shadow: none; }
+.cm-btn-metin { margin-left: 2px; }
+.cm-ara-btn { padding: 8px 16px; font-size: 14px; border-radius: 10px; }
+@media (max-width: 1500px) { .cm-k-aksiyon .rc-btn .cm-btn-metin { display: none; } .cm-k-aksiyon .rc-btn { padding: 8px 10px; } }
+@media (max-width: 760px) { .cm-k-bas { flex-wrap: wrap; } .cm-k-aksiyon { width: 100%; justify-content: flex-end; } }
+
+.cm-k-govde { padding: 10px 14px; }
+.cm-kart { padding: 10px 12px; margin-bottom: 10px; }
+.cm-kart-bas { margin-bottom: 7px; font-size: 11.5px; }
+.cm-sonuc-izgara { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 1280px) { .cm-sonuc-izgara { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.cm-sonuc { flex-direction: row; justify-content: center; gap: 6px; padding: 7px 6px; font-size: 12px; border-radius: 10px; line-height: 1.2; text-align: left; }
+.cm-sonuc .bi { font-size: 14px; flex: 0 0 auto; }
+.cm-sonuc.cm-hedef { border-width: 2px; }
+.cm-iki { margin-top: 7px; }
+.cm-kart textarea { margin-top: 7px; min-height: 48px; }
+.cm-kart select, .cm-kart textarea, .cm-kart input[type=text], .cm-kart input[type=time], .cm-kart input[type=number] { padding: 7px 10px; font-size: 13px; }
+.cm-satis-alan { margin-top: 7px; padding: 8px 10px; }
+.cm-sonra { margin-top: 7px; padding: 7px 12px; font-size: 12.5px; border-width: 1.5px; }
+.cm-sonra input { width: 16px; height: 16px; }
+.cm-sonra-alan { margin-top: 6px; padding: 8px; }
+.cm-kaydet { margin-top: 8px; padding: 9px; font-size: 13.5px; }
+.cm-anket, .cm-whatsapp { margin-top: 6px; padding: 8px; font-size: 12.5px; }
+.cm-k-govde .cm-iki .cm-anket { margin-top: 6px; }
+.cm-gecmis { padding: 8px 10px; margin-bottom: 7px; }
+.cm-ses { height: 30px; margin-top: 6px; }
