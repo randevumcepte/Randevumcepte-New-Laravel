@@ -16,5 +16,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/cagri-merkezi-v2.js?v=3"></script>
+    <script type="module" src="/js/cagri-merkezi-v2.js?v=4"></script>
 @endpush

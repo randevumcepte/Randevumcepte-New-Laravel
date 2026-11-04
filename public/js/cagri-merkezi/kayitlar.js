@@ -9,7 +9,7 @@ import { esc, tarihStr } from '/js/lib/v2-ortak.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { sure, sesOynatici, aramaBaslat } from '/js/cagri-merkezi/ortak.js?v=3';
+import { sure, sesOynatici, aramaBaslat } from '/js/cagri-merkezi/ortak.js?v=4';
 
 const YONLER = [{ kod: '', ad: 'Tümü', ikon: 'bi-telephone' }, { kod: 'gelen', ad: 'Gelen', ikon: 'bi-telephone-inbound' }, { kod: 'giden', ad: 'Giden', ikon: 'bi-telephone-outbound' }];
 

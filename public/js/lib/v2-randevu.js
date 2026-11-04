@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=3';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=4';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -399,7 +399,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
       };
     };
 
-    const gun = mevcut?.randevu_tarihi || (start ? tarihStr(start) : tarihStr(gun?.() || new Date()));
+    const formGun = mevcut?.randevu_tarihi || (start ? tarihStr(start) : tarihStr(gun?.() || new Date()));
     const saat = mevcut?.randevu_saati || (start ? saatStr(start) : '');
     const ov = document.createElement('div');
     ov.className = 'rc-onay-overlay';
@@ -407,7 +407,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
       <div class="rf-kart" role="dialog" aria-modal="true">
         <div class="rf-ust">
           <div class="rf-ust-sol"><span class="rf-ust-ikon"><i class="bi bi-calendar-plus"></i></span>
-            <div><h3>${mevcut ? 'Randevuyu Düzenle' : 'Yeni Randevu'}</h3><small>${esc(new Date(gun + 'T00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }))}${saat ? ' · ' + esc(saat) : ''}</small></div></div>
+            <div><h3>${mevcut ? 'Randevuyu Düzenle' : 'Yeni Randevu'}</h3><small>${esc(new Date(formGun + 'T00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }))}${saat ? ' · ' + esc(saat) : ''}</small></div></div>
           <button class="rf-kapat" title="Kapat"><i class="bi bi-x-lg"></i></button>
         </div>
         ${mevcut ? '' : `<div class="rf-sekmeler">
@@ -416,7 +416,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         <div class="rf-govde" data-pane="randevu">
           <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-person"></i> ${esc(fv.musteri_etiket)}</label><div id="rfMusteri"></div></div>
           <div class="rf-iki">
-            <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="rfTarih" value="${esc(gun)}" readonly></div>
+            <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="rfTarih" value="${esc(formGun)}" readonly></div>
             <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-clock"></i> Saat</label><select class="rf-girdi" id="rfSaat">${saatSecenekleri(saat, 'Saat seçin')}</select></div>
           </div>
           <div class="rf-bolum"><span>Hizmetler</span><button type="button" class="rf-paket-btn" id="rfPaketBtn" hidden><i class="bi bi-gift"></i> Paketler <b></b></button></div>
@@ -827,17 +827,17 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
 
     // ── Saat kapama sekmesi ──
     function kapamaPaneli() {
-      const kaynaklar = kaynaklar().filter((k) => TUR_KOLON[k.tur]);
-      if (!kaynaklar.length) {
+      const kapamaKaynaklari = kaynaklar().filter((k) => TUR_KOLON[k.tur]);
+      if (!kapamaKaynaklari.length) {
         return '<div class="rf-govde" data-pane="kapama" hidden><div class="rf-bilgi"><i class="bi bi-info-circle"></i> Hizmet kategorisi görünümünde saat kapatılamaz; personel, oda veya cihaz görünümüne geçin.</div></div>';
       }
       const kBas = start ? saatStr(start) : '';
       const kBit = end ? saatStr(end) : (kBas ? dkEkle(kBas, 60) : '');
       return `<div class="rf-govde" data-pane="kapama" hidden>
         <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-person-badge"></i> Kaynak</label>
-          <select class="rf-girdi" id="kpKaynak">${kaynaklar.map((k) => `<option value="${k.id}" ${String(k.id) === String(kaynakId ?? '') ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>
+          <select class="rf-girdi" id="kpKaynak">${kapamaKaynaklari.map((k) => `<option value="${k.id}" ${String(k.id) === String(kaynakId ?? '') ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></div>
         <div class="rf-uc">
-          <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="kpTarih" value="${esc(gun)}" readonly></div>
+          <div class="rf-alan"><label class="rf-etiket"><i class="bi bi-calendar3"></i> Tarih</label><input class="rf-girdi" id="kpTarih" value="${esc(formGun)}" readonly></div>
           <div class="rf-alan"><label class="rf-etiket">Başlangıç</label><select class="rf-girdi" id="kpBas">${saatSecenekleri(kBas, 'Seçin')}</select></div>
           <div class="rf-alan"><label class="rf-etiket">Bitiş</label><select class="rf-girdi" id="kpBit">${saatSecenekleri(kBit, 'Seçin')}</select></div>
         </div>
