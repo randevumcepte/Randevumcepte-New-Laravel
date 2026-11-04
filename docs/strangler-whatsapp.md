@@ -85,10 +85,16 @@ Yan etki: kontör talebi outbox `sistem_bildirim` (payload `mesaj`) → eski `v2
 - **Tek sayfa yerine sekmeler:** içerik aynı; Kontör ayrı sekmede, düşük bakiye uyarısı aynı sıklıkla (`uyari.gunluk_limit`).
 - **Alıcılar sayfalı;** eski 500 tavanı yok. Ad araması `users` adında; yalnız telefon eşleşmesiyle doldurulan adlar aranamaz.
 
+## Paylaşılan oturumda loglar
+
+Karar (4 Kas 2026): her işletme yalnız kendi mesajlarını görür, ortak görünüm yok. Monolit `WhatsAppService` logu gönderen salonun
+`salon_id`'siyle yazar; gönderim, kontör ve durum yine oturum sahibi salondan. Günlük limit oturumu paylaşan salonların toplamından
+sayılır (`canSendToday`). WA başarısızsa düşen SMS logdaki salondan, yani alt salonun SMS hesabından gider. Eski kayıtlar
+`2026_11_04_140000_whatsapp_loglari_alt_salona_tasi` ile taşındı; kaynağı ayırt edilemeyen randevusuz kayıtlar üst salonda kalır.
+
 ## Açık konular
 
-- Paylaşılan oturumda loglar üst salonun `salon_id`'siyle yazılır (`WhatsAppService::logPending`); alt salonun Mesajlarım/İstatistik'i bu yüzden boş kalır. Eski ekranla aynı bırakıldı; üst salonun müşteri mesajlarını açmak kararı ürün sahibinin.
-- Mesajlarım, şifre/OTP mesajlarının metnini de gösterir (eskiyle aynı).
+- Mesajlarım, şifre/OTP mesajlarının metnini de gösterir (eskiyle aynı; ürün sahibi kararı: şimdilik kalıyor).
 - Webhook (`/webhook/whatsapp`), mesaj gönderimi ve kontör düşümü eski monolitte kalır.
 
 ## Doğrulama

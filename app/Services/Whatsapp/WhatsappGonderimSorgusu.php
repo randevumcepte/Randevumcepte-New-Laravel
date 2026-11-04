@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\DB;
  * yoksa telefonda aranmaz (rakam rakam deneyip numarayı bulma kapalı). Bu yüzden alıcı geçmişi
  * telefonla değil, alıcının son log id'siyle istenir: maskeli numara istemciye yeter.
  *
- * Paylaşılan oturumda loglar üst salonun id'siyle yazılır; alt salon eski ekrandaki gibi yalnız
- * kendi salon_id'sini görür (üst salonun müşteri mesajları gösterilmez).
+ * Paylaşılan oturumda da log, mesajı gönderen salonun id'siyle yazılır (eski WhatsAppService):
+ * her işletme yalnız kendi salon_id'sini görür; üst ve alt salon mesajları birbirine karışmaz.
  */
 class WhatsappGonderimSorgusu
 {
