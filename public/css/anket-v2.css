@@ -1,0 +1,90 @@
+/* v2 Memnuniyet Anketi (public/js/memnuniyet-anketi-v2.js + js/anket/*) — .an-* önekli, yalnız ekrana özgü.
+   Ortak başlık / buton / sekme / modal / alan / rozet: v2-bilesen.css + panel.css (.rc-*); dönem: rapor-v2.css. */
+
+.an-kabuk { padding: 6px 2px 40px; }
+
+.an-kart { background: #fff; border: 1px solid #ece6f3; border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(92, 0, 142, .04); }
+.an-tablo-kart { padding: 0; overflow: hidden; }
+.an-tablo-bas { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid #ece6f3; }
+.an-tablo-bas h3 { margin: 0; font-size: 14px; font-weight: 700; color: #3a1a52; }
+.an-tablo-bas h3 i { color: #5C008E; }
+.an-tablo-kart .rc-dt { padding: 12px 16px; }
+.an-filtre-sec select { padding: 7px 10px; font-size: 13px; }
+.an-filtre { margin-bottom: 14px; }
+.an-arac { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.an-orta { text-align: center; }
+.an-sag { text-align: right; }
+.an-soluk { display: block; font-size: 11.5px; color: #8a8295; font-weight: 400; }
+.an-bos { color: #cbd5e1; }
+.an-yorum { font-size: 12.5px; color: #3a1a52; max-width: 280px; white-space: normal; word-break: break-word; }
+.an-yildiz { color: #f59e0b; font-size: 14px; letter-spacing: 1px; white-space: nowrap; }
+.an-yildiz.an-buyuk { font-size: 18px; }
+.an-yesil { color: #10b981; }
+.an-kirmizi { color: #ef4444; }
+.an-mavi { color: #1a73e8; }
+.an-altin { color: #b7892b; }
+
+/* NPS rozet + dağılım: aynı sınıf rengi */
+.an-nps { display: inline-block; padding: 3px 10px; border-radius: 11px; font-size: 12px; font-weight: 700; color: #fff; }
+.an-nps-detractor { background: #ef4444; }
+.an-nps-pasif { background: #f59e0b; }
+.an-nps-promoter { background: #10b981; }
+.an-kucuk-baslik { font-size: 12px; color: #5C008E; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.an-nps-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; margin: 12px 0 8px; }
+.an-nps-bar > div { color: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 30px; min-width: 0; overflow: hidden; }
+.an-lejant { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px; color: #5b6770; }
+.an-lejant span { display: inline-flex; align-items: center; gap: 5px; }
+.an-lejant i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* Reputation Booster */
+.an-rep { background: linear-gradient(135deg, #fff 0%, #faf5ff 100%); }
+.an-rep-ust { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.an-rep-ikon { width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center; font-size: 20px; color: #fff; background: linear-gradient(135deg, #4285f4, #1a73e8); flex: 0 0 auto; }
+.an-rep-metin { flex: 1; min-width: 220px; }
+.an-rep-metin h3 { margin: 0; font-size: 15px; font-weight: 700; color: #3a1a52; }
+.an-rep-metin p { margin: 4px 0 0; font-size: 12.5px; color: #5b6770; line-height: 1.55; }
+.an-rep-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #ece6f3; }
+.an-mini { display: block; width: 100%; text-align: left; background: #fff; border: 1px solid #ece6f3; border-radius: 8px; padding: 10px 14px; font: inherit; }
+.an-mini span { display: flex; justify-content: space-between; gap: 6px; font-size: 10.5px; color: #8a8295; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.an-mini b { display: block; font-size: 16px; font-weight: 800; margin-top: 3px; }
+.an-mini-tik { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.an-mini-tik:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(92, 0, 142, .12); }
+
+/* Bilgi kutuları */
+.an-bilgi { border-left: 4px solid; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; line-height: 1.6; }
+.an-bilgi-mavi { background: #eef4ff; border-color: #1a73e8; color: #1e3a8a; }
+.an-bilgi-altin { background: #fffaf0; border-color: #e0aa3e; color: #8a6d1f; }
+.an-bilgi-yesil { background: #f0fdf4; border-color: #10b981; color: #047857; }
+.an-bilgi-kirmizi { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
+.an-bilgi-mor { background: #faf5ff; border-color: #5C008E; color: #3a1a52; }
+
+/* Form */
+.an-baslik { margin: 18px 0 8px; font-size: 13.5px; font-weight: 700; color: #3a1a52; }
+.an-baslik.an-yesil { color: #10b981; }
+.an-baslik.an-kirmizi { color: #ef4444; }
+.an-baslik.an-altin { color: #b7892b; }
+.an-odul [hidden], .an-arac [hidden] { display: none; }
+.an-secim { display: inline-flex !important; align-items: center; gap: 7px; font-size: 13px !important; font-weight: 500 !important; color: #3a1a52 !important; text-transform: none !important; letter-spacing: 0 !important; cursor: pointer; }
+.an-secim input { accent-color: #5C008E; }
+.an-soru { background: #fff; border: 1px solid #ece6f3; border-left-width: 4px; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.an-soru-ust { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.an-tip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; margin-right: auto; }
+.an-ekle-grup { background: #fbfafd; border: 1px solid #ece6f3; border-radius: 8px; padding: 10px; margin-top: 8px; }
+.an-ekle-grup .rc-islem { margin: 2px; }
+
+/* Cevap detayı */
+.an-cevap { background: #fbfafd; border: 1px solid #ece6f3; border-radius: 8px; padding: 11px 14px; margin-bottom: 9px; font-size: 13.5px; color: #2d1b3f; }
+.an-cevap-soru { font-size: 12.5px; color: #5C008E; font-weight: 600; margin-bottom: 4px; }
+
+@media (prefers-color-scheme: dark) {
+  .an-kart, .an-rep, .an-mini, .an-soru { background: #22222e; border-color: #34344c; }
+  .an-ekle-grup, .an-cevap { background: #1b1b26; border-color: #34344c; color: #ededf5; }
+  .an-tablo-bas { border-color: #34344c; }
+  .an-tablo-bas h3, .an-rep-metin h3, .an-yorum, .an-baslik, .an-secim { color: #ededf5 !important; }
+  .an-baslik.an-yesil { color: #34d399 !important; }
+  .an-baslik.an-kirmizi { color: #f87171 !important; }
+  .an-baslik.an-altin { color: #e0aa3e !important; }
+  .an-cevap-soru, .an-kucuk-baslik { color: #c9a7f0; }
+  .an-rep-metin p, .an-lejant { color: #b8b8c8; }
+}

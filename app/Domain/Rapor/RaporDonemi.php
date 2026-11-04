@@ -35,9 +35,9 @@ final class RaporDonemi
      * Kayan donemler (bugun dahil geriye N gun) — eski Ozet kartlarinin "Son 7 / 30 / 90 gün"
      * secenekleri. Rapor ekranlarinin varsayilan listesinde YOK (secenekListesi alt-kume alir).
      */
-    public const KAYAN = ['son7' => 7, 'son30' => 30, 'son90' => 90];
+    public const KAYAN = ['son7' => 7, 'son30' => 30, 'son90' => 90, 'son365' => 365];
 
-    private const KAYAN_ETIKET = ['son7' => 'Son 7 Gün', 'son30' => 'Son 30 Gün', 'son90' => 'Son 90 Gün'];
+    private const KAYAN_ETIKET = ['son7' => 'Son 7 Gün', 'son30' => 'Son 30 Gün', 'son90' => 'Son 90 Gün', 'son365' => 'Son 1 Yıl'];
 
     private function __construct(
         public readonly string $anahtar,

@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\DB;
  *         sms (payload: mesajlar[{to,message}], dogrulama; randevu_id null — kasa bildirimleri / onay kodlari),
  *         ongorusme_kayit (randevu_id = on gorusme randevusu; payload: on_gorusme_id, guncelleme —
  *           musteri SMS + personel SMS/bildirim/push, ayar_id=12).
- *         anket_gonder (payload: user_id, personel_id, kanal; randevu_id null — Çağrı Merkezi memnuniyet anketi),
+ *         anket_link (payload: gonderim_id; randevu_id null — v2'de oluşturulan anket gönderiminin linkini WA-first/SMS yollar),
+ *         anket_gonder (ESKİ, artık yazılmaz; kuyruktaki eski satırlar için monolitte duruyor),
  *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi manuel WhatsApp),
  *         cark_duyuru (payload: baslik, mesaj; randevu_id null — Çarkıfelek "müşterilere duyur" push'u),
  *         kampanya_olustur (payload: kampanya_id; randevu_id null — Reklam Yönetimi yeni kampanya → personel push'u),

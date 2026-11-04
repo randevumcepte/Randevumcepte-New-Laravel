@@ -52,6 +52,16 @@ final class HareketKatalogu
         'cark_puan_odulu_guncelle'   => ['etiket' => 'Puan ödülü güncellendi', 'kategori' => HareketKategorisi::GUNCELLEME],
         'cark_puan_odulu_sil'        => ['etiket' => 'Puan ödülü silindi', 'kategori' => HareketKategorisi::SILME],
         'sadakat_kazanim_kurali'     => ['etiket' => 'Puan kazanma kuralı güncellendi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        // Memnuniyet Anketi (v2)
+        'anket_sablon_ekle'             => ['etiket' => 'Anket şablonu oluşturuldu', 'kategori' => HareketKategorisi::EKLEME],
+        'anket_sablon_guncelle'         => ['etiket' => 'Anket şablonu güncellendi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'anket_sablon_pasifle'          => ['etiket' => 'Anket şablonu pasifleştirildi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'anket_sablon_sil'              => ['etiket' => 'Anket şablonu silindi'],
+        'anket_manuel_gonder'           => ['etiket' => 'Memnuniyet anketi gönderildi', 'kategori' => HareketKategorisi::GONDERIM],
+        'anket_hizli_gonder'            => ['etiket' => 'Memnuniyet anketi gönderildi', 'kategori' => HareketKategorisi::GONDERIM],
+        'anket_ayar'                    => ['etiket' => 'Anket ayarları kaydedildi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'anket_premium_ac'              => ['etiket' => 'Reputation Booster açıldı', 'kategori' => HareketKategorisi::GUNCELLEME],
+
         // Çağrı Merkezi (v2) — tüm yazmalar AktiviteLog::yaz ile; yenisi gerekirse buraya tek satır.
         'cagri_gorusme_sonucu'          => ['etiket' => 'Çağrı: görüşme sonucu', 'kategori' => HareketKategorisi::GUNCELLEME],
         'cagri_arama_baslat'            => ['etiket' => 'Çağrı başlatıldı', 'kategori' => HareketKategorisi::GONDERIM],

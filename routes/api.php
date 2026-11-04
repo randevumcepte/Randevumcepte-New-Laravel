@@ -193,6 +193,9 @@ Route::prefix('v2')->group(function () {
         // BILDIRIM REKLAMLARI (yonetim: liste/form/kaydet/durum/sil/gorsel + push gonder outbox) — routes/v2/bildirim-reklam.php
         require __DIR__.'/v2/bildirim-reklam.php';
 
+        // MEMNUNIYET ANKETI (ozet, gonderimler, sablonlar, gonderim outbox, Reputation ayarlari) — routes/v2/anket.php
+        require __DIR__.'/v2/anket.php';
+
         // REKLAM YONETIMI (kampanya liste/sihirbaz/rapor + katilimci islemleri + senaryo sihirbazi) — routes/v2/kampanya.php
         require __DIR__.'/v2/kampanya.php';
 
