@@ -3,59 +3,62 @@
  * bağlantı + çağrı mantığı; arayüz softphone-panel.js'te.
  *
  * Olaylar (EventTarget):
- *   'durum' → {durum: 'baglaniyor'|'bagli'|'yeniden'|'kopuk', deneme?, hata?}
+ *   'durum' → {durum: 'baglaniyor'|'bagli'|'kayitsiz'|'yeniden'|'kopuk', deneme?}
+ *             ('bagli' = santrala KAYITLI, yalnız WebSocket açık olması yetmez)
  *   'cagri' → {asama: 'cikiyor'|'geliyor'|'baglandi'|'bitti', numara, cagriId}
  *   'beklet' → {beklemede: bool}
  *
- * Kopmada (Asterisk reload / ağ) artan gecikmeyle (2 sn … 30 sn) kendiliğinden yeniden bağlanır.
+ * Yeniden bağlanmanın TEK sahibi bu sınıf: kopmada artan gecikmeyle (2 sn … 30 sn), tek
+ * zamanlayıcıyla dener (sip.js'in kendi denemesi kapalı, ikisi birlikte çalışıp yarışıyordu).
+ *
+ * durdur() sonrası baslat() çağrılabilir ve her baslat() TEMİZ bir SimpleUser kurar; böylece
+ * sayfa tarayıcı önbelleğinden (geri/ileri, bfcache) dönünce eski durumdan bağımsız bağlanır.
+ * Eski örneğin geç gelen olayları nesil kontrolüyle yok sayılır.
  */
 export class SipHat extends EventTarget {
   /** @param {{dahili:string, sifre:string, sip_sunucu:string, wss_url:string}} ayar  @param {HTMLAudioElement} uzakSes */
   constructor(ayar, uzakSes) {
     super();
     this.ayar = ayar;
+    this.uzakSes = uzakSes;
     this.cagriVar = false;
     this.beklemede = false;
-    this._kapatildi = false;
+    this._kapatildi = true;
     this._deneme = 0;
+    this._zaman = null;
+    this._nesil = 0;
     this._yon = null; // 'giden' | 'gelen'
-    this._kullanici = new window.SIP.Web.SimpleUser(ayar.wss_url, {
-      aor: `sip:${ayar.dahili}@${ayar.sip_sunucu}`,
-      media: { remote: { audio: uzakSes } },
-      delegate: {
-        onCallCreated: () => this._cagriOlustu(),
-        onCallReceived: () => this._cagriGeldi(),
-        onCallAnswered: () => this._yay('cagri', { asama: 'baglandi', ...this._karsi() }),
-        onCallHangup: () => this._cagriBitti(),
-        onCallHold: (h) => this._bekletmeDegisti(h),
-        onServerConnect: () => this._sunucuBaglandi(),
-        onServerDisconnect: (hata) => this._sunucuKoptu(hata),
-      },
-      userAgentOptions: {
-        logLevel: 'warn',
-        displayName: ayar.dahili,
-        authorizationUsername: ayar.dahili,
-        authorizationPassword: ayar.sifre,
-        // server transportOptions içinde OLMALI: SimpleUser ilk argümanı yalnız
-        // transportOptions yoksa enjekte eder (eski "Invalid WebSocket Server URL" hatası).
-        transportOptions: { server: ayar.wss_url, connectionTimeout: 3 },
-      },
-    });
+    this._kullanici = null;
   }
 
   baslat() {
+    this._zamanlayiciTemizle();
+    this._kapatildi = false;
+    this._deneme = 0;
+    this._kullaniciKur();
     this._yay('durum', { durum: 'baglaniyor' });
     this._baglan();
   }
 
   durdur() {
+    if (this.cagriVar) this._cagriBitti(); // arayüz + zil temizlensin (sayfa geri dönebilir)
     this._kapatildi = true;
-    try { this._kullanici.disconnect(); } catch (_) { /* sayfa kapanıyor */ }
+    this._zamanlayiciTemizle();
+    this._nesil += 1;
+    try { this._kullanici?.disconnect(); } catch (_) { /* sayfa kapanıyor */ }
+  }
+
+  /** İnternet döndü / sekme öne geldi: bekleme süresini atlayıp hemen dene. */
+  hemenDene() {
+    if (this._kapatildi || this.bagliMi()) return;
+    this._zamanlayiciTemizle();
+    this._deneme = 0;
+    this._baglan();
   }
 
   /** Transport gerçekten bağlı mı (bayrağa değil SIP durumuna bakar). */
   bagliMi() {
-    try { return !!this._kullanici.isConnected(); } catch (_) { return false; }
+    try { return !!this._kullanici?.isConnected(); } catch (_) { return false; }
   }
 
   /** Rakam dışı karakterler atılır; bağlı değilse / çağrı sürüyorsa false. */
@@ -85,28 +88,68 @@ export class SipHat extends EventTarget {
   }
 
   // ───────────── iç ─────────────
+  _kullaniciKur() {
+    const nesil = ++this._nesil;
+    const canli = (f) => (...a) => { if (nesil === this._nesil) f(...a); };
+    const ayar = this.ayar;
+    this._kullanici = new window.SIP.Web.SimpleUser(ayar.wss_url, {
+      aor: `sip:${ayar.dahili}@${ayar.sip_sunucu}`,
+      media: { remote: { audio: this.uzakSes } },
+      reconnectionAttempts: 0,
+      delegate: {
+        onCallCreated: canli(() => this._cagriOlustu()),
+        onCallReceived: canli(() => this._cagriGeldi()),
+        onCallAnswered: canli(() => this._yay('cagri', { asama: 'baglandi', ...this._karsi() })),
+        onCallHangup: canli(() => this._cagriBitti()),
+        onCallHold: canli((h) => this._bekletmeDegisti(h)),
+        onServerConnect: canli(() => this._sunucuBaglandi()),
+        onServerDisconnect: canli(() => this._sunucuKoptu()),
+        onRegistered: canli(() => this._yay('durum', { durum: 'bagli' })),
+        // Reddedilen kaydı sip.js birkaç saniye içinde kendisi yeniden dener.
+        onUnregistered: canli(() => { if (this.bagliMi()) this._yay('durum', { durum: 'kayitsiz' }); }),
+      },
+      userAgentOptions: {
+        logLevel: 'warn',
+        displayName: ayar.dahili,
+        authorizationUsername: ayar.dahili,
+        authorizationPassword: ayar.sifre,
+        // server transportOptions içinde OLMALI: SimpleUser ilk argümanı yalnız
+        // transportOptions yoksa enjekte eder (eski "Invalid WebSocket Server URL" hatası).
+        transportOptions: { server: ayar.wss_url, connectionTimeout: 5 },
+      },
+    });
+  }
+
   _baglan() {
+    const nesil = this._nesil;
     this._kullanici.connect().catch((e) => {
+      if (nesil !== this._nesil) return;
       console.warn('[softphone] bağlanamadı', e);
       this._yenidenBaglan();
     });
   }
 
   _yenidenBaglan() {
-    if (this._kapatildi) return;
+    if (this._kapatildi || this._zaman !== null) return; // bekleyen deneme varsa yenisi kurulmaz
     this._deneme += 1;
     this._yay('durum', { durum: 'yeniden', deneme: this._deneme });
-    setTimeout(() => { if (!this._kapatildi) this._baglan(); }, Math.min(this._deneme * 2000, 30000));
+    this._zaman = setTimeout(() => { this._zaman = null; this._baglan(); }, Math.min(this._deneme * 2000, 30000));
+  }
+
+  _zamanlayiciTemizle() {
+    if (this._zaman !== null) clearTimeout(this._zaman);
+    this._zaman = null;
   }
 
   _sunucuBaglandi() {
     this._deneme = 0;
+    this._zamanlayiciTemizle();
     this._kullanici.register().catch((e) => console.warn('[softphone] kayıt olunamadı', e));
-    this._yay('durum', { durum: 'bagli' });
   }
 
-  _sunucuKoptu(hata) {
-    this._yay('durum', { durum: 'kopuk', hata: hata ? String(hata) : '' });
+  _sunucuKoptu() {
+    if (this.cagriVar) this._cagriBitti();
+    this._yay('durum', { durum: 'kopuk' });
     this._yenidenBaglan();
   }
 
@@ -123,6 +166,7 @@ export class SipHat extends EventTarget {
   }
 
   _cagriBitti() {
+    if (!this.cagriVar) return; // kopma + hangup aynı çağrı için iki kez bildirmesin
     const bilgi = this._karsi();
     this.cagriVar = false;
     this.beklemede = false;

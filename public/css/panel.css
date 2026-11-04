@@ -417,7 +417,7 @@ html, body { margin: 0; padding: 0; }
 .rc-rozet-sp { background: var(--rc-yesil); }
 .rc-sp-nokta { width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: .55; }
 .rc-sp[data-durum="bagli"] .rc-sp-nokta { opacity: 1; }
-.rc-sp[data-durum="kopuk"] .rc-rozet-sp, .rc-sp[data-durum="yeniden"] .rc-rozet-sp { background: #8a90ad; }
+.rc-sp[data-durum="kopuk"] .rc-rozet-sp, .rc-sp[data-durum="yeniden"] .rc-rozet-sp, .rc-sp[data-durum="kayitsiz"] .rc-rozet-sp { background: #8a90ad; }
 .rc-sp[data-durum="geliyor"] .rc-rozet-sp { animation: rc-sp-cal 1s ease-in-out infinite; }
 @keyframes rc-sp-cal { 50% { filter: brightness(1.25); transform: scale(1.06); } }
 .rc-sp-panel {

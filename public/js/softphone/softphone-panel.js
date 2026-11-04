@@ -11,7 +11,7 @@
  * yayılır; çağrı sonrası iş (ses kaydı bağlama vb.) ekranlar tarafından dinlenir.
  */
 import { api, esc } from '/js/lib/v2-ortak.js?v=1';
-import { SipHat } from '/js/softphone/sip-hat.js?v=1';
+import { SipHat } from '/js/softphone/sip-hat.js?v=2';
 import { Zil } from '/js/softphone/zil.js?v=1';
 
 const TUSLAR = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -19,6 +19,7 @@ const BAGLANTI_METNI = {
   baglaniyor: 'Bağlanıyor…',
   bagli: 'Hazır',
   kopuk: 'Bağlantı kesildi',
+  kayitsiz: 'Santrala kayıt olunamadı, yeniden deneniyor',
 };
 
 /**
@@ -74,6 +75,8 @@ export function softphoneKur(kap, salonId, ayar) {
     return ad;
   }
 
+  const cagriUyarisi = (e) => { e.preventDefault(); e.returnValue = ''; };
+
   /* ───────── SIP olayları ───────── */
   hat.addEventListener('durum', (e) => {
     durum.baglanti = e.detail.durum;
@@ -94,6 +97,9 @@ export function softphoneKur(kap, salonId, ayar) {
     else if (asama === 'geliyor') zil.gelenBaslat();
     else zil.durdur();
     if (asama === 'bitti') { durum.beklemede = false; girdi.value = ''; }
+    // Sayfalar arası geçiş çağrıyı düşürür: görüşme sürerken tarayıcı onay sorsun.
+    if (durum.asama) window.addEventListener('beforeunload', cagriUyarisi);
+    else window.removeEventListener('beforeunload', cagriUyarisi);
     ciz();
     document.dispatchEvent(new CustomEvent('rc:softphone', { detail: e.detail }));
 
@@ -126,8 +132,22 @@ export function softphoneKur(kap, salonId, ayar) {
   girdi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); aramaYap(); } });
   const disTiklama = (e) => { if (!panel.hidden && !kap.contains(e.target)) paneliKapat(); };
   document.addEventListener('mousedown', disTiklama);
-  const sayfaKapanis = () => hat.durdur();
+
+  /* ───────── sayfa yaşam döngüsü ───────── */
+  // Sayfa kapanırken kaydı bırak. Geri/ileri ile önbellekten dönerse (bfcache) JS durumu aynen
+  // geri gelir ama hat kapalıdır: pageshow'da yeniden kurulmazsa "Bağlantı kesildi"de kalır.
+  let zamanlayici = null;
+  const sayfaKapanis = () => { clearTimeout(zamanlayici); hat.durdur(); };
+  const sayfaGeriDondu = (e) => {
+    if (!e.persisted) return;
+    hat.baslat();
+    dakikaGoster($('.rc-sp-dk'), salonId);
+  };
+  const baglantiyiDene = () => { if (document.visibilityState === 'visible') hat.hemenDene(); };
   window.addEventListener('pagehide', sayfaKapanis);
+  window.addEventListener('pageshow', sayfaGeriDondu);
+  window.addEventListener('online', baglantiyiDene);
+  document.addEventListener('visibilitychange', baglantiyiDene);
 
   /* ───────── dışa açık API ───────── */
   const disApi = {
@@ -152,8 +172,8 @@ export function softphoneKur(kap, salonId, ayar) {
 
   dakikaGoster($('.rc-sp-dk'), salonId);
   ciz();
-  // Sayfa etkileşime hazır olduktan sonra bağlan (santral erişilemezse açılışı bloklamasın).
-  const zamanlayici = setTimeout(() => hat.baslat(), 1500);
+  // Sayfa çizildikten hemen sonra bağlan (santral erişilemezse açılışı bloklamasın).
+  zamanlayici = setTimeout(() => hat.baslat(), 300);
 
   return {
     yokEt() {
@@ -162,6 +182,10 @@ export function softphoneKur(kap, salonId, ayar) {
       hat.durdur();
       document.removeEventListener('mousedown', disTiklama);
       window.removeEventListener('pagehide', sayfaKapanis);
+      window.removeEventListener('pageshow', sayfaGeriDondu);
+      window.removeEventListener('online', baglantiyiDene);
+      document.removeEventListener('visibilitychange', baglantiyiDene);
+      window.removeEventListener('beforeunload', cagriUyarisi);
       if (window.rcSoftphone === disApi) delete window.rcSoftphone;
       kap.innerHTML = '';
     },
