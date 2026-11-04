@@ -59,6 +59,8 @@ class AppServiceProvider extends ServiceProvider
                     $validated = app(ResourceServer::class)->validateAuthenticatedRequest($psr);
 
                     $userId = $validated->getAttribute('oauth_user_id');
+                    // Oturumu tanimak icin (sifre degisiminde bu oturum korunur).
+                    $request->attributes->set('oauth_access_token_id', $validated->getAttribute('oauth_access_token_id'));
 
                     // Kullaniciyi guard'in KENDI tablosundan coz (yanlis tablo riskini keser)
                     return $userId ? $provider->retrieveById($userId) : null;

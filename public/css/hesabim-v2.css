@@ -1,0 +1,100 @@
+/* v2 Profil + Hesabım (profil-v2.js, hesabim-v2.js) — .hs-* önekli.
+   Ortak: başlık / form / buton / rozet / sekme / tablo v2-bilesen.css + panel.css (.rc-*). */
+
+.hs-kabuk { padding: 6px 2px 40px; }
+.hs-kart { background: var(--rc-kart); border: 1px solid var(--rc-cizgi); border-radius: 18px; box-shadow: var(--rc-golge); padding: 22px 24px; color: var(--rc-metin); }
+.hs-kart h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 16px; font-weight: 800; }
+.hs-kart h3 > i { color: var(--rc-mor); }
+.hs-soluk { color: var(--rc-sol); font-size: 12.5px; }
+.hs-kirmizi { color: #b91c1c; }
+.hs-form-alt { display: flex; justify-content: flex-end; margin-top: 18px; }
+
+.hs-liste { margin: 0; }
+.hs-liste > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px dashed var(--rc-cizgi); font-size: 14px; }
+.hs-liste > div:last-child { border-bottom: 0; }
+.hs-liste dt { color: var(--rc-sol); font-weight: 500; }
+.hs-liste dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+
+/* Avatar */
+.hs-avatar { position: relative; flex: 0 0 auto; width: 84px; height: 84px; border-radius: 50%; background: var(--rc-t-mor); color: var(--rc-mor);
+  display: grid; place-items: center; font-size: 30px; font-weight: 800; }
+.hs-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.hs-avatar-buyuk { width: 150px; height: 150px; margin: 0 auto 14px; font-size: 52px; }
+.hs-avatar-btn { position: absolute; right: 6px; bottom: 6px; width: 36px; height: 36px; border: 2px solid #fff; border-radius: 50%; cursor: pointer;
+  background: var(--rc-mor); color: #fff; display: grid; place-items: center; font-size: 14px; }
+
+/* Profil */
+.hs-profil { display: grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: 20px; align-items: start; }
+.hs-profil-kart { text-align: center; }
+.hs-profil-kart h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.hs-profil-kart h3 { justify-content: flex-start; margin: 22px 0 4px; font-size: 14px; color: var(--rc-mor); }
+.hs-radyolar { display: flex; gap: 18px; padding: 10px 0; }
+.hs-radyo { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; cursor: pointer; }
+.hs-radyo input { width: auto; accent-color: var(--rc-mor); }
+.hs-kirp { max-height: 62vh; }
+.hs-kirp img { display: block; max-width: 100%; }
+
+/* Hesabım hero */
+.hs-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 26px 30px; margin-bottom: 18px; border-radius: 20px; color: #fff;
+  background: radial-gradient(circle at 12% 25%, rgba(217,70,239,.45), transparent 45%), linear-gradient(135deg, #1a0533 0%, #5C008E 55%, #7B2FB8 100%); }
+.hs-hero .hs-avatar { border: 3px solid rgba(255,255,255,.4); background: rgba(255,255,255,.14); color: #fff; }
+.hs-hero-ad { flex: 1; min-width: 220px; }
+.hs-hero-ad h1 { margin: 0 0 4px; color: #fff; font-size: 24px; font-weight: 800; }
+.hs-hero-ad p { margin: 0; color: rgba(255,255,255,.85); font-size: 14px; }
+.hs-hero-iletisim { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.85); }
+.hs-hero-sag { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.hs-paket { padding: 7px 16px; border: 1px solid rgba(255,255,255,.3); border-radius: 30px; background: rgba(255,255,255,.15); font-size: 13px; font-weight: 700; }
+.hs-paket i { color: #fdba74; }
+.hs-kalan { padding: 10px 18px; border-radius: 13px; background: #fff; color: var(--rc-mor); font-weight: 800; font-size: 14px; }
+.hs-kalan b { font-size: 22px; }
+.hs-kalan.uyari { background: #fef3c7; color: #b45309; }
+.hs-kalan.kritik { background: #fee2e2; color: #b91c1c; }
+#hsSekmeler { margin-bottom: 18px; }
+
+/* Üyelik */
+.hs-uyelik { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+.hs-aksiyon { padding: 26px; border-radius: 18px; color: #fff; background: linear-gradient(135deg, #1a0533, #5C008E); }
+.hs-aksiyon h3 { margin: 0 0 8px; color: #fff; font-size: 17px; font-weight: 800; }
+.hs-aksiyon p { margin: 0 0 18px; color: rgba(255,255,255,.88); font-size: 13.5px; line-height: 1.55; }
+.hs-aksiyon a { text-decoration: none; }
+
+/* Hizmet + paket kartları */
+.hs-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.hs-hizmet { background: var(--rc-kart); border: 1px solid var(--rc-cizgi); border-radius: 16px; box-shadow: var(--rc-golge); padding: 20px; color: var(--rc-metin); }
+.hs-hizmet-bas { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.hs-hizmet h4 { margin: 0 0 3px; font-size: 15.5px; font-weight: 800; }
+.hs-hizmet p { margin: 0; color: var(--rc-sol); font-size: 13px; }
+.hs-hizmet-ikon { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 14px; display: inline-grid; place-items: center; color: #fff; font-size: 21px; }
+.hs-hizmet-ikon.mor { background: linear-gradient(135deg, #5C008E, #d946ef); }
+.hs-hizmet-ikon.yesil { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.hs-hizmet-ikon.turuncu { background: linear-gradient(135deg, #f97316, #fbbf24); }
+.hs-hizmet-ikon.mavi { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+.hs-hizmet-ikon.lacivert { background: linear-gradient(135deg, #0f172a, #334155); }
+.hs-hizmet-ikon.pembe { background: linear-gradient(135deg, #be185d, #ec4899); }
+.hs-hizmet-ikon.teal { background: linear-gradient(135deg, #0d9488, #2dd4bf); }
+.hs-hizmet-satir { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 11px; margin-top: 11px; border-top: 1px dashed var(--rc-cizgi); font-size: 13px; }
+.hs-hizmet-satir small { color: var(--rc-sol); font-size: 13px; }
+.hs-paket-kart { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.hs-paket-kart h4 { margin-top: 12px; font-size: 20px; }
+.hs-fiyat { margin-top: 12px; font-size: 26px; font-weight: 800; color: var(--rc-mor); }
+.hs-paket-kart ul { align-self: stretch; list-style: none; margin: 14px 0 18px; padding: 0; color: var(--rc-sol); font-size: 13px; text-align: left; }
+.hs-paket-kart li { padding: 4px 0; }
+.hs-paket-kart li i { margin-right: 6px; color: #16a34a; }
+.hs-paket-kart a { align-self: stretch; margin-top: auto; text-decoration: none; }
+
+/* Tablolar */
+.hs-tablo-baslik { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; font-size: 15px; font-weight: 800; color: var(--rc-metin); }
+.hs-tablo-baslik > i { color: var(--rc-mor); }
+.hs-tablo { padding: 14px 16px; margin-bottom: 22px; }
+.hs-tutar { font-weight: 800; color: var(--rc-mor); white-space: nowrap; }
+.hs-tablo a.rc-rozet { text-decoration: none; }
+
+.hs-bos { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 54px 20px; color: var(--rc-sol); text-align: center; }
+.hs-bos i { font-size: 48px; color: var(--rc-cizgi); margin-bottom: 8px; }
+
+@media (max-width: 860px) {
+  .hs-profil, .hs-uyelik { grid-template-columns: 1fr; }
+  .hs-hero { padding: 22px; }
+  .hs-hero-sag { align-items: flex-start; width: 100%; }
+  .hs-kart { padding: 18px; }
+}

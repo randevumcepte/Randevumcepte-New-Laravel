@@ -26,12 +26,7 @@ class IsletmeGorselServisi
     /** Mutlak gorsel URL'i (eski panel host'u) — istemciler host birlestirmez. */
     public function url(?string $yol): ?string
     {
-        $yol = trim((string) $yol);
-        if ($yol === '') {
-            return null;
-        }
-
-        return preg_match('#^https?://#', $yol) ? $yol : EskiPanelLinki::url(ltrim($yol, './'));
+        return EskiPanelLinki::mutlak($yol);
     }
 
     /** @return array{kalan:int, maks:int, gorseller:list<array{id:int,salon_gorseli:string,url:?string}>} */

@@ -8,6 +8,7 @@ use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\KapsamServisi;
 use Illuminate\Http\Request;
 
 /**
@@ -63,6 +64,33 @@ abstract class V2Controller extends Controller
         }
 
         return $salonId;
+    }
+
+    /**
+     * Salona bagli olmayan uclarin (kabuk, profil) baglam salonu: salon_id verildiyse kapsam
+     * icinde olmali (degilse 403), verilmediyse kullanicinin ilk salonu.
+     */
+    protected function baglamSalonu(Request $request): int
+    {
+        $salonlar = app(KapsamServisi::class)->kullaniciSalonlari($this->kullanici()->id);
+        if (! $salonlar) {
+            throw new YetkisizErisimException('Erişebileceğiniz bir işletme bulunamadı');
+        }
+        $salonId = $request->integer('salon_id');
+        if ($salonId <= 0) {
+            return (int) $salonlar[0];
+        }
+        if (! in_array($salonId, $salonlar, true)) {
+            throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
+        }
+
+        return $salonId;
+    }
+
+    /** Bu istegi yapan oturumun token id'si (legacy-passport guard'i koyar). */
+    protected function aktifTokenId(): ?string
+    {
+        return request()->attributes->get('oauth_access_token_id');
     }
 
     /** Kullanicinin bu salonda yetki anahtari var mi (buton/alan gorunurlugu icin; 403 atmaz). */

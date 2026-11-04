@@ -3,7 +3,8 @@
 namespace App\Services\Panel;
 
 use App\Services\Yetki\KapsamServisi;
-use App\Services\Yetki\YetkiServisi;
+use App\Support\EskiPanelLinki;
+use App\Support\PanelKisayollar;
 use App\Support\PanelMenu;
 use Illuminate\Support\Facades\DB;
 
@@ -20,14 +21,14 @@ use Illuminate\Support\Facades\DB;
 class PanelKabukServisi
 {
     public function __construct(
-        private YetkiServisi $yetki,
+        private MenuGorunurluk $gorunurluk,
         private KapsamServisi $kapsam,
     ) {}
 
     public function kabuk(int $yetkiliId, int $salonId): array
     {
         $tabanUrl = rtrim(config('panel.eski_panel_url', 'https://app.randevumcepte.com.tr'), '/');
-        $salon = $this->salonGetir($salonId);
+        $salon = $this->salonGetir($salonId) ?? (object) [];
         $roller = $this->kapsam->salonRolleri($yetkiliId, $salonId);
         $rol5 = in_array(5, $roller, true);
 
@@ -39,9 +40,13 @@ class PanelKabukServisi
                 'ad'          => trim((string) ($salon->salon_adi ?? '')),
                 'lisans_gun'  => self::lisansGun($salon),
                 'uyelik_turu' => (int) ($salon->uyelik_turu ?? 0),
+                'musteri_etiket' => PanelKisayollar::musteriEtiketi($salon),
             ],
             'subeler' => $this->subeler($yetkiliId, $salonId, $tabanUrl),
             'menu'    => $this->menu($yetkiliId, $salonId, $salon, $rol5, $tabanUrl),
+            'hizli_ekle'     => (self::lisansGun($salon) ?? 0) < 0 ? []   // eski: lisans bittiyse + menüsü yok
+                : $this->kisayollar(PanelKisayollar::hizliEkle($salon), $yetkiliId, $salonId, $salon, $rol5),
+            'kullanici_menu' => $this->kisayollar(PanelKisayollar::kullanici(), $yetkiliId, $salonId, $salon, $rol5),
         ];
     }
 
@@ -49,7 +54,7 @@ class PanelKabukServisi
     private function kullanici(int $yetkiliId, string $tabanUrl): array
     {
         $y = DB::table('isletmeyetkilileri')->where('id', $yetkiliId)->first(['name', 'profil_resim']);
-        $avatar = $y && $y->profil_resim ? $this->mutlak($y->profil_resim, $tabanUrl) : null;
+        $avatar = $y ? EskiPanelLinki::mutlak($y->profil_resim) : null;
 
         return [
             'ad'     => trim((string) ($y->name ?? 'Kullanıcı')),
@@ -80,7 +85,7 @@ class PanelKabukServisi
     {
         $cikti = [];
         foreach (PanelMenu::tanim() as $m) {
-            if (! $this->menuGoster($m, $yetkiliId, $salonId, $salon, $rol5)) {
+            if (! $this->gorunurluk->goster($m, $yetkiliId, $salonId, $salon, $rol5)) {
                 continue;
             }
             $cikti[] = [
@@ -96,45 +101,28 @@ class PanelKabukServisi
         return $cikti;
     }
 
-    private function menuGoster(array $m, int $yetkiliId, int $salonId, $salon, bool $rol5): bool
+    /**
+     * Header kısayolları: görünürlük süzülür, istemciye yalnız kod/etiket/ikon/url gider.
+     * url=null → istemci `kod`a göre formu açar.
+     *
+     * @param  list<array<string,mixed>>  $ogeler
+     */
+    private function kisayollar(array $ogeler, int $yetkiliId, int $salonId, object $salon, bool $rol5): array
     {
-        if (($m['rol5_gizle'] ?? false) && $rol5) {
-            return false;
-        }
-        if (($m['studyo_gizle'] ?? false) && (int) ($salon->studyo_modu ?? 0) === 1) {
-            return false;
-        }
-        if (! empty($m['ozellik']) && ! $this->ozellikVar($m['ozellik'], $salon)) {
-            return false;
-        }
-        if (! empty($m['yetki'])) {
-            foreach ((array) $m['yetki'] as $anahtar) {
-                if ($this->yetki->menuYetki($yetkiliId, $salonId, $anahtar)) {
-                    return true; // OR-gate
-                }
-            }
+        $gorunen = array_filter($ogeler, fn ($o) => $this->gorunurluk->goster($o, $yetkiliId, $salonId, $salon, $rol5));
 
-            return false;
-        }
-
-        return true;
-    }
-
-    private function ozellikVar(string $ozellik, $salon): bool
-    {
-        return match ($ozellik) {
-            'santral_aktif'       => (int) ($salon->santral_aktif ?? 0) === 1,
-            'grup_dersi_aktif'    => (int) ($salon->grup_dersi_aktif ?? 0) === 1,
-            'uyelik_turu_premium' => (int) ($salon->uyelik_turu ?? 0) > 2,
-            'uyelik_turu_paketli' => (int) ($salon->uyelik_turu ?? 0) > 1,   // eski menu: Kasa Raporu
-            default               => true,
-        };
+        return array_values(array_map(fn ($o) => [
+            'kod'    => $o['kod'],
+            'etiket' => $o['etiket'],
+            'ikon'   => $o['ikon'],
+            'url'    => $o['url'] ?? PanelMenu::url($o, $salonId),
+        ], $gorunen));
     }
 
     private function etiketCoz(array $m, $salon): string
     {
         // Müşteriler → Danışanlar (klinik/stüdyo salon türleri — eski menüyle birebir).
-        if ($m['slug'] === 'musteriler' && in_array((int) ($salon->salon_turu_id ?? 0), [15, 28, 29], true)) {
+        if ($m['slug'] === 'musteriler' && PanelKisayollar::musteriEtiketi($salon) === 'Danışan') {
             return 'Danışanlar';
         }
 
@@ -172,15 +160,5 @@ class PanelKabukServisi
             'id', 'salon_adi', 'uyelik_bitis_tarihi', 'uyelik_turu',
             'santral_aktif', 'grup_dersi_aktif', 'studyo_modu', 'salon_turu_id',
         ]);
-    }
-
-    /** Göreli yol → mutlak (eski panel asset'leri). */
-    private function mutlak(string $yol, string $tabanUrl): string
-    {
-        if (preg_match('#^https?://#i', $yol)) {
-            return $yol;
-        }
-
-        return $tabanUrl.'/'.ltrim($yol, '/');
     }
 }

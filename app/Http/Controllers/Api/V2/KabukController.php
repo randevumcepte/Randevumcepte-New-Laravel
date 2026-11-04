@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
 use App\Services\Panel\PanelKabukServisi;
-use App\Services\Yetki\KapsamServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -19,28 +17,10 @@ use Illuminate\Http\Request;
  */
 class KabukController extends V2Controller
 {
-    public function __construct(
-        private PanelKabukServisi $servis,
-        private KapsamServisi $kapsam,
-    ) {}
+    public function __construct(private PanelKabukServisi $servis) {}
 
     public function goster(Request $request)
     {
-        $user = $this->kullanici();
-
-        $salonlar = $this->kapsam->kullaniciSalonlari($user->id);
-        if (! $salonlar) {
-            throw new YetkisizErisimException('Erişebileceğiniz bir işletme bulunamadı');
-        }
-
-        $salonId = (int) $request->query('salon_id', 0);
-        if ($salonId <= 0) {
-            $salonId = (int) $salonlar[0];
-        } elseif (! in_array($salonId, $salonlar, true)) {
-            // Kapsam dışı salon → sızıntıyı önle.
-            throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
-        }
-
-        return ApiCevap::basarili($this->servis->kabuk((int) $user->id, $salonId));
+        return ApiCevap::basarili($this->servis->kabuk((int) $this->kullanici()->id, $this->baglamSalonu($request)));
     }
 }

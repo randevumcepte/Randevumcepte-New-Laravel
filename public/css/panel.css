@@ -168,7 +168,21 @@ html, body { margin: 0; padding: 0; }
 .rc-geri { width: auto; gap: 7px; padding: 0 14px; font-size: 13.5px; font-weight: 600; }
 .rc-geri span { display: inline; }
 
-.rc-kullanici { display: flex; align-items: center; gap: 10px; padding-left: 6px; }
+.rc-kullanici { display: flex; align-items: center; gap: 10px; padding: 0 0 0 6px; background: none; border: 0; cursor: pointer; color: inherit; font: inherit; }
+.rc-kullanici-ok { font-size: 12px; color: var(--rc-sol); }
+
+/* Header açılır menüleri ("+" ve kullanıcı) */
+.rc-acilir { position: relative; }
+.rc-acilir[hidden] { display: none; }
+.rc-hizli-btn { cursor: pointer; font-size: 18px; color: var(--rc-mor); }
+.rc-acilir-menu { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 60; min-width: 232px; padding: 8px;
+  background: var(--rc-kart); border: 1px solid var(--rc-cizgi); border-radius: 14px; box-shadow: var(--rc-golge-2); }
+.rc-acilir.acik .rc-acilir-menu { display: block; }
+.rc-acilir-oge { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: none;
+  color: var(--rc-metin); font: inherit; font-size: 14px; font-weight: 500; text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.rc-acilir-oge i { font-size: 17px; color: var(--rc-sol); }
+.rc-acilir-oge:hover, .rc-acilir-oge:focus-visible { background: var(--rc-mor-acik); color: var(--rc-mor); outline: none; }
+.rc-acilir-oge:hover i, .rc-acilir-oge:focus-visible i { color: var(--rc-mor); }
 .rc-avatar {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--rc-mor); color: #fff;
@@ -251,7 +265,7 @@ html, body { margin: 0; padding: 0; }
   .rc-sidebar .rc-link { justify-content: flex-start; }
   .rc-sidebar .rc-brand-mini { display: none; }
   .rc-sidebar .rc-brand-tam { display: inline; }
-  .rc-sube-sec, .rc-kullanici-ad { display: none; }
+  .rc-sube-sec, .rc-kullanici-ad, .rc-kullanici-ok { display: none; }
   .rc-ara { width: 100%; max-width: none; }
   .rc-icerik { padding: 14px; }
 }

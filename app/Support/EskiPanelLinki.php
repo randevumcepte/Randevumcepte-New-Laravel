@@ -19,6 +19,17 @@ final class EskiPanelLinki
         return $sorgu ? $url.'?'.http_build_query($sorgu) : $url;
     }
 
+    /** Veritabanındaki göreli yol → mutlak URL (zaten mutlaksa aynen; boşsa null). */
+    public static function mutlak(?string $yol): ?string
+    {
+        $yol = trim((string) $yol);
+        if ($yol === '') {
+            return null;
+        }
+
+        return preg_match('#^https?://#i', $yol) ? $yol : self::url(ltrim($yol, './'));
+    }
+
     /** Host (SMS linkleri "https://{host}/..." biçiminde kurulur). */
     public static function host(): string
     {

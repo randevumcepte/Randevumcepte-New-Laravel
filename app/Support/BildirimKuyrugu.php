@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\DB;
  *         sistem_bildirim (payload: mesaj; randevu_id null — sistem sahibine WA+SMS, ör. WhatsApp kontör talebi),
  *         kampanya_olustur (payload: kampanya_id; randevu_id null — Reklam Yönetimi yeni kampanya → personel push'u),
  *         ders_bildirim (payload: user_id, mesaj, gonderim_tipi; randevu_id null — grup dersi kayit/bekleme/terfi/iptal/kalan uyarisi),
+ *         sifre_degisti (payload: yetkili_id, haric_token; randevu_id null — kullanici kendi sifresini degistirdi: diger oturumlar kapatilir),
  *         sms_toplu (payload: telefonlar[], mesaj, tur, baslik; randevu_id null — SMS Yönetimi toplu/filtreli gönderim).
  */
 class BildirimKuyrugu

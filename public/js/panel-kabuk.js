@@ -72,6 +72,46 @@ function headerCiz(veri) {
 
   // Şube seçici
   subeCiz(veri.subeler || []);
+
+  // "+" ve kullanıcı menüsü: öğeler + görünürlük sunucudan
+  acilirDoldur('#rcHizliEkle', veri.hizli_ekle || []);
+  acilirDoldur('#rcKullaniciKutu', veri.kullanici_menu || []);
+}
+
+/* ───────────── Header açılır menüleri ───────────── */
+// url'li öğe link; url'siz öğe butondur, tıklamasını sahibi dinler (form açan "+" öğeleri → hizli-ekle.js).
+const acilirOge = (o) => {
+  const ic = `<i class="${esc(o.ikon)}"></i><span>${esc(o.etiket)}</span>`;
+  return o.url
+    ? `<a class="rc-acilir-oge" role="menuitem" data-kod="${esc(o.kod)}" href="${esc(o.url)}">${ic}</a>`
+    : `<button class="rc-acilir-oge" role="menuitem" type="button" data-kod="${esc(o.kod)}">${ic}</button>`;
+};
+
+function acilirDoldur(kapSec, ogeler) {
+  const kap = el(kapSec);
+  kap.hidden = !ogeler.length;
+  el('.rc-acilir-menu', kap).innerHTML = ogeler.map(acilirOge).join('');
+}
+
+function acilirBagla() {
+  const kapat = (haric = null) => document.querySelectorAll('.rc-acilir.acik').forEach((k) => {
+    if (k === haric) return;
+    k.classList.remove('acik');
+    el('[data-acilir-tetik]', k).setAttribute('aria-expanded', 'false');
+  });
+  document.addEventListener('click', (e) => {
+    const tetik = e.target.closest('[data-acilir-tetik]');
+    if (tetik) {
+      const kap = tetik.closest('.rc-acilir');
+      kapat(kap);
+      tetik.setAttribute('aria-expanded', String(kap.classList.toggle('acik')));
+      return;
+    }
+    // Çıkış: v2 token'ı bu tarayıcıdan silinir, eski panel oturumu kapatılır.
+    if (e.target.closest('[data-kod="cikis"]')) localStorage.removeItem('rc_access_token');
+    kapat();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kapat(); });
 }
 
 function subeCiz(subeler) {
@@ -213,10 +253,13 @@ window.rcPanel = {
     _aktifSalon = salonId;
     yukle(salonId);
   },
+  /** Kullanıcı/salon bilgisi değişti (profil, avatar): header'ı aynı salonla yeniden çiz. */
+  tazele() { return yukle(_kabukSalon); },
   toast,
   onay,
 };
 
 etkilesimBagla();
 aramaBagla();
+acilirBagla();
 yukle(null); // önce varsayılan salon; sayfa isterse salonAyarla ile tazeler

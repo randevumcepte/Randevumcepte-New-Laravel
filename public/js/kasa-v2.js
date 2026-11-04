@@ -16,6 +16,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { donemSecici, trTarih } from '/js/lib/v2-donem.js?v=1';
+import { masrafModal, personeller, secim, tarihSecici, formOku } from '/js/lib/v2-kasa-form.js?v=1';
 
 const kok = document.getElementById('rc-kasa');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -26,14 +27,10 @@ let secenek = null;
 let donem = null;
 let gelirTablo = null;
 let giderTablo = null;
-let personelSozu = null;
-let masrafFormSozu = null;
 
 const yetki = (k) => !!secenek?.yetkiler?.[k];
 const saat = (dt) => { const s = String(dt || '').slice(11, 16); return s && s !== '00:00' ? s : ''; };
 const btn = (goster, id, sinif, ikon, ad) => (goster ? `<button class="rc-btn ${sinif}" id="${id}"><i class="bi ${ikon}"></i> ${ad}</button>` : '');
-const secim = (liste, deger, ad, secili, bos = 'Seçiniz') => `<option value="">${esc(bos)}</option>`
-  + liste.map((o) => `<option value="${o[deger]}"${String(o[deger]) === String(secili ?? '') ? ' selected' : ''}>${esc(o[ad])}</option>`).join('');
 const ROZET = {
   personel_gideri: ['turuncu', 'Personel Gideri'], personel_odemesi: ['mavi', 'Personel Ödemesi'], isletme: ['kirmizi', 'İşletme Masrafı'],
 };
@@ -63,7 +60,7 @@ async function baslat() {
       <div id="ksRapor"></div>
     </div>`;
   el('#ksGunSonu')?.addEventListener('click', gunSonuAc);
-  el('#ksMasraf')?.addEventListener('click', () => masrafModal());
+  el('#ksMasraf')?.addEventListener('click', () => masrafAc());
   el('#ksParaEkle')?.addEventListener('click', () => paraModal('giris'));
   el('#ksParaCek')?.addEventListener('click', () => paraModal('cikis'));
 
@@ -155,46 +152,17 @@ function tablolariKur() {
   });
   el('#ksGiderler').addEventListener('click', (e) => {
     const d = e.target.closest('[data-masraf-duzenle]');
-    if (d) { masrafModal(d.dataset.masrafDuzenle); return; }
+    if (d) { masrafAc(d.dataset.masrafDuzenle); return; }
     const s = e.target.closest('[data-masraf-sil]');
     if (s) masrafSil(s.dataset.masrafSil);
   });
-}
-
-// ───────────────────────── Ortak form verisi ─────────────────────────
-
-function personeller() {
-  personelSozu ||= api('GET', '/personel', { params: { salon_id: salonId, tumu: 1 } })
-    .then((r) => (r.ok && r.govde?.basarili ? (r.govde.veri.data || []).filter((p) => Number(p.aktif) === 1) : []));
-  return personelSozu;
-}
-
-function masrafFormu() {
-  masrafFormSozu ||= api('GET', '/masraf/form-verisi', { params: { salon_id: salonId } })
-    .then((r) => (r.ok && r.govde?.basarili ? r.govde.veri : { kategoriler: [], odeme_yontemleri: secenek.odeme_yontemleri }));
-  return masrafFormSozu;
-}
-
-function tarihSecici(girdi) {
-  if (window.flatpickr) window.flatpickr(girdi, { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd.m.Y', locale: 'tr', disableMobile: true });
-}
-
-/** Form alanlarını düz nesneye çevirir (boş → null, sayılar sayı). */
-function formOku(ov, alanlar) {
-  const v = {};
-  alanlar.forEach(([ad, tip]) => {
-    const x = el(`[name="${ad}"]`, ov);
-    const deger = x ? x.value.trim() : '';
-    v[ad] = deger === '' ? null : (tip === 'sayi' ? Number(deger.replace(',', '.')) : deger);
-  });
-  return v;
 }
 
 // ───────────────────────── Para Ekle / Para Çek ─────────────────────────
 
 async function paraModal(yon) {
   const cikis = yon === 'cikis';
-  const pers = await personeller();
+  const pers = await personeller(salonId);
   const ov = modalAc(cikis ? 'Kasadan Para Çek' : 'Kasaya Para Ekle', `
     <div class="rc-form-izgara">
       <div class="rc-alan"><label>Tarih</label><input name="tarih" value="${tarihStr(new Date())}"></div>
@@ -232,56 +200,7 @@ async function paraModal(yon) {
 
 // ───────────────────────── Masraf ekle / düzenle / sil ─────────────────────────
 
-async function masrafModal(id = null) {
-  const [fv, pers, mevcut] = await Promise.all([
-    masrafFormu(), personeller(),
-    id ? api('GET', `/masraf/${id}`).then((r) => (r.ok && r.govde?.basarili ? r.govde.veri : null)) : null,
-  ]);
-  if (id && !mevcut) { yazSonuc({ ok: false, kod: 404, govde: { mesaj: 'Masraf bulunamadı' } }); return; }
-  const m = mevcut || { tarih: tarihStr(new Date()), personel_gideri: false };
-  // Silinmiş/pasif harcayan seçili kalsın.
-  const liste = m.harcayan_id && !pers.some((p) => p.id === m.harcayan_id) ? [...pers, { id: m.harcayan_id, personel_adi: m.harcayan_adi || '-' }] : pers;
-
-  const ov = modalAc(id ? 'Masraf Düzenleme' : 'Yeni Masraf', `
-    <div class="rc-sekmeler rp-segment">
-      <button type="button" class="rc-sekme${m.personel_gideri ? '' : ' aktif'}" data-mod="0"><i class="bi bi-receipt"></i> Masraf</button>
-      <button type="button" class="rc-sekme${m.personel_gideri ? ' aktif' : ''}" data-mod="1"><i class="bi bi-person-badge"></i> Personel Gideri</button>
-    </div>
-    <div class="rp-uyari" data-gideri-not ${m.personel_gideri ? '' : 'hidden'}><i class="bi bi-info-circle"></i> Personel gideri kasadan düşülür ve personelin net hak edişinden düşülür.</div>
-    <div class="rc-form-izgara">
-      <div class="rc-alan"><label>Harcayan</label><select name="harcayan_id">${secim(liste, 'id', 'personel_adi', m.harcayan_id)}</select></div>
-      <div class="rc-alan"><label>Tutar (₺)</label><input name="tutar" type="number" min="0" step="0.01" inputmode="decimal" value="${m.tutar ?? ''}"></div>
-      <div class="rc-alan"><label>Tarih</label><input name="tarih" value="${esc(m.tarih)}"></div>
-      <div class="rc-alan"><label>Ödeme Yöntemi</label><select name="odeme_yontemi_id">${secim(fv.odeme_yontemleri, 'id', 'odeme_yontemi', m.odeme_yontemi_id)}</select></div>
-      <div class="rc-alan" data-kategori ${m.personel_gideri ? 'hidden' : ''}><label>Kategori</label><select name="masraf_kategori_id">${secim(fv.kategoriler, 'id', 'kategori', m.masraf_kategori_id)}</select></div>
-      <div class="rc-alan rc-tam"><label>Açıklama</label><textarea name="aciklama" rows="2">${esc(m.aciklama || '')}</textarea></div>
-    </div>`,
-  `<button class="rc-btn rc-btn-ikincil" data-kapat>Vazgeç</button><button class="rc-btn rc-btn-birincil" id="ksMasrafKaydet"><i class="bi bi-check2"></i> Kaydet</button>`,
-  { ikon: 'receipt-cutoff', dar: true });
-  tarihSecici(el('[name="tarih"]', ov));
-  el('[data-kapat]', ov).onclick = modalKapat;
-
-  let gideri = !!m.personel_gideri;
-  el('.rp-segment', ov).onclick = (e) => {
-    const b = e.target.closest('[data-mod]');
-    if (!b) return;
-    gideri = b.dataset.mod === '1';
-    ov.querySelectorAll('[data-mod]').forEach((x) => x.classList.toggle('aktif', x === b));
-    el('[data-kategori]', ov).hidden = gideri;
-    el('[data-gideri-not]', ov).hidden = !gideri;
-  };
-
-  el('#ksMasrafKaydet', ov).onclick = async (e) => {
-    const govde = { salon_id: salonId, personel_gideri: gideri,
-      ...formOku(ov, [['harcayan_id', 'sayi'], ['tutar', 'sayi'], ['tarih'], ['odeme_yontemi_id', 'sayi'], ['masraf_kategori_id', 'sayi'], ['aciklama']]) };
-    if (gideri) govde.masraf_kategori_id = null;
-    const b = e.currentTarget;
-    b.disabled = true;
-    const r = await api(id ? 'PATCH' : 'POST', id ? `/masraf/${id}` : '/masraf', { body: govde });
-    b.disabled = false;
-    if (yazSonuc(r, r.govde?.mesaj)) { modalKapat(); yenile(); }
-  };
-}
+const masrafAc = (id = null) => masrafModal({ salonId, id, onKaydet: yenile });
 
 async function masrafSil(id) {
   if (!(await onay('Masraf kaydı silinecek. Emin misiniz?'))) return;

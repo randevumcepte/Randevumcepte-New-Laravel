@@ -227,6 +227,9 @@ Route::prefix('v2')->group(function () {
         // UYGULAMA AFISI (salt okuma: durum/link + afis onizleme JPEG + PDF) — routes/v2/uygulama-afisi.php
         require __DIR__.'/v2/uygulama-afisi.php';
 
+        // PROFİL + HESABIM (kendi profili, üyelik, hizmetler, faturalar).
+        require __DIR__.'/v2/hesabim.php';
+
         // CAGRI MERKEZI (calisma ekrani, arama randevulari, cagri kayitlari, performans, liste yonetimi) — routes/v2/cagri-merkezi.php
         require __DIR__.'/v2/cagri-merkezi.php';
 

@@ -193,3 +193,12 @@ Route::get('/v2/sms-yonetimi/{sube?}', fn ($sube = null) => view('v2.sms-yonetim
  */
 Route::get('/v2/reklam-yonetimi/{sube?}', fn ($sube = null) => view('v2.reklam-yonetimi', ['salonId' => (int) ($sube ?: request('sube', 0))]))
     ->whereNumber('sube');
+
+/*
+ | Profil + Hesabim v2 (eski /isletmeyonetim/profil, /hesabim) — build'siz island; veri
+ | /api/v2/profil ve /api/v2/hesabim (Bearer); yazmalar HESABIM_V2_YAZMA_AKTIF kapaliyken 409.
+ */
+Route::get('/v2/profil/{sube?}', fn ($sube = null) => view('v2.profil', ['salonId' => (int) ($sube ?: request('sube', 0))]))
+    ->whereNumber('sube');
+Route::get('/v2/hesabim/{sube?}', fn ($sube = null) => view('v2.hesabim', ['salonId' => (int) ($sube ?: request('sube', 0))]))
+    ->whereNumber('sube');
