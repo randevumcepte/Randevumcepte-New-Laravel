@@ -8,16 +8,17 @@ use App\Domain\Sms\SmsTuru;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Services\Sms\Bakiye\SmsBakiyeServisi;
+use App\Services\Sms\Gonderim\SmsKuyrukServisi;
 use App\Support\AktiviteLog;
-use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\Cache;
 
 /**
  * TOPLU / FİLTRELİ SMS — alıcı çözümü, maliyet önizlemesi, kuyruğa yazma.
  *
- * v2 SMS ÜRETMEZ: outbox 'sms_toplu' → eski `v2:bildirim-isle` → SmsTopluGonderJob mevcut gönderim
- * koduyla (VoiceTelekom çoklu paket / Efetech WA-first) yollar. Sonuç anında bilinmediği için cevap
- * "kuyruğa alındı"dır; paket SMS Raporları'nda görünür.
+ * Gönderim v2'nin kendi kuyruğuyla yapılır (SmsKuyrukServisi + `sms:kuyruk-isle`); canlı monolite kod
+ * gerektirmez. Şimdilik yalnız VoiceTelekom: Efetech yolu eski kodda WhatsApp önceliğiyle çalışır, onsuz
+ * taşınırsa davranış değişir → Efetech salonları eski panelden gönderir. Cevap "kuyruğa alındı"dır;
+ * sonuç GET /sms/gonderim/{id} ile izlenir.
  */
 class SmsGonderimServisi
 {
@@ -25,6 +26,7 @@ class SmsGonderimServisi
         private SmsHesapServisi $hesap,
         private SmsAliciServisi $alici,
         private SmsBakiyeServisi $bakiye,
+        private SmsKuyrukServisi $kuyruk,
     ) {}
 
     /** Gönderim öncesi özet (onay kutusu): kaç kişiye gider, kaç kredi tutar, bakiye yeter mi. */
@@ -36,8 +38,12 @@ class SmsGonderimServisi
     public function gonder(int $yetkiliId, int $salonId, ?int $kisit, SmsTuru $tur, array $idler, string $mesaj): array
     {
         $salon = $this->hesap->zorunlu($salonId);
-        if (! SmsSaglayici::salondan($salon)->hesapTanimli($salon)) {
+        $saglayici = SmsSaglayici::salondan($salon);
+        if (! $saglayici->hesapTanimli($salon)) {
             throw new GecersizIslemException('İşletmenin SMS hesabı tanımlı değil.');
+        }
+        if ($saglayici !== SmsSaglayici::VoiceTelekom) {
+            throw new GecersizIslemException('Bu işletmenin SMS sağlayıcısı için gönderim henüz v2\'de açık değil. Lütfen eski panelden gönderin.');
         }
         $cozum = $this->alici->cozumle($salonId, $kisit, $idler);
         if (! $cozum['telefonlar']) {
@@ -50,7 +56,7 @@ class SmsGonderimServisi
             throw new CakismaException('Bu mesaj az önce aynı alıcılara gönderildi. Birkaç dakika sonra tekrar deneyebilirsiniz.');
         }
 
-        BildirimKuyrugu::yaz($salonId, 'sms_toplu', null, $yetkiliId, [
+        $gonderimId = $this->kuyruk->ekle($salonId, $yetkiliId, [
             'telefonlar' => $cozum['telefonlar'],
             'mesaj'      => $mesaj,
             'tur'        => $tur->value,
@@ -61,7 +67,7 @@ class SmsGonderimServisi
             'alici_sayisi' => $adet, 'tur' => $tur->kod(), 'mesaj_ozet' => mb_substr($mesaj, 0, 140),
         ]);
 
-        return $this->ozet($salonId, $cozum, $mesaj);
+        return ['gonderim_id' => $gonderimId] + $this->ozet($salonId, $cozum, $mesaj);
     }
 
     /** @param array{telefonlar:string[], kara_liste:int, gecersiz:int} $cozum */

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Sms\SmsTuru;
 use App\Services\Randevu\RandevuFormServisi;
+use App\Services\Sms\Gonderim\SmsKuyrukServisi;
 use App\Services\Sms\SmsAliciServisi;
 use App\Services\Sms\SmsGonderimServisi;
 use App\Support\ApiCevap;
@@ -17,7 +18,8 @@ use Illuminate\Http\Request;
  *   GET  /sms/alicilar/idler?salon_id=&ara=&cinsiyet=      → {idler[]} ("tümünü seç")
  *   GET  /sms/musteri-ara?salon_id=&q=                     → [{id,ad,telefon}] (v2-secici sözleşmesi)
  *   POST /sms/gonderim/onizle {musteri_idler[], mesaj}     → {alici, kara_liste, gecersiz, parca, tahmini_kredi, kalan_sms, bakiye_yeterli}
- *   POST /sms/gonderim        {musteri_idler[], mesaj, tur=toplu|filtre} → aynı özet (202: kuyruğa alındı)
+ *   POST /sms/gonderim        {musteri_idler[], mesaj, tur=toplu|filtre} → gonderim_id + aynı özet (202: kuyruğa alındı)
+ *   GET  /sms/gonderim/{id}?salon_id=                      → {id, durum, etiket, tamamlandi, hata}
  */
 class SmsGonderimController extends SmsTabanController
 {
@@ -68,6 +70,13 @@ class SmsGonderimController extends SmsTabanController
             'Gönderim kuyruğa alındı. Sonucu SMS Raporları\'nda görebilirsiniz.',
             202,
         );
+    }
+
+    public function durum(Request $request, int $id, SmsKuyrukServisi $kuyruk)
+    {
+        [, $salonId] = $this->salonDenetle($request, self::GONDERIM);
+
+        return ApiCevap::basarili($kuyruk->durum($salonId, $id));
     }
 
     /** @return array{musteri_idler:int[], mesaj:string} */

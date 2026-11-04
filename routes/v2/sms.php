@@ -23,6 +23,7 @@ Route::prefix('sms')->group(function () {
     Route::get('/musteri-ara', [SmsGonderimController::class, 'musteriAra']);
     Route::post('/gonderim/onizle', [SmsGonderimController::class, 'onizle']);
     Route::post('/gonderim', [SmsGonderimController::class, 'gonder']);
+    Route::get('/gonderim/{id}', [SmsGonderimController::class, 'durum'])->whereNumber('id');
 
     Route::get('/sablonlar', [SmsSablonController::class, 'liste']);
     Route::post('/sablonlar', [SmsSablonController::class, 'ekle']);

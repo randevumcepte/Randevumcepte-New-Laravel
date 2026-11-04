@@ -5,9 +5,11 @@ namespace Tests\Unit\Domain\Sms;
 use App\Domain\Sms\MesajUzunlugu;
 use App\Domain\Sms\SmsAyarKatalogu;
 use App\Domain\Sms\SmsDurumu;
+use App\Domain\Sms\SmsKuyrukDurumu;
 use App\Domain\Sms\SmsSaglayici;
 use App\Domain\Sms\SmsSekmeleri;
 use App\Domain\Sms\SmsTuru;
+use App\Domain\Sms\VoiceTelekomPaketi;
 use App\Exceptions\GecersizIslemException;
 use PHPUnit\Framework\TestCase;
 
@@ -105,6 +107,27 @@ class SmsDomainTest extends TestCase
         $this->assertSame(SmsSaglayici::Efetech, SmsSaglayici::salondan($ef));
         $this->assertTrue(SmsSaglayici::Efetech->hesapTanimli($ef));
         $this->assertFalse(SmsSaglayici::Efetech->hesapTanimli((object) ['yeni_sms' => 0, 'sms_apikey' => 'a']), 'gönderici başlığı zorunlu');
+    }
+
+    public function test_kuyruk_durumlari_eski_tuketicinin_gormedigi_degerler(): void
+    {
+        foreach ([SmsKuyrukDurumu::BEKLIYOR, SmsKuyrukDurumu::ISLENIYOR] as $d) {
+            $this->assertFalse(in_array($d, [0, 3], true), 'eski v2:bildirim-isle 0 ve 3 ile çalışır');
+            $this->assertFalse(SmsKuyrukDurumu::sunum($d)['tamamlandi']);
+        }
+        $this->assertTrue(SmsKuyrukDurumu::sunum(SmsKuyrukDurumu::HATA)['tamamlandi']);
+    }
+
+    public function test_voicetelekom_paketi_eski_istemciyle_ayni(): void
+    {
+        $g = VoiceTelekomPaketi::govde('Toplu SMS', 'Merhaba', [1 => '5321234567'], 'SALON', 'sms_x');
+        $this->assertSame(['5321234567'], $g['numbers']);
+        $this->assertSame('Toplu SMS', $g['title']);
+        $this->assertSame('SALON', $g['sender']);
+        $this->assertSame(0, $g['encoding']);
+        $this->assertSame(true, $g['skipAhsQuery']);
+        $this->assertSame(false, $g['commercial']);
+        $this->assertSame(60, $g['validity']);
     }
 
     public function test_ayarlar_sekmesi_yalniz_hesap_sahibine(): void

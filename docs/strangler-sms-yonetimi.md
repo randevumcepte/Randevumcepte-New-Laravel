@@ -22,14 +22,15 @@ Flutter'a dokunulmadı: uygulama v1 uçlarını kullanmaya devam eder, v1 uçlar
 | Bakiye | `Services/Sms/Bakiye/*` | sağlayıcı stratejisi + önbellek (header rozeti ile ortak) |
 | Rapor | `Services/Sms/Rapor/*` | `SmsRaporSaglayici` stratejisi: `VoiceTelekomRapor`, `EfetechRapor`; `SmsRaporServisi` ortak zenginleştirme |
 | Alıcı | `Services/Sms/SmsAliciServisi.php` | seçici listesi, tümünü seç, kimlik → gönderilebilir telefon |
-| Gönderim | `Services/Sms/SmsGonderimServisi.php` | önizleme, tekrar kilidi, outbox `sms_toplu` |
+| Gönderim | `Services/Sms/SmsGonderimServisi.php` | önizleme, tekrar kilidi, kuyruğa ekleme |
+| Kuyruk | `Services/Sms/Gonderim/*`, `Console/Commands/SmsKuyrukIsle.php`, `Domain/Sms/SmsKuyrukDurumu.php` | `sms:kuyruk-isle`, VoiceTelekom gönderimi |
 | Şablon | `Services/Sms/SmsSablonServisi.php` | `sms_taslaklari` (sistem şablonları salt okunur) |
 | Ayar | `Services/Sms/SmsAyarServisi.php` | `salon_sms_ayarlari` + `randevu_sms_hatirlatma` |
 | Kara liste | `Services/Sms/SmsKaraListeServisi.php` | liste; yazma `MusteriYazServisi::karaListe` (tek yazma yolu) |
 | Açılış | `Services/Sms/SmsAcilisServisi.php` | sekmeler, yetkiler, sözlükler, bakiye, şablonlar, ayarlar |
 | HTTP | `Controllers/Api/V2/Sms*Controller.php`, `routes/v2/sms.php` | taban: yetki kapıları + kill-switch |
 | Web | `views/v2/sms-yonetimi.blade.php`, `public/js/sms-yonetimi-v2.js`, `public/js/sms/*.js`, `public/css/sms-yonetimi-v2.css` | build'siz island |
-| Eski repo | `V2BildirimIsle` (`sms_toplu`), `Jobs/SmsTopluGonderJob`, payload MEDIUMTEXT migration | gerçek gönderim |
+| Eski repo | payload MEDIUMTEXT migration (`sms_toplu` tüketici + `SmsTopluGonderJob` KULLANILMIYOR, bkz. Gönderim) | |
 
 ## Yetki
 
@@ -65,8 +66,7 @@ Tüm cevaplar `{basarili, veri, mesaj}` zarfında; alan adları aşağıda belir
 
 ## Bilerek değişenler
 
-- **Gönderim asenkron:** cevap "kuyruğa alındı". Sağlayıcı hatası kullanıcıya anında dönmez; job loguna
-  (`[SMS-TOPLU]`) yazılır, paket SMS Raporları'nda görünmez.
+- **Gönderim asenkron:** cevap "kuyruğa alındı"; ekran sonucu `GET /sms/gonderim/{id}` ile izleyip gösterir.
 - **Kara liste her yolda elenir:** eski web `yeni_sms=1` yolunda elemiyordu (v1 API eliyordu).
 - **Çift gönderim kilidi:** aynı mesaj + aynı alıcılar 120 sn içinde 409 (`sms.tekrar_kilit_sn`).
 - **Raporlar önbellekli:** VoiceTelekom paketleri türe ayrılıp 5 dk önbelleklenir (eski kod her tablo
@@ -86,10 +86,23 @@ Tüm cevaplar `{basarili, veri, mesaj}` zarfında; alan adları aşağıda belir
 - **Filtreli SMS web sekmesi:** eski web'de yoktu. Uç (`tur=filtre`, `cinsiyet`) hazır; Flutter'daki
   `filtreli_sms_tab.dart` de şu an sayfaya bağlı değil.
 
-## Deploy sırası
+## Gönderim
 
-Eski repo **önce** deploy olmalı (`sms_toplu` tüketici + MEDIUMTEXT migration): tüketici yeni türü tanımadan
-kuyruğa yazılırsa kayıt 3 denemeden sonra kalıcı hataya düşer.
+Canlı monolit (`randevumcepte`) donuk ve bu iş için dosyalarına **dokunulmaz** (kullanıcı kararı, 4 Kas 2026).
+Bu yüzden gönderim v2'nin kendi işleyicisiyle yapılır: kayıtlar `v2_bildirim_kuyrugu` tablosuna `durum=4` ile
+yazılır; eski `v2:bildirim-isle` yalnız 0 ve 3 ile çalıştığı için bu kayıtları görmez.
+
+- Şimdilik **yalnız VoiceTelekom**. Efetech salonları 422 alır, eski panelden gönderir (WhatsApp önceliği eski kodda).
+- Tekrar deneme yok; 30 dk içinde işlenmeyen kayıt iptal edilir, yarıda kalan kapatılır.
+- Sonuç: `GET /sms/gonderim/{id}`, log `[SMS-V2]` → `randevumcepteyeni/storage/logs`.
+
+Kurulum (uygulama dosyalarının sahibi kullanıcıyla çalışmalı, root log dosyası yaratmasın):
+
+```
+* * * * * <sahip> cd /var/www/www-root/data/www/randevumcepteyeni && /usr/bin/flock -n /tmp/rc-sms-v2.lock /opt/php83/bin/php artisan sms:kuyruk-isle >/dev/null 2>&1
+```
+
+Canlı güncellendiğinde karar verilecek: bu işleyici kalıcı mı olacak, yoksa eski repodaki `SmsTopluGonderJob` yoluna mı dönülecek.
 
 ## Test
 

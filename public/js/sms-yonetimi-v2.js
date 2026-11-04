@@ -14,7 +14,7 @@ if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 const MODULLER = {
   raporlar: () => import('/js/sms/raporlar.js?v=1'),
-  toplu: () => import('/js/sms/toplu.js?v=1'),
+  toplu: () => import('/js/sms/toplu.js?v=2'),
   ayarlar: () => import('/js/sms/ayarlar.js?v=1'),
   kara_liste: () => import('/js/sms/kara_liste.js?v=1'),
 };

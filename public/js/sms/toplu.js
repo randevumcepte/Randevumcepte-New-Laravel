@@ -12,6 +12,8 @@ import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan } from '/js/lib/v2-ongorusme.js?v=1';
 
 const SAYFA = 100;
+const IZLEME_MS = 3000;
+const IZLEME_TUR = 20;
 const parcaHesap = (uzunluk, esikler) => {
   const i = esikler.findIndex((e) => uzunluk <= e);
   if (i >= 0) return i + 1;
@@ -138,7 +140,22 @@ export async function ciz(kap, ctx) {
     secim.idler.clear();
     kap.querySelectorAll('#tpListe input').forEach((c) => { c.checked = false; });
     seciliCiz();
-    ctx.bakiyeYenile();
+    sonucuIzle(r.govde.veri.gonderim_id);
+  }
+
+  /** Kuyruk sonucunu kısa süre izler; sonuç gelmezse kullanıcı Raporlar'dan takip eder. */
+  async function sonucuIzle(id) {
+    for (let i = 0; i < IZLEME_TUR; i++) {
+      await new Promise((coz) => setTimeout(coz, IZLEME_MS));
+      if (!kap.isConnected) return;
+      const r = await ctx.oku(`/gonderim/${id}`);
+      const d = r.govde?.veri;
+      if (!r.ok || !d?.tamamlandi) continue;
+      if (d.durum === 'hata') mesaj(`SMS gönderilemedi: ${d.hata || d.etiket}`, 'hata');
+      else { mesaj('SMS sağlayıcıya iletildi.', 'ok'); ctx.bakiyeYenile(); }
+      return;
+    }
+    mesaj('Gönderim hâlâ kuyrukta. Sonucu SMS Raporları\'ndan takip edebilirsiniz.', 'bilgi');
   }
 
   // ── Şablonlar ──

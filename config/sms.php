@@ -9,6 +9,7 @@ return [
     'voicetelekom' => [
         'kredi_url' => env('SMS_VOICETELEKOM_KREDI_URL', 'http://smsvt.voicetelekom.com:9587/user/credit'),
         'rapor_url' => env('SMS_VOICETELEKOM_RAPOR_URL', 'https://smsvt.voicetelekom.com:9588'),
+        'gonderim_url' => env('SMS_VOICETELEKOM_GONDERIM_URL', 'http://smsvt.voicetelekom.com:9587/sms/create'),
         'rapor_sayfa' => 1000,      // saglayici ust siniri
         'rapor_maks_sayfa' => 20,   // 20.000 paket: sonsuz dongu sigortasi (eski kodla ayni)
     ],
@@ -31,6 +32,11 @@ return [
     'rapor_gun' => 60,
     'rapor_cache_sn' => 300,
     'rapor_zaman_asimi_sn' => 60,
+
+    /* sms:kuyruk-isle — buyuk paketlerde saglayici yavas (eski istemci de 120 sn bekliyordu); bu sureden
+       eski bekleyen kayit (worker kapaliydi) gec gitmesin diye iptal edilir. */
+    'gonderim_zaman_asimi_sn' => 120,
+    'kuyruk_gecerlilik_dk' => 30,
 
     /* Ayni mesaj + ayni alicilar bu sure icinde yeniden kuyruga alinmaz (cift ucretlendirme korumasi). */
     'tekrar_kilit_sn' => 120,
