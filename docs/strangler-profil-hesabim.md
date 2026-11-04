@@ -42,7 +42,7 @@ Yazma kill-switch: `HESABIM_V2_YAZMA_AKTIF` (varsayılan açık).
 ## Eski panelde kalanlar
 
 - Ödeme: paket yükseltme (`/isletmeyonetim/uyelik`), duyuru paketi satın alma (`smspaketsatinal`, PayTR). Linkler API'den gelir; Flutter göstermez (satın alma yok).
-- Çıkış: `kullanici_menu` eski `cikisyap` adresine gider; v2 token'ı tarayıcıdan silinir ama sunucuda iptal edilmez (ömrü `v2-web` kuralına tabi).
+- Çıkış: `POST /api/v2/oturum/cikis` token'ı sunucuda iptal eder, ardından `/v2/giris`'e dönülür (bkz. `strangler-oturum.md`).
 
 ## Flutter geçişi için notlar
 

@@ -1,7 +1,7 @@
 /** Panel girişi. Giriş kuralları /api/v2/oturum/giris'te; burada yalnız form ve yönlendirme var. */
 import { api, el, qp, token } from '/js/lib/v2-ortak.js?v=1';
 import { formBagla, gonder, sifreGosterBagla } from '/js/lib/v2-oturum-form.js?v=1';
-import { hedefSayfa, oturumuKaydet } from '/js/lib/v2-oturum-depo.js?v=1';
+import { hedefSayfa, oturumuKaydet } from '/js/lib/v2-oturum-depo.js?v=2';
 
 const donus = qp.get('donus');
 

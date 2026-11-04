@@ -74,5 +74,6 @@ Eski monolit tarafı (outbox, canlıya taşınmış olmalı): `sistem_bildirim` 
 
 ## Sınırlar
 
+- v2 çıkışı her zaman `/v2/giris`'e döner; eski panelden köprüyle gelindiyse eski panel oturumu açık kalır (süresi dolana ya da oradan çıkılana kadar).
 - v2 girişi eski panel oturumu açmaz. v2'den eski panele giden linkler (ödeme, form PDF) eski giriş ekranını gösterir.
 - Token'da hesap tipi yok (bkz. `strangler-musteri-sitesi.md` güvenlik bulgusu); `hesap_turu=isletme` yalnız girişi korur.

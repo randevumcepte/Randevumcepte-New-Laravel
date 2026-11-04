@@ -18,5 +18,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/oturum/giris.js?v=1"></script>
+    <script type="module" src="/js/oturum/giris.js?v=2"></script>
 @endpush

@@ -44,7 +44,7 @@ final class PanelKisayollar
         return [
             ['kod' => 'profil',  'etiket' => 'Profil Bilgileri',    'ikon' => 'bi bi-person',       'v2_rota' => '/v2/profil'],
             ['kod' => 'hesabim', 'etiket' => 'Hesabım & Faturalar', 'ikon' => 'bi bi-person-vcard', 'v2_rota' => '/v2/hesabim', 'rol5_gizle' => true],
-            ['kod' => 'cikis',   'etiket' => 'Çıkış Yap',           'ikon' => 'bi bi-box-arrow-right', 'url' => EskiPanelLinki::url('isletmeyonetim/cikisyap')],
+            ['kod' => 'cikis',   'etiket' => 'Çıkış Yap',           'ikon' => 'bi bi-box-arrow-right', 'url' => '/v2/giris'],
         ];
     }
 }
