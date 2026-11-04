@@ -73,7 +73,7 @@ class PanelMenu
             ['etiket' => 'Etkinlikler',        'ikon' => 'bi bi-text-left',        'slug' => 'etkinlik',          'pageindex' => 83,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'v2_rota' => '/v2/carkifelek', 'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],
             ['etiket' => 'Uygulama Afişi',     'ikon' => 'bi bi-qr-code',          'slug' => 'uygulama-afisi',    'v2_rota' => '/v2/uygulama-afisi', 'pageindex' => 85,  'yetki' => 'pazarlama.kampanya_yonet'],
-            ['etiket' => 'WhatsApp Yönetimi',  'ikon' => 'bi bi-whatsapp',         'slug' => 'whatsapp',          'pageindex' => 90,  'yetki' => 'pazarlama.whatsapp_gonder'],
+            ['etiket' => 'WhatsApp Yönetimi',  'ikon' => 'bi bi-whatsapp',         'slug' => 'whatsapp',          'v2_rota' => '/v2/whatsapp', 'pageindex' => 90,  'yetki' => 'pazarlama.whatsapp_gonder'],
             ['etiket' => 'SMS Yönetimi',       'ikon' => 'bi bi-chat-square-text', 'slug' => 'toplusms', 'v2_rota' => '/v2/sms-yonetimi', 'pageindex' => 91,  'yetki' => 'pazarlama.toplu_sms'],
 
             // ───────────── Çağrı Merkezi

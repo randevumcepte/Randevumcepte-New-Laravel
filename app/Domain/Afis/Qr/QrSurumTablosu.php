@@ -3,12 +3,12 @@
 namespace App\Domain\Afis\Qr;
 
 /**
- * QR sürüm kapasiteleri — YALNIZ hata düzeltme seviyesi M (%15), sürüm 1–10
+ * QR sürüm kapasiteleri — YALNIZ hata düzeltme seviyesi M (%15), sürüm 1–13
  * (ISO/IEC 18004 Tablo 9 + Ek E hizalama merkezleri).
  *
- * Sürüm 10 / M bayt modunda 213 bayta kadar taşır; afiş / indirme linki gibi kısa URL'ler
- * için fazlasıyla yeterli. Daha uzun içerik gerekirse tabloya satır eklemek yeter (OCP) —
- * kodlayıcı tablonun boyutunu bilmez.
+ * Sürüm 13 / M bayt modunda 331 bayta kadar taşır: afiş / indirme linki gibi kısa URL'ler
+ * küçük sürümde kalır, WhatsApp eşleştirme dizesi (~250 bayt) 11–12'ye sığar. Daha uzun içerik
+ * gerekirse tabloya satır eklemek yeter (OCP) — kodlayıcı tablonun boyutunu bilmez.
  */
 final class QrSurumTablosu
 {
@@ -27,6 +27,9 @@ final class QrSurumTablosu
         8  => [242, 22, 4, [6, 24, 42]],
         9  => [292, 22, 5, [6, 26, 46]],
         10 => [346, 26, 5, [6, 28, 50]],
+        11 => [404, 30, 5, [6, 30, 54]],
+        12 => [466, 22, 8, [6, 32, 58]],
+        13 => [532, 22, 9, [6, 34, 62]],
     ];
 
     public static function enBuyukSurum(): int

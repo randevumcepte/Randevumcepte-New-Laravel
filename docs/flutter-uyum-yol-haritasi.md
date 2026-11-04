@@ -54,7 +54,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Memnuniyet anketi (yönetici) | 12 | ✅ | `/anket/*` (özet, gönderimler+detay, web gizle, şablon CRUD, manuel/hızlı gönder → outbox, Reputation ayarları); v1 alan adları aynı; eşleme docs/strangler-memnuniyet-anketi.md; yazma `ANKET_V2_YAZMA_AKTIF` |
 | Bildirim reklamları (yönetici + müşteri uygulaması) | 12 | ✅ | `/bildirim-reklam/*` (liste+sayaç, form verisi, kaydet, durum, sil, görsel base64/multipart, alıcı sayısı, push gönder → outbox) + `/musteri-uygulama/reklamlar*` (`auth:api`); v1 alan adları aynı; eşleme docs/strangler-bildirim-reklam.md; yazma `BILDIRIM_REKLAM_V2_YAZMA_AKTIF` |
 | SMS | 13 | ✅ | `docs/strangler-sms-yonetimi.md` (`/api/v2/sms/*`) |
-| WhatsApp | ~7 | ❌ | |
+| WhatsApp | ~7 | ✅ | `docs/strangler-whatsapp.md` (`/api/v2/whatsapp/*`) |
 | E-asistan (Asistanım) | 2 | ✅ | `/asistan/*` — eşleme aşağıda |
 | Dashboard / hatırlatma / bildirim | ~13 | ◐ | Özet `GET /ozet/acilis`, `/ozet/kart/{kod}`, `/ozet/sekme/{kod}` ✅ (v1 `dashboard` + `dashboardKarsilastirma`; eşleme docs/strangler-ozet.md) — bildirim, hatırlatma, `easistandatadashboard`, boş saat kampanyası henüz v1 |
 | Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |

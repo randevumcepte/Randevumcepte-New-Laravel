@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\DB;
  *         anket_gonder (ESKİ, artık yazılmaz; kuyruktaki eski satırlar için monolitte duruyor),
  *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi manuel WhatsApp),
  *         cark_duyuru (payload: baslik, mesaj; randevu_id null — Çarkıfelek "müşterilere duyur" push'u),
+ *         sistem_bildirim (payload: mesaj; randevu_id null — sistem sahibine WA+SMS, ör. WhatsApp kontör talebi),
  *         kampanya_olustur (payload: kampanya_id; randevu_id null — Reklam Yönetimi yeni kampanya → personel push'u),
  *         sms_toplu (payload: telefonlar[], mesaj, tur, baslik; randevu_id null — SMS Yönetimi toplu/filtreli gönderim).
  */

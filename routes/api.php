@@ -217,6 +217,9 @@ Route::prefix('v2')->group(function () {
         // LOG HAREKETLERI (salon_aktivite_log salt okuma: liste + filtre secenekleri) — routes/v2/hareket.php
         require __DIR__.'/v2/hareket.php';
 
+        // WHATSAPP YONETIMI (oturum/QR, kanal, linkler, kontor, gonderim raporlari) — routes/v2/whatsapp.php
+        require __DIR__.'/v2/whatsapp.php';
+
         // UYGULAMA AFISI (salt okuma: durum/link + afis onizleme JPEG + PDF) — routes/v2/uygulama-afisi.php
         require __DIR__.'/v2/uygulama-afisi.php';
 

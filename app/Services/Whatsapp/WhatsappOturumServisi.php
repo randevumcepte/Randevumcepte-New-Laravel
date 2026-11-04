@@ -14,10 +14,12 @@ use Illuminate\Support\Facades\DB;
 class WhatsappOturumServisi
 {
     private const KOLONLAR = ['id', 'salon_adi', 'whatsapp_aktif', 'whatsapp_durum', 'whatsapp_numara', 'whatsapp_kontor',
-        'whatsapp_deneme_bitis', 'whatsapp_saglayici', 'whatsapp_paylasilan_salon_id'];
+        'whatsapp_deneme_bitis', 'whatsapp_saglayici', 'whatsapp_paylasilan_salon_id', 'whatsapp_baglanti_tarihi', 'whatsapp_gunluk_limit'];
 
     /**
-     * @return array{durum: WhatsappDurumu, saglayici: string, paylasilan: ?array{salon_id:int, salon_adi:string}}|null
+     * oturum: mesajların gerçekte gittiği salonun satırı (KOLONLAR).
+     *
+     * @return array{durum: WhatsappDurumu, saglayici: string, paylasilan: ?array{salon_id:int, salon_adi:string}, oturum: object}|null
      */
     public function coz(int $salonId): ?array
     {
@@ -33,6 +35,7 @@ class WhatsappOturumServisi
             'durum'      => WhatsappDurumu::salondan($oturum, date('Y-m-d')),
             'saglayici'  => (string) ($oturum->whatsapp_saglayici ?: 'baileys'),
             'paylasilan' => $sahip ? ['salon_id' => (int) $sahip->id, 'salon_adi' => (string) $sahip->salon_adi] : null,
+            'oturum'     => $oturum,
         ];
     }
 

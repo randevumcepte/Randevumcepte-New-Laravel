@@ -3,6 +3,7 @@
  * Marka paleti, TR sayı biçimi, ₺ ipucu ve "aynı tuvale yeniden çizince eskisini yok et"
  * tek yerde. Import yolu her yerde AYNI olmalı:
  *   import { cubuk, halka, cizgi, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=1';
+ * (v=2: yiginCubuk eklendi — kullanan ekran v=2 ile import eder; diğerleri için v=1 de çalışır.)
  */
 
 export const RENK = {
@@ -46,6 +47,19 @@ export function cubuk(tuval, etiketler, degerler, { yatay = false, para = false,
       indexAxis: yatay ? 'y' : 'x', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: ipucu(para, ek) },
       scales: yatay ? { x: eksen, y: { grid: { display: false } } } : { y: eksen, x: { grid: { display: false } } },
+    },
+  });
+}
+
+/** Yığılmış çubuk — aynı eksende birden çok seri. seriler: [{ad, veri, renk}] */
+export function yiginCubuk(tuval, etiketler, seriler) {
+  return ciz(tuval, {
+    type: 'bar',
+    data: { labels: etiketler, datasets: seriler.map((s) => ({ label: s.ad, data: s.veri, backgroundColor: s.renk, maxBarThickness: 34 })) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,.05)' } } },
     },
   });
 }

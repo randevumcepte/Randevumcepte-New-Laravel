@@ -78,6 +78,12 @@ final class HareketKatalogu
         'cagri_liste_sil'               => ['etiket' => 'Arama listesi silindi'],
         'cagri_liste_olustur'           => ['etiket' => 'Arama listesi oluşturuldu', 'kategori' => HareketKategorisi::EKLEME],
         'cagri_whatsapp_gonder'         => ['etiket' => 'Çağrı: WhatsApp mesajı'],
+        // WhatsApp Yönetimi (v2)
+        'whatsapp_baglanti_baslat'      => ['etiket' => 'WhatsApp bağlantısı başlatıldı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'whatsapp_baglanti_kapat'       => ['etiket' => 'WhatsApp oturumu kapatıldı', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'whatsapp_kanal_degistir'       => ['etiket' => 'WhatsApp hatırlatma kanalı değişti', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'whatsapp_link_kaydet'          => ['etiket' => 'WhatsApp işletme bağlantıları kaydedildi', 'kategori' => HareketKategorisi::GUNCELLEME],
+        'whatsapp_kontor_talep'         => ['etiket' => 'WhatsApp kontör talebi', 'kategori' => HareketKategorisi::GONDERIM],
         'cagri_script_kaydet'           => ['etiket' => 'Görüşme scripti kaydedildi'],
         'cagri_script_sil'              => ['etiket' => 'Görüşme scripti silindi'],
         'cagri_kategori_kaydet'         => ['etiket' => 'Sonuç kategorisi kaydedildi'],
