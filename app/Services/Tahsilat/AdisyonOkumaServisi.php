@@ -60,6 +60,10 @@ class AdisyonOkumaServisi
         $hizmetAdlari = DB::table('hizmetler')->whereIn('id', $hizmetler->pluck('hizmet_id')->filter()->unique()->all())->pluck('hizmet_adi', 'id');
         $urunAdlari   = DB::table('urunler')->whereIn('id', $urunler->pluck('urun_id')->filter()->unique()->all())->pluck('urun_adi', 'id');
         $paketAdlari  = DB::table('paketler')->whereIn('id', $paketler->pluck('paket_id')->filter()->unique()->all())->pluck('paket_adi', 'id');
+        // Kalem personeli (hizmet veren / satıcı) adı — pasif personel de görünür.
+        $personelAdlari = DB::table('salon_personelleri')
+            ->whereIn('id', $hizmetler->concat($urunler)->concat($paketler)->pluck('personel_id')->filter()->unique()->all())
+            ->pluck('personel_adi', 'id');
 
         // Saf hesap icin kalemleri normalize et. KANONIK: sadece fiyat + indirim.
         // (urun.fiyat zaten satir toplami; hediye kalemin fiyati zaten 0.)
@@ -101,6 +105,7 @@ class AdisyonOkumaServisi
                 'ad'            => $hizmetAdlari[$h->hizmet_id] ?? null,
                 'hizmet_id'     => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,
                 'personel_id'   => $h->personel_id !== null ? (int) $h->personel_id : null,
+                'personel_adi'  => $personelAdlari[$h->personel_id] ?? null,
                 'fiyat'         => $h->fiyat,
                 'indirim_tutari'=> $h->indirim_tutari,
                 'hediye'        => (int) ($h->hediye ?? 0),
@@ -113,6 +118,7 @@ class AdisyonOkumaServisi
                 'ad'             => $urunAdlari[$u->urun_id] ?? null,
                 'urun_id'        => $u->urun_id !== null ? (int) $u->urun_id : null,
                 'personel_id'    => $u->personel_id !== null ? (int) $u->personel_id : null,
+                'personel_adi'   => $personelAdlari[$u->personel_id] ?? null,
                 'adet'           => $u->adet,
                 'fiyat'          => $u->fiyat,
                 'indirim_tutari' => $u->indirim_tutari,
@@ -123,6 +129,7 @@ class AdisyonOkumaServisi
                 'ad'             => $paketAdlari[$p->paket_id] ?? null,
                 'paket_id'       => $p->paket_id !== null ? (int) $p->paket_id : null,
                 'personel_id'    => $p->personel_id !== null ? (int) $p->personel_id : null,
+                'personel_adi'   => $personelAdlari[$p->personel_id] ?? null,
                 'fiyat'          => $p->fiyat,
                 'indirim_tutari' => $p->indirim_tutari,
                 'hediye'         => (int) ($p->hediye ?? 0),

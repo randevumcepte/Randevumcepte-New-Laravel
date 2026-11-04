@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\GecersizIslemException;
 use App\Models\Adisyonlar;
+use App\Models\Salonlar;
 use App\Services\Satis\KalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -83,6 +84,24 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Kalem eklendi.');
     }
 
+    /** PATCH /api/v2/kalem/{tip}/{id}/personel  body: {personel_id} — hizmet veren / satıcı değiştir. */
+    public function personel(Request $request, string $tip, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+
+        $salonId = $this->servis->kalemSalonId($tip, $id);
+        if (! $salonId) {
+            return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+
+        return ApiCevap::basarili(
+            $this->servis->personelGuncelle($tip, $id, $this->personelGirdisi($request, $tip, $salonId)),
+            'Personel güncellendi.'
+        );
+    }
+
     /** PATCH /api/v2/kalem/urun/{id}  body: {adet} */
     public function urunAdet(Request $request, int $id)
     {
@@ -129,7 +148,7 @@ class SatisKalemController extends V2Controller
 
     /**
      * Kalem ekleme girdisi — yeni satış ve mevcut adisyona ekleme AYNI kuralla:
-     * tip ∈ hizmet|urun|paket, katalog_id zorunlu, personel (verildiyse) bu salonun.
+     * tip ∈ hizmet|urun|paket, katalog_id zorunlu, personel kuralı personelGirdisi'nde.
      *
      * @return array{0:string,1:int,2:array{adet:mixed,personel_id:?int}}
      */
@@ -143,9 +162,19 @@ class SatisKalemController extends V2Controller
         if (! $katalogId) {
             throw new GecersizIslemException('katalog_id zorunlu');
         }
-        $personelId = $request->input('personel_id') ? (int) $request->input('personel_id') : null;
+
+        return [$tip, $katalogId, ['adet' => $request->input('adet'), 'personel_id' => $this->personelGirdisi($request, $tip, $salonId)]];
+    }
+
+    /** Hizmette personel zorunlu (stüdyo hariç), ürün/pakette opsiyonel; verilen personel bu salonun olmalı. */
+    private function personelGirdisi(Request $request, string $tip, int $salonId): ?int
+    {
+        $personelId = (int) $request->input('personel_id') ?: null;
+        if (! $personelId && $tip === 'hizmet' && Salonlar::hizmetPersonelZorunlu($salonId)) {
+            throw new GecersizIslemException('Hizmet için personel seçiniz.');
+        }
         $this->sahiplik->personelOlmali($personelId, $salonId);
 
-        return [$tip, $katalogId, ['adet' => $request->input('adet'), 'personel_id' => $personelId]];
+        return $personelId;
     }
 }

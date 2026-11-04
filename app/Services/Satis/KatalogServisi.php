@@ -2,6 +2,7 @@
 
 namespace App\Services\Satis;
 
+use App\Models\Salonlar;
 use App\Services\Paket\PaketSorgusu;
 use Illuminate\Support\Facades\DB;
 
@@ -45,6 +46,12 @@ class KatalogServisi
             'hizmetler' => $hizmetler,
             'urunler'   => $urunler,
             'paketler'  => $paketler,
+            // Kalem personeli (hizmet veren / satıcı) seçimi: aktif personel, ada göre (eski personel_listesi_getir).
+            'personeller' => DB::table('salon_personelleri')
+                ->where('salon_id', $salonId)->where('aktif', 1)->orderBy('personel_adi')
+                ->get(['id', 'personel_adi'])
+                ->map(fn ($p) => ['id' => (int) $p->id, 'ad' => trim((string) $p->personel_adi)])->all(),
+            'hizmet_personel_zorunlu' => Salonlar::hizmetPersonelZorunlu($salonId),
         ];
     }
 

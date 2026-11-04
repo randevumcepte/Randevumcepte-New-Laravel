@@ -26,4 +26,10 @@ class Salonlar extends Model
     {
         return in_array((int) $salonTuruId, self::DANISAN_TURLERI, true);
     }
+
+    /** Hizmet kaleminde personel zorunlu mu — stüdyo modu HARİÇ (prim yok; eski adisyon_hizmet_formu kuralı). */
+    public static function hizmetPersonelZorunlu(int $salonId): bool
+    {
+        return (int) self::where('id', $salonId)->value('studyo_modu') !== 1;
+    }
 }

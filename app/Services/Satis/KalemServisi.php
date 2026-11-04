@@ -181,15 +181,34 @@ class KalemServisi
         });
     }
 
-    /** Bir kalemin ait olduğu adisyonun salon_id'si (kapsam denetimi için). */
-    public function kalemSalonId(string $tip, int $kalemId): ?int
+    /** Kalemin personelini (hizmet veren / satıcı) değiştir (eski adisyonhizmetpersonelguncelle; tahsilatlı kalemde de serbest). */
+    public function personelGuncelle(string $tip, int $kalemId, ?int $personelId): array
     {
-        $model = match ($tip) {
+        $model = self::kalemModeli($tip);
+        $k = $model ? $model::find($kalemId) : null;
+        if (! $k) {
+            throw new BulunamadiException('Kalem bulunamadı');
+        }
+        $k->personel_id = $personelId;
+        $k->save();
+
+        return ['tip' => $tip, 'kalem_id' => $kalemId, 'personel_id' => $personelId, 'adisyon_id' => (int) $k->adisyon_id];
+    }
+
+    private static function kalemModeli(string $tip): ?string
+    {
+        return match ($tip) {
             'hizmet' => AdisyonHizmetler::class,
             'urun'   => AdisyonUrunler::class,
             'paket'  => AdisyonPaketler::class,
             default  => null,
         };
+    }
+
+    /** Bir kalemin ait olduğu adisyonun salon_id'si (kapsam denetimi için). */
+    public function kalemSalonId(string $tip, int $kalemId): ?int
+    {
+        $model = self::kalemModeli($tip);
         if (! $model) {
             return null;
         }

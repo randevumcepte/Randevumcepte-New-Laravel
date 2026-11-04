@@ -5,7 +5,8 @@
  * SAĞ sütun = Ödeme/Özet paneli. /api/v2 uçlarını Bearer token ile tüketir
  * (web + ileride Flutter AYNI uçlar). Yetenekler:
  *   - Adisyon özeti + kalemleri HER DURUMDA (kapalı dahil) adıyla listeler.
- *   - Katalogdan hizmet/ürün/paket EKLE, ürün ADEDİ, kalem SİL.
+ *   - Katalogdan hizmet/ürün/paket EKLE, ürün ADEDİ, kalem SİL; hizmet veren / satıcı
+ *     personel seçimi (ekleme + satırda değiştirme; zorunluluk kuralı sunucuda).
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
  *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
  *   - Tarihler flatpickr (TR) ile seçilir.
@@ -67,12 +68,12 @@ async function adisyonYukle() {
   adisyon = govde.veri;
   salonId = adisyon.adisyon.salon_id;
   if (window.rcPanel && salonId) window.rcPanel.salonAyarla(salonId);
+  if (!katalog) await katalogYukle(); // kalem satırlarındaki personel seçimi katalogdan
   basligiGoster();
   ozetGoster();
   kalemlerGoster();
   gecmisGoster();
   alacakGoster();
-  if (!katalog) katalogYukle();
   // Tahsilat Tutarı güncel Kalan'ı takip eder (elle yazılınca / düzenleme modunda ezme).
   const h = adisyon.hesap;
   if (!tutarManuel && !duzenlenenTahsilat) el('#t-tutar').value = h.kalan > 0 ? h.kalan : '';
@@ -115,25 +116,43 @@ function ozetGoster() {
 function kalemlerGoster() {
   const v = adisyon;
   const k = [
-    ...(v.hizmetler || []).map((h) => ({ tip: 'hizmet', id: h.id, ad: h.ad || 'Hizmet #' + h.hizmet_id, ek: h.seans_sayisi ? h.seans_sayisi + ' seans' : '', fiyat: h.fiyat, indirim: h.indirim_tutari, adet: null })),
-    ...(v.paketler || []).map((p) => ({ tip: 'paket', id: p.id, ad: p.ad || 'Paket #' + p.paket_id, ek: '', fiyat: p.fiyat, indirim: p.indirim_tutari, adet: null })),
-    ...(v.urunler || []).map((u) => ({ tip: 'urun', id: u.id, ad: u.ad || 'Ürün #' + u.urun_id, ek: '', fiyat: u.fiyat, indirim: u.indirim_tutari, adet: u.adet })),
+    ...(v.hizmetler || []).map((h) => ({ tip: 'hizmet', id: h.id, ad: h.ad || 'Hizmet #' + h.hizmet_id, ek: h.seans_sayisi ? h.seans_sayisi + ' seans' : '', fiyat: h.fiyat, indirim: h.indirim_tutari, adet: null, personel_id: h.personel_id, personel_adi: h.personel_adi })),
+    ...(v.paketler || []).map((p) => ({ tip: 'paket', id: p.id, ad: p.ad || 'Paket #' + p.paket_id, ek: '', fiyat: p.fiyat, indirim: p.indirim_tutari, adet: null, personel_id: p.personel_id, personel_adi: p.personel_adi })),
+    ...(v.urunler || []).map((u) => ({ tip: 'urun', id: u.id, ad: u.ad || 'Ürün #' + u.urun_id, ek: '', fiyat: u.fiyat, indirim: u.indirim_tutari, adet: u.adet, personel_id: u.personel_id, personel_adi: u.personel_adi })),
   ];
   yerelTablo('t-kalemler', {
     birim: 'kalem',
     bosMesaj: 'Henüz kalem yok. Yukarıdan hizmet, ürün veya paket ekleyin.',
     kolonlar: [
       { baslik: 'Kalem', sirala: 'ad', deger: (x) => x.ad }, { baslik: 'Tür', sirala: 'tip', deger: (x) => TUR_AD[x.tip] },
+      { baslik: 'Personel', sirala: 'personel', deger: (x) => x.personel_adi || '' },
       { baslik: 'Fiyat', sinif: 'rc-sag', sirala: 'fiyat', deger: (x) => Number(x.fiyat) || 0 },
       { baslik: 'İndirim', sinif: 'rc-sag', sirala: 'indirim', deger: (x) => Number(x.indirim) || 0 }, { baslik: '' },
     ],
-    araMetni: (x) => `${x.ad} ${TUR_AD[x.tip]} ${x.ek}`,
-    satir: (x) => satir(x.tip, x.id, x.ad, x.ek, x.fiyat, x.indirim, x.adet),
+    araMetni: (x) => `${x.ad} ${TUR_AD[x.tip]} ${x.ek} ${x.personel_adi || ''}`,
+    satir: (x) => satir(x.tip, x.id, x.ad, x.ek, x.fiyat, x.indirim, x.adet, personelSecim(x)),
     cizildi: kalemOlaylariBagla,
   }).kayitlarAyarla(k);
 }
 
-function satir(tip, id, ad, ek, fiyat, indirim, adet) {
+const personelEtiket = (tip) => (tip === 'hizmet' ? 'Hizmet Veren' : 'Satıcı');
+
+// Personel <option>'ları (katalog: aktif personel). Listede olmayan (pasif) mevcut personel de korunur.
+function personelSecenekleri(seciliId, seciliAd, bosEtiket) {
+  const liste = [...(katalog?.personeller || [])];
+  if (seciliId && !liste.some((p) => p.id === seciliId)) liste.unshift({ id: seciliId, ad: seciliAd || '#' + seciliId });
+  return (bosEtiket ? `<option value="">${esc(bosEtiket)}</option>` : '')
+    + liste.map((p) => `<option value="${p.id}"${p.id === seciliId ? ' selected' : ''}>${esc(p.ad)}</option>`).join('');
+}
+
+function personelSecim(x) {
+  if (!katalog) return esc(x.personel_adi || '—');
+  // Zorunlu hizmette atanmış personel boşaltılamaz; atanmamış eski kalemde seçim istenir.
+  const bos = x.tip === 'hizmet' && katalog.hizmet_personel_zorunlu && x.personel_id ? null : 'Seçilmedi';
+  return `<select class="t-kalem-personel" data-tip="${x.tip}" data-id="${x.id}" aria-label="${personelEtiket(x.tip)}">${personelSecenekleri(x.personel_id, x.personel_adi, bos)}</select>`;
+}
+
+function satir(tip, id, ad, ek, fiyat, indirim, adet, personelHtml) {
   const rozet = `<span class="t-rozet ${tip}">${tip === 'hizmet' ? 'Hizmet' : tip === 'urun' ? 'Ürün' : 'Paket'}</span>${ek ? ' <small style="color:#9aa0bd">' + esc(ek) + '</small>' : ''}`;
   const tur = tip === 'urun'
     ? `${rozet}<br><input type="number" min="1" value="${adet || 1}" class="t-adet-inp" data-id="${id}"> adet`
@@ -141,6 +160,7 @@ function satir(tip, id, ad, ek, fiyat, indirim, adet) {
   return `<tr>
     <td><span class="t-kalem-ad">${esc(ad)}</span></td>
     <td>${tur}</td>
+    <td>${personelHtml}</td>
     <td class="rc-sag">${TL(fiyat)}</td>
     <td class="rc-sag">${TL(indirim || 0)}</td>
     <td class="rc-sag"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
@@ -148,6 +168,7 @@ function satir(tip, id, ad, ek, fiyat, indirim, adet) {
 
 function kalemOlaylariBagla() {
   document.querySelectorAll('#t-kalemler .t-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
+  document.querySelectorAll('#t-kalemler .t-kalem-personel').forEach((sel) => (sel.onchange = () => kalemPersonelDegistir(sel)));
   document.querySelectorAll('.t-adet-inp').forEach((inp) => {
     let zaman;
     inp.oninput = () => {
@@ -217,6 +238,8 @@ function ekleAc(tip) {
   katalogDoldur(tip);
   el('#t-ekle-adet-kutu').style.display = tip === 'urun' ? '' : 'none';
   el('#t-ekle-baslik').textContent = tip === 'hizmet' ? 'Hizmet Ekle' : tip === 'urun' ? 'Ürün Ekle' : 'Paket Ekle';
+  const zorunlu = tip === 'hizmet' && katalog.hizmet_personel_zorunlu;
+  el('#t-ekle-personel').innerHTML = personelSecenekleri(null, null, `${personelEtiket(tip)} seçin${zorunlu ? ' *' : ''}`);
   el('#t-ekle-katalog').focus();
 }
 
@@ -232,6 +255,8 @@ async function kalemEkle() {
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
+  const personelId = parseInt(el('#t-ekle-personel').value, 10);
+  if (personelId) body.personel_id = personelId;
   const btn = el('#t-ekle-btn');
   btn.disabled = true;
   try {
@@ -282,6 +307,13 @@ async function yeniSatisAc(kalem) {
   el('#t-ekle-panel').hidden = true;
   mesaj('Satış açıldı.', 'ok');
   await adisyonYukle();
+}
+
+async function kalemPersonelDegistir(sel) {
+  const { ok, kod, govde } = await api('PATCH', `/kalem/${sel.dataset.tip}/${sel.dataset.id}/personel`, { body: { personel_id: parseInt(sel.value, 10) || null } });
+  if (ok) mesaj('Personel güncellendi.', 'ok');
+  else mesaj(`Personel güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
+  await adisyonYukle(); // hata durumunda eski seçime döner
 }
 
 async function adetDegistir(kalemId, adet) {
@@ -476,6 +508,7 @@ function iskelet() {
             <div class="t-ekle-satir">
               <select id="t-ekle-tip" style="display:none"><option value="hizmet">Hizmet</option><option value="urun">Ürün</option><option value="paket">Paket</option></select>
               <select id="t-ekle-katalog" class="t-katalog"></select>
+              <select id="t-ekle-personel" class="t-personel" aria-label="Personel"></select>
               <span id="t-ekle-adet-kutu"><input id="t-ekle-adet" class="t-adet" type="number" min="1" value="1" title="Adet"></span>
               <button id="t-ekle-btn" class="t-mini mor">Ekle</button>
               <button id="t-ekle-iptal" class="t-mini" style="background:#8a90ad">Vazgeç</button>
