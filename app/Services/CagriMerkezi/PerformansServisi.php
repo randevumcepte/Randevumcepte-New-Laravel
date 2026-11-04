@@ -4,6 +4,7 @@ namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\AramaSonucu;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Domain\CagriMerkezi\SantralKaydi;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +22,7 @@ class PerformansServisi
 
     public function kartlar(CagriMerkeziErisim $e): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Performans);
         $zamanli = "am.tarih IS NOT NULL AND am.tarih<>'' AND am.saat IS NOT NULL AND am.saat<>''";
         $rows = DB::table('aranacak_musteriler as am')->join('arama_listesi as al', 'al.id', '=', 'am.arama_id')
             ->where('al.salon_id', $e->salonId)->whereNotNull('al.personel_id')
@@ -84,7 +85,7 @@ class PerformansServisi
     /** Bir personelin görüşme dökümü (son 300) + sonuç filtre grupları. */
     public function personelDetay(CagriMerkeziErisim $e, int $personelId): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Performans);
         $this->erisim->personel($personelId, $e);
         $host = (string) config('cagri_merkezi.ses_host');
 

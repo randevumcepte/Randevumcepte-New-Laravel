@@ -3,6 +3,7 @@
 namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
@@ -23,7 +24,7 @@ class CagriAyarServisi
     /** Yönetici görünümü: TÜM scriptler (pasifler dahil) + kategori ağacı. */
     public function getir(CagriMerkeziErisim $e): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::AyarYonet);
 
         return [
             'scriptler'   => DB::table('cagri_scriptleri')->where('salon_id', $e->salonId)->orderByDesc('id')->get(['id', 'baslik', 'icerik', 'aktif'])
@@ -35,7 +36,7 @@ class CagriAyarServisi
     /** @param array{baslik:string, icerik:?string, aktif:?bool} $v */
     public function scriptKaydet(CagriMerkeziErisim $e, ?int $id, array $v): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::AyarYonet);
         $kolon = ['baslik' => mb_substr(trim($v['baslik']), 0, 190), 'icerik' => (string) ($v['icerik'] ?? ''), 'aktif' => ($v['aktif'] ?? true) ? 1 : 0, 'updated_at' => now()];
         if ($id) {
             $this->scriptBul($e, $id);
@@ -50,7 +51,7 @@ class CagriAyarServisi
 
     public function scriptSil(CagriMerkeziErisim $e, int $id): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::AyarYonet);
         $s = $this->scriptBul($e, $id);
         DB::table('cagri_scriptleri')->where('id', $id)->delete();
         AktiviteLog::yaz($e->salonId, $e->yetkiliId, 'cagri_script_sil', 'cagri_script', $id, (string) $s->baslik, 'Görüşme scripti silindi');
@@ -61,7 +62,7 @@ class CagriAyarServisi
     /** Kategori ekle / yeniden adlandır. ust_id yalnız yeni kayıtta; bu salonun ANA kategorisi olmalı. */
     public function kategoriKaydet(CagriMerkeziErisim $e, ?int $id, string $ad, ?int $ustId): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::AyarYonet);
         $ad = mb_substr(trim($ad), 0, 190);
         if ($id) {
             $this->kategoriBul($e, $id);
@@ -83,7 +84,7 @@ class CagriAyarServisi
     /** Ana kategori silinirse alt kategorileri de gider (görüşme notlarındaki kategori_id kalır, etiket boş görünür). */
     public function kategoriSil(CagriMerkeziErisim $e, int $id): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::AyarYonet);
         $k = $this->kategoriBul($e, $id);
         DB::transaction(function () use ($e, $id) {
             DB::table('cagri_kategorileri')->where('salon_id', $e->salonId)->where('ust_id', $id)->delete();

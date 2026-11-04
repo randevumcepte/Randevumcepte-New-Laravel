@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Services\CagriMerkezi\AnketGonderimServisi;
 use App\Services\CagriMerkezi\AramaBaslatmaServisi;
 use App\Services\CagriMerkezi\GorusmeSonucServisi;
@@ -35,7 +36,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 {
     public function ara(Request $request, int $id, AramaBaslatmaServisi $s)
     {
-        $sonuc = $s->kayittan($this->erisim($request), $id, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
+        $sonuc = $s->kayittan($this->erisim($request, CagriMerkeziEylemi::Arama), $id, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
 
         return $sonuc['basarili'] ? ApiCevap::basarili($sonuc, $sonuc['mesaj']) : ApiCevap::hata($sonuc['mesaj'], 422, $sonuc);
     }
@@ -43,14 +44,14 @@ class CagriIslemController extends CagriMerkeziTabanController
     public function araNumara(Request $request, AramaBaslatmaServisi $s)
     {
         $v = $request->validate(['user_id' => ['nullable', 'integer', 'min:1'], 'numara' => ['nullable', 'string', 'max:30']]);
-        $sonuc = $s->numaradan($this->erisim($request), $v['user_id'] ?? null, $v['numara'] ?? null, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
+        $sonuc = $s->numaradan($this->erisim($request, CagriMerkeziEylemi::Arama), $v['user_id'] ?? null, $v['numara'] ?? null, filter_var($request->input('softphone'), FILTER_VALIDATE_BOOLEAN));
 
         return $sonuc['basarili'] ? ApiCevap::basarili($sonuc, $sonuc['mesaj']) : ApiCevap::hata($sonuc['mesaj'], 422, $sonuc);
     }
 
     public function sonuc(Request $request, int $id, GorusmeSonucServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::Calisma);
         $v = $request->validate([
             'sonuc'             => ['nullable', 'integer', 'between:0,9'],
             'not'               => ['nullable', 'string', 'max:5000'],
@@ -65,17 +66,17 @@ class CagriIslemController extends CagriMerkeziTabanController
 
     public function randevuVerildi(Request $request, int $id, GorusmeSonucServisi $s)
     {
-        return ApiCevap::basarili($s->randevuVerildi($this->yazmaErisimi($request), $id), 'Randevu oluşturuldu (müşteri listede kaldı).');
+        return ApiCevap::basarili($s->randevuVerildi($this->yazmaErisimi($request, CagriMerkeziEylemi::Calisma), $id), 'Randevu oluşturuldu (müşteri listede kaldı).');
     }
 
     public function iptal(Request $request, int $id, GorusmeSonucServisi $s)
     {
-        return ApiCevap::basarili($s->iptal($this->yazmaErisimi($request), $id), 'Arama randevusu iptal edildi.');
+        return ApiCevap::basarili($s->iptal($this->yazmaErisimi($request, CagriMerkeziEylemi::AramaRandevu), $id), 'Arama randevusu iptal edildi.');
     }
 
     public function ertele(Request $request, int $id, GorusmeSonucServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::AramaRandevu);
         $v = $request->validate(self::zamanKurallari(true));
 
         return ApiCevap::basarili($s->ertele($e, $id, $v['tarih'], $v['saat']), 'Arama randevusu ertelendi.');
@@ -83,7 +84,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 
     public function aramaRandevusu(Request $request, GorusmeSonucServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::AramaRandevu);
         $v = $request->validate([
             'musteri_id'  => ['required', 'integer', 'min:1'],
             'personel_id' => ['required', 'integer', 'min:1'],
@@ -113,7 +114,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 
     public function whatsapp(Request $request, int $id, WhatsappMesajServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::Whatsapp);
         $v = $request->validate(['mesaj' => ['required', 'string', 'max:'.WhatsappMesajServisi::MAKS_UZUNLUK]]);
         $sonuc = $s->gonder($e, $id, $v['mesaj']);
 

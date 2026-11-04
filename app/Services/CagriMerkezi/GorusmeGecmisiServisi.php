@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\DB;
  * çekilir; eşleme saf SantralKaydi::eslestir ile. Nota bağlanmamış kayıtlar "Arandı" satırı olarak
  * listelenir (not kaydedilmeden yapılan aramalar da görünür). Santral erişilemezse mevcut
  * kayıtlar KORUNUR (eşleme yapılmaz) ve liste yine döner.
+ *
+ * SES GÖRÜNÜRLÜĞÜ: eşleme salonun tamamıyla yapılır ama personel (rol 5) yalnız KENDİ dahilisinin
+ * kayıtlarını görür; santral erişilemezse kaydın kimin olduğu bilinemeyeceği için personele ses dönmez.
  */
 class GorusmeGecmisiServisi
 {
@@ -34,20 +37,26 @@ class GorusmeGecmisiServisi
             ->get(['id', 'sonuc', 'not', 'ses_kaydi', 'satis_tutari', 'created_at']);
         $son10 = CdrSiniflandirici::son10((string) DB::table('users')->where('id', $k->user_id)->value('cep_telefon'));
 
-        $adaylar = [];
+        $gorunen = [];
         $santralHata = false;
         if ($son10 !== '') {
             [$adaylar, $santralHata] = $this->adaylar($e->salonId, $son10);
             if (! $santralHata) {
                 $this->sesleriEsle($k, $notlar, $adaylar);
             }
+            $gorunen = $adaylar;
+            if (! $e->yonetici) {
+                [$gorunen, $kendiHata] = $this->adaylar($e->salonId, $son10, null, $e->dahililer);
+                $santralHata = $santralHata || $kendiHata;
+            }
         }
+        $gorunurYol = array_flip(array_column($gorunen, 'path'));
         $kullanilan = array_flip(array_filter($notlar->pluck('ses_kaydi')->all()));
         $host = (string) config('cagri_merkezi.ses_host');
         $rTarih = $k->tarih ? date('d.m.Y', strtotime($k->tarih)) : '';
         $rSaat = $k->saat ? substr((string) $k->saat, 0, 5) : '';
 
-        $satirlar = $notlar->map(function ($n) use ($host, $rTarih, $rSaat) {
+        $satirlar = $notlar->map(function ($n) use ($e, $gorunurYol, $host, $rTarih, $rSaat) {
             $kod = $n->sonuc !== null ? (int) $n->sonuc : null;
             $zamanli = in_array($kod, [AramaSonucu::TEKRAR_ARANACAK->value, AramaSonucu::ON_GORUSME->value], true);
 
@@ -58,14 +67,14 @@ class GorusmeGecmisiServisi
                 'sonuc'         => AramaSonucu::metin($kod),
                 'renk'          => AramaSonucu::renkKodu($kod),
                 'not'           => (string) ($n->not ?? ''),
-                'ses'           => SantralKaydi::url($n->ses_kaydi, $host),
+                'ses'           => $e->yonetici || isset($gorunurYol[(string) $n->ses_kaydi]) ? SantralKaydi::url($n->ses_kaydi, $host) : '',
                 'randevu_tarih' => $zamanli ? $rTarih : '',
                 'randevu_saat'  => $zamanli ? $rSaat : '',
                 'satis_tutari'  => $kod === AramaSonucu::TELEFONDA_SATIS->value && $n->satis_tutari !== null ? (float) $n->satis_tutari : null,
             ];
         })->all();
 
-        foreach ($adaylar as $c) {
+        foreach ($gorunen as $c) {
             if (isset($kullanilan[$c['path']])) {
                 continue;
             }
@@ -86,7 +95,7 @@ class GorusmeGecmisiServisi
 
     /**
      * Müşteriyle yapılan TÜM görüşme ses kayıtları (santral CDR, son N gün; eski musteri_ses_kayitlari).
-     * Not eşlemesi yapmaz — salt okuma.
+     * Not eşlemesi yapmaz — salt okuma. Personel yalnız kendi dahilisinin kayıtlarını görür.
      */
     public function tumSesler(CagriMerkeziErisim $e, int $aranacakId): array
     {
@@ -95,7 +104,7 @@ class GorusmeGecmisiServisi
         if ($son10 === '') {
             return ['kayitlar' => [], 'santral_hata' => false];
         }
-        [$adaylar, $hata] = $this->adaylar($e->salonId, $son10, (int) config('cagri_merkezi.tum_ses_gun'));
+        [$adaylar, $hata] = $this->adaylar($e->salonId, $son10, (int) config('cagri_merkezi.tum_ses_gun'), $e->yonetici ? null : $e->dahililer);
         $host = (string) config('cagri_merkezi.cdr_ses_host');
 
         return [
@@ -108,10 +117,13 @@ class GorusmeGecmisiServisi
         ];
     }
 
-    /** @return array{0: array<int, array{path:string, ts:int}>, 1: bool} [adaylar, santral hatası] */
-    private function adaylar(int $salonId, string $son10, ?int $gun = null): array
+    /**
+     * @param  array<int,string>|null  $dahililer  null → salonun tüm dahilileri
+     * @return array{0: array<int, array{path:string, ts:int}>, 1: bool} [adaylar, santral hatası]
+     */
+    private function adaylar(int $salonId, string $son10, ?int $gun = null, ?array $dahililer = null): array
     {
-        $dahililer = SantralErisimServisi::dahililer(
+        $dahililer ??= SantralErisimServisi::dahililer(
             Personeller::where('salon_id', $salonId)->where(fn ($q) => $q->whereNotNull('dahili_no')->orWhereNotNull('dahili_no_webrtc'))
                 ->get(['dahili_no', 'dahili_no_webrtc']));
         if (! $dahililer) {

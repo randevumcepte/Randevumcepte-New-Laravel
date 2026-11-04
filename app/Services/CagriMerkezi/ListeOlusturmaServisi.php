@@ -4,11 +4,13 @@ namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\AramaFiltresi;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Domain\CagriMerkezi\ListeDurumu;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
+use App\Support\KvkkMaske;
 use App\Support\ListeIstegi;
 use Illuminate\Support\Facades\DB;
 
@@ -35,7 +37,7 @@ class ListeOlusturmaServisi
     /** Form seçenekleri + atanabilir personel (ekran açılışı). */
     public function formVerisi(CagriMerkeziErisim $e): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
 
         return ['filtreler' => AramaFiltresi::secenekler()];
     }
@@ -46,19 +48,22 @@ class ListeOlusturmaServisi
      */
     public function onizleme(CagriMerkeziErisim $e, AramaFiltresi $f, int $sayfa, int $boy): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $toplam = $this->filtre->say($e->salonId, $f->aramasiz());
         $listeToplam = $f->ara !== null ? $this->filtre->say($e->salonId, $f) : $toplam;
         $satirlar = $this->filtre->sorgu($e->salonId, $f)->distinct()
             ->forPage($sayfa, $boy)->get(['mp.user_id', 'u.name', 'u.cep_telefon', 'u.cinsiyet', 'mp.created_at']);
         $ilkSira = ($sayfa - 1) * $boy;
+        $maske = $e->maskele();
 
         return [
             'toplam'           => $toplam,
             'toplam_filtresiz' => $this->filtre->say($e->salonId, AramaFiltresi::diziden([])),
             'ozet'             => $f->ozet(),
             'data'             => $satirlar->values()->map(fn ($m, $i) => [
-                'id' => (int) $m->user_id, 'ad' => (string) $m->name, 'telefon' => (string) $m->cep_telefon,
+                'id' => (int) $m->user_id,
+                'ad' => $maske ? KvkkMaske::adSoyad($m->name) : (string) $m->name,
+                'telefon' => $maske ? KvkkMaske::telefon($m->cep_telefon) : (string) $m->cep_telefon,
                 'sira' => $f->ara === null ? $ilkSira + $i + 1 : null,
                 'kayit_tarihi' => $m->created_at ? substr((string) $m->created_at, 0, 10) : null,
             ])->all(),
@@ -70,7 +75,7 @@ class ListeOlusturmaServisi
      */
     public function olustur(CagriMerkeziErisim $e, AramaFiltresi $f, array $v): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $baslik = trim($v['baslik']);
         $f = $f->aramasiz();
 

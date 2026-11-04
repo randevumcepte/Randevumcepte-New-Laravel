@@ -3,6 +3,7 @@
 namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Exceptions\GecersizIslemException;
 use App\Services\Anket\AnketGonderServisi;
 use App\Support\AktiviteLog;
@@ -24,7 +25,7 @@ class AnketGonderimServisi
 
     public function gonder(CagriMerkeziErisim $e, int $aranacakId): array
     {
-        $this->erisim->yetkiZorunlu($e, 'anket', 'Anket gönderme yetkiniz yok.');
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Anket);
         $k = $this->erisim->kayit($aranacakId, $e);
         $musteri = DB::table('users')->where('id', $k->user_id)->first(['id', 'name', 'cep_telefon']);
         if (! $musteri) {

@@ -22,10 +22,12 @@ use Illuminate\Support\Facades\DB;
  * Kurallar (birebir):
  *   1. Hesap Sahibi (model_has_roles.role_id=1) HER ZAMAN tam yetki.
  *   2. Ozel yetki kaydi (personel_yetki_ayarlari) varsa rolden BAGIMSIZ uygulanir.
- *   3. Kayit yoksa: Personel rolu (role_id=5) degilse tam yetki; ise 'personel' default.
+ *   3. Kayit yoksa: rol varsayilani (YetkiSabitleri::rolVarsayilanAyarlari) — rol 5 'personel'
+ *      default; rol 4 tam yetki, yalniz Kasa/Satis/Isletme raporlari kapali; digerleri tam yetki.
  *   4. Eksik anahtar daima KAYDIN KENDI sablonundan tamamlanir (web/mobil paritesi).
- *   5. Rol-5 kopuk-bag (yetkili_id bagi yok ama role_id=5) → 'personel' default
- *      (tam yetki DEGIL).
+ *   5. Kopuk-bag (bu salonda personel kaydi yok) da ayni rol varsayilanini alir
+ *      (rol 5 tam yetki ALMAZ).
+ *   6. "Tam yetki" kisit anahtarlarini (kapali_adisyon_gizle) ACMAZ.
  */
 class YetkiServisi
 {
@@ -71,16 +73,16 @@ class YetkiServisi
     private function yetkiVarCekirdek($personelId, $salonId, string $key, bool $impersonationBypass): bool
     {
         if (! $personelId || ! $salonId) {
-            return true; // bilinmiyorsa engelleme (eski davranis birebir)
+            return $this->tamYetkiDegeri($key); // bilinmiyorsa engelleme (eski davranis birebir)
         }
 
         if ($impersonationBypass && $this->impersonationAktif()) {
-            return true;
+            return $this->tamYetkiDegeri($key);
         }
 
         // Hesap Sahibi her zaman tam yetki (ozel kayit onu kilitleyemez).
         if ($this->hesapSahibiMi($personelId, $salonId)) {
-            return true;
+            return $this->tamYetkiDegeri($key);
         }
 
         $roluKey = $personelId.'|'.$salonId;
@@ -95,20 +97,13 @@ class YetkiServisi
         $ozelAyar = $this->ayarlarCache[$roluKey];
 
         if ($ozelAyar === null) {
-            // Ozel kayit yok → rol bazli. Personel rolu (5) degilse tam yetki.
-            if (! array_key_exists($roluKey, $this->personelRoluCache)) {
-                $this->personelRoluCache[$roluKey] = $this->personelRolundeMi($personelId, $salonId);
-            }
-            if (! $this->personelRoluCache[$roluKey]) {
-                return true;
-            }
-            $ayarlar = YetkiSabitleri::sablonAyarlari('personel');
-            $fallbackSablon = 'personel';
-        } else {
-            // Ozel yetki kaydi var → rolden bagimsiz bu kaydi uygula.
-            $ayarlar = $ozelAyar;
-            $fallbackSablon = $this->sablonCache[$roluKey] ?? 'personel';
+            // Ozel kayit yok → rol varsayilani.
+            return $this->rolVarsayilani($this->personelRolleri($personelId, $salonId), $key);
         }
+
+        // Ozel yetki kaydi var → rolden bagimsiz bu kaydi uygula.
+        $ayarlar = $ozelAyar;
+        $fallbackSablon = $this->sablonCache[$roluKey] ?? 'personel';
 
         // Anahtar kayitta yoksa kaydin KENDI sablonunun default'undan tamamla.
         if (! array_key_exists($key, $ayarlar)) {
@@ -123,11 +118,11 @@ class YetkiServisi
     private function yetkiliYetkiVarCekirdek($yetkiliId, $salonId, string $key, bool $impersonationBypass): bool
     {
         if (! $yetkiliId || ! $salonId) {
-            return true;
+            return $this->tamYetkiDegeri($key);
         }
 
         if ($impersonationBypass && $this->impersonationAktif()) {
-            return true;
+            return $this->tamYetkiDegeri($key);
         }
 
         $cacheKey = $yetkiliId.'|'.$salonId.'|'.$key.'|'.($impersonationBypass ? '1' : '0');
@@ -147,21 +142,8 @@ class YetkiServisi
         }
 
         if (! $personelId) {
-            // Bag kopuk. role_id=5 ise sahip DEGIL → 'personel' default (tam yetki DEGIL).
-            $personelRolunde = DB::table('model_has_roles')
-                ->where('model_id', $yetkiliId)
-                ->where('salon_id', $salonId)
-                ->where('role_id', 5)
-                ->exists();
-
-            if ($personelRolunde) {
-                $sade = YetkiSabitleri::sablonAyarlari('personel');
-
-                return $this->yetkiliYetkiVarCache[$cacheKey] = (bool) ($sade[$key] ?? false);
-            }
-
-            // Gercekten personel rolu degil (sahip / direkt yetkili) → tam yetki.
-            return $this->yetkiliYetkiVarCache[$cacheKey] = true;
+            // Bag kopuk → rol varsayilani (rol 5 tam yetki ALMAZ).
+            return $this->yetkiliYetkiVarCache[$cacheKey] = $this->rolVarsayilani($this->yetkiliRolleri($yetkiliId, $salonId), $key);
         }
 
         return $this->yetkiliYetkiVarCache[$cacheKey] =
@@ -171,6 +153,45 @@ class YetkiServisi
     // ---------------------------------------------------------------------
     // Yardimcilar
     // ---------------------------------------------------------------------
+
+    /** Tam yetkili hesapta anahtarin degeri (kisit anahtarlari kapali). */
+    private function tamYetkiDegeri(string $key): bool
+    {
+        return ! in_array($key, YetkiSabitleri::kisitAnahtarlari(), true);
+    }
+
+    /** Ozel kaydi olmayan hesapta anahtarin degeri; tanimsiz anahtar yalniz rol 5'e kapali. */
+    private function rolVarsayilani(array $roller, string $key): bool
+    {
+        $ayarlar = YetkiSabitleri::rolVarsayilanAyarlari($roller);
+
+        return (bool) ($ayarlar[$key] ?? ! in_array(YetkiSabitleri::ROL_PERSONEL, $roller, true));
+    }
+
+    /** @return int[] kullanicinin bu salondaki rolleri (model_has_roles) */
+    private function yetkiliRolleri($yetkiliId, $salonId): array
+    {
+        return DB::table('model_has_roles')
+            ->where('model_id', $yetkiliId)
+            ->where('salon_id', $salonId)
+            ->pluck('role_id')
+            ->map(fn ($r) => (int) $r)
+            ->all();
+    }
+
+    /** @return int[] personelin bagli oldugu yetkilinin rolleri (bag yoksa bos) */
+    private function personelRolleri($personelId, $salonId): array
+    {
+        $k = $personelId.'|'.$salonId;
+        if (array_key_exists($k, $this->personelRoluCache)) {
+            return $this->personelRoluCache[$k];
+        }
+        $yetkiliId = Personeller::where('id', $personelId)
+            ->where('salon_id', $salonId)
+            ->value('yetkili_id');
+
+        return $this->personelRoluCache[$k] = $yetkiliId ? $this->yetkiliRolleri($yetkiliId, $salonId) : [];
+    }
 
     /** Hesap Sahibi mi? (model_has_roles.role_id=1) */
     public function hesapSahibiMi($personelId, $salonId): bool
@@ -218,22 +239,11 @@ class YetkiServisi
     /** Personel rolunde mi? (model_has_roles.role_id=5) */
     public function personelRolundeMi($personelId, $salonId): bool
     {
-        $yetkiliId = Personeller::where('id', $personelId)
-            ->where('salon_id', $salonId)
-            ->value('yetkili_id');
-        if (! $yetkiliId) {
-            return false;
-        }
-
-        return DB::table('model_has_roles')
-            ->where('role_id', 5) // Personel rolu
-            ->where('model_id', $yetkiliId)
-            ->where('salon_id', $salonId)
-            ->exists();
+        return in_array(YetkiSabitleri::ROL_PERSONEL, $this->personelRolleri($personelId, $salonId), true);
     }
 
     /**
-     * Personelin tum yetki ayarlarini dondur (yoksa default). benimYetkilerim /
+     * Personelin tum yetki ayarlarini dondur (kayit yoksa rol varsayilani). benimYetkilerim /
      * UI icin. Secili sablondan eksik anahtarlar tamamlanir (sade'den DEGIL).
      */
     public function ayarlariGetir($personelId, $salonId): array
@@ -261,9 +271,35 @@ class YetkiServisi
             ];
         }
 
+        $roller = $this->personelRolleri($personelId, $salonId);
+
         return [
-            'sablon'  => 'personel',
-            'ayarlar' => YetkiSabitleri::sablonAyarlari('personel'),
+            'sablon'  => YetkiSabitleri::rolVarsayilanSablonu($roller),
+            'ayarlar' => YetkiSabitleri::rolVarsayilanAyarlari($roller),
+        ];
+    }
+
+    /**
+     * Giris yapanin EFEKTIF yetkileri — yetkiliYetkiVar ile AYNI karar zinciri (ekran ve uc
+     * farkli sonuc vermesin): hesap sahibi tam; ozel kayit uygulanir; yoksa rol varsayilani.
+     *
+     * @return array{roller:int[], personel_id:?int, sablon:string, ayarlar:array<string,bool>}
+     */
+    public function efektifYetkiler($yetkiliId, $salonId): array
+    {
+        $roller = $this->yetkiliRolleri($yetkiliId, $salonId);
+        $personelId = Personeller::where('yetkili_id', $yetkiliId)->where('salon_id', $salonId)->value('id');
+        $personelId = $personelId ? (int) $personelId : null;
+
+        if (! in_array(YetkiSabitleri::ROL_HESAP_SAHIBI, $roller, true) && $personelId) {
+            return ['roller' => $roller, 'personel_id' => $personelId] + $this->ayarlariGetir($personelId, $salonId);
+        }
+
+        return [
+            'roller'      => $roller,
+            'personel_id' => $personelId,
+            'sablon'      => YetkiSabitleri::rolVarsayilanSablonu($roller),
+            'ayarlar'     => YetkiSabitleri::rolVarsayilanAyarlari($roller),
         ];
     }
 

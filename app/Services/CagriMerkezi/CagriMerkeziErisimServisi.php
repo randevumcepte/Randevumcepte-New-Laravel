@@ -3,6 +3,7 @@
 namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
@@ -24,14 +25,6 @@ use Illuminate\Support\Facades\DB;
  */
 class CagriMerkeziErisimServisi
 {
-    /** Ekran/buton bayrakları için okunan yetki anahtarları (eski menü/sayfa anahtarlarıyla aynı). */
-    private const YETKILER = [
-        'satis'         => 'satis.tahsilat_al',       // Telefonda Satış (eski cagri_hizli_satis)
-        'fiyat_degistir' => 'satis.indirim_uygula',   // katalogdan farklı satış fiyatı
-        'anket'         => 'pazarlama.anket_yonet',   // Memnuniyet anketi gönder
-        'ongorusme'     => 'gorusme.ekle_duzenle',    // Ön görüşme randevusu oluştur
-    ];
-
     public function __construct(
         private GuvenlikKapisi $kapi,
         private KapsamServisi $kapsam,
@@ -53,8 +46,11 @@ class CagriMerkeziErisimServisi
             ->first(['id', 'dahili_no', 'dahili_no_webrtc']);
 
         $yetkiler = [];
-        foreach (self::YETKILER as $bayrak => $anahtar) {
-            $yetkiler[$bayrak] = $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, $anahtar);
+        foreach (CagriMerkeziEylemi::cases() as $eylem) {
+            if ($eylem->anahtarlar() !== []) {
+                $yetkiler[$eylem->value] = array_filter($eylem->anahtarlar(),
+                    fn ($anahtar) => $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, $anahtar)) !== [];
+            }
         }
 
         return new CagriMerkeziErisim(
@@ -68,19 +64,11 @@ class CagriMerkeziErisimServisi
         );
     }
 
-    /** Performans / liste yönetimi: yalnız yönetici (eski arama_dashboard rol 5'e kapalı). */
-    public function yoneticiZorunlu(CagriMerkeziErisim $e): void
+    /** Eylem kapısı (rol + yetki anahtarı; kural CagriMerkeziEylemi'nde). */
+    public function eylemZorunlu(CagriMerkeziErisim $e, CagriMerkeziEylemi $eylem): void
     {
-        if (! $e->yonetici) {
-            throw new YetkisizErisimException('Bu bölüm personel hesaplarına kapalıdır');
-        }
-    }
-
-    /** Yetki bayrağı zorunlu (satis / anket / ongorusme …). */
-    public function yetkiZorunlu(CagriMerkeziErisim $e, string $bayrak, string $mesaj): void
-    {
-        if (! $e->yetki($bayrak)) {
-            throw new YetkisizErisimException($mesaj);
+        if (! $e->yapabilir($eylem)) {
+            throw new YetkisizErisimException($eylem->redMesaji());
         }
     }
 

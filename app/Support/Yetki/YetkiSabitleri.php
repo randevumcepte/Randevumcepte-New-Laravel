@@ -11,10 +11,16 @@ namespace App\Support\Yetki;
  * ayni anahtar eklenmeli (tanimlar + sablonlar + mobilGizliAnahtarlar), yoksa
  * web/mobil paritesi bozulur ve Flutter sahte "zorla cikis" tetikler.
  *
- * Onemli: musteri.telefon_gor TUM sablonlarda default KAPALI.
+ * Onemli: musteri.telefon_gor yalniz Yonetici sablonunda default ACIK.
  */
 class YetkiSabitleri
 {
+    public const ROL_HESAP_SAHIBI = 1;
+
+    public const ROL_SEKRETER = 4;
+
+    public const ROL_PERSONEL = 5;
+
     /** Tum yetki tanimi: kategori + key + Turkce etiket + aciklama. */
     public static function tanimlar(): array
     {
@@ -125,14 +131,14 @@ class YetkiSabitleri
 
     /**
      * Hazir sablonlar (yonetici / sekreter / personel).
-     * NOT: musteri.telefon_gor TUM sablonlarda KAPALI.
+     * NOT: musteri.telefon_gor yalniz Yonetici sablonunda ACIK.
      */
     public static function sablonlar(): array
     {
         return [
             'yonetici' => [
                 'ad' => 'Yönetici',
-                'aciklama' => 'Geniş yetki: tüm operasyon, raporlar ve finans açık. Telefon ve yetki yönetimi kapalı (salon sahibi açabilir).',
+                'aciklama' => 'Geniş yetki: tüm operasyon, müşteri telefonu, raporlar ve finans açık. Yetki yönetimi kapalı (salon sahibi açabilir).',
                 'ikon' => 'verified_user',
                 'ayarlar' => [
                     'randevu.takvim_gor' => true, 'randevu.tum_personel_gor' => true,
@@ -140,7 +146,7 @@ class YetkiSabitleri
                     'randevu.kapanis_blok_ekle' => true, 'randevu.online_ayar' => true,
                     'musteri.liste_gor' => true, 'musteri.tum_portfoy_gor' => true,
                     'musteri.detay_gor' => true, 'musteri.ekle_duzenle' => true,
-                    'musteri.sil' => true, 'musteri.telefon_gor' => false,
+                    'musteri.sil' => true, 'musteri.telefon_gor' => true,
                     'musteri.not_yaz' => true, 'musteri.gecmis_satis_gor' => true,
                     'satis.adisyon_olustur' => true, 'satis.tahsilat_al' => true,
                     'satis.tahsilat_sil' => true, 'satis.adisyon_sil' => true,
@@ -272,6 +278,67 @@ class YetkiSabitleri
     public static function tumAnahtarlar(): array
     {
         return array_map(fn ($t) => $t['key'], self::tanimlar());
+    }
+
+    /**
+     * "Acikken KISITLAYAN" anahtarlar: tam yetkili hesapta KAPALI sayilir (yoksa hesap sahibi
+     * kapali adisyonlari goremezdi). Sablon/ozel kayitta acilirsa gecerlidir.
+     */
+    public static function kisitAnahtarlari(): array
+    {
+        return ['personel.kapali_adisyon_gizle'];
+    }
+
+    /** Tam yetkili hesabin ayarlari: tum anahtarlar acik, kisit anahtarlari kapali. */
+    public static function tamYetkiAyarlari(): array
+    {
+        $kisit = self::kisitAnahtarlari();
+        $ayarlar = [];
+        foreach (self::tumAnahtarlar() as $key) {
+            $ayarlar[$key] = ! in_array($key, $kisit, true);
+        }
+
+        return $ayarlar;
+    }
+
+    /** Ozel kaydi olmayan Sekreter'de (rol 4) kapali olanlar: Kasa, Satis ve Isletme raporlari. */
+    public static function sekreterKapaliAnahtarlar(): array
+    {
+        return ['rapor.kasa', 'rapor.satis', 'rapor.personel_performans', 'rapor.musteri'];
+    }
+
+    /**
+     * OZEL KAYDI OLMAYAN hesabin rol varsayilani (TEK kaynak):
+     *   rol 1 → tam | rol 5 → personel sablonu | rol 4 → tam, raporlar kapali | digerleri (2, 3, rolsuz) → tam.
+     *
+     * @param  int[]  $roller  kullanicinin bu salondaki rolleri
+     */
+    public static function rolVarsayilanAyarlari(array $roller): array
+    {
+        if (in_array(self::ROL_HESAP_SAHIBI, $roller, true)) {
+            return self::tamYetkiAyarlari();
+        }
+        if (in_array(self::ROL_PERSONEL, $roller, true)) {
+            return self::sablonAyarlari('personel');
+        }
+        if (in_array(self::ROL_SEKRETER, $roller, true)) {
+            return array_merge(self::tamYetkiAyarlari(), array_fill_keys(self::sekreterKapaliAnahtarlar(), false));
+        }
+
+        return self::tamYetkiAyarlari();
+    }
+
+    /** rolVarsayilanAyarlari'nin ekrandaki adi. @param  int[]  $roller */
+    public static function rolVarsayilanSablonu(array $roller): string
+    {
+        if (in_array(self::ROL_HESAP_SAHIBI, $roller, true)) {
+            return 'tam_yetki';
+        }
+        if (in_array(self::ROL_PERSONEL, $roller, true)) {
+            return 'personel';
+        }
+
+        return in_array(self::ROL_SEKRETER, $roller, true) ? 'sekreter_varsayilan' : 'tam_yetki';
     }
 
     /**

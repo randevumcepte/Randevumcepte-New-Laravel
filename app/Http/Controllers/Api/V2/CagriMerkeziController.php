@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Services\CagriMerkezi\AramaListesiServisi;
 use App\Services\CagriMerkezi\CagriReferansServisi;
 use App\Services\CagriMerkezi\GorusmeGecmisiServisi;
@@ -33,13 +34,13 @@ class CagriMerkeziController extends CagriMerkeziTabanController
 
     public function listeler(Request $request, AramaListesiServisi $s)
     {
-        return ApiCevap::basarili($s->kartlar($this->erisim($request),
+        return ApiCevap::basarili($s->kartlar($this->erisim($request, CagriMerkeziEylemi::Calisma),
             filter_var($request->input('arsiv'), FILTER_VALIDATE_BOOLEAN), filter_var($request->input('tumu'), FILTER_VALIDATE_BOOLEAN)));
     }
 
     public function kuyruk(Request $request, int $id, KuyrukServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::Calisma);
         $grup = $request->validate(['grup' => ['nullable', 'string', 'max:30']])['grup'] ?? null;
 
         return ApiCevap::basarili($s->listele($e, $id, $grup, ListeIstegi::istekten($request, 100)->dizi()));
@@ -47,28 +48,28 @@ class CagriMerkeziController extends CagriMerkeziTabanController
 
     public function kayit(Request $request, int $id, KuyrukServisi $s)
     {
-        return ApiCevap::basarili($s->tekil($this->erisim($request), $id));
+        return ApiCevap::basarili($s->tekil($this->erisim($request, CagriMerkeziEylemi::Calisma), $id));
     }
 
     public function musteri(Request $request, int $id, KuyrukServisi $s)
     {
-        return ApiCevap::basarili($s->musteriBilgisi($this->erisim($request), $id));
+        return ApiCevap::basarili($s->musteriBilgisi($this->erisim($request, CagriMerkeziEylemi::Calisma), $id));
     }
 
     public function gecmis(Request $request, int $id, GorusmeGecmisiServisi $s)
     {
-        return ApiCevap::basarili($s->getir($this->erisim($request), $id));
+        return ApiCevap::basarili($s->getir($this->erisim($request, CagriMerkeziEylemi::Calisma), $id));
     }
 
     public function sesKayitlari(Request $request, int $id, GorusmeGecmisiServisi $s)
     {
-        return ApiCevap::basarili($s->tumSesler($this->erisim($request), $id));
+        return ApiCevap::basarili($s->tumSesler($this->erisim($request, CagriMerkeziEylemi::CagriKayitlari), $id));
     }
 
     /** Arama randevusu ekleme için müşteri arama (randevu formuyla AYNI kural; telefon maskesi). */
     public function musteriAra(Request $request, RandevuFormServisi $form)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::AramaRandevu);
 
         return ApiCevap::basarili($form->musteriAra($e->salonId, (string) $request->input('q', ''), ! $e->maskele()));
     }

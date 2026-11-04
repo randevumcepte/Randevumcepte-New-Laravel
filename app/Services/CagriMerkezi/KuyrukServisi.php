@@ -58,7 +58,7 @@ class KuyrukServisi
         return [
             'liste'   => ['id' => (int) $liste->id, 'baslik' => (string) $liste->arama_baslik],
             'gruplar' => $gruplar,
-            'data'    => $satirlar->map(fn ($s) => $this->satir($s, $listeId, $maske, $host))->all(),
+            'data'    => $satirlar->map(fn ($s) => $this->satir($s, $listeId, $maske, $host, $e->yonetici))->all(),
         ] + ListeIstegi::meta($l['page'], $l['per_page'], $toplam);
     }
 
@@ -70,7 +70,7 @@ class KuyrukServisi
         $k->name = $u->name ?? '';
         $k->cep_telefon = $u->cep_telefon ?? '';
 
-        return $this->satir($k, (int) $k->arama_id, $e->maskele(), (string) config('cagri_merkezi.ses_host'))
+        return $this->satir($k, (int) $k->arama_id, $e->maskele(), (string) config('cagri_merkezi.ses_host'), $e->yonetici)
             + ['liste_baslik' => (string) $k->liste_baslik];
     }
 
@@ -91,7 +91,8 @@ class KuyrukServisi
         ];
     }
 
-    private function satir(object $s, int $listeId, bool $maske, string $host): array
+    /** $sesGor: satirdaki son kayit baska personele ait olabilir; personel sesi gecmisten (kendi dahilisi) gorur. */
+    private function satir(object $s, int $listeId, bool $maske, string $host, bool $sesGor): array
     {
         $tel = (string) ($s->cep_telefon ?? '');
         $kod = $s->durum !== null ? (int) $s->durum : null;
@@ -110,7 +111,7 @@ class KuyrukServisi
             'not'                 => (string) ($s->musteri_not ?? ''),
             'not_tarih'           => (string) ($s->tarih ?? ''),
             'not_saat'            => $s->saat ? substr((string) $s->saat, 0, 5) : '',
-            'ses'                 => SantralKaydi::url($s->ses_kaydi ?? null, $host),
+            'ses'                 => $sesGor ? SantralKaydi::url($s->ses_kaydi ?? null, $host) : '',
         ];
     }
 

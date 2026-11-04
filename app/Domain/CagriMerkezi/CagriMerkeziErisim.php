@@ -10,8 +10,9 @@ namespace App\Domain\CagriMerkezi;
  *     liste yönetimi; arama randevusunu başka personele verebilir.
  *   - Personel (rol 5)      : yalnız KENDİNE atanan listeler ve onların arama randevuları;
  *                             yalnız kendi dahilisinin çağrıları; arama randevusu yalnız kendine.
- *   - Maske (KVKK)          : yalnız personel + 'musteri.telefon_gor' YOK → ad soyad kısaltılır,
- *                             telefon maskelenir, ham numara istemciye HİÇ gitmez, telefonla arama kapalı.
+ *   - Maske (KVKK)          : 'musteri.telefon_gor' YOK → ad soyad kısaltılır, telefon maskelenir, ham
+ *                             numara istemciye HİÇ gitmez, telefonla arama kapalı. Rolden bağımsızdır;
+ *                             özel kaydı olmayan yönetici için anahtar zaten açıktır (YetkiServisi).
  */
 final class CagriMerkeziErisim
 {
@@ -29,10 +30,17 @@ final class CagriMerkeziErisim
         public readonly array $yetkiler = [],
     ) {}
 
-    /** Personel + telefon görme yetkisi yok → maskele (yönetici hiçbir zaman maskelenmez). */
+    /** Telefon görme yetkisi yok → maskele. */
     public function maskele(): bool
     {
-        return ! $this->yonetici && ! $this->telefonGor;
+        return ! $this->telefonGor;
+    }
+
+    /** Eylem bu kullanıcıya açık mı? (rol + anahtar; kural CagriMerkeziEylemi'nde) */
+    public function yapabilir(CagriMerkeziEylemi $eylem): bool
+    {
+        return (! $eylem->yalnizYonetici() || $this->yonetici)
+            && ($eylem->anahtarlar() === [] || $this->yetki($eylem->value));
     }
 
     /** Bu listeyi görebilir / işleyebilir mi? (yönetici tümü, personel kendine atanan) */

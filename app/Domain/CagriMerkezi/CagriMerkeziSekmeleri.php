@@ -8,7 +8,7 @@ namespace App\Domain\CagriMerkezi;
  *
  * Hangi sekmenin kime görüneceği SUNUCUDA karar verilir; web (lib/v2-sekme.js) ve Flutter
  * (TabBar) aynı listeyi çizer. YENİ SEKME EKLEMEK:
- *   1) Buraya tek satır (kod, ad, ikon, yalniz_yonetici)
+ *   1) Buraya tek satır (kod, ad, ikon, eylem)
  *   2) Web: public/js/cagri-merkezi/<kod>.js modülü (export async function ciz(kap, ctx))
  *      ve cagri-merkezi-v2.js MODULLER haritasına tek satır
  *   3) Flutter: aynı `kod` için sekme gövdesi
@@ -16,21 +16,21 @@ namespace App\Domain\CagriMerkezi;
  */
 final class CagriMerkeziSekmeleri
 {
-    /** @var array<int, array{kod:string, ad:string, ikon:string, yalniz_yonetici:bool, aciklama:string}> */
+    /** @var array<int, array{kod:string, ad:string, ikon:string, eylem:CagriMerkeziEylemi, aciklama:string}> */
     private const TANIMLAR = [
-        ['kod' => 'calisma', 'ad' => 'Çalışma Ekranı', 'ikon' => 'bi-headset', 'yalniz_yonetici' => false,
+        ['kod' => 'calisma', 'ad' => 'Çalışma Ekranı', 'ikon' => 'bi-headset', 'eylem' => CagriMerkeziEylemi::Calisma,
             'aciklama' => 'Atanan listelerden müşterileri arayın, görüşme sonucunu ve notunu kaydedin.'],
-        ['kod' => 'ajanda', 'ad' => 'Arama Randevularım', 'ikon' => 'bi-alarm', 'yalniz_yonetici' => false,
+        ['kod' => 'ajanda', 'ad' => 'Arama Randevularım', 'ikon' => 'bi-alarm', 'eylem' => CagriMerkeziEylemi::AramaRandevu,
             'aciklama' => 'Bekleyen arama randevularınız; seçilen günün dökümü, arama ve erteleme.'],
-        ['kod' => 'takvim', 'ad' => 'Arama Randevuları', 'ikon' => 'bi-calendar-check', 'yalniz_yonetici' => false,
+        ['kod' => 'takvim', 'ad' => 'Arama Randevuları', 'ikon' => 'bi-calendar-check', 'eylem' => CagriMerkeziEylemi::AramaRandevu,
             'aciklama' => 'Seçilen güne ait arama randevuları personele göre, saat sırasıyla.'],
-        ['kod' => 'kayitlar', 'ad' => 'Çağrı Kayıtları', 'ikon' => 'bi-telephone', 'yalniz_yonetici' => false,
+        ['kod' => 'kayitlar', 'ad' => 'Çağrı Kayıtları', 'ikon' => 'bi-telephone', 'eylem' => CagriMerkeziEylemi::CagriKayitlari,
             'aciklama' => 'Santraldeki gerçek çağrı geçmişi ve ses kayıtları.'],
-        ['kod' => 'performans', 'ad' => 'Performans', 'ikon' => 'bi-bar-chart', 'yalniz_yonetici' => true,
+        ['kod' => 'performans', 'ad' => 'Performans', 'ikon' => 'bi-bar-chart', 'eylem' => CagriMerkeziEylemi::Performans,
             'aciklama' => 'Personel bazlı atanan data, aranan, görüşme ve dönüşüm takibi.'],
-        ['kod' => 'listeler', 'ad' => 'Liste Yönetimi', 'ikon' => 'bi-sliders', 'yalniz_yonetici' => true,
+        ['kod' => 'listeler', 'ad' => 'Liste Yönetimi', 'ikon' => 'bi-sliders', 'eylem' => CagriMerkeziEylemi::ListeYonet,
             'aciklama' => 'Filtreyle yeni arama listesi oluştur; listeyi sonuca göre ayır, indir, taşı, arşivle.'],
-        ['kod' => 'ayarlar', 'ad' => 'Ayarlar', 'ikon' => 'bi-gear', 'yalniz_yonetici' => true,
+        ['kod' => 'ayarlar', 'ad' => 'Ayarlar', 'ikon' => 'bi-gear', 'eylem' => CagriMerkeziEylemi::AyarYonet,
             'aciklama' => 'Görüşme scriptleri ve sonuç kategorileri.'],
     ];
 
@@ -38,8 +38,8 @@ final class CagriMerkeziSekmeleri
     public static function gorunur(CagriMerkeziErisim $erisim): array
     {
         return array_values(array_map(
-            fn ($t) => array_diff_key($t, ['yalniz_yonetici' => 1]),
-            array_filter(self::TANIMLAR, fn ($t) => $erisim->yonetici || ! $t['yalniz_yonetici']),
+            fn ($t) => array_diff_key($t, ['eylem' => 1]),
+            array_filter(self::TANIMLAR, fn ($t) => $erisim->yapabilir($t['eylem'])),
         ));
     }
 

@@ -4,6 +4,7 @@ namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\AramaSonucu;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Services\Satis\TekKalemSatisServisi;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,7 @@ class TelefondaSatisServisi
      */
     public function sat(CagriMerkeziErisim $e, int $aranacakId, array $v): array
     {
-        $this->erisim->yetkiZorunlu($e, 'satis', 'Satış için yetkiniz yok.');
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Satis);
         $k = $this->erisim->kayit($aranacakId, $e);
         if (! empty($v['personel_id'])) {
             $this->erisim->personel((int) $v['personel_id'], $e);

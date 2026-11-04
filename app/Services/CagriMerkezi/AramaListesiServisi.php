@@ -4,6 +4,7 @@ namespace App\Services\CagriMerkezi;
 
 use App\Domain\CagriMerkezi\AramaSonucu;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Domain\CagriMerkezi\ListeDurumu;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
@@ -31,7 +32,7 @@ class AramaListesiServisi
         if (! $e->yonetici) {
             $q->where('personel_id', $e->personelId ?? 0);
         }
-        $listeler = $q->orderByRaw('ISNULL(aranacak_tarih) asc')->orderBy('aranacak_tarih')->orderByDesc('id')
+        $listeler = $q->orderByRaw('aranacak_tarih IS NULL asc')->orderBy('aranacak_tarih')->orderByDesc('id')
             ->get(['id', 'arama_baslik', 'personel_id', 'aranacak_tarih', 'durum']);
 
         $sayac = AramaKaydiSorgusu::listeSayaclari($listeler->pluck('id')->all());
@@ -66,7 +67,7 @@ class AramaListesiServisi
     /** Sonuca göre segmentler (sabit set, 0 olsa da; 'Arandı' yalnız varsa). */
     public function segmentler(CagriMerkeziErisim $e, int $listeId): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         $sayim = [];
         foreach (DB::table('aranacak_musteriler')->where('arama_id', $listeId)->select('durum', DB::raw('COUNT(*) as adet'))->groupBy('durum')->get() as $r) {
@@ -92,7 +93,7 @@ class AramaListesiServisi
 
     public function durumDegistir(CagriMerkeziErisim $e, int $listeId, ListeDurumu $durum): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         DB::table('arama_listesi')->where('id', $listeId)->update(['durum' => $durum->value, 'updated_at' => now()]);
         $this->log($e, 'cagri_liste_durum_degistir', $listeId, $liste->arama_baslik, 'Liste '.$durum->gecisMetni(), ['durum' => $durum->value]);
@@ -103,7 +104,7 @@ class AramaListesiServisi
     /** Listenin tamamını başka personele ata; null → atamayı geri al (hiçbir kuyrukta görünmez). */
     public function personelDegistir(CagriMerkeziErisim $e, int $listeId, ?int $personelId): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         $hedef = $personelId ? $this->erisim->personel($personelId, $e) : null;
         DB::table('arama_listesi')->where('id', $listeId)->update(['personel_id' => $hedef?->id, 'updated_at' => now()]);
@@ -121,7 +122,7 @@ class AramaListesiServisi
      */
     public function tasi(CagriMerkeziErisim $e, int $listeId, array $kodlar, int $personelId, ?string $baslik): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         $hedef = $this->erisim->personel($personelId, $e);
         $kodlar = array_values(array_unique(array_map('strval', $kodlar ?: AramaSonucu::sonucAlinamayanlar())));
@@ -154,7 +155,7 @@ class AramaListesiServisi
     /** Listeyi + içindeki tüm müşteri ve görüşme kayıtlarını siler (geri alınamaz). */
     public function sil(CagriMerkeziErisim $e, int $listeId): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         $adet = DB::transaction(function () use ($listeId) {
             $ids = DB::table('aranacak_musteriler')->where('arama_id', $listeId)->pluck('id')->all();
@@ -181,7 +182,7 @@ class AramaListesiServisi
      */
     public function csv(CagriMerkeziErisim $e, int $listeId, string $kod): array
     {
-        $this->erisim->yoneticiZorunlu($e);
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $liste = $this->erisim->liste($listeId, $e);
         $satirlar = AramaKaydiSorgusu::sonucKodlari(
             DB::table('aranacak_musteriler as am')->leftJoin('users as u', 'u.id', '=', 'am.user_id')->where('am.arama_id', $listeId), [$kod], 'am')

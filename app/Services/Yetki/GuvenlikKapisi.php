@@ -73,7 +73,7 @@ class GuvenlikKapisi
      * KIMLIK + KAPSAM + kullanicinin bu salondaki rollerinden HICBIRI $kapaliRoller'de degil.
      * Rol bazli kapatilan ekranlarin ortak kapisi (yoneticiDenetle = [5]; Log Hareketleri = [4, 5]).
      *
-     * @param  int[]  $kapaliRoller  model_has_roles.role_id (1=Hesap Sahibi … 4=Yonetici, 5=Personel)
+     * @param  int[]  $kapaliRoller  model_has_roles.role_id (1=Hesap Sahibi … 4=Sekreter, 5=Personel)
      *
      * @throws YetkisizErisimException
      */

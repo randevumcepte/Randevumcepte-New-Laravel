@@ -103,7 +103,8 @@ class CagriMerkeziDomainTest extends TestCase
         $personel = new CagriMerkeziErisim(20, 7, false, 55, ['101'], false);
         $yonetici = new CagriMerkeziErisim(20, 3, true, null, [], false);
         $this->assertTrue($personel->maskele());
-        $this->assertFalse($yonetici->maskele());
+        $this->assertTrue($yonetici->maskele());   // anahtar kapaliysa yonetici de maskelenir
+        $this->assertFalse((new CagriMerkeziErisim(20, 3, true, null, [], true))->maskele());
         $this->assertFalse((new CagriMerkeziErisim(20, 7, false, 55, [], true))->maskele());
         $this->assertTrue($personel->listeyeErisir(55));
         $this->assertFalse($personel->listeyeErisir(56));

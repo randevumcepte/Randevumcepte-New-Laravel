@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\PersonelYetkiAyari;
 use App\Services\Yetki\YetkiServisi;
@@ -56,68 +57,53 @@ class YetkiYonetimServisi
 
     /**
      * Giris yapan kisinin KENDI efektif yetkileri (benimYetkilerim).
-     *   - Personel kaydi yok → salon sahibi: tum yetki=true, sablon=tam_yetki
-     *   - Personel rolu degil + ozel kayit yok → tam yetki
-     *   - Aksi halde → gercek ayarlar
+     * Karar motorun efektifYetkiler'inden gelir (uc denetimiyle ayni sonuc):
+     *   - sablon=tam_yetki → personel_rolunde=false, tum yetkiler
+     *   - Aksi halde       → personel_rolunde=true, gercek ayarlar
      * Yanittan mobilGizliAnahtarlar cikarilir (gelecekteki Flutter gocunde sahte
      * "zorla cikis" tetiklememek icin; sozlesme eski /api/v1 benimYetkilerim ile ayni).
      */
     public function benimYetkilerim(int $yetkiliId, int $salonId): array
     {
-        $personelId = Personeller::where('yetkili_id', $yetkiliId)
-            ->where('salon_id', $salonId)
-            ->value('id');
+        $e = $this->motor->efektifYetkiler($yetkiliId, $salonId);
+        $ayarlar = Arr::except($e['ayarlar'], YetkiSabitleri::mobilGizliAnahtarlar());
 
-        if (! $personelId) {
-            return $this->tamYetkiYaniti(salonSahibi: true);
+        if ($e['sablon'] === 'tam_yetki') {
+            return [
+                'personel_rolunde' => false,
+                'salon_sahibi'     => in_array(YetkiSabitleri::ROL_HESAP_SAHIBI, $e['roller'], true) || $e['personel_id'] === null,
+                'sablon'           => 'tam_yetki',
+                'ayarlar'          => $ayarlar,
+            ];
         }
-
-        $personelRolunde = $this->motor->personelRolundeMi($personelId, $salonId);
-        $ozelKayitVar = PersonelYetkiAyari::where('personel_id', $personelId)
-            ->where('salon_id', $salonId)->exists();
-
-        if (! $personelRolunde && ! $ozelKayitVar) {
-            return $this->tamYetkiYaniti(salonSahibi: false);
-        }
-
-        $ayarlar = $this->motor->ayarlariGetir($personelId, $salonId);
 
         return [
             'personel_rolunde' => true,
             'salon_sahibi'     => false,
-            'sablon'           => $ayarlar['sablon'],
-            'ayarlar'          => Arr::except($ayarlar['ayarlar'], YetkiSabitleri::mobilGizliAnahtarlar()),
-            'personel_id'      => (int) $personelId,
+            'sablon'           => $e['sablon'],
+            'ayarlar'          => $ayarlar,
+            'personel_id'      => $e['personel_id'],
         ];
     }
 
     /**
      * Yetki ayarlarini kaydet. Kayit + whitelist motorda; personele force_logout push'u
      * ayni islemde kuyruga yazilir (eski personelYetkiDegistiBildir gonderir).
+     * Kullanici kendi yetkisini degistiremez (kendine rapor/telefon acmasin).
+     *
+     * @throws YetkisizErisimException
      */
     public function kaydet(int $personelId, int $salonId, string $sablon, array $ayarlar, ?int $yapanId = null): void
     {
+        if ($yapanId && (int) Personeller::where('id', $personelId)->value('yetkili_id') === $yapanId) {
+            throw new YetkisizErisimException('Kendi yetkilerinizi değiştiremezsiniz');
+        }
+
         DB::transaction(function () use ($personelId, $salonId, $sablon, $ayarlar, $yapanId) {
             $this->motor->ayarlariKaydet($personelId, $salonId, $sablon, $ayarlar);
             BildirimKuyrugu::yaz($salonId, 'yetki_degisti', null, $yapanId, ['personel_id' => $personelId]);
             AktiviteLog::yaz($salonId, $yapanId, 'personel_yetki_kaydet', 'personel', $personelId,
                 Personeller::where('id', $personelId)->value('personel_adi'), 'Personel yetkileri güncellendi', ['sablon' => $sablon]);
         });
-    }
-
-    /** Tum anahtarlar true + sablon=tam_yetki (mobilGizli cikarilmis). */
-    private function tamYetkiYaniti(bool $salonSahibi): array
-    {
-        $tum = [];
-        foreach (YetkiSabitleri::tumAnahtarlar() as $k) {
-            $tum[$k] = true;
-        }
-
-        return [
-            'personel_rolunde' => false,
-            'salon_sahibi'     => $salonSahibi,
-            'sablon'           => 'tam_yetki',
-            'ayarlar'          => Arr::except($tum, YetkiSabitleri::mobilGizliAnahtarlar()),
-        ];
     }
 }

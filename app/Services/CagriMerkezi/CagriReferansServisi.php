@@ -6,6 +6,7 @@ use App\Domain\CagriMerkezi\AramaFiltresi;
 use App\Domain\CagriMerkezi\AramaRandevuDurumu;
 use App\Domain\CagriMerkezi\AramaSonucu;
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Domain\CagriMerkezi\CagriMerkeziSekmeleri;
 use App\Domain\CagriMerkezi\ListeDurumu;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,7 @@ class CagriReferansServisi
             'scriptler'       => $this->scriptler($e->salonId),
             'kategoriler'     => $this->kategoriler($e->salonId),
             'personeller'     => $this->personeller($e),
-            'liste_filtreleri' => $e->yonetici ? AramaFiltresi::secenekler() : null,
+            'liste_filtreleri' => $e->yapabilir(CagriMerkeziEylemi::ListeYonet) ? AramaFiltresi::secenekler() : null,
             'salon_adi'       => (string) DB::table('salonlar')->where('id', $e->salonId)->value('salon_adi'),
         ];
     }

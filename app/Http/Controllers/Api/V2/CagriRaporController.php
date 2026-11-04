@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Services\CagriMerkezi\AramaRandevuServisi;
 use App\Services\CagriMerkezi\CagriKayitlariServisi;
 use App\Services\CagriMerkezi\PerformansServisi;
@@ -25,7 +26,7 @@ class CagriRaporController extends CagriMerkeziTabanController
 {
     public function takvim(Request $request, AramaRandevuServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::AramaRandevu);
         $v = $request->validate(['bas' => ['nullable', 'date_format:Y-m-d'], 'bit' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:bas']]);
 
         return ApiCevap::basarili($s->takvim($e, $v['bas'] ?? null, $v['bit'] ?? null));
@@ -33,12 +34,12 @@ class CagriRaporController extends CagriMerkeziTabanController
 
     public function yaklasan(Request $request, AramaRandevuServisi $s)
     {
-        return ApiCevap::basarili($s->yaklasanlar($this->erisim($request)));
+        return ApiCevap::basarili($s->yaklasanlar($this->erisim($request, CagriMerkeziEylemi::AramaRandevu)));
     }
 
     public function ajanda(Request $request, AramaRandevuServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::AramaRandevu);
         $v = $request->validate(['tarih' => ['nullable', 'date_format:Y-m-d']]);
 
         return ApiCevap::basarili($s->ajanda($e, $v['tarih'] ?? null));
@@ -46,17 +47,17 @@ class CagriRaporController extends CagriMerkeziTabanController
 
     public function performans(Request $request, PerformansServisi $s)
     {
-        return ApiCevap::basarili($s->kartlar($this->erisim($request)));
+        return ApiCevap::basarili($s->kartlar($this->erisim($request, CagriMerkeziEylemi::Performans)));
     }
 
     public function personelDetay(Request $request, int $personelId, PerformansServisi $s)
     {
-        return ApiCevap::basarili($s->personelDetay($this->erisim($request), $personelId));
+        return ApiCevap::basarili($s->personelDetay($this->erisim($request, CagriMerkeziEylemi::Performans), $personelId));
     }
 
     public function cagriKayitlari(Request $request, CagriKayitlariServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::CagriKayitlari);
         $v = $request->validate([
             'tarih1' => ['nullable', 'date_format:Y-m-d'],
             'tarih2' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:tarih1'],

@@ -11,8 +11,7 @@ use Illuminate\Http\Request;
 /**
  * Personel YETKI YONETIMI API v2 controller (ince).
  *
- * Faz 1 — SALT OKUMA: sema (referans), benim (kendi yetkilerim), getir (hedef personel).
- * kaydet (yazma) Faz 2b'de — kill-switch + force_logout koprusu ile.
+ * sema (referans), benim (kendi yetkilerim), getir + kaydet (hedef personel).
  */
 class PersonelYetkiController extends V2Controller
 {
@@ -60,8 +59,8 @@ class PersonelYetkiController extends V2Controller
 
     /**
      * PATCH /api/v2/personel/{id}/yetki  body: {sablon, ayarlar}  (personel.yetki_yonet)
-     * Faz 2b — kill-switch arkasinda. NOT: eski sistemdeki YETKI_DEGISTI force_logout
-     * push'u bu projede HENUZ YOK; kapru kurulana kadar canli token gecersizlenmez.
+     * Kill-switch arkasinda. Personele force_logout push'u outbox'tan gider ('yetki_degisti').
+     * Kullanici kendi yetkisini degistiremez (YetkiYonetimServisi).
      */
     public function kaydet(Request $request, int $id)
     {

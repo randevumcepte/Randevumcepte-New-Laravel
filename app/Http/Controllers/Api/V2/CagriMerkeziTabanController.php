@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\CagriMerkezi\CagriMerkeziErisim;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Exceptions\GecersizIslemException;
 use App\Services\CagriMerkezi\CagriMerkeziErisimServisi;
 use Illuminate\Http\Request;
@@ -17,21 +18,27 @@ abstract class CagriMerkeziTabanController extends V2Controller
 
     protected string $yazmaKapaliMesaj = 'Çağrı merkezi v2 yazma şu an kapalı';
 
-    /** İstekteki salon için erişim (kapsam + paket + rol + dahili + yetki bayrakları). */
-    protected function erisim(Request $request): CagriMerkeziErisim
+    /** İstekteki salon için erişim (kapsam + paket + rol + dahili + yetki bayrakları) + varsa eylem kapısı. */
+    protected function erisim(Request $request, ?CagriMerkeziEylemi $eylem = null): CagriMerkeziErisim
     {
         $salonId = (int) $request->input('salon_id');
         if (! $salonId) {
             throw new GecersizIslemException('salon_id zorunlu');
         }
 
-        return app(CagriMerkeziErisimServisi::class)->coz((int) $this->kullanici()->id, $salonId);
+        $servis = app(CagriMerkeziErisimServisi::class);
+        $e = $servis->coz((int) $this->kullanici()->id, $salonId);
+        if ($eylem) {
+            $servis->eylemZorunlu($e, $eylem);
+        }
+
+        return $e;
     }
 
     /** Yazma uçları: önce erişim (403/404 sızıntısız), sonra kill-switch. */
-    protected function yazmaErisimi(Request $request): CagriMerkeziErisim
+    protected function yazmaErisimi(Request $request, ?CagriMerkeziEylemi $eylem = null): CagriMerkeziErisim
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, $eylem);
         $this->yazmaAcikMi();
 
         return $e;

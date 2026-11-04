@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\CagriMerkezi\AramaFiltresi;
+use App\Domain\CagriMerkezi\CagriMerkeziEylemi;
 use App\Domain\CagriMerkezi\ListeDurumu;
 use App\Services\CagriMerkezi\AramaListesiServisi;
 use App\Services\CagriMerkezi\ListeOlusturmaServisi;
@@ -29,7 +30,7 @@ class CagriListeController extends CagriMerkeziTabanController
 {
     public function onizleme(Request $request, ListeOlusturmaServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::ListeYonet);
         $l = ListeIstegi::istekten($request, 50);
 
         return ApiCevap::basarili($s->onizleme($e, AramaFiltresi::diziden((array) $request->input('filtre', [])), $l->sayfa, $l->sayfaBoyu));
@@ -37,7 +38,7 @@ class CagriListeController extends CagriMerkeziTabanController
 
     public function olustur(Request $request, ListeOlusturmaServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::ListeYonet);
         $v = $request->validate([
             'baslik'         => ['required', 'string', 'max:190'],
             'personel_id'    => ['required', 'integer', 'min:1'],
@@ -56,12 +57,12 @@ class CagriListeController extends CagriMerkeziTabanController
 
     public function segmentler(Request $request, int $id, AramaListesiServisi $s)
     {
-        return ApiCevap::basarili($s->segmentler($this->erisim($request), $id));
+        return ApiCevap::basarili($s->segmentler($this->erisim($request, CagriMerkeziEylemi::ListeYonet), $id));
     }
 
     public function durum(Request $request, int $id, AramaListesiServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::ListeYonet);
         $v = $request->validate(['durum' => ['required', 'integer', Rule::in(array_column(ListeDurumu::cases(), 'value'))]]);
         $sonuc = $s->durumDegistir($e, $id, ListeDurumu::from((int) $v['durum']));
 
@@ -70,7 +71,7 @@ class CagriListeController extends CagriMerkeziTabanController
 
     public function personel(Request $request, int $id, AramaListesiServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::ListeYonet);
         $v = $request->validate(['personel_id' => ['nullable', 'integer', 'min:1']]);
         $sonuc = $s->personelDegistir($e, $id, $v['personel_id'] ?? null);
 
@@ -79,7 +80,7 @@ class CagriListeController extends CagriMerkeziTabanController
 
     public function tasi(Request $request, int $id, AramaListesiServisi $s)
     {
-        $e = $this->yazmaErisimi($request);
+        $e = $this->yazmaErisimi($request, CagriMerkeziEylemi::ListeYonet);
         $v = $request->validate([
             'kodlar'      => ['nullable', 'array', 'max:12'],
             'kodlar.*'    => ['string', Rule::in(['bekleyen', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])],
@@ -93,14 +94,14 @@ class CagriListeController extends CagriMerkeziTabanController
 
     public function sil(Request $request, int $id, AramaListesiServisi $s)
     {
-        $sonuc = $s->sil($this->yazmaErisimi($request), $id);
+        $sonuc = $s->sil($this->yazmaErisimi($request, CagriMerkeziEylemi::ListeYonet), $id);
 
         return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
     }
 
     public function csv(Request $request, int $id, AramaListesiServisi $s)
     {
-        $e = $this->erisim($request);
+        $e = $this->erisim($request, CagriMerkeziEylemi::ListeYonet);
         $kod = $request->validate(['kod' => ['required', 'string', Rule::in(['bekleyen', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])]])['kod'];
         $d = $s->csv($e, $id, $kod);
 
