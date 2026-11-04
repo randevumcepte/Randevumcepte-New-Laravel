@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\MusteriHesap;
+namespace App\Services\Oturum;
 
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
@@ -11,11 +11,11 @@ use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer\Rsa\Sha256;
 
 /**
- * Musteri (users) erisim token'i. Eski Passport'un personal access token'i ile AYNI bicim: RS256 JWT
- * + oauth_access_tokens satiri, ortak anahtar. Boylece token hem v2 'auth:api' hem v1 uclarinda gecerlidir.
+ * Erisim token'i (musteri ve isletme yetkilisi). Eski Passport'un personal access token'i ile AYNI bicim: RS256 JWT
+ * + oauth_access_tokens satiri, ortak anahtar. Boylece token hem v2 guard'larinda hem v1 uclarinda gecerlidir.
  * Tarih claim'leri tam sayi: eski Passport 4 kutuphanesi kesirli degerleri okuyamaz.
  */
-class MusteriTokenServisi
+class ErisimTokenServisi
 {
     private const TOKEN_ADI = 'appToken';
 
@@ -47,6 +47,12 @@ class MusteriTokenServisi
             ->withClaim('scopes', [])
             ->getToken($yapilandirma->signer(), $yapilandirma->signingKey())
             ->toString();
+    }
+
+    /** Bugun uretilecek token'in bitis zamani (istemciye bilgi amacli). */
+    public function bitisTarihi(): string
+    {
+        return now()->addDays((int) config('online.token_gun'))->toDateTimeString();
     }
 
     public function iptal(string $tokenId): void

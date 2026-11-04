@@ -49,6 +49,12 @@ final class TelefonNumarasi
         return $d; // 10 haneli TR cep zaten kanonik; oneksiz yabanci (eski kayit) oldugu gibi
     }
 
+    /** Kanonik numara gecerli bir hesap telefonu mu: TR cep (5XXXXXXXXX) ya da "+KOD..." uluslararasi. */
+    public static function gecerliMi(string $kanonik): bool
+    {
+        return (bool) preg_match('/^(5\d{9}|\+\d{7,15})$/', $kanonik);
+    }
+
     /**
      * Kanonik numaranin DB'de gecmisten kalma farkli bicimleri (dedup aramasi icin).
      *

@@ -15,6 +15,7 @@
 // tek yerde yapilir; modul tekil oldugu icin hangi ekran once yuklenirse yuklensin
 // tum istekler tokeni bulur.
 import { api, el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { v2denGirildi, oturumuTemizle, girisSayfasinaGit } from '/js/lib/v2-oturum-depo.js?v=1';
 
 const kabukGetir = (salonId) => api('GET', '/kabuk', { params: { salon_id: salonId } });
 
@@ -93,6 +94,12 @@ function acilirDoldur(kapSec, ogeler) {
   el('.rc-acilir-menu', kap).innerHTML = ogeler.map(acilirOge).join('');
 }
 
+async function oturumuKapat() {
+  await api('POST', '/oturum/cikis');
+  oturumuTemizle();
+  location.href = '/v2/giris';
+}
+
 function acilirBagla() {
   const kapat = (haric = null) => document.querySelectorAll('.rc-acilir.acik').forEach((k) => {
     if (k === haric) return;
@@ -107,8 +114,12 @@ function acilirBagla() {
       tetik.setAttribute('aria-expanded', String(kap.classList.toggle('acik')));
       return;
     }
-    // Çıkış: v2 token'ı bu tarayıcıdan silinir, eski panel oturumu kapatılır.
-    if (e.target.closest('[data-kod="cikis"]')) localStorage.removeItem('rc_access_token');
+    // Çıkış: v2'den girildiyse token sunucuda iptal edilir, v2 girişine dönülür. Eski panelden gelindiyse
+    // token bu tarayıcıdan silinir, link eski panel oturumunu da kapatır.
+    if (e.target.closest('[data-kod="cikis"]')) {
+      if (v2denGirildi()) { e.preventDefault(); oturumuKapat(); return; }
+      localStorage.removeItem('rc_access_token');
+    }
     kapat();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kapat(); });
@@ -139,7 +150,8 @@ function subeUrl(subeId) {
 }
 
 async function yukle(salonId) {
-  const { ok, govde } = await kabukGetir(salonId);
+  const { ok, kod, govde } = await kabukGetir(salonId);
+  if (kod === 401) { girisSayfasinaGit(); return; }
   if (!ok || !govde || !govde.veri) {
     el('#rcMenu').innerHTML = '<div class="rc-menu-iskele">Menü yüklenemedi</div>';
     return;

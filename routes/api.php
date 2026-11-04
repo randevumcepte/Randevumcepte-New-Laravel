@@ -72,6 +72,9 @@ Route::prefix('v2')->group(function () {
     // ISLETME VITRINI + MUSTERI OTURUMU (kimliksiz, kisisel veri dondurmez) — routes/v2/vitrin.php
     require __DIR__.'/v2/vitrin.php';
 
+    // GIRIS + SIFRE SIFIRLAMA + UCRETSIZ DENEME (web + Flutter tek uc) — routes/v2/oturum.php
+    require __DIR__.'/v2/oturum.php';
+
     /*
      | KORUMALI — kisisel veri iceren TUM uclar buraya. Kimlik ZORUNLU.
      | Kapsam + yetki her controller'da GuvenlikKapisi ile uygulanir.

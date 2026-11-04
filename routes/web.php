@@ -7,6 +7,15 @@ Route::get('/', function () {
 });
 
 /*
+ | Giris, sifremi unuttum, ucretsiz deneme — kabuksuz sayfalar; tum is /api/v2/oturum + /api/v2/deneme.
+ | docs/strangler-oturum.md
+ */
+Route::view('/v2/giris', 'oturum.giris');
+Route::view('/v2/sifremi-unuttum', 'oturum.sifremi-unuttum');
+Route::view('/ucretsiz-denemenizi-baslatin', 'deneme.baslat');
+Route::view('/ucretsiz-deneme', 'deneme.baslat');
+
+/*
  | Tahsilat v2 — web paneli island host sayfasi (ilk tuketici, pilot).
  | Sayfa yalnizca HTML iskelet; veri /api/v2 (Bearer) ile yuklenir. Token
  | pilotta ?token=... ile saglanir (uretimde eski panel enjekte eder).

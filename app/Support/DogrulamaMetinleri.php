@@ -23,6 +23,9 @@ final class DogrulamaMetinleri
         'satis_tarihi' => 'Satış tarihi', 'ad' => 'Ad', 'renk' => 'Renk', 'sira' => 'Sıra', 'depo_adi' => 'Depo adı',
         'telefon' => 'Telefon', 'vergi_no' => 'Vergi no', 'email' => 'E-posta', 'adres' => 'Adres',
         'hizmet_id' => 'Hizmet', 'tedarikci_id' => 'Tedarikçi', 'kategori_id' => 'Kategori',
+        'kimlik' => 'Telefon veya e-posta', 'password' => 'Şifre', 'cep_telefon' => 'Telefon', 'kod' => 'Doğrulama kodu',
+        'yeni_sifre' => 'Yeni şifre', 'salon_turu_id' => 'İşletme türü', 'isletme_adi' => 'İşletme adı',
+        'isletme_adresi' => 'İşletme adresi', 'ad_soyad' => 'Yetkili adı soyadı',
     ];
 
     public static function mesajlar(): array
@@ -38,6 +41,7 @@ final class DogrulamaMetinleri
             'email'                => ':attribute geçerli bir e-posta olmalı.',
             'min.numeric'          => ':attribute en az :min olmalı.',
             'min.array'            => ':attribute en az :min kalem içermeli.',
+            'min.string'           => ':attribute en az :min karakter olmalı.',
             'max.numeric'          => ':attribute en fazla :max olabilir.',
             'max.string'           => ':attribute en fazla :max karakter olabilir.',
             'max.array'            => ':attribute en fazla :max kalem içerebilir.',

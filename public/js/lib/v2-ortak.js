@@ -7,6 +7,8 @@
  * tum import satirlarindaki ?v= birlikte artirilir.
  */
 
+import { ilkAlanHatasi } from '/js/lib/v2-hata.js?v=1';
+
 export const BASE = '/api/v2';
 export const qp = new URLSearchParams(location.search);
 
@@ -60,14 +62,6 @@ export function yazSonuc({ ok, kod, govde }, basariMsg) {
   if (ok && govde && govde.basarili) { if (basariMsg) mesaj(basariMsg, 'ok'); return true; }
   mesaj(ilkAlanHatasi(govde) || (govde && govde.mesaj) || `Hata (${kod})`, 'hata');
   return false;
-}
-
-/** 422 doğrulama zarfında ({veri: {alan: [mesaj]}}) ilk alan mesajı; yoksa null. */
-function ilkAlanHatasi(govde) {
-  const v = govde && !govde.basarili && govde.veri;
-  if (!v || typeof v !== 'object') return null;
-  const ilk = Object.values(v).find((m) => Array.isArray(m) && m.length);
-  return ilk ? String(ilk[0]) : null;
 }
 
 /**

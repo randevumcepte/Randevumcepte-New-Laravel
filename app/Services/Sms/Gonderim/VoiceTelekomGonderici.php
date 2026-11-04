@@ -19,11 +19,11 @@ class VoiceTelekomGonderici
      *
      * @throws SaglayiciHatasi
      */
-    public function gonder(object $salon, array $numaralar, string $mesaj, string $baslik): string
+    public function gonder(object $salon, array $numaralar, string $mesaj, string $baslik, ?int $zamanAsimiSn = null): string
     {
         $ozelId = 'sms_'.date('Ymd_His').'_'.Str::lower(Str::random(8));
         try {
-            $cevap = Http::timeout((int) config('sms.gonderim_zaman_asimi_sn'))
+            $cevap = Http::timeout($zamanAsimiSn ?? (int) config('sms.gonderim_zaman_asimi_sn'))
                 ->withoutVerifying()
                 ->withBasicAuth((string) $salon->sms_user_name, (string) $salon->sms_secret)
                 ->acceptJson()

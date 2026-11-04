@@ -5,6 +5,7 @@ namespace App\Services\MusteriHesap;
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
+use App\Services\Oturum\ErisimTokenServisi;
 use App\Support\DosyaYukleme;
 use App\Support\EskiPanelLinki;
 use Illuminate\Http\UploadedFile;
@@ -21,7 +22,7 @@ class MusteriProfilServisi
     private const ALANLAR = ['id', 'name', 'cep_telefon', 'email', 'meslek', 'cinsiyet', 'ev_telefon', 'dogum_tarihi', 'profil_resim', 'adres'];
     private const SIFRE_MIN = 6;
 
-    public function __construct(private MusteriTokenServisi $token) {}
+    public function __construct(private ErisimTokenServisi $token) {}
 
     public function goster(int $userId): array
     {

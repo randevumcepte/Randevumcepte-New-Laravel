@@ -7,6 +7,8 @@ use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Exceptions\GirisHatasiException;
 use App\Services\Online\OnlineSalonKapisi;
+use App\Services\Oturum\ErisimTokenServisi;
+use App\Services\Oturum\Hesap\MusteriHesabi;
 use App\Support\BildirimKuyrugu;
 use App\Support\OnayKodu;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +29,8 @@ class MusteriOturumServisi
     private const SIFRE_KOD_AMAC = 'musteri_sifre';
 
     public function __construct(
-        private MusteriTokenServisi $token,
+        private ErisimTokenServisi $token,
+        private MusteriHesabi $hesap,
         private PortfoyKaydi $portfoy,
         private MusteriProfilServisi $profil,
         private OnlineSalonKapisi $kapi,
@@ -41,14 +44,14 @@ class MusteriOturumServisi
             throw new CokFazlaIstekException();
         }
 
-        $kullanici = $this->kullanici($tel);
-        if (! $kullanici || ! Hash::check($sifre, (string) $kullanici->password)) {
+        $userId = $this->hesap->sifreyleBul($tel, $sifre);
+        if ($userId === null) {
             RateLimiter::hit($anahtar, (int) config('online.giris_deneme_sn'));
             throw new GirisHatasiException();
         }
         RateLimiter::clear($anahtar);
 
-        return $this->oturumAc((int) $kullanici->id, $salonId);
+        return $this->oturumAc($userId, $salonId);
     }
 
     /**
@@ -63,7 +66,7 @@ class MusteriOturumServisi
         if (RateLimiter::tooManyAttempts($telAnahtar, (int) config('online.kayit_tel_gunluk'))) {
             throw new CokFazlaIstekException();
         }
-        if ($this->kullanici($tel)) {
+        if ($this->hesap->telefonlaBul($tel) !== null) {
             return ['sifre_gerekli' => true];
         }
 
@@ -95,11 +98,11 @@ class MusteriOturumServisi
         if (! RateLimiter::attempt('musteri-sifre-tel:'.$tel, 1, fn () => true, (int) config('online.sifre_kodu_tel_sn'))) {
             return;
         }
-        $kullanici = $this->kullanici($tel);
-        if (! $kullanici) {
+        $userId = $this->hesap->telefonlaBul($tel);
+        if ($userId === null) {
             return;
         }
-        $kod = OnayKodu::uret(self::SIFRE_KOD_AMAC, $salonId, (int) $kullanici->id);
+        $kod = OnayKodu::uret(self::SIFRE_KOD_AMAC, $salonId, $userId);
         BildirimKuyrugu::sms($salonId, null, [[
             'to' => $tel, 'message' => $salon->salon_adi.' şifre yenileme kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.',
         ]], true);
@@ -107,12 +110,11 @@ class MusteriOturumServisi
 
     public function sifreSifirla(string $telefonHam, int $salonId, string $kod, string $yeniSifre): void
     {
-        $kullanici = $this->kullanici($this->telefon($telefonHam));
-        if (! $kullanici || ! OnayKodu::dogrula(self::SIFRE_KOD_AMAC, $salonId, (int) $kullanici->id, $kod)) {
+        $userId = $this->hesap->telefonlaBul($this->telefon($telefonHam));
+        if ($userId === null || ! OnayKodu::dogrula(self::SIFRE_KOD_AMAC, $salonId, $userId, $kod)) {
             throw new GecersizIslemException('Kod hatalı veya süresi dolmuş.');
         }
-        DB::table('users')->where('id', $kullanici->id)->update(['password' => Hash::make($yeniSifre), 'updated_at' => now()]);
-        $this->token->digerleriniIptal((int) $kullanici->id, null);
+        $this->hesap->sifreGuncelle($userId, $yeniSifre);
     }
 
     private function oturumAc(int $userId, ?int $salonId): array
@@ -140,17 +142,10 @@ class MusteriOturumServisi
     private function telefon(string $ham): string
     {
         $tel = TelefonNumarasi::kanonik($ham);
-        $tr = (bool) preg_match('/^5\d{9}$/', $tel);
-        $yabanci = (bool) preg_match('/^\+\d{7,15}$/', $tel);
-        if (! $tr && ! $yabanci) {
+        if (! TelefonNumarasi::gecerliMi($tel)) {
             throw new GecersizIslemException('Geçerli bir telefon numarası girin.');
         }
 
         return $tel;
-    }
-
-    private function kullanici(string $tel): ?object
-    {
-        return DB::table('users')->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($tel))->orderBy('id')->first(['id', 'password']);
     }
 }

@@ -9,7 +9,9 @@ use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\KapsamServisi;
+use App\Support\DogrulamaMetinleri;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Tum /api/v2 controller'larinin ortak tabani — kimlik, kayit-bulunamadi ve yazma
@@ -107,6 +109,12 @@ abstract class V2Controller extends Controller
         }
 
         return $salonId;
+    }
+
+    /** Turkce mesajli girdi dogrulamasi; hata 422 zarfina doner (istemciler ilk alan mesajini gosterir). */
+    protected function alanlariDogrula(Request $request, array $kurallar): array
+    {
+        return Validator::make($request->all(), $kurallar, DogrulamaMetinleri::mesajlar(), DogrulamaMetinleri::alanlar())->validate();
     }
 
     /** Yazma kill-switch'i kapaliysa 409. */

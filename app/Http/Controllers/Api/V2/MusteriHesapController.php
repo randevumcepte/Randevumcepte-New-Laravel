@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Services\MusteriHesap\MusteriProfilServisi;
 use App\Services\MusteriHesap\MusteriRandevuServisi;
-use App\Services\MusteriHesap\MusteriTokenServisi;
+use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\MusteriHesap\MusteriYorumServisi;
 use App\Services\Online\OnlineRandevuServisi;
 use App\Services\Randevu\RandevuFormServisi;
@@ -65,7 +65,7 @@ class MusteriHesapController extends MusteriUygulamaController
         return ApiCevap::basarili(null, 'Şifreniz değiştirildi.');
     }
 
-    public function cikis(Request $request, MusteriTokenServisi $token)
+    public function cikis(Request $request, ErisimTokenServisi $token)
     {
         if ($id = $request->attributes->get('oauth_access_token_id')) {
             $token->iptal($id);

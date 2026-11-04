@@ -1,0 +1,115 @@
+/* Giriş + şifremi unuttum. Görünüm eski isletmeadmin/login ile aynı; yalnız kullanılan kurallar. */
+:root {
+  --ot-ana: #5C008E;
+  --ot-yazi: #666;
+  --ot-soluk: #868686;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Montserrat, sans-serif;
+  color: var(--ot-yazi);
+  background: #2b0a45;
+}
+
+[hidden] { display: none !important; }
+
+.ot-arkaplan {
+  position: fixed;
+  inset: 0;
+  background: url(/img/oturum/arkaplan.jpg) center / cover no-repeat;
+}
+
+.ot-kap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 16px;
+  pointer-events: none; /* parçacık etkileşimi kartın dışında çalışsın */
+}
+
+.ot-kart {
+  width: 100%;
+  max-width: 350px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 30px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, .1);
+  pointer-events: auto;
+}
+
+.ot-logo { display: block; width: 100%; height: auto; margin-bottom: 16px; }
+
+.ot-baslik { margin: 0 0 16px; font-size: 20px; font-weight: 600; text-align: center; color: #333; }
+
+.ot-alan {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px 20px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ot-yazi);
+  background: #f8f8f8;
+  border: 0;
+  border-bottom: 2px solid #ccc;
+  border-radius: 5px;
+  transition: border-color .3s;
+}
+.ot-alan::placeholder { font-size: 13px; }
+.ot-alan:focus { outline: 0; border-bottom-color: var(--ot-ana); }
+
+.ot-sifre { position: relative; }
+.ot-sifre .ot-alan { padding-right: 40px; }
+.ot-sifre .bi {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--ot-soluk);
+  cursor: pointer;
+}
+
+.ot-baglanti { font-size: 13px; font-weight: 500; color: var(--ot-ana); text-decoration: none; }
+.ot-baglanti:hover { text-decoration: underline; }
+.ot-sag { display: block; margin: 8px 0 4px; text-align: right; }
+
+.ot-dugme {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ot-ana);
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.ot-dugme:disabled { opacity: .6; cursor: wait; }
+
+.ot-metin-dugme {
+  display: block;
+  margin: 10px auto 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ot-ana);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.ot-ayrac { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; font-size: 13px; color: var(--ot-soluk); }
+.ot-ayrac::before, .ot-ayrac::after { content: ""; flex: 1; height: 1px; background: #e2e2e2; }
+
+.ot-alt { margin: 0; font-size: 13px; text-align: center; color: var(--ot-soluk); }
+
+.ot-mesaj { margin: 0 0 10px; padding: 8px 10px; font-size: 14px; border-radius: 4px; color: #721c24; background: #f8d7da; }
+.ot-mesaj[data-tip="ok"] { color: #155724; background: #d4edda; }
