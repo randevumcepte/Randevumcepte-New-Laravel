@@ -9,12 +9,16 @@
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
  *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
  *   - Tarihler flatpickr (TR) ile seçilir.
+ *   - YENİ SATIŞ modu (/v2/yeni-satis, data-adisyon=0): önce müşteri seçilir; ilk kalem
+ *     POST /adisyon ile adisyonu açar, ekran aynı sayfada normal akışa geçer (eski
+ *     /yenitahsilat ile aynı: boş adisyon oluşmaz). Ayrı form kodu yok.
  *
  * Token: localStorage['rc_access_token'] (pilotta ?token=). Menü+header shell'den
  * (panel-kabuk.js); bu betik yalnızca içerik alanını yönetir.
  */
 
-import { api, el, esc, TL, mesaj, onay } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=1';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
@@ -29,7 +33,8 @@ const YONTEM = { 1: 'Nakit', 2: 'Kredi Kartı', 3: 'Havale/EFT' };
 const yontemAd = (id) => YONTEM[parseInt(id, 10)] || 'Diğer';
 
 const kok = document.getElementById('rc-tahsilat');
-const adisyonId = parseInt(kok.dataset.adisyon, 10);
+let adisyonId = parseInt(kok.dataset.adisyon, 10) || 0;   // 0 = Yeni Satış modu
+let yeniMusteri = null;                                    // Yeni Satış: seçilen müşteri
 let adisyon = null;
 let katalog = null;
 let salonId = null;
@@ -227,10 +232,55 @@ async function kalemEkle() {
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
-  const { ok, kod, govde } = await api('POST', '/adisyon/' + adisyonId + '/kalem', { body });
-  if (!ok) { mesaj(`Kalem eklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
-  mesaj('Kalem eklendi.', 'ok');
+  const btn = el('#t-ekle-btn');
+  btn.disabled = true;
+  try {
+    if (!adisyonId) { await yeniSatisAc(body); return; }
+    const { ok, kod, govde } = await api('POST', '/adisyon/' + adisyonId + '/kalem', { body });
+    if (!ok) { mesaj(`Kalem eklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
+    mesaj('Kalem eklendi.', 'ok');
+    el('#t-ekle-panel').hidden = true;
+    await adisyonYukle();
+  } finally { btn.disabled = false; }
+}
+
+/* ───────────── Yeni Satış modu ───────────── */
+function yeniSatisBaslat() {
+  salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
+  if (!salonId) { mesaj('Şube seçili değil (?sube=... bekleniyor).', 'hata'); return; }
+  if (window.rcPanel) window.rcPanel.salonAyarla(salonId);
+  el('#t-baslik-h1').textContent = 'Yeni Satış';
+  el('#t-adisyon-no').textContent = '';
+  document.querySelectorAll('.t-yeni-gizle').forEach((x) => { x.hidden = true; });
+  el('#t-kalemler').innerHTML = '<div class="t-yeni-ipucu"><i class="bi bi-person-check"></i> Önce müşteri seçin, ardından hizmet / ürün / paket ekleyin.</div>';
+  yeniButonlar(false);
+  katalogYukle();
+  musteriSecici(el('#t-musteri-sec'), {
+    salonId, yol: '/musteri/ara', ipucu: 'Müşteri adı veya telefon…',
+    onSec: (m) => { yeniMusteri = m; yeniButonlar(!!m); },
+  });
+}
+
+// Eski formdaki gibi: müşteri seçilmeden kalem butonları kapalı.
+function yeniButonlar(acik) {
+  document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => { b.disabled = !acik; });
+  if (!acik) el('#t-ekle-panel').hidden = true;
+}
+
+// İlk kalem: adisyonu açar (POST /adisyon), sonra ekran normal Satış & Tahsilat akışına geçer.
+async function yeniSatisAc(kalem) {
+  if (!yeniMusteri) { mesaj('Önce müşteri seçin', 'hata'); return; }
+  const { ok, kod, govde } = await api('POST', '/adisyon', {
+    body: { ...kalem, salon_id: salonId, musteri_id: yeniMusteri.id, idempotency_key: uuid() },
+  });
+  if (!ok || !govde?.basarili) { mesaj(`Satış açılamadı (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
+  adisyonId = govde.veri.adisyon_id;
+  history.replaceState(null, '', `/v2/tahsilat/${adisyonId}?sube=${salonId}`);
+  el('#t-musteri-sec').innerHTML = '';
+  el('#t-baslik-h1').textContent = 'Satış & Tahsilat Düzenleme';
+  document.querySelectorAll('.t-yeni-gizle').forEach((x) => { x.hidden = false; });
   el('#t-ekle-panel').hidden = true;
+  mesaj('Satış açıldı.', 'ok');
   await adisyonYukle();
 }
 
@@ -400,13 +450,14 @@ function iskelet() {
   kok.innerHTML = `
     <div class="t-baslik">
       <div>
-        <h1>Satış &amp; Tahsilat Düzenleme</h1>
-        <div class="t-alt"><b id="t-musteri">…</b> <span id="t-adisyon-no"></span></div>
+        <h1 id="t-baslik-h1">Satış &amp; Tahsilat Düzenleme</h1>
+        <div class="t-alt"><b id="t-musteri"></b> <span id="t-adisyon-no"></span></div>
+        <div id="t-musteri-sec" class="t-musteri-sec"></div>
       </div>
-      <span class="t-durum" id="t-durum"></span>
+      <span class="t-durum t-yeni-gizle" id="t-durum"></span>
     </div>
 
-    <div class="t-ozet-serit" id="t-ozet-serit"></div>
+    <div class="t-ozet-serit t-yeni-gizle" id="t-ozet-serit"></div>
 
     <div class="t-kolon">
       <!-- SOL: kalemler + ekleme + tahsilatlar + alacaklar -->
@@ -433,19 +484,19 @@ function iskelet() {
           <div class="t-kart-govde" id="t-kalemler"></div>
         </section>
 
-        <section class="t-kart t-gecmis">
+        <section class="t-kart t-gecmis t-yeni-gizle">
           <div class="t-kart-bas"><h3>Yapılan Tahsilatlar</h3></div>
           <div class="t-kart-govde" id="t-gecmis"></div>
         </section>
 
-        <section class="t-kart t-alacaklar">
+        <section class="t-kart t-alacaklar t-yeni-gizle">
           <div class="t-kart-bas"><h3>Planlanan Alacaklar</h3></div>
           <div class="t-kart-govde" id="t-alacaklar"></div>
         </section>
       </div>
 
       <!-- SAĞ: ödeme / özet -->
-      <aside class="t-kart t-sag">
+      <aside class="t-kart t-sag t-yeni-gizle">
         <div class="t-odeme-bas">Ödeme</div>
         <div class="t-alacak"><span>Kalan Alacak (₺)</span><b id="t-kalan-buyuk">—</b></div>
         <div class="t-ozet-detay" id="t-ozet-detay"></div>
@@ -491,4 +542,4 @@ function iskelet() {
 }
 
 iskelet();
-adisyonYukle();
+if (adisyonId) adisyonYukle(); else yeniSatisBaslat();

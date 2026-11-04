@@ -2,7 +2,6 @@
 
 namespace App\Services\Stok;
 
-use App\Domain\Stok\HareketTipi;
 use App\Models\Adisyonlar;
 use App\Models\Urunler;
 use App\Services\Satis\KalemServisi;
@@ -16,7 +15,8 @@ use App\Support\Idempotency;
  * Sistemde urun satisi DAIMA bir adisyona baglidir (eskiyle ayni akis):
  *   1) Musteriye adisyon acilir
  *   2) Her kalem satis domaininin KalemServisi'yle yazilir (fiyat = katalog fiyati
- *      × adet; istemcinin gonderdigi fiyat YOK SAYILIR) + stoktan 'satis' dusulur
+ *      × adet; istemcinin gonderdigi fiyat YOK SAYILIR); stoktan 'satis' dusumu de
+ *      KalemServisi'nde (urun satan tum akislar icin tek yer)
  *   3) Pesin istenirse tahsilat, tahsilat domaininin TahsilatYazServisi'yle yazilir
  *      (WEB-kanonik dagitim, kalem tahsilatlari, kasa) — kopya tahsilat kodu yok.
  * Tamami tek transaction + idempotency_key (cift tiklamada ikinci adisyon acilmaz).
@@ -48,9 +48,7 @@ class HizliSatisServisi
         $sonuc = Idempotency::calistir('stok_hizli_satis', (string) $v['idempotency_key'], $yetkiliId, $salonId,
             function () use ($salonId, $v, $sepet, $musteriId, $personelId, $kim, $yetkiliId) {
                 $tarih = $v['satis_tarihi'] ?? now()->toDateString();
-                $adisyon = Adisyonlar::create([
-                    'user_id' => $musteriId, 'salon_id' => $salonId, 'olusturan_id' => $yetkiliId, 'tarih' => $tarih,
-                ]);
+                $adisyon = Adisyonlar::ac($salonId, $musteriId, $yetkiliId, $tarih);
                 $batch = $this->hareket->yeniBatch();
                 $kalemIdleri = [];
                 $toplam = 0.0;
@@ -58,24 +56,13 @@ class HizliSatisServisi
                 foreach ($sepet as $k) {
                     $urun = Urunler::findOrFail($k['urun_id']);
                     $adet = (int) $k['miktar'];
-                    $kalem = $this->kalem->ekle((int) $adisyon->id, 'urun', (int) $urun->id, ['adet' => $adet, 'personel_id' => $personelId]);
+                    // Kalem + stok 'satis' hareketi TEK yazıcıda (KalemServisi::ekle).
+                    $kalem = $this->kalem->ekle((int) $adisyon->id, 'urun', (int) $urun->id, [
+                        'adet' => $adet, 'personel_id' => $personelId, 'depo_id' => $k['depo_id'] ?? null,
+                        'batch_uuid' => $batch, 'aciklama' => $v['aciklama'] ?? 'Hızlı satış', 'kullanici_id' => $yetkiliId,
+                    ]);
                     $kalemIdleri[] = $kalem['kalem_id'];
                     $toplam += round((float) $urun->fiyat * $adet, 2);
-
-                    $this->hareket->kaydet([
-                        'salon_id'           => $salonId,
-                        'urun_id'            => (int) $urun->id,
-                        'depo_id'            => $this->hareket->depoCoz($salonId, $k['depo_id'] ?? null, $urun->varsayilan_depo_id),
-                        'miktar'             => $adet,
-                        'tip'                => HareketTipi::Satis,
-                        'referans_tip'       => 'adisyon_urun',
-                        'referans_id'        => $kalem['kalem_id'],
-                        'batch_uuid'         => $batch,
-                        'birim_satis_fiyati' => $urun->fiyat,
-                        'birim_alis_fiyati'  => $urun->alis_fiyati,
-                        'aciklama'           => $v['aciklama'] ?? 'Hızlı satış',
-                        'kullanici_id'       => $yetkiliId,
-                    ]);
                 }
 
                 $tahsilatId = null;

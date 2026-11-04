@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Exceptions\GecersizIslemException;
+use App\Models\Adisyonlar;
 use App\Services\Satis\KalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\SalonSahipligi;
 use App\Support\ApiCevap;
+use App\Support\Idempotency;
 use Illuminate\Http\Request;
 
 /**
@@ -24,7 +28,40 @@ class SatisKalemController extends V2Controller
         private KalemServisi $servis,
         private AdisyonOkumaServisi $adisyonServisi,
         private GuvenlikKapisi $kapi,
+        private SalonSahipligi $sahiplik,
     ) {}
+
+    /**
+     * POST /api/v2/adisyon — YENİ SATIŞ (eski "Yeni Tahsilat" /yenitahsilat akışı).
+     * body: {salon_id, musteri_id, tip, katalog_id, adet?, personel_id?, tarih?, idempotency_key}
+     * Eskisiyle aynı: adisyon İLK KALEMLE açılır (boş adisyon oluşmaz); sonraki kalemler,
+     * tahsilat ve alacak mevcut /adisyon/{id}/* uçlarıyla. Yetki: satis.adisyon_olustur.
+     */
+    public function adisyonAc(Request $request)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+
+        $salonId = (int) $request->input('salon_id');
+        $musteriId = (int) $request->input('musteri_id');
+        if (! $salonId || ! $musteriId) {
+            return ApiCevap::hata('salon_id ve musteri_id zorunlu', 422);
+        }
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->sahiplik->musteriOlmali($musteriId, $salonId);
+        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId);
+        $tarih = $request->input('tarih') ? date('Y-m-d', strtotime((string) $request->input('tarih'))) : null;
+
+        $sonuc = Idempotency::calistir('yeni_satis', (string) $request->input('idempotency_key'), (int) $user->id, $salonId,
+            function () use ($salonId, $musteriId, $user, $tarih, $tip, $katalogId, $opt) {
+                $adisyon = Adisyonlar::ac($salonId, $musteriId, (int) $user->id, $tarih);
+                $kalem = $this->servis->ekle((int) $adisyon->id, $tip, $katalogId, $opt + ['tarih' => $tarih, 'kullanici_id' => (int) $user->id]);
+
+                return ['adisyon_id' => (int) $adisyon->id, 'kalem_id' => $kalem['kalem_id'] ?? null];
+            });
+
+        return ApiCevap::basarili($sonuc, 'Satış açıldı.');
+    }
 
     /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, personel_id?} */
     public function ekle(Request $request, int $adisyon)
@@ -38,19 +75,9 @@ class SatisKalemController extends V2Controller
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
 
-        $tip = (string) $request->input('tip');
-        if (! in_array($tip, ['hizmet', 'urun', 'paket'], true)) {
-            return ApiCevap::hata('Geçersiz tip (hizmet|urun|paket)', 422);
-        }
-        $katalogId = (int) $request->input('katalog_id');
-        if (! $katalogId) {
-            return ApiCevap::hata('katalog_id zorunlu', 422);
-        }
+        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId);
 
-        $sonuc = $this->servis->ekle($adisyon, $tip, $katalogId, [
-            'adet'        => $request->input('adet'),
-            'personel_id' => $request->input('personel_id'),
-        ]);
+        $sonuc = $this->servis->ekle($adisyon, $tip, $katalogId, $opt + ['kullanici_id' => (int) $user->id]);
         $sonuc['hesap'] = $this->adisyonServisi->getir($adisyon)['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Kalem eklendi.');
@@ -73,7 +100,7 @@ class SatisKalemController extends V2Controller
             return ApiCevap::hata('adet en az 1 olmalı', 422);
         }
 
-        $sonuc = $this->servis->urunAdetGuncelle($id, $adet);
+        $sonuc = $this->servis->urunAdetGuncelle($id, $adet, (int) $user->id);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Adet güncellendi.');
@@ -92,11 +119,33 @@ class SatisKalemController extends V2Controller
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
 
-        $sonuc = $this->servis->sil($tip, $id);
+        $sonuc = $this->servis->sil($tip, $id, (int) $user->id);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Kalem silindi.');
     }
 
 
+
+    /**
+     * Kalem ekleme girdisi — yeni satış ve mevcut adisyona ekleme AYNI kuralla:
+     * tip ∈ hizmet|urun|paket, katalog_id zorunlu, personel (verildiyse) bu salonun.
+     *
+     * @return array{0:string,1:int,2:array{adet:mixed,personel_id:?int}}
+     */
+    private function kalemGirdisi(Request $request, int $salonId): array
+    {
+        $tip = (string) $request->input('tip');
+        if (! in_array($tip, ['hizmet', 'urun', 'paket'], true)) {
+            throw new GecersizIslemException('Geçersiz tip (hizmet|urun|paket)');
+        }
+        $katalogId = (int) $request->input('katalog_id');
+        if (! $katalogId) {
+            throw new GecersizIslemException('katalog_id zorunlu');
+        }
+        $personelId = $request->input('personel_id') ? (int) $request->input('personel_id') : null;
+        $this->sahiplik->personelOlmali($personelId, $salonId);
+
+        return [$tip, $katalogId, ['adet' => $request->input('adet'), 'personel_id' => $personelId]];
+    }
 }

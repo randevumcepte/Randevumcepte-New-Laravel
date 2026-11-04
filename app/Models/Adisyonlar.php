@@ -4,12 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** PAYLASILAN 'adisyonlar' tablosu (satis basligi). Yeni app Faz 1'de yalnizca OKUR. */
+/** PAYLASILAN 'adisyonlar' tablosu (satis basligi). v2 yeni adisyonu yalniz ac() ile acar. */
 class Adisyonlar extends Model
 {
     protected $table = 'adisyonlar';
 
     protected $guarded = [];
+
+    /**
+     * Yeni adisyon (satış başlığı) AÇ — TEK KAYNAK. Tüm v2 satış yazıcıları (Yeni Satış,
+     * paket satışı, hızlı ürün satışı, tek kalemli satış) adisyonu buradan açar.
+     * Kalemler ayrıca KalemServisi::ekle ile eklenir (boş adisyon bırakılmaz — çağıran
+     * aynı transaction'da en az bir kalem ekler).
+     */
+    public static function ac(int $salonId, int $musteriId, ?int $olusturanId, ?string $tarih = null): self
+    {
+        return self::create([
+            'user_id'      => $musteriId,
+            'salon_id'     => $salonId,
+            'olusturan_id' => $olusturanId,
+            'tarih'        => $tarih ?: now()->toDateString(),
+        ]);
+    }
 
     public function hizmetler()
     {

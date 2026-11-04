@@ -129,6 +129,8 @@ Route::prefix('v2')->group(function () {
         Route::delete('/tahsilat/{id}', [TahsilatController::class, 'sil'])->whereNumber('id');
 
         // SATIS KALEM yonetimi (Satis & Tahsilat Duzenleme) — flag korumali.
+        // YENİ SATIŞ: müşteri + ilk kalemle adisyon açar (boş adisyon yok) — satis.adisyon_olustur.
+        Route::post('/adisyon', [SatisKalemController::class, 'adisyonAc']);
         Route::post('/adisyon/{adisyon}/kalem', [SatisKalemController::class, 'ekle'])->whereNumber('adisyon');
         Route::patch('/kalem/urun/{id}', [SatisKalemController::class, 'urunAdet'])->whereNumber('id');
         Route::delete('/kalem/{tip}/{id}', [SatisKalemController::class, 'sil'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');

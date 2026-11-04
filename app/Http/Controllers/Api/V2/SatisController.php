@@ -97,6 +97,7 @@ class SatisController extends V2Controller
         $hesapSahibi = $this->yetki->yetkiliHesapSahibiGorunur($user->id, $salonId);
         $yetkiler = [
             'tahsilat_al'     => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.tahsilat_al'),
+            'adisyon_olustur' => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.adisyon_olustur'),
             'adisyon_sil'     => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.adisyon_sil'),
             'fatura_isaretle' => $hesapSahibi && ! $studyo,
             'faturasiz_gizle' => $hesapSahibi && ! $studyo,

@@ -54,10 +54,7 @@ class PaketSatisServisi
         $yetkiliId = (int) $kim['yetkili_id'];
         $sonuc = Idempotency::calistir('paket_satis', (string) $v['idempotency_key'], $yetkiliId, $salonId,
             function () use ($salonId, $v, $musteriId, $saticiId, $kalemler, $yetkiliId) {
-                $adisyon = Adisyonlar::create([
-                    'user_id' => $musteriId, 'salon_id' => $salonId, 'olusturan_id' => $yetkiliId,
-                    'tarih'   => $v['tarih'] ?? now()->toDateString(),
-                ]);
+                $adisyon = Adisyonlar::ac($salonId, $musteriId, $yetkiliId, $v['tarih'] ?? null);
                 foreach ($kalemler as $k) {
                     $this->kalem->ekle((int) $adisyon->id, 'paket', $k['paket_id'], ['personel_id' => $saticiId, 'fiyat' => $k['fiyat'], 'seans' => $k['seans']]);
                 }

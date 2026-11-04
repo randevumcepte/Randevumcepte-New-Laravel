@@ -16,6 +16,15 @@ Route::get('/v2/tahsilat/{adisyon}', function ($adisyon) {
 })->whereNumber('adisyon');
 
 /*
+ | Yeni Satış v2 (eski /isletmeyonetim/yenitahsilat) — AYNI tahsilat ekranı, "yeni" modda:
+ | önce müşteri seçilir, ilk kalemle adisyon açılır (POST /api/v2/adisyon), sonra
+ | ekran normal Satış & Tahsilat akışına geçer. Ayrı form kodu YOK.
+ */
+Route::get('/v2/yeni-satis/{sube?}', function ($sube = null) {
+    return view('v2.tahsilat', ['adisyonId' => 0, 'salonId' => (int) ($sube ?: request('sube', 0))]);
+})->whereNumber('sube');
+
+/*
  | Satis Takibi v2 — adisyon/satis listesi host sayfasi (ayni island deseni).
  | Veri /api/v2/satislar (Bearer) ile yuklenir; salon_id ?sube= query'sinden
  | gelir (kabuk sube secimiyle de uyumlu). Eski panel "Satis Takibi" karsiligi.

@@ -123,3 +123,5 @@
 }
 .s-fatura-gizle.aktif { background: #fff2e0; border-color: #f3d3a6; color: #b96c00; }
 @media (prefers-color-scheme: dark) { .s-fatura-gizle { background: #1b1b26; border-color: #34344c; color: #cfcfe0; } }
+
+.s-yeni-btn[hidden] { display: none; }

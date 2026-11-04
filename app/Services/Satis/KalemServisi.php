@@ -2,6 +2,7 @@
 
 namespace App\Services\Satis;
 
+use App\Domain\Stok\HareketTipi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Models\Adisyonlar;
@@ -9,6 +10,7 @@ use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Services\Paket\PaketSorgusu;
+use App\Services\Stok\StokHareketServisi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,12 +24,19 @@ use Illuminate\Support\Facades\DB;
  * Eski sistemden GÜVENLİ farklar (tutarsızlık önleme):
  *   - Kaleme tahsilat yapılmışsa adet değiştirme / silme REDDEDİLİR (eski
  *     urunadetdegistir tahsili yok sayıp fiyatı ezebiliyordu).
- *   - Otomatik randevu/seans oluşturma ve stok hareketi bu sürümde YOK (ayrı adım).
+ *   - Otomatik randevu/seans oluşturma bu sürümde YOK (ayrı adım).
+ * STOK (eskiyle aynı, TEK YER): ürün kalemi eklenince 'satis' (−adet), silinince 'iade'
+ * (+adet) hareketi StokHareketServisi ile yazılır; adet değişince fark kadar satış/iade
+ * (eski urunadetdegistir stoğa dokunmuyordu — tutarlılık için düzeltildi). Ürün satan
+ * tüm v2 akışları (Yeni Satış, Satış & Tahsilat, Hızlı Satış, tek kalem) bu yoldan geçer.
  * Flag arkasında (controller kontrol eder); transaction + kilit.
  */
 class KalemServisi
 {
-    public function __construct(private PaketSorgusu $paketler) {}
+    public function __construct(
+        private PaketSorgusu $paketler,
+        private StokHareketServisi $stok,
+    ) {}
 
     /** Katalogdan adisyona kalem ekle. */
     public function ekle(int $adisyonId, string $tip, int $katalogId, array $opt): array
@@ -69,9 +78,10 @@ class KalemServisi
                 $k->save();
                 $yeniId = $k->id;
             } elseif ($tip === 'urun') {
-                $u = DB::table('urunler')->where('id', $katalogId)->first();
+                // Ürün bu salonun AKTİF ürünü olmalı (StokKapsam::aitOlmali ile aynı kural).
+                $u = DB::table('urunler')->where('id', $katalogId)->where('salon_id', $salonId)->where('aktif', 1)->first();
                 if (! $u) {
-                    throw new BulunamadiException('Ürün bulunamadı');
+                    throw new BulunamadiException('Ürün bu işletmeye ait değil veya silinmiş');
                 }
                 $adet = max(1, (int) ($opt['adet'] ?? 1));
                 $k = new AdisyonUrunler();
@@ -83,6 +93,8 @@ class KalemServisi
                 $k->islem_tarihi = $bugun;
                 $k->save();
                 $yeniId = $k->id;
+                // opt: depo_id (yoksa ürün/salon varsayılanı), batch_uuid, aciklama, kullanici_id
+                $this->stokHareketi($salonId, $u, $adet, HareketTipi::Satis, 'adisyon_urun', (int) $k->id, $opt);
             } elseif ($tip === 'paket') {
                 // Etkin katalog fiyat/seansi (PaketTutari); paket bu salonun aktif paketi olmali.
                 // fiyat/seans opt'ta verilirse (Paket Yonetimi satisi) o kullanilir — yetki cagri yerinde.
@@ -108,10 +120,10 @@ class KalemServisi
         });
     }
 
-    /** Ürün adedi güncelle (fiyat = birim × adet yeniden). Tahsilatı varsa reddet. */
-    public function urunAdetGuncelle(int $kalemId, int $adet): array
+    /** Ürün adedi güncelle (fiyat = birim × adet yeniden; stok farkı). Tahsilatı varsa reddet. */
+    public function urunAdetGuncelle(int $kalemId, int $adet, ?int $kullaniciId = null): array
     {
-        return DB::transaction(function () use ($kalemId, $adet) {
+        return DB::transaction(function () use ($kalemId, $adet, $kullaniciId) {
             $k = AdisyonUrunler::where('id', $kalemId)->lockForUpdate()->first();
             if (! $k) {
                 throw new BulunamadiException('Ürün kalemi bulunamadı');
@@ -120,20 +132,26 @@ class KalemServisi
             if ($tah > 0) {
                 throw new CakismaException('Bu ürüne tahsilat yapılmış; adet değiştirmeden önce tahsilatı iade edin');
             }
-            $birim = (float) DB::table('urunler')->where('id', $k->urun_id)->value('fiyat');
+            $u = DB::table('urunler')->where('id', $k->urun_id)->first();
             $adet = max(1, $adet);
+            $fark = $adet - (int) $k->adet;
             $k->adet = $adet;
-            $k->fiyat = round($birim * $adet, 2);
+            $k->fiyat = round((float) ($u->fiyat ?? 0) * $adet, 2);
             $k->save();
+            if ($u && $fark !== 0) {
+                $salonId = (int) Adisyonlar::where('id', $k->adisyon_id)->value('salon_id');
+                $this->stokHareketi($salonId, $u, abs($fark), $fark > 0 ? HareketTipi::Satis : HareketTipi::Iade,
+                    'adisyon_urun', $kalemId, ['kullanici_id' => $kullaniciId, 'aciklama' => 'Adisyon ürün adedi değişti']);
+            }
 
             return ['kalem_id' => $kalemId, 'adet' => $adet, 'fiyat' => $k->fiyat, 'adisyon_id' => (int) $k->adisyon_id];
         });
     }
 
-    /** Kalemi sil. Kaleme tahsilat yapılmışsa reddet. */
-    public function sil(string $tip, int $kalemId): array
+    /** Kalemi sil (ürünse stoğa iade). Kaleme tahsilat yapılmışsa reddet. */
+    public function sil(string $tip, int $kalemId, ?int $kullaniciId = null): array
     {
-        return DB::transaction(function () use ($tip, $kalemId) {
+        return DB::transaction(function () use ($tip, $kalemId, $kullaniciId) {
             [$model, $tahTablo, $tahFk] = match ($tip) {
                 'hizmet' => [AdisyonHizmetler::class, 'tahsilat_hizmetler', 'adisyon_hizmet_id'],
                 'urun'   => [AdisyonUrunler::class, 'tahsilat_urunler', 'adisyon_urun_id'],
@@ -151,6 +169,11 @@ class KalemServisi
             }
             if ($tip === 'paket') {
                 DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $kalemId)->delete();
+            }
+            if ($tip === 'urun' && ($u = DB::table('urunler')->where('id', $k->urun_id)->first())) {
+                $salonId = (int) Adisyonlar::where('id', $adisyonId)->value('salon_id');
+                $this->stokHareketi($salonId, $u, (int) $k->adet, HareketTipi::Iade, 'adisyon_urun_sil', $kalemId,
+                    ['kullanici_id' => $kullaniciId, 'aciklama' => 'Adisyondan ürün silindi']);
             }
             $k->delete();
 
@@ -173,5 +196,24 @@ class KalemServisi
         $adisyonId = $model::where('id', $kalemId)->value('adisyon_id');
 
         return $adisyonId ? (int) Adisyonlar::where('id', $adisyonId)->value('salon_id') : null;
+    }
+
+    /** Ürün kalemi stok hareketi — satış/iade TEK yazıcı (StokHareketServisi). */
+    private function stokHareketi(int $salonId, object $urun, int $adet, HareketTipi $tip, string $refTip, int $refId, array $opt): void
+    {
+        $this->stok->kaydet([
+            'salon_id'           => $salonId,
+            'urun_id'            => (int) $urun->id,
+            'depo_id'            => $this->stok->depoCoz($salonId, isset($opt['depo_id']) ? (int) $opt['depo_id'] : null, $urun->varsayilan_depo_id ?? null),
+            'miktar'             => $adet,
+            'tip'                => $tip,
+            'referans_tip'       => $refTip,
+            'referans_id'        => $refId,
+            'batch_uuid'         => $opt['batch_uuid'] ?? null,
+            'birim_satis_fiyati' => $urun->fiyat ?? null,
+            'birim_alis_fiyati'  => $urun->alis_fiyati ?? null,
+            'aciklama'           => $opt['aciklama'] ?? 'Adisyon ürün satışı',
+            'kullanici_id'       => $opt['kullanici_id'] ?? null,
+        ]);
     }
 }

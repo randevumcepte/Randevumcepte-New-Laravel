@@ -125,3 +125,11 @@
   .t-ozet-serit { grid-template-columns: repeat(2, 1fr); }
   .t-ekle-btns { width: 100%; }
 }
+
+/* ── Yeni Satış modu (/v2/yeni-satis) ── */
+.t-yeni-gizle[hidden] { display: none !important; }
+.t-musteri-sec { margin-top: 10px; max-width: 460px; }
+.t-musteri-sec:empty { display: none; }
+.t-yeni-ipucu { padding: 26px 16px; text-align: center; color: #8a8fae; font-size: 14px; }
+.t-yeni-ipucu i { font-size: 18px; margin-right: 6px; color: #9b6bd8; }
+.t-ekle-btns .t-mini:disabled { opacity: .45; cursor: not-allowed; }

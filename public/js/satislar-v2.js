@@ -58,6 +58,7 @@ function iskeletCiz() {
             <div class="s-alt">Adisyon / satış listesi ve tahsilat durumu</div>
           </div>
         </div>
+        <a class="s-yeni-btn" id="sYeniSatis" href="/v2/yeni-satis?sube=${salonId}" hidden><i class="bi bi-plus-lg"></i> <span>Yeni Satış &amp; Tahsilat</span></a>
       </div>
 
       <div class="s-ozet" id="sOzet"></div>
@@ -335,6 +336,9 @@ async function faturasizGizleTikla() {
 
 function ekKontrollerCiz(v) {
   const y = v.yetkiler || {};
+  // Yeni Satış (v2 /yeni-satis): yalnız satis.adisyon_olustur; stüdyoda eski adı "Yeni Satış".
+  el('#sYeniSatis').hidden = !y.adisyon_olustur;
+  el('#sYeniSatis span').textContent = studyo ? 'Yeni Satış' : 'Yeni Satış & Tahsilat';
   el('#sFaturaGizleGrup').style.display = y.faturasiz_gizle ? '' : 'none';
   const btn = el('#sFaturaGizle');
   btn.classList.toggle('aktif', !!v.faturasiz_gizle_aktif);
