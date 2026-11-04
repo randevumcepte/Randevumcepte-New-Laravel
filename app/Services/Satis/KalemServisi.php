@@ -12,9 +12,11 @@ use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Services\Paket\PaketSorgusu;
+use App\Services\Stok\ReceteUygulamaServisi;
 use App\Services\Stok\StokHareketServisi;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Satış kalem yönetimi (Satış & Tahsilat Düzenleme ekranı) — ekle / adet / sil.
@@ -32,6 +34,8 @@ use Illuminate\Support\Facades\DB;
  * (+adet) hareketi StokHareketServisi ile yazılır; adet değişince fark kadar satış/iade
  * (eski urunadetdegistir stoğa dokunmuyordu — tutarlılık için düzeltildi). Ürün satan
  * tüm v2 akışları (Yeni Satış, Satış & Tahsilat, Hızlı Satış, tek kalem) bu yoldan geçer.
+ * SARF: hizmet kalemi eklenince aktif reçete uygulanır (eskiyle aynı: hata satışı engellemez,
+ * hizmet silinince geri alınmaz).
  * Flag arkasında (controller kontrol eder); transaction + kilit.
  */
 class KalemServisi
@@ -39,6 +43,7 @@ class KalemServisi
     public function __construct(
         private PaketSorgusu $paketler,
         private StokHareketServisi $stok,
+        private ReceteUygulamaServisi $recete,
     ) {}
 
     /** Katalogdan adisyona kalem ekle. */
@@ -80,6 +85,11 @@ class KalemServisi
                 }
                 $k->save();
                 $yeniId = $k->id;
+                try {
+                    $this->recete->uygula($salonId, $katalogId, 'adisyon_hizmet_recete', (int) $k->id, $opt['kullanici_id'] ?? null);
+                } catch (\Throwable $e) {
+                    Log::error('Sarf reçetesi uygulanamadı', ['adisyon_hizmet_id' => $k->id, 'hizmet_id' => $katalogId, 'salon_id' => $salonId, 'hata' => $e->getMessage()]);
+                }
             } elseif ($tip === 'urun') {
                 // Ürün bu salonun AKTİF ürünü olmalı (StokKapsam::aitOlmali ile aynı kural).
                 $u = DB::table('urunler')->where('id', $katalogId)->where('salon_id', $salonId)->where('aktif', 1)->first();

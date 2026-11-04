@@ -67,7 +67,7 @@ class TekKalemSatisServisi
         return Idempotency::calistir('hizmet_satis', $g['idempotency_key'], $yetkiliId, $salonId, function () use ($salonId, $hizmetId, $g, $fiyat, $yetkiliId) {
             $adisyon = Adisyonlar::ac($salonId, (int) $g['musteri_id'], $yetkiliId, $g['tarih']);
             $this->kalem->ekle((int) $adisyon->id, 'hizmet', $hizmetId, [
-                'personel_id' => $g['personel_id'], 'fiyat' => $fiyat, 'seans' => $g['seans'] ?? null, 'tarih' => $g['tarih'],
+                'personel_id' => $g['personel_id'], 'fiyat' => $fiyat, 'seans' => $g['seans'] ?? null, 'tarih' => $g['tarih'], 'kullanici_id' => $yetkiliId,
             ]);
 
             return ['adisyon_id' => (int) $adisyon->id, 'toplam_tutar' => $fiyat];
