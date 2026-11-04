@@ -6,6 +6,7 @@ use App\Domain\Satis\AdisyonSatir;
 use App\Domain\Stok\HareketTipi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
+use App\Exceptions\GecersizIslemException;
 use App\Models\Adisyonlar;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
@@ -24,8 +25,8 @@ use Illuminate\Support\Facades\DB;
  *   - paket.fiyat  = etkin katalog fiyati (Domain\Paket\PaketTutari)
  *
  * Eski sistemden GÜVENLİ farklar (tutarsızlık önleme):
- *   - Kaleme tahsilat yapılmışsa adet değiştirme / silme REDDEDİLİR (eski
- *     urunadetdegistir tahsili yok sayıp fiyatı ezebiliyordu).
+ *   - Kaleme tahsilat yapılmışsa silme REDDEDİLİR; adet/fiyat değişiminde net, tahsil
+ *     edilenin altına inemez (eski urunadetdegistir tahsili yok sayıp fiyatı ezebiliyordu).
  *   - Otomatik randevu/seans oluşturma bu sürümde YOK (ayrı adım).
  * STOK (eskiyle aynı, TEK YER): ürün kalemi eklenince 'satis' (−adet), silinince 'iade'
  * (+adet) hareketi StokHareketServisi ile yazılır; adet değişince fark kadar satış/iade
@@ -62,7 +63,7 @@ class KalemServisi
                 }
                 // fiyat / seans opt'ta verilirse (on gorusme donusumu) o kullanilir — fiyat yetkisi cagri yerinde.
                 // Seans: bos / <=1 → tekil hizmet (NULL); 2+ → seansli (eski "Yeni Satis" hizmet kurali).
-                $seans = isset($opt['seans']) && (int) $opt['seans'] > 1 ? (int) $opt['seans'] : null;
+                $seans = AdisyonHizmetler::seansNormal($opt['seans'] ?? null);
                 $k = new AdisyonHizmetler();
                 $k->adisyon_id = $adisyonId;
                 $k->hizmet_id = $katalogId;
@@ -124,7 +125,7 @@ class KalemServisi
         });
     }
 
-    /** Ürün adedi güncelle (satırın mevcut birim fiyatı × yeni adet — elle fiyat korunur; stok farkı). Tahsilatı varsa reddet. */
+    /** Ürün adedi güncelle (satırın mevcut birim fiyatı × yeni adet — elle fiyat korunur; stok farkı). Net, tahsil edilenin altına inemez. */
     public function urunAdetGuncelle(int $kalemId, int $adet, ?int $kullaniciId = null): array
     {
         return DB::transaction(function () use ($kalemId, $adet, $kullaniciId) {
@@ -132,16 +133,14 @@ class KalemServisi
             if (! $k) {
                 throw new BulunamadiException('Ürün kalemi bulunamadı');
             }
-            $tah = (float) DB::table('tahsilat_urunler')->where('adisyon_urun_id', $kalemId)->sum('tutar');
-            if ($tah > 0) {
-                throw new CakismaException('Bu ürüne tahsilat yapılmış; adet değiştirmeden önce tahsilatı iade edin');
-            }
             $u = DB::table('urunler')->where('id', $k->urun_id)->first();
             $adet = max(1, $adet);
             $fark = $adet - (int) $k->adet;
             $birim = (int) $k->adet > 0 ? (float) $k->fiyat / (int) $k->adet : (float) ($u->fiyat ?? 0);
+            $yeniFiyat = round($birim * $adet, 2);
+            $this->tahsilAltSiniri($k, 'tahsilat_urunler', 'adisyon_urun_id', $yeniFiyat);
             $k->adet = $adet;
-            $k->fiyat = round($birim * $adet, 2);
+            $k->fiyat = $yeniFiyat;
             $k->save();
             if ($u && $fark !== 0) {
                 $salonId = (int) Adisyonlar::where('id', $k->adisyon_id)->value('salon_id');
@@ -216,10 +215,7 @@ class KalemServisi
             if (! $k) {
                 throw new BulunamadiException('Kalem bulunamadı');
             }
-            $tahsil = (float) DB::table($tahTablo)->where($tahFk, $kalemId)->sum('tutar');
-            if (round($fiyat - (float) ($k->indirim_tutari ?? 0), 2) < round($tahsil, 2)) {
-                throw new CakismaException('Fiyat, tahsil edilen tutarın ('.AdisyonSatir::trFormat($tahsil).' ₺) altına inemez; önce tahsilatı iade edin');
-            }
+            $this->tahsilAltSiniri($k, $tahTablo, $tahFk, $fiyat);
             $eski = (float) $k->fiyat;
             $k->fiyat = $fiyat;
             $k->save();
@@ -239,6 +235,33 @@ class KalemServisi
         return $sonuc;
     }
 
+    /**
+     * Hizmetin seans sayısını değiştir (eski hizmetseansdegistir): boş/≤1 tekil hizmet, 2+ paket
+     * satışı. Randevu kalemi değişmez; kullanılmış seansın altına inilemez.
+     */
+    public function hizmetSeansGuncelle(int $kalemId, $girilen): array
+    {
+        return DB::transaction(function () use ($kalemId, $girilen) {
+            $k = AdisyonHizmetler::where('id', $kalemId)->lockForUpdate()->first();
+            if (! $k) {
+                throw new BulunamadiException('Kalem bulunamadı');
+            }
+            if ($k->randevu_id !== null) {
+                throw new GecersizIslemException('Randevudan gelen hizmetin seans sayısı değiştirilemez');
+            }
+            $seans = AdisyonHizmetler::seansNormal($girilen);
+            $kullanilan = (int) $k->kullanilan_seans + (int) $k->kullanilmayan_seans;
+            if ((int) $seans < $kullanilan) {
+                throw new CakismaException('Seans sayısı kullanılmış seansın ('.$kullanilan.') altına inemez');
+            }
+            $k->seans_sayisi = $seans;
+            $k->bekleyen_seans = $seans === null ? null : $seans - $kullanilan;
+            $k->save();
+
+            return ['kalem_id' => $kalemId, 'seans_sayisi' => $seans, 'adisyon_id' => (int) $k->adisyon_id];
+        });
+    }
+
     /** Kalemin personelini (hizmet veren / satıcı) değiştir (eski adisyonhizmetpersonelguncelle; tahsilatlı kalemde de serbest). */
     public function personelGuncelle(string $tip, int $kalemId, ?int $personelId): array
     {
@@ -251,6 +274,15 @@ class KalemServisi
         $k->save();
 
         return ['tip' => $tip, 'kalem_id' => $kalemId, 'personel_id' => $personelId, 'adisyon_id' => (int) $k->adisyon_id];
+    }
+
+    /** İndirim düşülmüş yeni net, kaleme tahsil edilenin altına inemez (fiyat + adet ortak kuralı). */
+    private function tahsilAltSiniri($k, string $tahTablo, string $tahFk, float $yeniFiyat): void
+    {
+        $tahsil = (float) DB::table($tahTablo)->where($tahFk, $k->id)->sum('tutar');
+        if (round($yeniFiyat - (float) ($k->indirim_tutari ?? 0), 2) < round($tahsil, 2)) {
+            throw new CakismaException('Tutar, tahsil edilen tutarın ('.AdisyonSatir::trFormat($tahsil).' ₺) altına inemez; önce tahsilatı iade edin');
+        }
     }
 
     private static function kalemModeli(string $tip): ?string

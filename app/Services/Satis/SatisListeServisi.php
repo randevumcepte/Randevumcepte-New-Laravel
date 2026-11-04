@@ -337,7 +337,7 @@ class SatisListeServisi
     {
         $hizmetler = [];
         foreach ($a->hizmetler as $h) {
-            $seansli = is_null($h->randevu_id) && (int) ($h->seans_sayisi ?? 0) > 0;
+            $seansli = $h->seansliMi();
             $hizmetler[] = [
                 'ad'           => $h->hizmet->hizmet_adi ?? '',
                 'fiyat'        => $h->fiyat ?? 0,

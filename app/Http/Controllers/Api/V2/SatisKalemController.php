@@ -40,7 +40,7 @@ class SatisKalemController extends V2Controller
 
     /**
      * POST /api/v2/adisyon — YENİ SATIŞ (eski "Yeni Tahsilat" /yenitahsilat akışı).
-     * body: {salon_id, musteri_id, tip, katalog_id, adet?, fiyat?, personel_id?, tarih?, idempotency_key}
+     * body: {salon_id, musteri_id, tip, katalog_id, adet?, fiyat?, seans?, personel_id?, tarih?, idempotency_key}
      * Eskisiyle aynı: adisyon İLK KALEMLE açılır (boş adisyon oluşmaz); sonraki kalemler,
      * tahsilat ve alacak mevcut /adisyon/{id}/* uçlarıyla. Yetki: satis.adisyon_olustur.
      */
@@ -70,7 +70,7 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Satış açıldı.');
     }
 
-    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, fiyat?, personel_id?} */
+    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, fiyat?, seans?, personel_id?} */
     public function ekle(Request $request, int $adisyon)
     {
         $user = $this->kullanici();
@@ -106,6 +106,21 @@ class SatisKalemController extends V2Controller
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Fiyat güncellendi.');
+    }
+
+    /** PATCH /api/v2/kalem/hizmet/{id}/seans  body: {seans} — boş/≤1 tekil hizmet, 2+ paket satışı. */
+    public function seans(Request $request, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+
+        $salonId = $this->servis->kalemSalonId('hizmet', $id);
+        if (! $salonId) {
+            return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+
+        return ApiCevap::basarili($this->servis->hizmetSeansGuncelle($id, $request->input('seans')), 'Seans güncellendi.');
     }
 
     /** PATCH /api/v2/kalem/{tip}/{id}/personel  body: {personel_id} — hizmet veren / satıcı değiştir. */
@@ -189,6 +204,9 @@ class SatisKalemController extends V2Controller
         }
 
         $opt = ['adet' => $request->input('adet'), 'personel_id' => $this->personelGirdisi($request, $tip, $salonId)];
+        if ($tip === 'hizmet') {
+            $opt['seans'] = $request->input('seans'); // opsiyonel; 2+ → paket satışı
+        }
         $fiyat = $this->fiyatGirdisi($request);
         if ($fiyat !== null) {
             if ($fiyat !== $this->servis->katalogFiyati($tip, $katalogId, $salonId, (int) $request->input('adet', 1))

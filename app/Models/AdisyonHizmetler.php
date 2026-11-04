@@ -11,6 +11,21 @@ class AdisyonHizmetler extends Model
 
     protected $guarded = [];
 
+    /**
+     * PAKET satışı sayılan seanslı hizmet mi — TEK kural (eski panel + mobil ile aynı):
+     * randevudan gelmemiş (randevu_id NULL) VE seans_sayisi > 0.
+     */
+    public function seansliMi(): bool
+    {
+        return is_null($this->randevu_id) && (int) ($this->seans_sayisi ?? 0) > 0;
+    }
+
+    /** Girilen seans → kolon değeri: boş veya ≤1 tekil hizmet (NULL), 2+ paket satışı (eski kural). */
+    public static function seansNormal($girilen): ?int
+    {
+        return (int) $girilen > 1 ? (int) $girilen : null;
+    }
+
     /** Hizmet adi (hizmetler.hizmet_adi). */
     public function hizmet()
     {

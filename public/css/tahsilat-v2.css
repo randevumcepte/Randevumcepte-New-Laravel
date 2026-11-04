@@ -51,6 +51,7 @@
 .t-ekle-panel .t-katalog { flex: 1; min-width: 220px; }
 .t-ekle-panel .t-adet { width: 90px; }
 .t-ekle-panel .t-personel { flex: 0 1 220px; min-width: 180px; }
+.t-ekle-panel .t-ekle-seans { width: 120px; }
 .t-kalem-personel { min-width: 150px; max-width: 200px; }
 .t-kalem-fiyat { width: 110px; padding: 7px 9px; border: 1px solid #dcdce8; border-radius: 9px; text-align: right; font: inherit; background: #fff; color: inherit; }
 .t-kalem-fiyat:focus { outline: none; border-color: #9b6bd8; box-shadow: 0 0 0 3px rgba(123, 47, 247, .12); }

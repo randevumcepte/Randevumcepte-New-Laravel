@@ -8,6 +8,8 @@
  *   - Katalogdan hizmet/ürün/paket EKLE, ürün ADEDİ, kalem SİL; hizmet veren / satıcı
  *     personel seçimi (ekleme + satırda değiştirme; zorunluluk kuralı sunucuda).
  *   - Elle FİYAT (ekleme + satırda; katalog.fiyat_degistir yetkisine göre açık).
+ *   - Hizmette opsiyonel SEANS (2+ → API paket satışı sayar, seansli alanı); üründe ADET
+ *     (fiyat birim üzerinden adede yansır, sunucuda).
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
  *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
  *   - Tarihler flatpickr (TR) ile seçilir.
@@ -116,22 +118,24 @@ function ozetGoster() {
 
 function kalemlerGoster() {
   const v = adisyon;
+  const ortak = (x) => ({ id: x.id, fiyat: x.fiyat, indirim: x.indirim_tutari, personel_id: x.personel_id, personel_adi: x.personel_adi });
   const k = [
-    ...(v.hizmetler || []).map((h) => ({ tip: 'hizmet', id: h.id, ad: h.ad || 'Hizmet #' + h.hizmet_id, ek: h.seans_sayisi ? h.seans_sayisi + ' seans' : '', fiyat: h.fiyat, indirim: h.indirim_tutari, adet: null, personel_id: h.personel_id, personel_adi: h.personel_adi })),
-    ...(v.paketler || []).map((p) => ({ tip: 'paket', id: p.id, ad: p.ad || 'Paket #' + p.paket_id, ek: '', fiyat: p.fiyat, indirim: p.indirim_tutari, adet: null, personel_id: p.personel_id, personel_adi: p.personel_adi })),
-    ...(v.urunler || []).map((u) => ({ tip: 'urun', id: u.id, ad: u.ad || 'Ürün #' + u.urun_id, ek: '', fiyat: u.fiyat, indirim: u.indirim_tutari, adet: u.adet, personel_id: u.personel_id, personel_adi: u.personel_adi })),
+    ...(v.hizmetler || []).map((h) => ({ ...ortak(h), tip: 'hizmet', ad: h.ad || 'Hizmet #' + h.hizmet_id, seans: h.seans_sayisi, seansli: h.seansli, randevudan: h.randevudan })),
+    ...(v.paketler || []).map((p) => ({ ...ortak(p), tip: 'paket', ad: p.ad || 'Paket #' + p.paket_id })),
+    ...(v.urunler || []).map((u) => ({ ...ortak(u), tip: 'urun', ad: u.ad || 'Ürün #' + u.urun_id, adet: u.adet })),
   ];
   yerelTablo('t-kalemler', {
     birim: 'kalem',
     bosMesaj: 'Henüz kalem yok. Yukarıdan hizmet, ürün veya paket ekleyin.',
     kolonlar: [
-      { baslik: 'Kalem', sirala: 'ad', deger: (x) => x.ad }, { baslik: 'Tür', sirala: 'tip', deger: (x) => TUR_AD[x.tip] },
+      { baslik: 'Kalem', sirala: 'ad', deger: (x) => x.ad }, { baslik: 'Tür', sirala: 'tip', deger: turAd },
+      { baslik: 'Adet / Seans', sinif: 'rc-orta' },
       { baslik: 'Personel', sirala: 'personel', deger: (x) => x.personel_adi || '' },
       { baslik: 'Fiyat', sinif: 'rc-sag', sirala: 'fiyat', deger: (x) => Number(x.fiyat) || 0 },
       { baslik: 'İndirim', sinif: 'rc-sag', sirala: 'indirim', deger: (x) => Number(x.indirim) || 0 }, { baslik: '' },
     ],
-    araMetni: (x) => `${x.ad} ${TUR_AD[x.tip]} ${x.ek} ${x.personel_adi || ''}`,
-    satir: (x) => satir(x.tip, x.id, x.ad, x.ek, x.fiyat, x.indirim, x.adet, personelSecim(x)),
+    araMetni: (x) => `${x.ad} ${turAd(x)} ${x.personel_adi || ''}`,
+    satir,
     cizildi: kalemOlaylariBagla,
   }).kayitlarAyarla(k);
 }
@@ -159,29 +163,38 @@ function fiyatHucre(tip, id, fiyat) {
   return `<input type="number" step="0.01" min="0" class="t-kalem-fiyat" data-tip="${tip}" data-id="${id}" value="${esc(fiyat ?? 0)}" title="${ipucu}" aria-label="${ipucu}">`;
 }
 
-function satir(tip, id, ad, ek, fiyat, indirim, adet, personelHtml) {
-  const rozet = `<span class="t-rozet ${tip}">${tip === 'hizmet' ? 'Hizmet' : tip === 'urun' ? 'Ürün' : 'Paket'}</span>${ek ? ' <small style="color:#9aa0bd">' + esc(ek) + '</small>' : ''}`;
-  const tur = tip === 'urun'
-    ? `${rozet}<br><input type="number" min="1" value="${adet || 1}" class="t-adet-inp" data-id="${id}"> adet`
-    : rozet;
+// Seanslı hizmet paket satışı sayılır (karar API'de: seansli).
+const turAd = (x) => (x.seansli ? TUR_AD.paket : TUR_AD[x.tip]);
+
+// Üründe adet, randevudan gelmeyen hizmette opsiyonel seans; paket seansı katalogdan.
+function miktarHucre(x) {
+  if (x.tip === 'urun') return `<input type="number" min="1" value="${x.adet || 1}" class="t-adet-inp" data-id="${x.id}" title="Adet" aria-label="Adet">`;
+  if (x.tip === 'hizmet' && !x.randevudan) return `<input type="number" min="0" value="${x.seans || ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-id="${x.id}" title="Boş: tek hizmet · 2 ve üzeri: paket satışı" aria-label="Seans sayısı">`;
+  return '—';
+}
+
+function satir(x) {
   return `<tr>
-    <td><span class="t-kalem-ad">${esc(ad)}</span></td>
-    <td>${tur}</td>
-    <td>${personelHtml}</td>
-    <td class="rc-sag">${fiyatHucre(tip, id, fiyat)}</td>
-    <td class="rc-sag">${TL(indirim || 0)}</td>
-    <td class="rc-sag"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
+    <td><span class="t-kalem-ad">${esc(x.ad)}</span></td>
+    <td><span class="t-rozet ${x.seansli ? 'paket' : x.tip}">${turAd(x)}</span></td>
+    <td class="rc-orta">${miktarHucre(x)}</td>
+    <td>${personelSecim(x)}</td>
+    <td class="rc-sag">${fiyatHucre(x.tip, x.id, x.fiyat)}</td>
+    <td class="rc-sag">${TL(x.indirim || 0)}</td>
+    <td class="rc-sag"><button class="t-sil" data-tip="${x.tip}" data-id="${x.id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
 }
 
 function kalemOlaylariBagla() {
   document.querySelectorAll('#t-kalemler .t-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
   document.querySelectorAll('#t-kalemler .t-kalem-fiyat').forEach((i) => (i.onchange = () => kalemFiyatDegistir(i)));
   document.querySelectorAll('#t-kalemler .t-kalem-personel').forEach((sel) => (sel.onchange = () => kalemPersonelDegistir(sel)));
-  document.querySelectorAll('.t-adet-inp').forEach((inp) => {
+  document.querySelectorAll('#t-kalemler .t-seans-inp').forEach((i) => (i.onchange = () => seansDegistir(i)));
+  document.querySelectorAll('#t-kalemler .t-adet-inp:not(.t-seans-inp)').forEach((inp) => {
     let zaman;
     inp.oninput = () => {
       clearTimeout(zaman);
       const deger = inp.value;
+      if (!(parseInt(deger, 10) >= 1)) return; // yazarken boş/0: bekle
       zaman = setTimeout(() => adetDegistir(inp.dataset.id, deger), 600);
     };
   });
@@ -246,6 +259,8 @@ function ekleAc(tip) {
   el('#t-ekle-adet').value = 1;
   katalogDoldur(tip);
   el('#t-ekle-adet-kutu').style.display = tip === 'urun' ? '' : 'none';
+  el('#t-ekle-seans').style.display = tip === 'hizmet' ? '' : 'none';
+  el('#t-ekle-seans').value = '';
   el('#t-ekle-baslik').textContent = tip === 'hizmet' ? 'Hizmet Ekle' : tip === 'urun' ? 'Ürün Ekle' : 'Paket Ekle';
   const zorunlu = tip === 'hizmet' && katalog.hizmet_personel_zorunlu;
   el('#t-ekle-personel').innerHTML = personelSecenekleri(null, null, `${personelEtiket(tip)} seçin${zorunlu ? ' *' : ''}`);
@@ -265,6 +280,17 @@ function ekleFiyatOner() {
   const op = el('#t-ekle-katalog').selectedOptions[0];
   const adet = el('#t-ekle-tip').value === 'urun' ? (parseInt(el('#t-ekle-adet').value, 10) || 1) : 1;
   el('#t-ekle-fiyat').value = op ? Math.round((Number(op.dataset.fiyat) || 0) * adet * 100) / 100 : '';
+  ekleSonAdet = adet;
+}
+
+// Adet değişince fiyat, alandaki (elle girilmiş olabilir) birim üzerinden yansır.
+let ekleSonAdet = 1;
+function ekleAdetDegisti() {
+  const adet = parseInt(el('#t-ekle-adet').value, 10);
+  if (!(adet >= 1)) return;
+  const fiyat = Number(el('#t-ekle-fiyat').value) || 0;
+  el('#t-ekle-fiyat').value = Math.round((fiyat / ekleSonAdet) * adet * 100) / 100;
+  ekleSonAdet = adet;
 }
 
 async function kalemEkle() {
@@ -273,6 +299,7 @@ async function kalemEkle() {
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
+  if (tip === 'hizmet' && el('#t-ekle-seans').value !== '') body.seans = parseInt(el('#t-ekle-seans').value, 10);
   if (katalog.fiyat_degistir && el('#t-ekle-fiyat').value !== '') body.fiyat = Number(el('#t-ekle-fiyat').value);
   const personelId = parseInt(el('#t-ekle-personel').value, 10);
   if (personelId) body.personel_id = personelId;
@@ -344,8 +371,15 @@ async function kalemPersonelDegistir(sel) {
 
 async function adetDegistir(kalemId, adet) {
   const { ok, kod, govde } = await api('PATCH', '/kalem/urun/' + kalemId, { body: { adet: parseInt(adet, 10) } });
-  if (!ok) { mesaj(`Adet güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
-  mesaj('Adet güncellendi.', 'ok');
+  if (ok) mesaj('Adet güncellendi.', 'ok');
+  else mesaj(`Adet güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
+  await adisyonYukle(); // yeni fiyat çizilir; hata durumunda eski adete döner
+}
+
+async function seansDegistir(i) {
+  const { ok, kod, govde } = await api('PATCH', `/kalem/hizmet/${i.dataset.id}/seans`, { body: { seans: i.value } });
+  if (ok) mesaj('Seans güncellendi.', 'ok');
+  else mesaj(`Seans güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
   await adisyonYukle();
 }
 
@@ -536,6 +570,7 @@ function iskelet() {
               <select id="t-ekle-katalog" class="t-katalog"></select>
               <select id="t-ekle-personel" class="t-personel" aria-label="Personel"></select>
               <span id="t-ekle-adet-kutu"><input id="t-ekle-adet" class="t-adet" type="number" min="1" value="1" title="Adet"></span>
+              <input id="t-ekle-seans" class="t-adet t-ekle-seans" type="number" min="0" placeholder="Seans (ops.)" title="Boş: tek hizmet · 2 ve üzeri: paket satışı" aria-label="Seans sayısı">
               <input id="t-ekle-fiyat" class="t-adet" type="number" step="0.01" min="0" placeholder="Fiyat ₺" title="Fiyat (₺)" aria-label="Fiyat">
               <button id="t-ekle-btn" class="t-mini mor">Ekle</button>
               <button id="t-ekle-iptal" class="t-mini" style="background:#8a90ad">Vazgeç</button>
@@ -596,7 +631,7 @@ function iskelet() {
   el('#t-duzen-vazgec').onclick = tahsilatDuzenVazgec;
   el('#t-ekle-btn').onclick = kalemEkle;
   el('#t-ekle-katalog').onchange = ekleFiyatOner;
-  el('#t-ekle-adet').oninput = ekleFiyatOner;
+  el('#t-ekle-adet').oninput = ekleAdetDegisti;
   el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };
   document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
   el('#t-alacak-ac').onclick = alacakFormAc;
