@@ -6,7 +6,7 @@ use App\Services\Sms\Gonderim\SmsKuyrukServisi;
 use Illuminate\Console\Command;
 
 /**
- * v2 SMS kuyruğu işleyicisi. Cron her dakika başlatır (flock ile tek süreç), ~55 sn 2 sn aralıkla yoklar.
+ * v2 SMS kuyruğu işleyicisi. Supervisor altında tek süreç; ~55 sn 2 sn aralıkla yoklar, çıkınca yeniden başlatılır.
  * Kurulum: docs/strangler-sms-yonetimi.md. Canlı monolite bağlı değildir.
  */
 class SmsKuyrukIsle extends Command

@@ -96,10 +96,22 @@ yazılır; eski `v2:bildirim-isle` yalnız 0 ve 3 ile çalıştığı için bu k
 - Tekrar deneme yok; 30 dk içinde işlenmeyen kayıt iptal edilir, yarıda kalan kapatılır.
 - Sonuç: `GET /sms/gonderim/{id}`, log `[SMS-V2]` → `randevumcepteyeni/storage/logs`.
 
-Kurulum (uygulama dosyalarının sahibi kullanıcıyla çalışmalı, root log dosyası yaratmasın):
+Kurulum: supervisor (`www-root` kullanıcısıyla, root log dosyası yaratmasın). Komut ~55 sn'de bir çıkar,
+`autorestart` yeniden başlatır → yeni kod kendiliğinden yüklenir. Tek süreç (`numprocs=1`); `stopwaitsecs`
+gönderim zaman aşımından (120 sn) büyük olmalı, yoksa durdurma paketi yarıda keser.
 
 ```
-* * * * * <sahip> cd /var/www/www-root/data/www/randevumcepteyeni && /usr/bin/flock -n /tmp/rc-sms-v2.lock /opt/php83/bin/php artisan sms:kuyruk-isle >/dev/null 2>&1
+[program:randevumcepte-sms-v2]
+command=/opt/php83/bin/php artisan sms:kuyruk-isle
+directory=/var/www/www-root/data/www/randevumcepteyeni
+user=www-root
+numprocs=1
+autostart=true
+autorestart=true
+startsecs=5
+stopwaitsecs=150
+stdout_logfile=/var/www/www-root/data/www/randevumcepteyeni/storage/logs/sms-worker.log
+redirect_stderr=true
 ```
 
 Canlı güncellendiğinde karar verilecek: bu işleyici kalıcı mı olacak, yoksa eski repodaki `SmsTopluGonderJob` yoluna mı dönülecek.
