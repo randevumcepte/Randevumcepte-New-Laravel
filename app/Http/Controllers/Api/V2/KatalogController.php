@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Services\Satis\KatalogServisi;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -16,6 +17,7 @@ class KatalogController extends V2Controller
     public function __construct(
         private KatalogServisi $servis,
         private GuvenlikKapisi $kapi,
+        private YetkiServisi $yetki,
     ) {}
 
     /** GET /api/v2/katalog?salon_id= */
@@ -35,6 +37,9 @@ class KatalogController extends V2Controller
             'satis.tum_satis_gor',
         ]);
 
-        return ApiCevap::basarili($this->servis->listele($salonId));
+        // fiyat_degistir: ekranlar elle fiyat alanını buna göre açar (kural sunucuda da denetlenir).
+        return ApiCevap::basarili($this->servis->listele($salonId) + [
+            'fiyat_degistir' => $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.indirim_uygula'),
+        ]);
     }
 }

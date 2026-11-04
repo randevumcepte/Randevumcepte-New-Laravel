@@ -2,6 +2,7 @@
 
 namespace App\Services\Satis;
 
+use App\Domain\Satis\AdisyonSatir;
 use App\Domain\Stok\HareketTipi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
@@ -11,6 +12,7 @@ use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Services\Paket\PaketSorgusu;
 use App\Services\Stok\StokHareketServisi;
+use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -89,12 +91,14 @@ class KalemServisi
                 $k->urun_id = $katalogId;
                 $k->personel_id = $personelId;
                 $k->adet = $adet;
-                $k->fiyat = round((float) $u->fiyat * $adet, 2); // SATIR TOPLAMI
+                // SATIR TOPLAMI: elle girildiyse o (fiyat yetkisi çağrı yerinde), yoksa birim × adet.
+                $k->fiyat = isset($opt['fiyat']) ? round((float) $opt['fiyat'], 2) : round((float) $u->fiyat * $adet, 2);
                 $k->islem_tarihi = $bugun;
                 $k->save();
                 $yeniId = $k->id;
                 // opt: depo_id (yoksa ürün/salon varsayılanı), batch_uuid, aciklama, kullanici_id
-                $this->stokHareketi($salonId, $u, $adet, HareketTipi::Satis, 'adisyon_urun', (int) $k->id, $opt);
+                $this->stokHareketi($salonId, $u, $adet, HareketTipi::Satis, 'adisyon_urun', (int) $k->id,
+                    $opt + ['birim_satis_fiyati' => round((float) $k->fiyat / $adet, 2)]);
             } elseif ($tip === 'paket') {
                 // Etkin katalog fiyat/seansi (PaketTutari); paket bu salonun aktif paketi olmali.
                 // fiyat/seans opt'ta verilirse (Paket Yonetimi satisi) o kullanilir — yetki cagri yerinde.
@@ -120,7 +124,7 @@ class KalemServisi
         });
     }
 
-    /** Ürün adedi güncelle (fiyat = birim × adet yeniden; stok farkı). Tahsilatı varsa reddet. */
+    /** Ürün adedi güncelle (satırın mevcut birim fiyatı × yeni adet — elle fiyat korunur; stok farkı). Tahsilatı varsa reddet. */
     public function urunAdetGuncelle(int $kalemId, int $adet, ?int $kullaniciId = null): array
     {
         return DB::transaction(function () use ($kalemId, $adet, $kullaniciId) {
@@ -135,8 +139,9 @@ class KalemServisi
             $u = DB::table('urunler')->where('id', $k->urun_id)->first();
             $adet = max(1, $adet);
             $fark = $adet - (int) $k->adet;
+            $birim = (int) $k->adet > 0 ? (float) $k->fiyat / (int) $k->adet : (float) ($u->fiyat ?? 0);
             $k->adet = $adet;
-            $k->fiyat = round((float) ($u->fiyat ?? 0) * $adet, 2);
+            $k->fiyat = round($birim * $adet, 2);
             $k->save();
             if ($u && $fark !== 0) {
                 $salonId = (int) Adisyonlar::where('id', $k->adisyon_id)->value('salon_id');
@@ -179,6 +184,59 @@ class KalemServisi
 
             return ['tip' => $tip, 'kalem_id' => $kalemId, 'adisyon_id' => $adisyonId];
         });
+    }
+
+    /** Katalog fiyatı (ürün: birim × adet) — "katalogdan farklı fiyat" yetki kararı için tek kaynak. */
+    public function katalogFiyati(string $tip, int $katalogId, int $salonId, int $adet = 1): float
+    {
+        return round(match ($tip) {
+            'hizmet' => (float) DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $katalogId)->max('baslangic_fiyat'),
+            'urun'   => (float) DB::table('urunler')->where('id', $katalogId)->where('salon_id', $salonId)->value('fiyat') * max(1, $adet),
+            'paket'  => (float) $this->paketler->satisTutari($katalogId, $salonId)['fiyat'],
+            default  => 0.0,
+        }, 2);
+    }
+
+    /**
+     * Kalem fiyatını elle değiştir (eski hizmet/urun/pakettahsilattutaridegistir). Fiyat, ürün için
+     * SATIR toplamıdır. İndirim düşülmüş net, tahsil edilen tutarın altına inemez.
+     */
+    public function fiyatGuncelle(string $tip, int $kalemId, float $fiyat, ?int $kullaniciId = null): array
+    {
+        [$model, $tahTablo, $tahFk, $adTablo, $adKolon, $katalogFk] = match ($tip) {
+            'hizmet' => [AdisyonHizmetler::class, 'tahsilat_hizmetler', 'adisyon_hizmet_id', 'hizmetler', 'hizmet_adi', 'hizmet_id'],
+            'urun'   => [AdisyonUrunler::class, 'tahsilat_urunler', 'adisyon_urun_id', 'urunler', 'urun_adi', 'urun_id'],
+            'paket'  => [AdisyonPaketler::class, 'tahsilat_paketler', 'adisyon_paket_id', 'paketler', 'paket_adi', 'paket_id'],
+            default  => throw new BulunamadiException('Geçersiz kalem tipi'),
+        };
+        $fiyat = round($fiyat, 2);
+
+        $sonuc = DB::transaction(function () use ($model, $tahTablo, $tahFk, $katalogFk, $kalemId, $fiyat, $tip) {
+            $k = $model::where('id', $kalemId)->lockForUpdate()->first();
+            if (! $k) {
+                throw new BulunamadiException('Kalem bulunamadı');
+            }
+            $tahsil = (float) DB::table($tahTablo)->where($tahFk, $kalemId)->sum('tutar');
+            if (round($fiyat - (float) ($k->indirim_tutari ?? 0), 2) < round($tahsil, 2)) {
+                throw new CakismaException('Fiyat, tahsil edilen tutarın ('.AdisyonSatir::trFormat($tahsil).' ₺) altına inemez; önce tahsilatı iade edin');
+            }
+            $eski = (float) $k->fiyat;
+            $k->fiyat = $fiyat;
+            $k->save();
+
+            return ['tip' => $tip, 'kalem_id' => $kalemId, 'eski_fiyat' => $eski, 'fiyat' => $fiyat, 'adisyon_id' => (int) $k->adisyon_id, 'katalog_id' => (int) $k->{$katalogFk}];
+        });
+
+        if ($sonuc['eski_fiyat'] !== $fiyat) {
+            $ad = DB::table($adTablo)->where('id', $sonuc['katalog_id'])->value($adKolon) ?? ucfirst($tip).' #'.$sonuc['katalog_id'];
+            AktiviteLog::yaz((int) Adisyonlar::where('id', $sonuc['adisyon_id'])->value('salon_id'), $kullaniciId,
+                'adisyon_'.$tip.'_fiyat_degistir', 'adisyon_'.$tip, $kalemId,
+                $ad.' — '.AdisyonSatir::trFormat($fiyat).' ₺', 'Adisyondaki kalem fiyatı değiştirildi',
+                ['adisyon_id' => $sonuc['adisyon_id'], 'eski_fiyat' => $sonuc['eski_fiyat'], 'yeni_fiyat' => $fiyat]);
+        }
+        unset($sonuc['katalog_id']);
+
+        return $sonuc;
     }
 
     /** Kalemin personelini (hizmet veren / satıcı) değiştir (eski adisyonhizmetpersonelguncelle; tahsilatlı kalemde de serbest). */
@@ -229,7 +287,7 @@ class KalemServisi
             'referans_tip'       => $refTip,
             'referans_id'        => $refId,
             'batch_uuid'         => $opt['batch_uuid'] ?? null,
-            'birim_satis_fiyati' => $urun->fiyat ?? null,
+            'birim_satis_fiyati' => $opt['birim_satis_fiyati'] ?? $urun->fiyat ?? null,
             'birim_alis_fiyati'  => $urun->alis_fiyati ?? null,
             'aciklama'           => $opt['aciklama'] ?? 'Adisyon ürün satışı',
             'kullanici_id'       => $opt['kullanici_id'] ?? null,

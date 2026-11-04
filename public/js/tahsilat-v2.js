@@ -7,6 +7,7 @@
  *   - Adisyon özeti + kalemleri HER DURUMDA (kapalı dahil) adıyla listeler.
  *   - Katalogdan hizmet/ürün/paket EKLE, ürün ADEDİ, kalem SİL; hizmet veren / satıcı
  *     personel seçimi (ekleme + satırda değiştirme; zorunluluk kuralı sunucuda).
+ *   - Elle FİYAT (ekleme + satırda; katalog.fiyat_degistir yetkisine göre açık).
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
  *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
  *   - Tarihler flatpickr (TR) ile seçilir.
@@ -152,6 +153,12 @@ function personelSecim(x) {
   return `<select class="t-kalem-personel" data-tip="${x.tip}" data-id="${x.id}" aria-label="${personelEtiket(x.tip)}">${personelSecenekleri(x.personel_id, x.personel_adi, bos)}</select>`;
 }
 
+function fiyatHucre(tip, id, fiyat) {
+  if (!katalog?.fiyat_degistir) return TL(fiyat);
+  const ipucu = tip === 'urun' ? 'Satır toplamı (₺)' : 'Fiyat (₺)';
+  return `<input type="number" step="0.01" min="0" class="t-kalem-fiyat" data-tip="${tip}" data-id="${id}" value="${esc(fiyat ?? 0)}" title="${ipucu}" aria-label="${ipucu}">`;
+}
+
 function satir(tip, id, ad, ek, fiyat, indirim, adet, personelHtml) {
   const rozet = `<span class="t-rozet ${tip}">${tip === 'hizmet' ? 'Hizmet' : tip === 'urun' ? 'Ürün' : 'Paket'}</span>${ek ? ' <small style="color:#9aa0bd">' + esc(ek) + '</small>' : ''}`;
   const tur = tip === 'urun'
@@ -161,13 +168,14 @@ function satir(tip, id, ad, ek, fiyat, indirim, adet, personelHtml) {
     <td><span class="t-kalem-ad">${esc(ad)}</span></td>
     <td>${tur}</td>
     <td>${personelHtml}</td>
-    <td class="rc-sag">${TL(fiyat)}</td>
+    <td class="rc-sag">${fiyatHucre(tip, id, fiyat)}</td>
     <td class="rc-sag">${TL(indirim || 0)}</td>
     <td class="rc-sag"><button class="t-sil" data-tip="${tip}" data-id="${id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
 }
 
 function kalemOlaylariBagla() {
   document.querySelectorAll('#t-kalemler .t-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
+  document.querySelectorAll('#t-kalemler .t-kalem-fiyat').forEach((i) => (i.onchange = () => kalemFiyatDegistir(i)));
   document.querySelectorAll('#t-kalemler .t-kalem-personel').forEach((sel) => (sel.onchange = () => kalemPersonelDegistir(sel)));
   document.querySelectorAll('.t-adet-inp').forEach((inp) => {
     let zaman;
@@ -235,6 +243,7 @@ function ekleAc(tip) {
   const panel = el('#t-ekle-panel');
   panel.hidden = false;
   el('#t-ekle-tip').value = tip;
+  el('#t-ekle-adet').value = 1;
   katalogDoldur(tip);
   el('#t-ekle-adet-kutu').style.display = tip === 'urun' ? '' : 'none';
   el('#t-ekle-baslik').textContent = tip === 'hizmet' ? 'Hizmet Ekle' : tip === 'urun' ? 'Ürün Ekle' : 'Paket Ekle';
@@ -246,7 +255,16 @@ function ekleAc(tip) {
 function katalogDoldur(tip) {
   const liste = tip === 'hizmet' ? katalog.hizmetler : tip === 'urun' ? katalog.urunler : katalog.paketler;
   const idAlan = tip === 'hizmet' ? 'hizmet_id' : tip === 'urun' ? 'urun_id' : 'paket_id';
-  el('#t-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}">${esc(x.ad)} — ${TL(x.fiyat)}</option>`).join('');
+  el('#t-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}" data-fiyat="${esc(x.fiyat ?? 0)}">${esc(x.ad)} — ${TL(x.fiyat)}</option>`).join('');
+  el('#t-ekle-fiyat').readOnly = !katalog.fiyat_degistir;
+  ekleFiyatOner();
+}
+
+// Fiyat alanı: seçilen kalemin katalog fiyatı (ürün: birim × adet); elle değiştirilebilir.
+function ekleFiyatOner() {
+  const op = el('#t-ekle-katalog').selectedOptions[0];
+  const adet = el('#t-ekle-tip').value === 'urun' ? (parseInt(el('#t-ekle-adet').value, 10) || 1) : 1;
+  el('#t-ekle-fiyat').value = op ? Math.round((Number(op.dataset.fiyat) || 0) * adet * 100) / 100 : '';
 }
 
 async function kalemEkle() {
@@ -255,6 +273,7 @@ async function kalemEkle() {
   if (!katalogId) { mesaj('Katalogdan seçim yapın', 'hata'); return; }
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
+  if (katalog.fiyat_degistir && el('#t-ekle-fiyat').value !== '') body.fiyat = Number(el('#t-ekle-fiyat').value);
   const personelId = parseInt(el('#t-ekle-personel').value, 10);
   if (personelId) body.personel_id = personelId;
   const btn = el('#t-ekle-btn');
@@ -307,6 +326,13 @@ async function yeniSatisAc(kalem) {
   el('#t-ekle-panel').hidden = true;
   mesaj('Satış açıldı.', 'ok');
   await adisyonYukle();
+}
+
+async function kalemFiyatDegistir(i) {
+  const { ok, kod, govde } = await api('PATCH', `/kalem/${i.dataset.tip}/${i.dataset.id}/fiyat`, { body: { fiyat: i.value } });
+  if (ok) mesaj('Fiyat güncellendi.', 'ok');
+  else mesaj(`Fiyat güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
+  await adisyonYukle(); // hata durumunda eski fiyata döner
 }
 
 async function kalemPersonelDegistir(sel) {
@@ -510,6 +536,7 @@ function iskelet() {
               <select id="t-ekle-katalog" class="t-katalog"></select>
               <select id="t-ekle-personel" class="t-personel" aria-label="Personel"></select>
               <span id="t-ekle-adet-kutu"><input id="t-ekle-adet" class="t-adet" type="number" min="1" value="1" title="Adet"></span>
+              <input id="t-ekle-fiyat" class="t-adet" type="number" step="0.01" min="0" placeholder="Fiyat ₺" title="Fiyat (₺)" aria-label="Fiyat">
               <button id="t-ekle-btn" class="t-mini mor">Ekle</button>
               <button id="t-ekle-iptal" class="t-mini" style="background:#8a90ad">Vazgeç</button>
             </div>
@@ -568,6 +595,8 @@ function iskelet() {
   el('#t-onizle').onclick = odemeButon;
   el('#t-duzen-vazgec').onclick = tahsilatDuzenVazgec;
   el('#t-ekle-btn').onclick = kalemEkle;
+  el('#t-ekle-katalog').onchange = ekleFiyatOner;
+  el('#t-ekle-adet').oninput = ekleFiyatOner;
   el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };
   document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
   el('#t-alacak-ac').onclick = alacakFormAc;

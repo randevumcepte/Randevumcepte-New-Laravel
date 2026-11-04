@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\GecersizIslemException;
+use App\Exceptions\YetkisizErisimException;
 use App\Models\Adisyonlar;
 use App\Models\Salonlar;
 use App\Services\Satis\KalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\SalonSahipligi;
+use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
 use App\Support\Idempotency;
 use Illuminate\Http\Request;
@@ -25,16 +27,20 @@ class SatisKalemController extends V2Controller
 
     private const DUZENLEME_YETKI = ['satis.adisyon_olustur'];
 
+    /** Fiyatı elle değiştirme (eski *tahsilattutaridegistir kapısı; v2 satış yazıcılarıyla aynı). */
+    private const FIYAT_YETKI = 'satis.indirim_uygula';
+
     public function __construct(
         private KalemServisi $servis,
         private AdisyonOkumaServisi $adisyonServisi,
         private GuvenlikKapisi $kapi,
         private SalonSahipligi $sahiplik,
+        private YetkiServisi $yetki,
     ) {}
 
     /**
      * POST /api/v2/adisyon — YENİ SATIŞ (eski "Yeni Tahsilat" /yenitahsilat akışı).
-     * body: {salon_id, musteri_id, tip, katalog_id, adet?, personel_id?, tarih?, idempotency_key}
+     * body: {salon_id, musteri_id, tip, katalog_id, adet?, fiyat?, personel_id?, tarih?, idempotency_key}
      * Eskisiyle aynı: adisyon İLK KALEMLE açılır (boş adisyon oluşmaz); sonraki kalemler,
      * tahsilat ve alacak mevcut /adisyon/{id}/* uçlarıyla. Yetki: satis.adisyon_olustur.
      */
@@ -50,7 +56,7 @@ class SatisKalemController extends V2Controller
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
         $this->sahiplik->musteriOlmali($musteriId, $salonId);
-        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId);
+        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId, (int) $user->id);
         $tarih = $request->input('tarih') ? date('Y-m-d', strtotime((string) $request->input('tarih'))) : null;
 
         $sonuc = Idempotency::calistir('yeni_satis', (string) $request->input('idempotency_key'), (int) $user->id, $salonId,
@@ -64,7 +70,7 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Satış açıldı.');
     }
 
-    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, personel_id?} */
+    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, fiyat?, personel_id?} */
     public function ekle(Request $request, int $adisyon)
     {
         $user = $this->kullanici();
@@ -76,12 +82,30 @@ class SatisKalemController extends V2Controller
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
 
-        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId);
+        [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId, (int) $user->id);
 
         $sonuc = $this->servis->ekle($adisyon, $tip, $katalogId, $opt + ['kullanici_id' => (int) $user->id]);
         $sonuc['hesap'] = $this->adisyonServisi->getir($adisyon)['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Kalem eklendi.');
+    }
+
+    /** PATCH /api/v2/kalem/{tip}/{id}/fiyat  body: {fiyat} — elle fiyat (ürün: satır toplamı). */
+    public function fiyat(Request $request, string $tip, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+
+        $salonId = $this->servis->kalemSalonId($tip, $id);
+        if (! $salonId) {
+            return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        $this->kapi->denetle($user->id, $salonId, [self::FIYAT_YETKI]);
+
+        $sonuc = $this->servis->fiyatGuncelle($tip, $id, $this->fiyatGirdisi($request) ?? throw new GecersizIslemException('fiyat zorunlu'), (int) $user->id);
+        $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
+
+        return ApiCevap::basarili($sonuc, 'Fiyat güncellendi.');
     }
 
     /** PATCH /api/v2/kalem/{tip}/{id}/personel  body: {personel_id} — hizmet veren / satıcı değiştir. */
@@ -148,11 +172,12 @@ class SatisKalemController extends V2Controller
 
     /**
      * Kalem ekleme girdisi — yeni satış ve mevcut adisyona ekleme AYNI kuralla:
-     * tip ∈ hizmet|urun|paket, katalog_id zorunlu, personel kuralı personelGirdisi'nde.
+     * tip ∈ hizmet|urun|paket, katalog_id zorunlu, personel kuralı personelGirdisi'nde;
+     * katalogdan farklı fiyat yalnız satis.indirim_uygula ile.
      *
-     * @return array{0:string,1:int,2:array{adet:mixed,personel_id:?int}}
+     * @return array{0:string,1:int,2:array<string,mixed>}
      */
-    private function kalemGirdisi(Request $request, int $salonId): array
+    private function kalemGirdisi(Request $request, int $salonId, int $yetkiliId): array
     {
         $tip = (string) $request->input('tip');
         if (! in_array($tip, ['hizmet', 'urun', 'paket'], true)) {
@@ -163,7 +188,31 @@ class SatisKalemController extends V2Controller
             throw new GecersizIslemException('katalog_id zorunlu');
         }
 
-        return [$tip, $katalogId, ['adet' => $request->input('adet'), 'personel_id' => $this->personelGirdisi($request, $tip, $salonId)]];
+        $opt = ['adet' => $request->input('adet'), 'personel_id' => $this->personelGirdisi($request, $tip, $salonId)];
+        $fiyat = $this->fiyatGirdisi($request);
+        if ($fiyat !== null) {
+            if ($fiyat !== $this->servis->katalogFiyati($tip, $katalogId, $salonId, (int) $request->input('adet', 1))
+                && ! $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, self::FIYAT_YETKI)) {
+                throw new YetkisizErisimException('Fiyatı değiştirme yetkiniz yok');
+            }
+            $opt['fiyat'] = $fiyat;
+        }
+
+        return [$tip, $katalogId, $opt];
+    }
+
+    /** İstekteki fiyat (yoksa null); sayı ve negatif olmayan olmalı. */
+    private function fiyatGirdisi(Request $request): ?float
+    {
+        $fiyat = $request->input('fiyat');
+        if ($fiyat === null || $fiyat === '') {
+            return null;
+        }
+        if (! is_numeric($fiyat) || (float) $fiyat < 0) {
+            throw new GecersizIslemException('Geçersiz fiyat');
+        }
+
+        return round((float) $fiyat, 2);
     }
 
     /** Hizmette personel zorunlu (stüdyo hariç), ürün/pakette opsiyonel; verilen personel bu salonun olmalı. */

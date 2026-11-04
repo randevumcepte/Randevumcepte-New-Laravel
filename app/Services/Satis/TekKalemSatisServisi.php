@@ -8,7 +8,6 @@ use App\Models\Adisyonlar;
 use App\Services\Paket\PaketSatisServisi;
 use App\Services\Stok\HizliSatisServisi;
 use App\Support\Idempotency;
-use Illuminate\Support\Facades\DB;
 
 /**
  * TEK KALEMLİ SATIŞ AÇ — "bir paket / ürün / hizmet sattım" diyen akışların ortak yazıcısı
@@ -58,9 +57,9 @@ class TekKalemSatisServisi
     /** Hizmet satışı: adisyon + tek hizmet kalemi. Katalogdan farklı fiyat yalnız 'satis.indirim_uygula' ile. */
     private function hizmetSat(int $salonId, int $hizmetId, array $g, array $kim): array
     {
-        $katalog = (float) DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $hizmetId)->max('baslangic_fiyat');
+        $katalog = $this->kalem->katalogFiyati('hizmet', $hizmetId, $salonId);
         $fiyat = isset($g['fiyat']) ? round((float) $g['fiyat'], 2) : $katalog;
-        if ($fiyat !== round($katalog, 2) && ! $kim['fiyat_degistirebilir']) {
+        if ($fiyat !== $katalog && ! $kim['fiyat_degistirebilir']) {
             throw new YetkisizErisimException('Hizmet fiyatını değiştirme yetkiniz yok');
         }
         $yetkiliId = (int) $kim['yetkili_id'];
