@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=4';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=5';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -80,6 +80,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
     const btn = (islem, ikon, etiket, sinif = '') => `<button class="t-aks ${sinif}" data-islem="${islem}"><i class="bi ${ikon}"></i> ${etiket}</button>`;
     const butonlar = [
       v.durum === 0 ? btn('onayla', 'bi-check2-all', 'Onayla', 'mavi') : '',
+      v.durum === 1 && !v.kapali && !v.on_gorusme_id ? btn('tahsilat', 'bi-cash-coin', 'Tahsilat', 'mavi') : '',
       aktif ? btn('duzenle', 'bi-pencil-square', 'Düzenle') : '',
       aktif && !geldiMi ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
       aktif && !gelmediMi ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
@@ -121,12 +122,24 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
 
     el('.t-ck-kapat', ck()).onclick = cekmeceKapat;
     ck().querySelectorAll('[data-islem]').forEach((b) => {
-      b.onclick = () => (b.dataset.islem === 'duzenle' ? randevuFormu({ randevuId: v.id }) : islemYap(v, b.dataset.islem, {}));
+      b.onclick = () => {
+        if (b.dataset.islem === 'duzenle') return randevuFormu({ randevuId: v.id });
+        if (b.dataset.islem === 'tahsilat') return tahsilataGit(v, b);
+        return islemYap(v, b.dataset.islem, {});
+      };
     });
     ck().querySelectorAll('[data-telafi-rh]').forEach((b) => {
       const h = (v.hizmetler || []).find((x) => String(x.id) === b.dataset.telafiRh);
       b.onclick = () => telafiFormu(v, h);
     });
+  }
+
+  /** Randevunun adisyonunu sunucu bulur/açar; tahsilat ekranına gidilir (mobil de aynı uç). */
+  async function tahsilataGit(v, b) {
+    b.disabled = true;
+    const s = await yazVeyaOnizle('POST', `/randevu/${v.id}/tahsilat`, {});
+    b.disabled = false;
+    if (s?.yazildi) location.href = `/v2/tahsilat/${s.adisyon_id}?sube=${s.salon_id}`;
   }
 
   const ISLEM_UC = {

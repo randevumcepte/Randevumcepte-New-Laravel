@@ -242,3 +242,9 @@ saat kapama sentinelleri. Dönüş: `cakismavar` + `cakisanunsurlar`.
 
 v1 randevu path'lerini nginx'te yeni app'e yönlendir (sözleşme-koruyan adaptör)
 VEYA Flutter'ı v2'ye taşı. Eski `randevular()` ve kardeşlerini emekliye ayır.
+
+## Randevudan tahsilata + takvim sadeleştirme (4 Kas 2026)
+
+- `POST /api/v2/randevu/{id}/tahsilat` (yetki `satis.tahsilat_al`, varsayılan dry_run): adisyonu bulur ya da açar, kalemleri ekler, `adisyon_id` döner. Web çekmecesi ve mobil için tek uç. `RandevuTahsilatServisi` + saf `Domain\Randevu\TahsilatKalemSecimi`; satır yazımı `KalemServisi::randevuKalemiEkle`.
+- Eski akışlardan farklar: paket adisyonu `hizmet_id` ile aranır (eskide web'de filtresiz, mobilde ad LIKE); ekstra modunda aynı kalem ikinci kez eklenmez.
+- Takvim yalnız günlük açılır; büyüteç 60–400 %, salon başına `rc_takvim_zoom_{salonId}` ile kalıcı.

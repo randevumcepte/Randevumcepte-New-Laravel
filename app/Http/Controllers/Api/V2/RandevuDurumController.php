@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Services\Randevu\RandevuDurumServisi;
 use App\Services\Randevu\RandevuOkumaServisi;
+use App\Services\Randevu\RandevuTahsilatServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
 use App\Support\RandevuYazma;
@@ -16,15 +17,22 @@ use Illuminate\Http\Request;
  * dry_run=false ancak RandevuYazma (config/randevu.php) aciksa yazar; kapaliysa 409.
  *
  * Yetki: geldi/gelmedi/isaret-kaldir/seans-telafisi/iptal → randevu.duzenle_iptal,
- *        onayla → randevu.onayla.
+ *        onayla → randevu.onayla, tahsilat → satis.tahsilat_al.
  */
 class RandevuDurumController extends V2Controller
 {
     public function __construct(
         private RandevuDurumServisi $servis,
         private RandevuOkumaServisi $okuma,
+        private RandevuTahsilatServisi $tahsilat,
         private GuvenlikKapisi $kapi,
     ) {}
+
+    /** POST /api/v2/randevu/{id}/tahsilat — adisyonu bul/ac, kalemleri ekle; adisyon_id doner. */
+    public function tahsilat(Request $request, int $id)
+    {
+        return $this->calistir($request, $id, 'satis.tahsilat_al', fn ($uid, $yaz) => $this->tahsilat->tahsilataGec($id, $uid, $yaz));
+    }
 
     /** POST /api/v2/randevu/{id}/geldi */
     public function geldi(Request $request, int $id)

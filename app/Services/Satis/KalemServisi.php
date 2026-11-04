@@ -46,6 +46,38 @@ class KalemServisi
         private ReceteUygulamaServisi $recete,
     ) {}
 
+    /**
+     * Randevu kalemini adisyona ekle (randevudan tahsilata): fiyat/saat/sure/kaynak randevudan
+     * gelir, seans alanlari NULL = paket satisi degil (eski adisyon_hizmet_ekle ile ayni).
+     * Transaction cagiranda; sarf hatasi satisi engellemez (ekle() ile ayni).
+     */
+    public function randevuKalemiEkle(int $adisyonId, int $salonId, int $randevuId, string $tarih, object $rh, ?int $kullaniciId): int
+    {
+        $k = new AdisyonHizmetler();
+        $k->adisyon_id = $adisyonId;
+        $k->randevu_id = $randevuId;
+        $k->hizmet_id = (int) $rh->hizmet_id;
+        $k->personel_id = $rh->personel_id;
+        $k->cihaz_id = $rh->cihaz_id;
+        $k->fiyat = $rh->fiyat;
+        $k->sure = $rh->sure_dk;
+        $k->islem_tarihi = $tarih;
+        $k->islem_saati = $rh->saat;
+        $k->geldi = true;
+        $k->seans_sayisi = null;
+        $k->bekleyen_seans = null;
+        $k->kullanilan_seans = null;
+        $k->kullanilmayan_seans = null;
+        $k->save();
+        try {
+            $this->recete->uygula($salonId, (int) $rh->hizmet_id, 'adisyon_hizmet_recete', (int) $k->id, $kullaniciId);
+        } catch (\Throwable $e) {
+            Log::error('Sarf reçetesi uygulanamadı', ['adisyon_hizmet_id' => $k->id, 'hizmet_id' => $rh->hizmet_id, 'salon_id' => $salonId, 'hata' => $e->getMessage()]);
+        }
+
+        return (int) $k->id;
+    }
+
     /** Katalogdan adisyona kalem ekle. */
     public function ekle(int $adisyonId, string $tip, int $katalogId, array $opt): array
     {

@@ -99,6 +99,7 @@ Route::prefix('v2')->group(function () {
         // SEANS TELAFISI (paket seansi telafi hakkina) — telafi RANDEVUSU'ndan ayri.
         Route::post('/randevu/{id}/seans-telafisi', [RandevuDurumController::class, 'seansTelafisi'])->whereNumber('id');
         Route::post('/randevu/{id}/iptal', [RandevuDurumController::class, 'iptal'])->whereNumber('id');
+        Route::post('/randevu/{id}/tahsilat', [RandevuDurumController::class, 'tahsilat'])->whereNumber('id');
 
         // TELAFI RANDEVUSU (A tipi: ucretsiz duzeltme + prim devri) — ayni kill-switch.
         Route::get('/randevu/telafi-secenekler', [RandevuTelafiController::class, 'secenekler']);

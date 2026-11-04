@@ -17,7 +17,7 @@
  */
 
 import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
-import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=4';
+import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=5';
 import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=1';
 
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
@@ -44,12 +44,6 @@ function durumCoz(s) {
 const kok = document.getElementById('rc-takvim');
 let salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 
-const VIEWLER = [
-  { ad: 'Günlük', view: 'resourceTimeGridDay' },
-  { ad: 'Haftalık', view: 'resourceTimeGridWeek' },
-  { ad: 'Liste', view: 'listDay' },
-];
-
 // Takvim turu (kaynak tipi) — eski sistemdeki randevu_takvim_turu degerleri.
 const TURLER = [
   { deger: '1', ad: 'Personel' },
@@ -64,7 +58,20 @@ function kayitliTur() {
 
 let R = null; // randevuIslemleri() — çekmece, durum aksiyonları, randevu formu (lib/v2-randevu.js)
 
+// Büyüteç — eski panel/mobil ile aynı aralık; salon başına tarayıcıda kalıcı.
+const ZOOM = { MIN: 0.6, MAX: 4, ADIM: 0.4, SLOT_PX: 22, SUTUN_MIN: 100, SUTUN_MAX: 200 };
+const zoomAnahtar = () => 'rc_takvim_zoom_' + salonId;
+function kayitliZoom() {
+  try {
+    const z = parseFloat(localStorage.getItem(zoomAnahtar()));
+    return z >= ZOOM.MIN && z <= ZOOM.MAX ? z : 1;
+  } catch { return 1; }
+}
+const slotYuksekligi = (z) => Math.round(ZOOM.SLOT_PX * z);
+const sutunGenisligi = (z) => `minmax(${Math.min(ZOOM.SUTUN_MAX, Math.max(ZOOM.SUTUN_MIN, Math.round(ZOOM.SUTUN_MIN * z)))}px, 1fr)`;
+
 const durum = {
+  zoom: kayitliZoom(),
   takvimTuru: kayitliTur(), // '' = salonun varsayilani (sunucu cozer)
   kaynaklar: [],      // sunucudan gelen tum kaynaklar
   secili: '',         // personel/kaynak filtresi ('' = tumu)
@@ -83,7 +90,6 @@ function iskeletCiz() {
           <span class="t-baslik-ikon"><i class="bi bi-calendar4-week"></i></span>
           <div>
             <h1>Randevu Takvimi</h1>
-            <div class="t-alt">Önizleme (v2) · durum işlemleri sunucu yazması açılana kadar plan olarak gösterilir</div>
           </div>
         </div>
         <div class="t-ust-sag">
@@ -96,8 +102,10 @@ function iskeletCiz() {
           ${TURLER.map((t) => `<option value="${t.deger}">${t.ad}</option>`).join('')}
         </select>
         <select id="tKaynak" class="t-sec" title="Personel / kaynak"><option value="">Tümü</option></select>
-        <div class="t-segment" id="tView">
-          ${VIEWLER.map((v, i) => `<button data-view="${v.view}" class="${i === 0 ? 'aktif' : ''}">${v.ad}</button>`).join('')}
+        <div class="t-zoom" title="Takvim büyüklüğü (kalıcı)">
+          <button id="tZoomAz" aria-label="Küçült"><i class="bi bi-zoom-out"></i></button>
+          <span id="tZoomDeger"></span>
+          <button id="tZoomCok" aria-label="Büyüt"><i class="bi bi-zoom-in"></i></button>
         </div>
         <div class="t-nav">
           <button class="t-yuv" id="tGeri" title="Önceki"><i class="bi bi-chevron-left"></i></button>
@@ -273,11 +281,11 @@ function takvimKur() {
     slotMaxTime: '23:00',
     scrollTime: '09:00',
     slotDuration: '00:15',
-    slotHeight: 22,
+    slotHeight: slotYuksekligi(durum.zoom),
     slotLabelInterval: '00:30',
     height: 'calc(100vh - 280px)',
-    // Sutun en az 100px; genis ekranda esit yayilir, dar ekranda yatay kaydirma.
-    columnWidth: 'minmax(100px, 1fr)',
+    // Sutun en az 100px (buyutecle 200'e kadar); genis ekranda esit yayilir, dar ekranda yatay kaydirma.
+    columnWidth: sutunGenisligi(durum.zoom),
     datesAboveResources: true,
     resources: [],
     eventTimeFormat: { hour: '2-digit', minute: '2-digit' },
@@ -313,12 +321,7 @@ function takvimKur() {
     eventResizeStart: () => { durum.etkilesim = true; },
     eventResizeStop: () => { durum.etkilesim = false; },
     datesSet: (info) => {
-      const d = info.start;
-      const v = info.view.type;
-      const bitis = new Date(info.end.getTime() - 1);
-      el('#tTarih').textContent = v === 'resourceTimeGridWeek'
-        ? `${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} – ${bitis.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}`
-        : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
+      el('#tTarih').textContent = info.start.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
     },
   });
 }
@@ -341,7 +344,31 @@ function otomatikYenilemeKur() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) sessizYenile(); });
 }
 
+function zoomGoster() {
+  el('#tZoomDeger').textContent = `${Math.round(durum.zoom * 100)}%`;
+  el('#tZoomAz').disabled = durum.zoom <= ZOOM.MIN;
+  el('#tZoomCok').disabled = durum.zoom >= ZOOM.MAX;
+}
+
+function zoomDegistir(fark) {
+  const yeni = Math.round(Math.min(ZOOM.MAX, Math.max(ZOOM.MIN, durum.zoom + fark)) * 100) / 100;
+  if (yeni === durum.zoom) return;
+  // Bakilan saat ekranda kalsin: kaydirma konumu ayni oranda tasinir.
+  const kaydirici = el('#tTakvim .ec-main');
+  const oran = yeni / durum.zoom;
+  const ust = kaydirici?.scrollTop ?? 0;
+  durum.zoom = yeni;
+  try { localStorage.setItem(zoomAnahtar(), String(yeni)); } catch { /* ozel mod */ }
+  durum.ec.setOption('slotHeight', slotYuksekligi(yeni));
+  durum.ec.setOption('columnWidth', sutunGenisligi(yeni));
+  zoomGoster();
+  requestAnimationFrame(() => { if (kaydirici) kaydirici.scrollTop = ust * oran; });
+}
+
 function aracBagla() {
+  zoomGoster();
+  el('#tZoomAz').onclick = () => zoomDegistir(-ZOOM.ADIM);
+  el('#tZoomCok').onclick = () => zoomDegistir(ZOOM.ADIM);
   el('#tGeri').onclick = () => durum.ec.prev();
   el('#tIleri').onclick = () => durum.ec.next();
   el('#tBugun').onclick = () => durum.ec.setOption('date', new Date());
@@ -358,12 +385,6 @@ function aracBagla() {
     durum.ec.setOption('resources', []); // eski turun sutunlari kalmasin
     durum.ec.refetchEvents();
   };
-  el('#tView').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-view]');
-    if (!b) return;
-    el('#tView').querySelectorAll('button').forEach((x) => x.classList.toggle('aktif', x === b));
-    durum.ec.setOption('view', b.dataset.view);
-  });
   if (window.flatpickr) {
     const fp = window.flatpickr(document.body.appendChild(Object.assign(document.createElement('input'), { type: 'hidden' })), {
       locale: 'tr',
