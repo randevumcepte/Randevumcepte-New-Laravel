@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Models\Salonlar;
 use App\Services\Personel\PersonelArsivServisi;
 use App\Services\Personel\PersonelListeServisi;
 use App\Services\Personel\PersonelOkumaServisi;
@@ -81,7 +82,8 @@ class PersonelController extends V2Controller
         }
         $this->kapi->denetle($user->id, $salonId, ['personel.liste_gor', 'personel.ekle_duzenle']);
 
-        return ApiCevap::basarili($this->okuma->formVerisi());
+        // Stüdyoda prim/hak ediş modülü kapalı: ekran bölümü bu bayrağa göre gizler.
+        return ApiCevap::basarili($this->okuma->formVerisi() + ['studyo_modu' => Salonlar::studyoModu($salonId)]);
     }
 
     /** GET /api/v2/personel/{id}  (personel.liste_gor) */

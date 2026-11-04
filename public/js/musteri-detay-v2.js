@@ -21,6 +21,7 @@ import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-m
 import { seansTakibi } from '/js/lib/v2-seans.js?v=2';
 import { formArsivi } from '/js/lib/v2-form.js?v=1';
 import { randevuTablosu } from '/js/lib/v2-randevu.js?v=3';
+import { musteriDersSekmesi } from '/js/lib/v2-ders.js?v=1';
 
 const kok = document.getElementById('rc-musteri-detay');
 const musteriId = parseInt(kok.dataset.musteri, 10) || 0;
@@ -38,6 +39,8 @@ const P = { salon_id: salonId };
 const sekmeTanimlari = () => [
   { ad: 'genel', etiket: 'Genel Bilgiler', ikon: 'bi-person-vcard', goster: true, yukle: genelYukle },
   { ad: 'randevular', etiket: 'Randevular', ikon: 'bi-calendar-check', goster: true, yukle: randevularYukle },
+  { ad: 'dersler', etiket: 'Grup Dersleri', ikon: 'bi-people', goster: a.grup_dersi_aktif && y.olcum_gor,
+    yukle: (p) => musteriDersSekmesi(p, { salonId, musteriId, plan: a.studyo_modu }) },
   { ad: 'olcum', etiket: 'Vücut Ölçümü', ikon: 'bi-heart-pulse', goster: a.studyo_modu && y.olcum_gor, yukle: olcumYukle },
   { ad: 'satislar', etiket: 'Satışlar', ikon: 'bi-receipt', goster: y.satis_gor, yukle: satislarYukle },
   { ad: 'seanslar', etiket: 'Seanslar', ikon: 'bi-check2-square', goster: y.seans_gor, yukle: (p) => seansTakibi(p, { salonId, musteriId }) },

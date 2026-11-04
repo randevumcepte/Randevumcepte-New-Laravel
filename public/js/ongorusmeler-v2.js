@@ -15,6 +15,7 @@ import { qp, api, el, esc, TL, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-orta
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=1';
 import { trTarih } from '/js/lib/v2-donem.js?v=1';
 import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=1';
 
@@ -172,6 +173,7 @@ function satisYapildi(k) {
     if (el('#sFiyat', ov) && yetki('fiyat_degistir')) d.fiyat = sayiVeyaNull(el('#sFiyat', ov).value);
     const r = await yaz('POST', `/ongorusme/${k.id}/satis-yapildi`, d);
     if (!yazSonuc(r, r.govde?.mesaj)) return;
+    if (fiyatGizli()) await satisSonrasiDersPlani(salonId, r.govde.veri.adisyon_id);
     await satisSonrasi(salonId, r.govde.veri.adisyon_id, { studyo: fiyatGizli(), odemeAlindi: btn.dataset.odeme === '1' });
   })));
 }

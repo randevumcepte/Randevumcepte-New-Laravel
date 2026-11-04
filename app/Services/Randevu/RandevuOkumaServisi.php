@@ -6,6 +6,8 @@ use App\Exceptions\BulunamadiException;
 use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
+use App\Models\Salonlar;
+use App\Services\Ders\DersOturumServisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Support\Carbon;
@@ -36,6 +38,7 @@ class RandevuOkumaServisi
 {
     public function __construct(
         private YetkiServisi $yetki,
+        private DersOturumServisi $dersOturum,
     ) {}
 
     /** Yalnizca salon_id (kapsam denetimi icin ucuz sorgu). */
@@ -86,11 +89,16 @@ class RandevuOkumaServisi
 
         $satirlar = $this->hamSatirlar($salonId, $tarih1, $tarih2, $personelId, $takvimTuru, $personelRolu);
         $merged   = self::birlestir($satirlar);
+        $grupDersi = Salonlar::grupDersiAktif($salonId);
 
         return [
             'randevular' => array_values(array_map(fn ($r) => $this->disaSatir($r), $merged)),
             'resources'  => $this->kaynaklar($salonId, $personelId, $takvimTuru, $personelRolu, $satirlar),
             'takvim_turu'=> $takvimTuru,
+            // Grup dersi bloklari ayri anahtarda (randevu sozlesmesi degismez). Bloklar personel
+            // sutununa oturdugu icin yalniz personel takviminde; rol-5 kisiti $personelId'den gelir.
+            'grup_dersi_aktif' => $grupDersi,
+            'dersler'    => $grupDersi && $takvimTuru === 1 ? $this->dersOturum->takvimOlaylari($salonId, $tarih1, $tarih2, $personelId) : [],
             'baslangic'  => $tarih1,
             'bitis'      => $tarih2,
         ];

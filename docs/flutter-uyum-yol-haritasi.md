@@ -37,7 +37,7 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 |---|---|---|---|
 | Personel (CRUD, saat, yetki) | 15 | ✅ | aşağıda detay; yazma `PERSONEL_V2_YAZMA_AKTIF` arkasında |
 | Personel prim / hak ediş | 7 | ❌ | Faz 3 (`primHakedisToplu`, `personelPrimHesaplaAyYil`, `primOde*`, `primHareket*`) |
-| Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı, randevu **listesi** (`GET /randevu/liste` + `/liste/secenekler`: zaman/kaynak/durum/hizmet filtresi, satır `aksiyonlar`) var; randevu-sonrası not, sesli randevu, grup dersi yok |
+| Randevu / takvim | ~25 | 🟡 | takvim, form, oluştur/güncelle, durumlar, telafi, saat kapama, taşı, randevu **listesi** (`GET /randevu/liste` + `/liste/secenekler`: zaman/kaynak/durum/hizmet filtresi, satır `aksiyonlar`) var; randevu-sonrası not, sesli randevu yok; grup dersi `docs/strangler-studyo.md` |
 | Satış / adisyon / tahsilat / alacak | ~30 | 🟡 | liste, adisyon, kalem, tahsilat, alacak var; taksit, senet, kupon/kampanya kodu, müşteri indirim türü yok |
 | Katalog (hizmet/ürün/paket listeleri) | ~8 | 🟡 | `GET /katalog` var; sayfalı yönetim listeleri ve CRUD yok |
 | Müşteri | ~15 | 🟡 | liste+sayaç+seçici, detay, randevu notları, randevular, ekle/güncelle/sil, kara liste, sağlık, ölçüm var (yazma `MUSTERI_V2_YAZMA_AKTIF`); resimler, seanslar, toplu içe aktarma, anket/WhatsApp, harici tahsilat yok |
@@ -59,6 +59,10 @@ Ekranlar HTTP'yi şuradan yapar: `lib/Backend/backend.dart` (serbest fonksiyonla
 | Dashboard / hatırlatma / bildirim | ~13 | ◐ | Özet `GET /ozet/acilis`, `/ozet/kart/{kod}`, `/ozet/sekme/{kod}` ✅ (v1 `dashboard` + `dashboardKarsilastirma`; eşleme docs/strangler-ozet.md) — bildirim, hatırlatma, `easistandatadashboard`, boş saat kampanyası henüz v1 |
 | Hesabım / profil | ~5 | ❌ | (v1'de Bearer'lı) |
 | Çağrı merkezi / santral | ~30 | ✅ | `/cagri-merkezi/*` (çalışma ekranı, arama randevuları, çağrı kayıtları, performans, liste yönetimi — tek sekmeli `/v2/cagri-merkezi`) + `/santral/*`; eşleme docs/strangler-cagri-merkezi.md; yazma `CAGRI_MERKEZI_V2_YAZMA_AKTIF`. liste oluşturma (filtre motoru), script/kategori tanımı, WhatsApp manuel, ajanda dahil |
+
+## Stüdyo + grup dersi
+
+Tüm eşleme: `docs/strangler-studyo.md` (`/api/v2/ders/*`, `/api/v2/studyo/politika`, `/api/v2/musteri-uygulama/{grup-dersleri,derslerim,olcumlerim}`).
 
 ## Personel — v1 → v2 eşlemesi
 
@@ -258,7 +262,7 @@ Henüz taşınmayan: Google takvim entegrasyonu (en son), yeni şube açma (hesa
 ## Sıradaki adımlar (öneri)
 
 1. Personel Faz 3: prim / hak ediş / ödeme (Flutter `prim_hakedis`, `hakedislerim`, `personeldetay`).
-2. Randevu boşlukları: randevu listesi (`/randevular?page`), randevu-sonrası not, grup dersi.
+2. Randevu boşlukları: randevu-sonrası not. Grup dersi + stüdyo eşlemesi: `docs/strangler-studyo.md`.
 3. Satış boşlukları: taksit, senet, kupon/kampanya kodu, müşteri indirim türü.
 4. Müşteri kalanları (resimler, seanslar, toplu içe aktarma) → Ayar → Pazarlama/SMS/WhatsApp → Dashboard → Çağrı merkezi.
 5. En son: Flutter HTTP katmanı geçişi (kullanıcı "geçiş" dediğinde).

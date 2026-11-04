@@ -4,6 +4,7 @@ namespace App\Services\OnGorusme;
 
 use App\Domain\Musteri\MusteriSozluk;
 use App\Domain\OnGorusme\GorusmeDurumu;
+use App\Models\Salonlar;
 use App\Services\Randevu\RandevuFormServisi;
 use App\Services\Satis\KatalogServisi;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ class OnGorusmeFormServisi
             'durumlar'     => GorusmeDurumu::secenekler(),
             'saat_araligi' => config('ongorusme.saat_araligi'),
             'sure_dk'      => (int) config('ongorusme.sure_dk', 60),
-            'studyo_modu'  => (bool) DB::table('salonlar')->where('id', $salonId)->value('studyo_modu'), // fiyat gizleme (MODEL B)
+            'studyo_modu'  => Salonlar::studyoModu($salonId), // fiyat gizleme (MODEL B)
             'yetkiler'     => $yetkiler,
             'yazma_aktif'  => (bool) config('ongorusme.yazma_aktif'),
         ];

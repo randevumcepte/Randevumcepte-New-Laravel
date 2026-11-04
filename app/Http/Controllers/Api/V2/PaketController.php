@@ -50,7 +50,7 @@ class PaketController extends V2Controller
 
         return ApiCevap::basarili([
             'hizmetler'   => $katalog->hizmetler($salonId),
-            'studyo_modu' => (bool) Salonlar::whereKey($salonId)->value('studyo_modu'), // fiyat gizleme (MODEL B)
+            'studyo_modu' => Salonlar::studyoModu($salonId), // fiyat gizleme (MODEL B)
             'yetkiler'    => [
                 'tanim_olustur'  => $this->yetkiVar($uid, $salonId, 'paket.tanim_olustur'),
                 'sat'            => $this->yetkiVar($uid, $salonId, 'paket.sat'),

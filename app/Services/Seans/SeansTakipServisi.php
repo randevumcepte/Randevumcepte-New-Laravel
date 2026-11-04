@@ -6,6 +6,7 @@ use App\Domain\Seans\LazerTespiti;
 use App\Domain\Seans\SeansDurumu;
 use App\Domain\Seans\SeansKalemTuru;
 use App\Domain\Seans\SeansSayaci;
+use App\Models\Salonlar;
 use App\Support\ListeIstegi;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -50,7 +51,7 @@ class SeansTakipServisi
             + ListeIstegi::meta($l->sayfa, $l->sayfaBoyu, $toplam)
             + [
                 'durumlar' => SeansDurumu::sozluk(),
-                'ayarlar'  => ['grup_dersi_aktif' => (bool) DB::table('salonlar')->where('id', $salonId)->value('grup_dersi_aktif')],
+                'ayarlar'  => ['grup_dersi_aktif' => Salonlar::grupDersiAktif($salonId)],
             ];
     }
 

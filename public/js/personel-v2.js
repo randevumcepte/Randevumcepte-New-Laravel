@@ -268,7 +268,7 @@ async function formAc(p) {
       </div>
     </div>
 
-    <div class="p-sec">
+    <div class="p-sec"${formVeri.studyo_modu ? ' style="display:none"' : ''}>
       <div class="p-sec-bas"><span class="p-sec-ikon p-sec-prim"><i class="bi bi-cash-coin"></i></span>
         <div><h3>Prim &amp; Hak Ediş Ayarları</h3><div class="p-sec-alt">Aylık maaş ve tahsilat üzerinden prim yüzdeleri (Hak Ediş raporunda hesaplanır)</div></div></div>
       <div class="p-prim-grid">
@@ -288,7 +288,7 @@ async function formAc(p) {
 
   modalAc(duzenleme ? 'Personel Düzenle' : 'Yeni Personel', govde, alt, {
     ikon: 'person-lines-fill',
-    altbaslik: 'Personel bilgilerini, çalışma saatlerini ve hak ediş ayarlarını düzenleyin',
+    altbaslik: formVeri.studyo_modu ? 'Personel bilgilerini ve çalışma saatlerini düzenleyin' : 'Personel bilgilerini, çalışma saatlerini ve hak ediş ayarlarını düzenleyin',
   });
 
   // Çalışma/mola satır vurgusu toggle ile senkron.

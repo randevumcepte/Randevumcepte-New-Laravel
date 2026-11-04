@@ -195,6 +195,25 @@ class SatisController extends V2Controller
         ]));
     }
 
+    /** PATCH /api/v2/adisyon/{id}/odeme-tarihi  body:{tarih?:Y-m-d} — stüdyo "Ödeme Alınma Tarihi" (satis.tahsilat_al). */
+    public function odemeTarihi(Request $request, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+        $request->validate(['tarih' => ['nullable', 'date_format:Y-m-d']]);
+
+        $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
+        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+        if (! $this->islem->studyoModu($salonId)) {
+            return ApiCevap::hata('Yalnızca stüdyo modunda kullanılabilir', 422);
+        }
+
+        return ApiCevap::basarili($this->islem->studyoOdemeTarihi($id, $salonId, $request->input('tarih'), [
+            'yetkili_id'   => (int) $user->id,
+            'olusturan_id' => $this->personelId($user->id, $salonId),
+        ]));
+    }
+
     /** Yetkilinin bu salondaki personel kaydi (olusturan / fatura kesen). */
     private function personelId(int $yetkiliId, int $salonId): ?int
     {

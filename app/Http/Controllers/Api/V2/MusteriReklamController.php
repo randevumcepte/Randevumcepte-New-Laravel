@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\YetkisizErisimException;
-use App\Http\Controllers\Controller;
 use App\Services\BildirimReklam\MusteriReklamServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
@@ -16,7 +14,7 @@ use Illuminate\Http\Request;
  *   GET  /musteri-uygulama/reklamlar?salon_id= | ?appBundle=   → [kart]  (BildirimReklamSunumu::musteri)
  *   POST /musteri-uygulama/reklamlar/{id}/kupon               → {zaten, kupon}
  */
-class MusteriReklamController extends Controller
+class MusteriReklamController extends MusteriUygulamaController
 {
     public function __construct(private MusteriReklamServisi $servis) {}
 
@@ -32,15 +30,5 @@ class MusteriReklamController extends Controller
         $sonuc = $this->servis->kuponKap($this->musteriId(), $id);
 
         return ApiCevap::basarili($sonuc, $sonuc['zaten'] ? 'Kuponun zaten cebinde 👍' : '🎉 Kuponun tanımlandı!', $sonuc['zaten'] ? 200 : 201);
-    }
-
-    private function musteriId(): int
-    {
-        $u = auth('api')->user();
-        if (! $u) {
-            throw new YetkisizErisimException('Giriş yapmalısınız.');
-        }
-
-        return (int) $u->id;
     }
 }

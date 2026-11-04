@@ -4,6 +4,7 @@ namespace App\Services\Satis;
 
 use App\Domain\Tahsilat\AdisyonHesap;
 use App\Exceptions\BulunamadiException;
+use App\Models\Salonlar;
 use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class AdisyonIslemServisi
 
     public function studyoModu(int $salonId): bool
     {
-        return (int) DB::table('salonlar')->where('id', $salonId)->value('studyo_modu') === 1;
+        return Salonlar::studyoModu($salonId);
     }
 
     public function faturasizGizleAktif(int $salonId): bool
@@ -116,5 +117,24 @@ class AdisyonIslemServisi
         });
 
         return ['adisyon_id' => $adisyonId, 'odendi' => $alindi ? 1 : 0];
+    }
+
+    /**
+     * Stüdyo: "Ödeme Alınma Tarihi"ni elle güncelle. Ödenmemişse önce tam tahsilat (odendi=1).
+     *
+     * @param array{yetkili_id:int,olusturan_id:?int} $kim
+     */
+    public function studyoOdemeTarihi(int $adisyonId, int $salonId, ?string $tarih, array $kim): array
+    {
+        $tarih = date('Y-m-d H:i:s', $tarih ? strtotime($tarih) : time());
+
+        return DB::transaction(function () use ($adisyonId, $salonId, $tarih, $kim) {
+            if ((int) DB::table('adisyonlar')->where('id', $adisyonId)->where('salon_id', $salonId)->value('odendi') !== 1) {
+                $this->studyoOdeme($adisyonId, $salonId, true, $kim);
+            }
+            DB::table('adisyonlar')->where('id', $adisyonId)->update(['odendi_tarihi' => $tarih]);
+
+            return ['adisyon_id' => $adisyonId, 'odendi' => 1, 'odendi_tarihi' => $tarih];
+        });
     }
 }

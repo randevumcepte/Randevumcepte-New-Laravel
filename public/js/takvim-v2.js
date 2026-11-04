@@ -18,6 +18,7 @@
 
 import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
 import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=3';
+import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=1';
 
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
 
@@ -106,6 +107,7 @@ function iskeletCiz() {
         </div>
         <button class="t-yenile" id="tYenile"><i class="bi bi-arrow-clockwise"></i> Yenile</button>
         <button class="t-yenile t-kapat-btn" id="tSaatKapat"><i class="bi bi-lock"></i> Saat Kapat</button>
+        <button class="t-yenile" id="tGrupDersi" hidden><i class="bi bi-people"></i> Grup Dersi</button>
       </div>
 
       <div class="t-lejant">
@@ -139,8 +141,9 @@ async function olaylariGetir(info) {
   // Sunucunun cozdugu tur (varsayilan dahil) seciciye yansisin.
   if (v.takvim_turu !== undefined) el('#tTur').value = String(v.takvim_turu);
   kaynaklariAyarla(v.resources || []);
+  el('#tGrupDersi').hidden = !v.grup_dersi_aktif;
 
-  return (v.randevular || []).map((e, i) => {
+  const randevular = (v.randevular || []).map((e, i) => {
     const d = durumCoz(e.durum);
     const kaynak = durum.kaynaklar.find((k) => String(k.id) === String(e.resourceId));
     const ana = e.kapali ? '#5b5f73' : renk(e.bgcolor, renk(kaynak?.bgcolor));
@@ -158,6 +161,24 @@ async function olaylariGetir(info) {
       extendedProps: { ...e, ana, d },
     };
   });
+  return [...randevular, ...(v.dersler || []).map(dersOlayi)];
+}
+
+// Grup dersi bloğu: rengi eğitmen sütunu; taşınamaz (saat/tarih ders formundan değişir).
+function dersOlayi(e) {
+  const kaynak = durum.kaynaklar.find((k) => String(k.id) === String(e.resourceId));
+  const ana = renk(kaynak?.bgcolor, renk(e.renk));
+  return {
+    id: e.id,
+    start: e.start.replace('T', ' '),
+    end: e.end.replace('T', ' '),
+    resourceIds: [String(e.resourceId ?? '')],
+    title: e.ders_tipi,
+    backgroundColor: yari(ana, 0.28),
+    textColor: '#2b2f45',
+    editable: false,
+    extendedProps: { ...e, ana, ders: true },
+  };
 }
 
 function kaynaklariAyarla(liste) {
@@ -210,6 +231,15 @@ function kaynakEtiketi(info) {
 
 function olayIcerik(info) {
   const e = info.event.extendedProps || {};
+  if (e.ders) {
+    return {
+      html: `<div class="t-olay t-olay-ders" style="--a:${e.ana}">
+        <b><i class="bi bi-people"></i> ${esc(e.ders_tipi)} ${e.doluluk}/${e.kapasite}</b>
+        <div class="t-olay-saat">${esc(info.timeText)}</div>
+        <div class="t-ders-kisiler">${e.katilimcilar.map(esc).join('\n')}</div>
+      </div>`,
+    };
+  }
   if (e.kapali) {
     return { html: `<div class="t-olay t-olay-kapali"><i class="bi bi-lock"></i> Kapalı Saat<span>${esc(info.timeText)}</span></div>` };
   }
@@ -273,6 +303,7 @@ function takvimKur() {
     },
     eventClick: (info) => {
       const e = info.event.extendedProps || {};
+      if (e.ders) return dersOturumAc(e.ders_oturum_id, { salonId, onDegisti: () => durum.ec.refetchEvents() });
       if (e.kapali) return kapaliSaatPenceresi(e);
       R.cekmeceAc(e.randevu_id || e.id);
     },
@@ -316,6 +347,7 @@ function aracBagla() {
   el('#tBugun').onclick = () => durum.ec.setOption('date', new Date());
   el('#tYenile').onclick = () => durum.ec.refetchEvents();
   el('#tSaatKapat').onclick = () => saatKapamaFormu({});
+  el('#tGrupDersi').onclick = () => dersOturumYeni({ salonId, tarih: tarihStr(durum.ec.getOption('date')), onDegisti: () => durum.ec.refetchEvents() });
   el('#tYeni').onclick = () => R.randevuFormu({});
   el('#tKaynak').onchange = (e) => { durum.secili = e.target.value; kaynakFiltresiUygula(); };
   el('#tTur').onchange = (e) => {

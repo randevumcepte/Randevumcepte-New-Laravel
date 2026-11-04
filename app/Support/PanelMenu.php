@@ -41,8 +41,8 @@ class PanelMenu
             // ───────────── Randevu
             // v2 onizleme (EventCalendar) — durum yazma RANDEVU_V2_YAZMA_AKTIF acilana kadar DRY-RUN.
             ['etiket' => 'Randevu Takvimi',    'ikon' => 'bi bi-calendar4-week',   'slug' => 'takvim-v2',         'v2_rota' => '/v2/takvim', 'pageindex' => 2,  'yetki' => 'randevu.takvim_gor', 'bolum' => 'Randevu'],
-            ['etiket' => 'Ders Programı',      'ikon' => 'bi bi-grid-3x3-gap-fill','slug' => 'ders-programi',     'pageindex' => 205,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
-            ['etiket' => 'Grup Dersi Raporu',  'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'grup-dersi-raporu', 'pageindex' => 206,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
+            ['etiket' => 'Ders Programı',      'ikon' => 'bi bi-grid-3x3-gap-fill','slug' => 'ders-programi',     'v2_rota' => '/v2/ders-programi', 'pageindex' => 205,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
+            ['etiket' => 'Grup Dersi Raporu',  'ikon' => 'bi bi-bar-chart-fill',   'slug' => 'grup-dersi-raporu', 'v2_rota' => '/v2/grup-dersi-raporu', 'pageindex' => 206,'yetki' => 'randevu.takvim_gor', 'ozellik' => 'grup_dersi_aktif'],
             ['etiket' => 'Ön Görüşmeler',      'ikon' => 'bi bi-chat-left-text',   'slug' => 'ongorusmeler',      'v2_rota' => '/v2/ongorusmeler', 'pageindex' => 12, 'yetki' => 'gorusme.liste_gor', 'studyo_gizle' => true],
             // v2 ekran — eski "Randevular" (randevular-liste) karşılığı.
             ['etiket' => 'Randevular',         'ikon' => 'bi bi-card-heading',     'slug' => 'randevular-liste',  'v2_rota' => '/v2/randevular', 'pageindex' => 3],

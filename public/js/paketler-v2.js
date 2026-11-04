@@ -16,6 +16,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=1';
 
 const kok = document.getElementById('rc-paket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -221,6 +222,7 @@ function satisYap() {
     });
     const r = await yaz('POST', '/paket/satis', { musteri_id: m.id, personel_id: el('#pkPersonel')?.value || null, kalemler, idempotency_key: anahtar });
     if (!yazSonuc(r)) return;
+    if (fiyatGizli()) await satisSonrasiDersPlani(salonId, r.govde.veri.adisyon_id);
     await satisSonrasi(salonId, r.govde.veri.adisyon_id, { studyo: fiyatGizli(), odemeAlindi: btn.dataset.odeme === '1' });
   })));
 }

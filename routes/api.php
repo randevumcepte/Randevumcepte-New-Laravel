@@ -120,6 +120,7 @@ Route::prefix('v2')->group(function () {
         Route::delete('/adisyon/{id}', [SatisController::class, 'sil'])->whereNumber('id');
         Route::patch('/adisyon/{id}/fatura', [SatisController::class, 'fatura'])->whereNumber('id');
         Route::patch('/adisyon/{id}/odeme', [SatisController::class, 'odeme'])->whereNumber('id');
+        Route::patch('/adisyon/{id}/odeme-tarihi', [SatisController::class, 'odemeTarihi'])->whereNumber('id');
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);
@@ -183,6 +184,9 @@ Route::prefix('v2')->group(function () {
 
         // RAPORLAR (satis / isletme) + KASA + MASRAF — routes/v2/rapor.php
         require __DIR__.'/v2/rapor.php';
+
+        // STUDYO + GRUP DERSI (politika, program, oturum, katilimci, otomatik plan, rapor) — routes/v2/ders.php
+        require __DIR__.'/v2/ders.php';
 
         // PAKET YONETIMI (paket tanimi liste/ekle/duzenle/sil + secili paketleri sat) — routes/v2/paket.php
         require __DIR__.'/v2/paket.php';

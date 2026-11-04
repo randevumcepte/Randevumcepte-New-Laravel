@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/personel-v2.js?v=9"></script>
+    <script type="module" src="/js/personel-v2.js?v=10"></script>
 @endpush

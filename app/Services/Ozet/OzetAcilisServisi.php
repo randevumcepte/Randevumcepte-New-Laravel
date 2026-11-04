@@ -6,6 +6,7 @@ use App\Domain\Ozet\OzetEylemi;
 use App\Domain\Ozet\OzetKarti;
 use App\Domain\Ozet\OzetSekmesi;
 use App\Domain\Rapor\RaporDonemi;
+use App\Models\Salonlar;
 use App\Services\Panel\PanelKabukServisi;
 use App\Services\Rapor\RaporSecenekServisi;
 use App\Services\Yetki\YetkiServisi;
@@ -93,6 +94,6 @@ class OzetAcilisServisi
     /** Studyo modunda gizli kart mi (veri ucu 404 doner, kapsam sizintisi yok). */
     public function kartGizli(int $salonId, OzetKarti $kart): bool
     {
-        return $kart->studyoGizle() && (int) DB::table('salonlar')->where('id', $salonId)->value('studyo_modu') === 1;
+        return $kart->studyoGizle() && Salonlar::studyoModu($salonId);
     }
 }

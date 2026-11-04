@@ -91,7 +91,7 @@ class SatisListeServisi
         // faturasiz_gizle ayari (salon seviyesinde) -> yalnizca fatura kesilmis.
         $faturasizGizle = (bool) Salonlar::where('id', $salonId)->value('faturasiz_gizle');
         // STUDYO: fiyat 0 tutulur -> acik/kapali KALAN ile belirlenemez, 'odendi' esas.
-        $studyoModu = (int) Salonlar::where('id', $salonId)->value('studyo_modu') === 1;
+        $studyoModu = Salonlar::studyoModu($salonId);
 
         $pf = $pid ? ' AND personel_id = ?' : '';
 

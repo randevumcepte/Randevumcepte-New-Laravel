@@ -24,6 +24,7 @@
 import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { dersPlani } from '/js/lib/v2-ders.js?v=1';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
 const tablolar = {};
@@ -49,7 +50,7 @@ let duzenlenenAlacak = null;    // düzenlenen alacak id (null = yeni alacak)
 /* ───────────── Datepicker (flatpickr, TR) ───────────── */
 function datepickerBagla() {
   if (!window.flatpickr) return;
-  ['#t-tarih', '#t-alacak-tarih'].forEach((sel) => {
+  ['#t-tarih', '#t-alacak-tarih', '#t-studyo-tarih'].forEach((sel) => {
     const i = el(sel);
     if (i && !i._fp) i._fp = flatpickr(i, { dateFormat: 'Y-m-d', locale: 'tr', allowInput: true, disableMobile: true });
   });
@@ -77,6 +78,7 @@ async function adisyonYukle() {
   kalemlerGoster();
   gecmisGoster();
   alacakGoster();
+  studyoOdemeGoster();
   // Tahsilat Tutarı güncel Kalan'ı takip eder (elle yazılınca / düzenleme modunda ezme).
   const h = adisyon.hesap;
   if (!tutarManuel && !duzenlenenTahsilat) el('#t-tutar').value = h.kalan > 0 ? h.kalan : '';
@@ -84,14 +86,48 @@ async function adisyonYukle() {
 
 async function katalogYukle() {
   const { ok, govde } = await api('GET', '/katalog?salon_id=' + salonId);
-  if (ok) { katalog = govde.veri; }
+  if (ok) { katalog = govde.veri; studyoModuUygula(); }
+}
+
+/* ───────────── Stüdyo (MODEL B): fiyat gizli, ikili ödeme ───────────── */
+const studyo = () => !!katalog?.studyo_modu;
+
+// Tutar makinesi, kalem fiyat/personel sütunları ve ürün CSS ile gizlenir (.t-studyo, değerler korunur).
+function studyoModuUygula() {
+  kok.classList.toggle('t-studyo', studyo());
+  if (studyo()) el('#t-baslik-h1').textContent = 'Satış';
+}
+
+function studyoOdemeGoster() {
+  if (!studyo()) return;
+  const a = adisyon.adisyon;
+  const odendi = a.odendi === 1;
+  el('#t-studyo-rozet').innerHTML = odendi
+    ? '<span class="rc-rozet rc-rozet-yesil"><i class="bi bi-check-lg"></i> Ödeme Alındı</span>'
+    : '<span class="rc-rozet rc-rozet-gri">Ödeme Alınmadı</span>';
+  tarihAyarla('#t-studyo-tarih', a.odendi_tarihi ? String(a.odendi_tarihi).slice(0, 10) : '');
+}
+
+async function studyoOdeme(alindi) {
+  const { ok, kod, govde } = await api('PATCH', `/adisyon/${adisyonId}/odeme`, { body: { alindi } });
+  if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
+  mesaj('Kaydedildi.', 'ok');
+  await adisyonYukle();
+}
+
+async function studyoOdemeTarihi() {
+  const { ok, kod, govde } = await api('PATCH', `/adisyon/${adisyonId}/odeme-tarihi`, { body: { tarih: tarihDeger('#t-studyo-tarih') || null } });
+  if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
+  mesaj('Ödeme tarihi kaydedildi.', 'ok');
+  await adisyonYukle();
 }
 
 function basligiGoster() {
   const a = adisyon.adisyon;
   el('#t-musteri').textContent = a.musteri_ad || 'Müşteri';
   el('#t-adisyon-no').textContent = '#' + adisyonId + (a.tarih ? ' · ' + a.tarih : '');
-  const kapali = adisyon.hesap.durum === 'kapali';
+  // Stüdyoda fiyat pratikte 0: kapalılık kalandan değil, odendi bayrağından.
+  const kapali = studyo() ? a.odendi === 1 : adisyon.hesap.durum === 'kapali';
   const d = el('#t-durum');
   d.textContent = kapali ? 'KAPALI' : 'AKTİF';
   d.className = 't-durum ' + (kapali ? 'kapali' : 'acik');
@@ -270,7 +306,7 @@ function ekleAc(tip) {
 function katalogDoldur(tip) {
   const liste = tip === 'hizmet' ? katalog.hizmetler : tip === 'urun' ? katalog.urunler : katalog.paketler;
   const idAlan = tip === 'hizmet' ? 'hizmet_id' : tip === 'urun' ? 'urun_id' : 'paket_id';
-  el('#t-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}" data-fiyat="${esc(x.fiyat ?? 0)}">${esc(x.ad)} — ${TL(x.fiyat)}</option>`).join('');
+  el('#t-ekle-katalog').innerHTML = (liste || []).map((x) => `<option value="${x[idAlan]}" data-fiyat="${esc(x.fiyat ?? 0)}">${esc(x.ad)}${studyo() ? '' : ` — ${TL(x.fiyat)}`}</option>`).join('');
   el('#t-ekle-fiyat').readOnly = !katalog.fiyat_degistir;
   ekleFiyatOner();
 }
@@ -593,6 +629,15 @@ function iskelet() {
       <!-- SAĞ: ödeme / özet -->
       <aside class="t-kart t-sag t-yeni-gizle">
         <div class="t-odeme-bas">Ödeme</div>
+        <div class="t-studyo-panel">
+          <div id="t-studyo-rozet"></div>
+          <button id="t-studyo-alindi" class="t-btn mor"><i class="bi bi-check-lg"></i> Ödeme Alındı</button>
+          <button id="t-studyo-alinmadi" class="t-btn ikincil">Ödeme Alınmadı</button>
+          <label>Ödeme Alınma Tarihi</label>
+          <input id="t-studyo-tarih" type="text" class="t-date" placeholder="GG.AA.YYYY">
+          <button id="t-studyo-tarih-kaydet" class="t-btn ikincil">Tarihi Kaydet</button>
+          <button id="t-studyo-plan" class="t-btn ikincil"><i class="bi bi-arrow-repeat"></i> Otomatik Ders Planı</button>
+        </div>
         <div class="t-alacak"><span>Kalan Alacak (₺)</span><b id="t-kalan-buyuk">—</b></div>
         <div class="t-ozet-detay" id="t-ozet-detay"></div>
         <div class="t-form">
@@ -628,6 +673,10 @@ function iskelet() {
   tarihAyarla('#t-tarih', new Date().toISOString().slice(0, 10));
   el('#t-tutar').addEventListener('input', () => { if (!duzenlenenTahsilat) tutarManuel = true; });
   el('#t-onizle').onclick = odemeButon;
+  el('#t-studyo-alindi').onclick = () => studyoOdeme(true);
+  el('#t-studyo-alinmadi').onclick = () => studyoOdeme(false);
+  el('#t-studyo-tarih-kaydet').onclick = studyoOdemeTarihi;
+  el('#t-studyo-plan').onclick = () => dersPlani({ salonId, musteriId: adisyon.adisyon.user_id });
   el('#t-duzen-vazgec').onclick = tahsilatDuzenVazgec;
   el('#t-ekle-btn').onclick = kalemEkle;
   el('#t-ekle-katalog').onchange = ekleFiyatOner;

@@ -26,6 +26,16 @@ class OlcumServisi
             ->get()->map(fn ($o) => $this->donustur($o, $saat))->all();
     }
 
+    /** Danisanin kendi olcumleri: grafik icin ARTAN tarih; salon verilmezse tum isletmeler. */
+    public function danisanListe(int $userId, ?int $salonId): array
+    {
+        $saat = Schema::hasColumn('musteri_olcumleri', 'olcum_saati');
+
+        return DB::table('musteri_olcumleri')->where('user_id', $userId)->when($salonId, fn ($q) => $q->where('salon_id', $salonId))
+            ->orderBy('olcum_tarihi')->orderBy('id')
+            ->get()->map(fn ($o) => $this->donustur($o, $saat))->all();
+    }
+
     public function ekle(int $salonId, int $userId, array $g, ?int $olcenPersonelId): array
     {
         $saat = Schema::hasColumn('musteri_olcumleri', 'olcum_saati');

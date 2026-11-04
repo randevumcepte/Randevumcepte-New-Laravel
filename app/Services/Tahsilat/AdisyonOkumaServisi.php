@@ -99,6 +99,7 @@ class AdisyonOkumaServisi
                 'musteri_ad' => $musteriAd ?: null,
                 'tarih'    => $adisyon->tarih,
                 'odendi'   => (int) ($adisyon->odendi ?? 0),
+                'odendi_tarihi' => $adisyon->odendi_tarihi ?? null, // stüdyo "Ödeme Alınma Tarihi"
             ],
             'hizmetler' => $hizmetler->map(fn ($h) => [
                 'id'            => (int) $h->id,

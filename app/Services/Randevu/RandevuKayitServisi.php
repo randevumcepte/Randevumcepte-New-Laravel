@@ -8,6 +8,7 @@ use App\Domain\Randevu\SaatKapama;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\Randevular;
+use App\Services\Seans\SeansHavuzu;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,8 @@ use InvalidArgumentException;
 class RandevuKayitServisi
 {
     private const KAYNAK_TABLO = ['personel_id' => ['salon_personelleri', 'personel'], 'cihaz_id' => ['cihazlar', 'cihaz'], 'oda_id' => ['odalar', 'oda']];
+
+    public function __construct(private SeansHavuzu $seansHavuzu) {}
 
     public function kaydet(int $salonId, array $g, ?int $yetkiliId, bool $yaz): array
     {
@@ -461,13 +464,13 @@ class RandevuKayitServisi
                     $tuketilen[$hz] = $k + 1;
                 } else {
                     $tuketilen[$hz] = $k + 1;
-                    $telafi = $this->bekleyenTelafi($salonId, $gi['user_id'], $hz, $tarih, $telafiKullanilan);
+                    $telafi = $this->seansHavuzu->bekleyenTelafi($salonId, $gi['user_id'], $hz, $tarih, $telafiKullanilan);
                     if ($telafi) {
                         $telafiKullanilan[] = $telafi;
                         $seans = ['islem' => 'telafi_bagla', 'aps_id' => $telafi];
                     } else {
                         $seans = $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve)
-                            ?? $this->yeniSeansAdayi($salonId, $gi['user_id'], $hz, $rezerve);
+                            ?? $this->seansHavuzu->yeniAday($salonId, $gi['user_id'], $hz, $rezerve);
                     }
                 }
 
@@ -520,25 +523,6 @@ class RandevuKayitServisi
         return $o ? (int) $o : null;
     }
 
-    /** Eski DersSeansServisi::bekleyenTelafi (once tek hizmet satisi, sonra paket). */
-    private function bekleyenTelafi(int $salonId, int $userId, int $hizmetId, string $tarih, array $haric): ?int
-    {
-        foreach ([['adisyon_hizmetler', 'aps.adisyon_hizmet_id'], ['adisyon_paketler', 'aps.adisyon_paket_id']] as [$tablo, $fk]) {
-            $id = DB::table('adisyon_paket_seanslar as aps')->join($tablo.' as x', $fk, '=', 'x.id')
-                ->join('adisyonlar as a', 'x.adisyon_id', '=', 'a.id')
-                ->where('aps.geldi', 2)->where('aps.hizmet_id', $hizmetId)
-                ->where('a.user_id', $userId)->where('a.salon_id', $salonId)
-                ->whereDate('aps.seans_tarih', '<', $tarih)
-                ->when($haric, fn ($q) => $q->whereNotIn('aps.id', $haric))
-                ->orderBy('aps.seans_tarih')->value('aps.id');
-            if ($id) {
-                return (int) $id;
-            }
-        }
-
-        return null;
-    }
-
     /**
      * Paket randevusu formunda SECILEN satis (adisyon_paket_id / adisyon_hizmet_id)
      * gecerliyse seansi ONDAN dus. Gecerli = ayni musteri + salon, bu hizmeti iceriyor,
@@ -580,54 +564,6 @@ class RandevuKayitServisi
         }
 
         return null;
-    }
-
-    /**
-     * Eski yeni-seans aday secimi: kalan seansi olan tek hizmet satisi ve paket;
-     * ikisi de varsa adisyon tarihi ERKEN olan (esitse paket). Bulunamazsa null.
-     * $rezerve: [ 'AH:id' => n, 'AP:id:hizmet' => n ] — ayni istek icinde ayrilan.
-     */
-    private function yeniSeansAdayi(int $salonId, int $userId, int $hizmetId, array &$rezerve): ?array
-    {
-        $hizmet = null;
-        $q = DB::table('adisyon_hizmetler as ah')->join('adisyonlar as a', 'ah.adisyon_id', '=', 'a.id')
-            ->where('ah.hizmet_id', $hizmetId)->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ah.seans_sayisi', '>', 0);
-        foreach (RandevuOrtak::otomatikRandevuDegil($q, 'ah')->orderBy('a.tarih')->get(['ah.id', 'ah.seans_sayisi', 'ah.kullanilan_seans', 'ah.kullanilmayan_seans', 'a.tarih']) as $x) {
-            $kul = DB::table('adisyon_paket_seanslar')->where('adisyon_hizmet_id', $x->id)->count() + ($rezerve['AH:'.$x->id] ?? 0);
-            if ($kul < (int) $x->seans_sayisi) {
-                $hizmet = $x;
-                break;
-            }
-        }
-
-        $paket = null;
-        $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'ap.adisyon_id', '=', 'a.id')
-            ->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
-            ->where('ph.hizmet_id', $hizmetId)->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
-        foreach (RandevuOrtak::otomatikRandevuDegil($q, 'ap')->orderBy('a.tarih')->distinct()->get(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans', 'a.tarih']) as $x) {
-            $kul = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $x->id)->where('hizmet_id', $hizmetId)->count()
-                + ($rezerve['AP:'.$x->id.':'.$hizmetId] ?? 0);
-            if ($kul < (int) $x->seans_sayisi) {
-                $paket = $x;
-                break;
-            }
-        }
-
-        $hizmetSec = $hizmet && (! $paket || date('Y-m-d', strtotime($hizmet->tarih)) < date('Y-m-d', strtotime($paket->tarih)));
-        if ($hizmetSec) {
-            $rezerve['AH:'.$hizmet->id] = ($rezerve['AH:'.$hizmet->id] ?? 0) + 1;
-
-            return ['islem' => 'yeni_seans', 'adisyon_hizmet_id' => (int) $hizmet->id,
-                'seans_no' => (int) $hizmet->kullanilan_seans + (int) $hizmet->kullanilmayan_seans + 1];
-        }
-        if ($paket) {
-            $rezerve['AP:'.$paket->id.':'.$hizmetId] = ($rezerve['AP:'.$paket->id.':'.$hizmetId] ?? 0) + 1;
-
-            return ['islem' => 'yeni_seans', 'adisyon_paket_id' => (int) $paket->id,
-                'seans_no' => (int) $paket->kullanilan_seans + (int) $paket->kullanilmayan_seans + 1];
-        }
-
-        return null; // paket/seans randevusu degil
     }
 
     // ═════════════════════════════ YAZMA ═════════════════════════════

@@ -30,6 +30,18 @@ class Salonlar extends Model
     /** Hizmet kaleminde personel zorunlu mu — stüdyo modu HARİÇ (prim yok; eski adisyon_hizmet_formu kuralı). */
     public static function hizmetPersonelZorunlu(int $salonId): bool
     {
-        return (int) self::where('id', $salonId)->value('studyo_modu') !== 1;
+        return ! self::studyoModu($salonId);
+    }
+
+    /** Stüdyo modu bayrağı — TEK okuma noktası (kurallar: Domain\Studyo\StudyoPolitikasi). */
+    public static function studyoModu(int $salonId): bool
+    {
+        return (int) self::where('id', $salonId)->value('studyo_modu') === 1;
+    }
+
+    /** Grup dersi modülü açık mı. */
+    public static function grupDersiAktif(int $salonId): bool
+    {
+        return (int) self::where('id', $salonId)->value('grup_dersi_aktif') === 1;
     }
 }

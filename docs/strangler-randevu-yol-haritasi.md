@@ -223,7 +223,7 @@ olduğundan v1/monolitte kalır (aynı DB + ortak bildirim kodu → tutarlı).
   denetimi. v2 kabuğu fragment token'ı saklar ve adresten siler.
 - **Menü:** `V2_TAKVIM_SALONLARI=20` (veya `*`) olan salonlarda eski paneldeki
   "Randevu Takvimi" v2 takvimini açar; v2 takvimde "Klasik takvim" ile geri dönüş.
-- v2'de henüz OLMAYAN (klasik takvimde kalan): grup dersi blokları, salon renk sırası /
+- v2'de henüz OLMAYAN (klasik takvimde kalan): salon renk sırası /
   tek renk, PAKET/KARMA etiketi, müşteri uygulaması kaynaklı özel akışlar.
 
 ### Pilot açılış adımları (test salonu)

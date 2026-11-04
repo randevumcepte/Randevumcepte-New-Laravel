@@ -139,3 +139,14 @@
 .t-yeni-ipucu { padding: 26px 16px; text-align: center; color: #8a8fae; font-size: 14px; }
 .t-yeni-ipucu i { font-size: 18px; margin-right: 6px; color: #9b6bd8; }
 .t-ekle-btns .t-mini:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Stüdyo (MODEL B): fiyat, tutar makinesi, tahsilat/alacak, ürün ve satıcı gizli; ikili ödeme paneli açık. */
+.t-studyo-panel { display: none; }
+.t-studyo .t-studyo-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.t-studyo .t-studyo-panel label { font-size: 12px; font-weight: 600; color: #6b7280; margin: 4px 0 -6px; }
+.t-studyo .t-ozet-serit, .t-studyo .t-alacak, .t-studyo .t-ozet-detay, .t-studyo .t-form, .t-studyo #t-plan,
+.t-studyo .t-gecmis, .t-studyo .t-alacaklar, .t-studyo .t-ekle-btns [data-tip="urun"],
+.t-studyo #t-ekle-fiyat, .t-studyo #t-ekle-personel,
+.t-studyo #t-kalemler th:nth-child(4), .t-studyo #t-kalemler td:nth-child(4),
+.t-studyo #t-kalemler th:nth-child(5), .t-studyo #t-kalemler td:nth-child(5),
+.t-studyo #t-kalemler th:nth-child(6), .t-studyo #t-kalemler td:nth-child(6) { display: none !important; }

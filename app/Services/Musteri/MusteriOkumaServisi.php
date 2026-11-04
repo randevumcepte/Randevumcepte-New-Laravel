@@ -197,7 +197,7 @@ class MusteriOkumaServisi
     public function salonAyarlari(int $salonId): array
     {
         $kolonlar = array_values(array_filter(
-            ['salon_turu_id', 'studyo_modu', 'kara_liste_aktif', 'sadik_musteri_indirim_yuzde', 'aktif_musteri_indirim_yuzde'],
+            ['salon_turu_id', 'studyo_modu', 'grup_dersi_aktif', 'kara_liste_aktif', 'sadik_musteri_indirim_yuzde', 'aktif_musteri_indirim_yuzde'],
             fn ($k) => Schema::hasColumn('salonlar', $k),
         ));
         $s = DB::table('salonlar')->where('id', $salonId)->first($kolonlar);
@@ -205,6 +205,7 @@ class MusteriOkumaServisi
         return [
             'danisan'          => Salonlar::danisanMi($s->salon_turu_id ?? 0),
             'studyo_modu'      => (int) ($s->studyo_modu ?? 0) === 1,
+            'grup_dersi_aktif' => (int) ($s->grup_dersi_aktif ?? 0) === 1,
             // Kolon yoksa / NULL ise aktif; yalniz 0 pasif (eski KaraListeServisi::salonAktifMi).
             'kara_liste_aktif' => ! isset($s->kara_liste_aktif) || (int) $s->kara_liste_aktif === 1,
             'indirim'          => [

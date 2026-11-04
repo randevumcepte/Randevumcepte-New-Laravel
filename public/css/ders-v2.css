@@ -1,0 +1,80 @@
+/* Grup dersi (Ders Programı, oturum modalı, otomatik ders planı, rapor). Ortak .rc-* bileşenleri v2-bilesen.css'te. */
+.dp-yayin { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; background: #fff; border: 1px solid #ece8f4; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+.dp-yayin .rc-alan { min-width: 130px; flex: 0 1 150px; }
+.dp-izgara { display: grid; grid-template-columns: repeat(7, minmax(165px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+.dp-kolon { background: #fff; border: 1px solid #ece8f4; border-radius: 14px; min-height: 160px; display: flex; flex-direction: column; }
+.dp-kolon-bas { padding: 10px; text-align: center; font-weight: 700; font-size: 13.5px; color: #fff; background: #5C008E; border-radius: 13px 13px 0 0; }
+.dp-kolon-govde { padding: 8px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.dp-ders { border: 1px solid #e9ddf5; border-radius: 11px; padding: 9px 10px; background: #fbf9fe; font-size: 12.5px; }
+.dp-ders-ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; font-weight: 700; color: #3b2a55; }
+.dp-ders-kisi { flex: none; background: #5C008E; color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 10.5px; }
+.dp-ders-sat { margin-top: 4px; color: #5f5f73; display: flex; align-items: center; gap: 5px; }
+.dp-ders-etiket { display: inline-block; margin-top: 5px; font-size: 10.5px; border-radius: 6px; padding: 1px 7px; background: #eef7ff; color: #2471a3; }
+.dp-ders-etiket.yok { background: #f4f4f7; color: #8d8d9e; }
+.dp-ders-aksiyon { margin-top: 8px; display: flex; gap: 6px; }
+.dp-ders-aksiyon button { flex: 1; border: 1px solid #ddd8e8; background: #fff; border-radius: 7px; padding: 4px 0; font-size: 11.5px; color: #3b2a55; cursor: pointer; }
+.dp-ders-aksiyon button:hover { background: #f5f1fb; }
+.dp-ders-aksiyon .sil { flex: 0 0 34px; color: #b91c1c; border-color: #fecaca; }
+.dp-ekle { border: 1.5px dashed #c9b7e4; background: none; color: #5C008E; border-radius: 10px; padding: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; width: 100%; }
+.dp-ekle:hover { background: #f8f4fd; }
+
+/* Oturum modalı */
+.do-ozet { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid #eee; }
+.do-ozet b { font-size: 16px; }
+.do-ozet small { display: block; color: #77778a; margin-top: 3px; }
+.do-liste { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.do-kisi { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid #eee; border-radius: 9px; padding: 9px 11px; }
+.do-kisi small { color: #8d8d9e; margin-left: 4px; }
+.do-durumlar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.do-durum { border: 1px solid #d9d9e3; background: #fff; color: #6b6b7c; border-radius: 6px; padding: 3px 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.do-durum.on.rezerve { background: #0369a1; border-color: #0369a1; color: #fff; }
+.do-durum.on.geldi { background: #15803d; border-color: #15803d; color: #fff; }
+.do-durum.on.gelmedi { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+.do-durum.on.telafi { background: #ea7a2f; border-color: #ea7a2f; color: #fff; }
+.do-cikar { border: none; background: none; color: #b91c1c; font-size: 17px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.do-tehlike { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.do-bos { color: #8d8d9e; text-align: center; padding: 14px; }
+
+/* Otomatik ders planı */
+.dpl-cipler { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0; }
+.dpl-cip { padding: 6px 13px; border: 1px solid #e0d6ec; border-radius: 20px; background: #fff; font-size: 13px; font-weight: 600; color: #4b5563; cursor: pointer; }
+.dpl-cip.on { background: #5C008E; border-color: #5C008E; color: #fff; }
+.dpl-slot { width: 100%; text-align: left; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e0d6ec; border-radius: 12px; margin-bottom: 7px; background: #fff; cursor: pointer; }
+.dpl-slot.on { background: rgba(92, 0, 142, .08); border-color: #5C008E; }
+.dpl-isaret { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #cbd5e1; flex: none; }
+.dpl-slot.on .dpl-isaret { border-color: #5C008E; background: #5C008E; box-shadow: inset 0 0 0 3px #fff; }
+.dpl-slot b { display: block; font-size: 14px; }
+.dpl-slot small { color: #6b7280; }
+.dpl-uyari { background: #fff7ed; color: #9a3412; padding: 10px; border-radius: 9px; font-size: 12.5px; }
+.dpl-ozet { margin-right: auto; color: #5C008E; font-weight: 700; font-size: 13px; }
+
+/* Müşteri detay > Grup Dersleri */
+.dm-bolum { background: #fff; border: 1px solid #ece8f4; border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.dm-bolum-bas { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.dm-bolum-bas h3 { margin: 0; font-size: 15px; color: #5C008E; }
+.dm-satir { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid #f2eff7; padding: 9px 2px; font-size: 13.5px; }
+.dm-satir:last-child { border-bottom: none; }
+.dm-satir small { display: block; color: #8d8d9e; }
+
+/* Rapor */
+.gr-filtre { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.gr-filtre .rc-alan { width: 150px; }
+.gr-kart { background: #fff; border: 1px solid #ece8f4; border-radius: 14px; padding: 14px; margin-top: 16px; }
+.gr-kart h3 { margin: 0 0 10px; font-size: 15px; color: #5C008E; }
+.gr-cubuk { display: inline-block; vertical-align: middle; width: 90px; height: 8px; background: #f3ecfa; border-radius: 999px; overflow: hidden; margin-right: 8px; }
+.gr-cubuk > span { display: block; height: 100%; background: #5C008E; }
+
+/* Takvim bloğu */
+#tGrupDersi[hidden] { display: none; } /* .t-yenile display'i hidden'i ezer */
+.t-olay-ders b { display: block; }
+.t-olay-ders .t-ders-kisiler { font-size: 11px; opacity: .85; white-space: pre-line; }
+@media (prefers-color-scheme: dark) {
+  .dp-yayin, .dp-kolon, .dm-bolum, .gr-kart { background: #1b1b26; border-color: #34344c; }
+  .dp-ders { background: #23233a; border-color: #34344c; }
+  .dp-ders-ust { color: #ededf5; }
+  .dp-ders-sat { color: #b6b6c8; }
+  .dp-ders-aksiyon button, .do-durum, .dpl-cip, .dpl-slot { background: #1b1b26; border-color: #34344c; color: #ededf5; }
+  .do-kisi, .do-ozet, .dm-satir { border-color: #34344c; }
+  .dp-ekle { color: #cdb4ee; border-color: #5b4a7a; }
+  .dm-bolum-bas h3, .gr-kart h3 { color: #cdb4ee; }
+}
