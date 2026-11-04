@@ -31,7 +31,7 @@ class OnlineSecenekServisi
     {
         $kategoriler = DB::table('hizmet_kategorisi')->pluck('hizmet_kategorisi_adi', 'id');
 
-        return array_values(array_map(fn ($h) => $h + [
+        return array_values(array_map(fn ($h) => ['ad' => trim((string) $h['ad'])] + $h + [
             'kategori_adi'    => $kategoriler[$h['kategori_id'] ?? 0] ?? null,
             'baslangic_fiyat' => $h['fiyat'],
         ], array_filter($this->form->hizmetler($salonId, null), fn ($h) => $h['aktif'])));
