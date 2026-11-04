@@ -2,8 +2,9 @@
 
 namespace App\Services\Sms\Bakiye;
 
+use App\Domain\Sms\SmsSaglayici;
+use App\Services\Sms\SmsHesapServisi;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Salonun kalan SMS bakiyesi — saglayici secimi + onbellek TEK yerde.
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 class SmsBakiyeServisi
 {
     public function __construct(
+        private SmsHesapServisi $hesap,
         private VoiceTelekomBakiye $voiceTelekom,
         private EfetechBakiye $efetech,
     ) {}
@@ -24,8 +26,7 @@ class SmsBakiyeServisi
             return $onceki;
         }
 
-        $salon = DB::table('salonlar')->where('id', $salonId)
-            ->first(['id', 'yeni_sms', 'sms_user_name', 'sms_secret', 'sms_apikey']);
+        $salon = $this->hesap->bul($salonId);
         $kalan = $salon ? $this->saglayici($salon)->bakiye($salon) : null;
         if ($kalan !== null) {
             Cache::put($anahtar, $kalan, (int) config('sms.bakiye_cache_sn', 120));
@@ -36,6 +37,9 @@ class SmsBakiyeServisi
 
     private function saglayici(object $salon): SmsBakiyeSaglayici
     {
-        return (int) ($salon->yeni_sms ?? 0) === 1 ? $this->voiceTelekom : $this->efetech;
+        return match (SmsSaglayici::salondan($salon)) {
+            SmsSaglayici::VoiceTelekom => $this->voiceTelekom,
+            SmsSaglayici::Efetech      => $this->efetech,
+        };
     }
 }

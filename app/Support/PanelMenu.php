@@ -74,7 +74,7 @@ class PanelMenu
             ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'v2_rota' => '/v2/carkifelek', 'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],
             ['etiket' => 'Uygulama Afişi',     'ikon' => 'bi bi-qr-code',          'slug' => 'uygulama-afisi',    'v2_rota' => '/v2/uygulama-afisi', 'pageindex' => 85,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'WhatsApp Yönetimi',  'ikon' => 'bi bi-whatsapp',         'slug' => 'whatsapp',          'pageindex' => 90,  'yetki' => 'pazarlama.whatsapp_gonder'],
-            ['etiket' => 'SMS Yönetimi',       'ikon' => 'bi bi-chat-square-text', 'slug' => 'toplusms',          'pageindex' => 91,  'yetki' => 'pazarlama.toplu_sms'],
+            ['etiket' => 'SMS Yönetimi',       'ikon' => 'bi bi-chat-square-text', 'slug' => 'toplusms', 'v2_rota' => '/v2/sms-yonetimi', 'pageindex' => 91,  'yetki' => 'pazarlama.toplu_sms'],
 
             // ───────────── Çağrı Merkezi
             // Eski 4 sayfa (Çağrı Merkezi paneli, Arama Randevu Takvimi, Çağrı Kayıtları, Atanan Aramalar)

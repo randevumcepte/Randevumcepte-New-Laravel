@@ -101,6 +101,12 @@ class MusteriListeServisi
             $q->whereRaw($kosul);
         }
 
+        return $this->aramaUygula($q, $ara);
+    }
+
+    /** Ad veya telefon parcasiyla arama — portfoy sorgulari (alias u) ortak kullanir. */
+    public function aramaUygula(Builder $q, ?string $ara): Builder
+    {
         if ($like = ListeIstegi::like($ara)) {
             // Telefon parcasi: kayitlar kanonik (bastaki 0'siz) tutulur → "0532 1" de bulsun.
             $rakam = ltrim(preg_replace('/\D/', '', (string) $ara), '0');

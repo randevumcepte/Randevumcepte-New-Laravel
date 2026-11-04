@@ -177,6 +177,13 @@ Route::get('/v2/bildirim-reklamlari/{sube?}', fn ($sube = null) => view('v2.bild
     ->whereNumber('sube');
 
 /*
+ | SMS Yonetimi v2 (eski /isletmeyonetim/toplusms) — build'siz island; sekmeler ve veri
+ | /api/v2/sms/* (Bearer); yazmalar SMS_V2_YAZMA_AKTIF kapaliyken 409.
+ */
+Route::get('/v2/sms-yonetimi/{sube?}', fn ($sube = null) => view('v2.sms-yonetimi', ['salonId' => (int) ($sube ?: request('sube', 0))]))
+    ->whereNumber('sube');
+
+/*
  | Reklam Yonetimi v2 — kampanya listesi (kanal sekmeleri) + olustur/duzenle sihirbazi + reklam raporu
  | (katilimci sekmeleri) + Senaryo Sihirbazi; veri /api/v2/kampanya/* (Bearer); yazmalar
  | KAMPANYA_V2_YAZMA_AKTIF kapaliyken 409.
