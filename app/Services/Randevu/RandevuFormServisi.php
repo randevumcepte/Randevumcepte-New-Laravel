@@ -166,7 +166,7 @@ class RandevuFormServisi
     // ─────────────────────────────────────────────────────────────
 
     /** Hizmet basina EN SON salon_sunulan_hizmetler kaydi; santral haric; duzenlemede randevunun pasif hizmetleri dahil. */
-    private function hizmetler(int $salonId, ?int $randevuId): array
+    public function hizmetler(int $salonId, ?int $randevuId): array
     {
         $randevuHizmetleri = $randevuId
             ? DB::table('randevu_hizmetler')->where('randevu_id', $randevuId)->whereNotNull('hizmet_id')->pluck('hizmet_id')->all()
@@ -178,18 +178,19 @@ class RandevuFormServisi
 
         return DB::table('salon_sunulan_hizmetler as ssh')->join('hizmetler as h', 'h.id', '=', 'ssh.hizmet_id')
             ->whereIn('ssh.id', $sonIdler)->orderBy('h.hizmet_adi')
-            ->get(['ssh.hizmet_id', 'h.hizmet_adi', 'ssh.sure_dk', 'ssh.baslangic_fiyat', 'ssh.hizmet_kategori_id', 'ssh.aktif'])
+            ->get(['ssh.hizmet_id', 'h.hizmet_adi', 'ssh.sure_dk', 'ssh.baslangic_fiyat', 'ssh.hizmet_kategori_id', 'ssh.bolum', 'ssh.aktif'])
             ->map(fn ($h) => [
                 'hizmet_id'   => (int) $h->hizmet_id,
                 'ad'          => $h->hizmet_adi,
                 'sure_dk'     => $h->sure_dk !== null ? (int) $h->sure_dk : null,
                 'fiyat'       => $h->baslangic_fiyat !== null ? (float) $h->baslangic_fiyat : null,
                 'kategori_id' => $h->hizmet_kategori_id ? (int) $h->hizmet_kategori_id : null,
+                'bolum'       => $h->bolum,
                 'aktif'       => (bool) $h->aktif,
             ])->all();
     }
 
-    private function haritalar(int $salonId): array
+    public function haritalar(int $salonId): array
     {
         $grupla = function ($satirlar, string $anahtar, string $deger): array {
             $m = [];

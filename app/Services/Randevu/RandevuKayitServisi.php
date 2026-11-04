@@ -28,8 +28,8 @@ use InvalidArgumentException;
  * adisyon fiyat senkronu, yardimci personel) → [yaz] tek transaction + outbox
  * (bildirim: randevu_kayit, Google: google_takvim) + aktivite logu.
  *
- * KAPSAM DISI (monolitte kalir): musteri uygulamasi / online randevu (kaynak
- * uygulama/web: sert cakisma, hizmet sirasi optimizasyonu), sesli asistan.
+ * Musteri uygulamasi / online randevu Online\OnlineRandevuServisi'nden gelir (kaynak=web|uygulama):
+ * sert cakisma ve hizmet sirasi orada cozulur, yazma burada. KAPSAM DISI: sesli asistan.
  *
  * Eski davranistan BILINCLI farklar:
  *   - Guncellemede tekrar YOK SAYILIR (eski kod ayni randevuyu her tarihte ustune
@@ -45,6 +45,11 @@ use InvalidArgumentException;
 class RandevuKayitServisi
 {
     private const KAYNAK_TABLO = ['personel_id' => ['salon_personelleri', 'personel'], 'cihaz_id' => ['cihazlar', 'cihaz'], 'oda_id' => ['odalar', 'oda']];
+
+    private const KAYNAK_SALON = 'salon';
+
+    /** Musterinin kendi olusturdugu randevu: randevular'daki kolon adi kaynakla ayni. */
+    private const MUSTERI_KAYNAKLARI = ['web', 'uygulama'];
 
     public function __construct(private SeansHavuzu $seansHavuzu) {}
 
@@ -178,6 +183,7 @@ class RandevuKayitServisi
             'eski' => $eski, 'user_id' => $userId, 'hizmetler' => $hizmetler, 'satirlar' => $satirlar,
             'yardimcilar' => $yardimcilar, 'tarihler' => $tarihler, 'saat' => $saat, 'bitis' => $bitis,
             'durum' => $durum, 'notlar' => trim((string) ($g['notlar'] ?? '')) ?: null,
+            'kaynak' => in_array($g['kaynak'] ?? null, self::MUSTERI_KAYNAKLARI, true) ? $g['kaynak'] : self::KAYNAK_SALON,
             'zaman_degisti' => $zamanDegisti, 'hizmet_degisti' => $hizmetDegisti,
             'override' => (string) ($g['cakisanrandevuekle'] ?? '') === '1',
         ];
@@ -574,11 +580,12 @@ class RandevuKayitServisi
         $randevuIdler = [];
         $yeniRh = [];
         $silinenRh = [];
+        $musteriKaynakli = $gi['kaynak'] !== self::KAYNAK_SALON;
 
         foreach ($plan['gunler'] as $gun) {
             $alanlar = [
                 'user_id' => $gi['user_id'], 'salon_id' => $salonId, 'tarih' => $gun['tarih'], 'saat' => $gi['saat'],
-                'saat_bitis' => $gi['bitis'], 'personel_notu' => $gi['notlar'], 'durum' => $gi['durum'], 'updated_at' => now(),
+                'saat_bitis' => $gi['bitis'], $musteriKaynakli ? 'notlar' : 'personel_notu' => $gi['notlar'], 'durum' => $gi['durum'], 'updated_at' => now(),
             ];
             if ($eski) {
                 $randevuId = (int) $eski->id;
@@ -594,8 +601,8 @@ class RandevuKayitServisi
                 }
             } else {
                 $randevuId = DB::table('randevular')->insertGetId($alanlar + [
-                    'salon' => 1, 'olusturan_personel_id' => $yetkiliId, 'created_at' => now(),
-                ]);
+                    $gi['kaynak'] => 1, 'olusturan_personel_id' => $yetkiliId, 'created_at' => now(),
+                ] + ($musteriKaynakli ? ['olusturan_user_id' => $gi['user_id']] : []));
             }
             $randevuIdler[] = $randevuId;
 
@@ -645,7 +652,7 @@ class RandevuKayitServisi
             'zaman_degisti'  => $gi['zaman_degisti'],
             'hizmet_degisti' => $gi['hizmet_degisti'],
             'istek'          => [
-                'randevu_tarihi' => $gi['tarihler'][0], 'randevu_saati' => $gi['saat'], 'randevuKaynak' => 'salon',
+                'randevu_tarihi' => $gi['tarihler'][0], 'randevu_saati' => $gi['saat'], 'randevuKaynak' => $gi['kaynak'],
                 'durum' => $gi['durum'], 'olusturan' => $yetkiliId,
             ],
         ]);

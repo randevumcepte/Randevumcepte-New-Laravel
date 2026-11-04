@@ -287,6 +287,26 @@ class RandevuDurumServisi
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true, $bildirimler);
     }
 
+    /**
+     * Musterinin kendi randevusunu iptali (durum=3). Sahiplik/zaman kurali cagiranda
+     * (MusteriRandevuServisi). Seanslar isletme iptaliyle ayni kurala gore serbest kalir;
+     * monolit durum=3 gorunce personele "musteri iptal etti" metnini yollar.
+     */
+    public function musteriIptal(int $randevuId): void
+    {
+        $randevu = $this->randevu($randevuId);
+        $salonId = (int) $randevu->salon_id;
+        $seansPlan = SeansDurumGecisi::iptal($this->seanslar($randevuId));
+
+        DB::transaction(function () use ($randevuId, $seansPlan, $salonId) {
+            Randevular::where('id', $randevuId)->update(['durum' => Randevular::KABUL_EDILMEDI]);
+            $this->seansPlaniUygula($randevuId, $seansPlan);
+            $this->kuyruga($salonId, 'randevu_iptal', $randevuId, null, ['red' => false]);
+        });
+
+        AktiviteLog::yaz($salonId, null, 'randevu_iptal', 'randevu', $randevuId, $this->musteriAdi($randevu), 'Randevu müşteri tarafından iptal edildi');
+    }
+
     /** ONAYLA (bekleyen online talep → onaylandi). */
     public function onayla(int $randevuId, ?int $yetkiliId, bool $yaz): array
     {

@@ -69,6 +69,9 @@ Route::prefix('v2')->group(function () {
     // Telefon ulke kodlari + bicimleri (web + Flutter tek kaynak; kisisel veri yok).
     Route::get('/telefon/ulkeler', [TelefonController::class, 'ulkeler']);
 
+    // ISLETME VITRINI + MUSTERI OTURUMU (kimliksiz, kisisel veri dondurmez) — routes/v2/vitrin.php
+    require __DIR__.'/v2/vitrin.php';
+
     /*
      | KORUMALI — kisisel veri iceren TUM uclar buraya. Kimlik ZORUNLU.
      | Kapsam + yetki her controller'da GuvenlikKapisi ile uygulanir.
