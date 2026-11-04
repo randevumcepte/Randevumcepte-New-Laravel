@@ -17,6 +17,10 @@ ve uç kapısı aynı tanımı kullanır — istemci yetki kuralı tutmaz, yaln�
 Dönem: `RaporDonemi` (tüm raporlarla aynı sözleşme) + kayan `son7 | son30 | son90`; her kart yalnız
 kendi `donemler` listesini kabul eder (aksi 422).
 
+## Web görünümü
+
+Kullanıcı kararı (4 Kas 2026): `/v2/ozet` eski özetle **aynı tasarımda** kalır. `css/ozet-v2.css` eski blade'in stilinin birebir kopyası (`rmc-*`), dönem düğmesi etiketleri (`Günlük`, `7g`…) `OzetKarti`'da, tablo kolonları `OzetSekmesi`'nde eskiyle aynı. Eskiden bilinçli farklar: kasa kartında "Online Ödeme" ayrı satır (id esaslı kova), hizmet ikonu nötr, sekme tablolarında v2 tablo standardı (arama + sayfa boyu), "Adisyon No" adisyon id'si. `karsilastirma` kartı eski web ekranında yoktu: Flutter içindir, web çizmez.
+
 ## Kanonik kurallar (eski farklılıkların kararı)
 
 | Konu | Eskisi | v2 |

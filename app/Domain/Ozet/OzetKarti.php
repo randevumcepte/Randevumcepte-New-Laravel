@@ -67,15 +67,28 @@ enum OzetKarti: string
         return $this === self::Cark || $this === self::Karsilastirma;
     }
 
+    /** @return array<string,string> RaporDonemi kodu => kartin dugme etiketi (eski ekranla ayni) */
+    private function donemEtiketleri(): array
+    {
+        return match ($this) {
+            self::Kasa          => ['bugun' => 'Günlük', 'son7' => 'Son 7 gün', 'son30' => 'Son 30 gün'],
+            self::Randevu       => ['bugun' => 'Günlük', 'son7' => '7g', 'son30' => '30g'],
+            self::Anket, self::Cark => ['son7' => '7g', 'son30' => '30g', 'son90' => '90g'],
+            self::Karsilastirma => ['bugun' => 'Günlük', 'hafta' => 'Haftalık', 'ay' => 'Aylık', 'yil' => 'Yıllık'],
+            default             => [],
+        };
+    }
+
     /** @return array<string> RaporDonemi kodlari (bos = donemsiz, hep bugun) */
     public function donemler(): array
     {
-        return match ($this) {
-            self::Kasa, self::Randevu => ['bugun', 'son7', 'son30'],
-            self::Anket, self::Cark   => ['son7', 'son30', 'son90'],
-            self::Karsilastirma       => ['bugun', 'hafta', 'ay', 'yil'],
-            default                   => [],
-        };
+        return array_keys($this->donemEtiketleri());
+    }
+
+    /** @return array<int,array{kod:string,ad:string}> acilis cevabindaki dugmeler */
+    public function donemSecenekleri(): array
+    {
+        return array_map(fn ($kod, $ad) => ['kod' => $kod, 'ad' => $ad], $this->donemler(), $this->donemEtiketleri());
     }
 
     public function varsayilanDonem(): ?string

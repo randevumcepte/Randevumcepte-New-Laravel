@@ -65,12 +65,12 @@ export function yiginCubuk(tuval, etiketler, seriler) {
 }
 
 /** Halka (doughnut) — dağılım; tüm değerler 0 ise çizmez (null döner). */
-export function halka(tuval, etiketler, degerler, { para = false } = {}) {
+export function halka(tuval, etiketler, degerler, { para = false, renkler = PALET, lejant = true, kesit = '68%', ipucuAcik = true } = {}) {
   if (!degerler.some((v) => Number(v) > 0)) return null;
   return ciz(tuval, {
     type: 'doughnut',
-    data: { labels: etiketler, datasets: [{ data: degerler, backgroundColor: PALET, borderWidth: 0 }] },
-    options: { cutout: '68%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: ipucu(para) } },
+    data: { labels: etiketler, datasets: [{ data: degerler, backgroundColor: renkler, borderWidth: 0 }] },
+    options: { cutout: kesit, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: lejant, position: 'bottom' }, tooltip: { enabled: ipucuAcik, ...ipucu(para) } } },
   });
 }
 

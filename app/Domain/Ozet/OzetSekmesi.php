@@ -5,7 +5,7 @@ namespace App\Domain\Ozet;
 /**
  * Ozet alt paneli LISTE SEKMELERI — TEK KAYNAK (yetki, baslik, ikon, bos mesaj, kolonlar).
  * Kolon tanimi API'den gelir; web ve Flutter tabloyu bu listeye gore cizer (UI'da sabit
- * kolon/baslik yok). Kolon tipi: metin | tarih | saat | telefon | para | durum.
+ * kolon/baslik yok). Kolon tipi: metin | tarih | saat | telefon | para.
  *
  * Eski dashboard $_sekmeTanim + dashboardSekme $_sekmeYetki ile birebir.
  */
@@ -52,6 +52,12 @@ enum OzetSekmesi: string
         };
     }
 
+    /** Sekme basliginda "YENI" rozeti. */
+    public function yeni(): bool
+    {
+        return $this === self::BugunkuRandevu;
+    }
+
     public function bosMesaj(): string
     {
         return match ($this) {
@@ -70,11 +76,11 @@ enum OzetSekmesi: string
         $musteri = [$k('musteri', 'Müşteri'), $k('telefon', 'Telefon', 'telefon')];
 
         return match ($this) {
-            self::OnlineTalep    => [$k('tarih', 'Tarih', 'tarih'), $k('saat', 'Saat', 'saat'), ...$musteri, $k('hizmet', 'Hizmet'), $k('durum', 'Durum', 'durum')],
-            self::BugunkuRandevu => [$k('saat', 'Saat', 'saat'), ...$musteri, $k('hizmet', 'Hizmet'), $k('personel', 'Personel / Kaynak'), $k('durum', 'Durum', 'durum')],
-            self::AcikAdisyon    => [$k('tarih', 'Satış Tarihi', 'tarih'), ...$musteri, $k('toplam', 'Toplam', 'para'), $k('kalan', 'Kalan', 'para')],
+            self::OnlineTalep    => [$k('tarih', 'Tarih', 'tarih'), $k('saat', 'Saat', 'saat'), ...$musteri, $k('hizmet', 'Hizmet')],
+            self::BugunkuRandevu => [$k('saat', 'Saat', 'saat'), ...$musteri, $k('hizmet', 'Hizmet'), $k('personel', 'Personel')],
+            self::AcikAdisyon    => [$k('id', 'Adisyon No'), $k('tarih', 'Tarih', 'tarih'), ...$musteri, $k('kalan', 'Kalan', 'para')],
             self::Alacak         => [$k('planlanan_odeme_tarihi', 'Planlanan Ödeme', 'tarih'), ...$musteri, $k('tutar', 'Tutar', 'para')],
-            self::DogumGunu      => [$k('dogum_tarihi', 'Doğum Tarihi', 'tarih'), ...$musteri, $k('kalan_gun', 'Kalan Gün')],
+            self::DogumGunu      => [$k('dogum_tarihi', 'Doğum Tarihi', 'tarih'), ...$musteri],
         };
     }
 }
