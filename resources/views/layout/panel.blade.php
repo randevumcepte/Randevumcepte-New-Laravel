@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=15">
+    <link rel="stylesheet" href="/css/panel.css?v=16">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=3">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
@@ -70,6 +70,14 @@
                     <div id="rcWaRozet"></div>
                     <div id="rcSoftphone" class="rc-sp"></div>
                 </div>
+                {{-- Bildirim zili: rozet + liste bildirim-zil.js ile /api/v2/bildirim'den --}}
+                <div class="rc-acilir rc-zil" id="rcBildirim">
+                    <button class="rc-header-ic rc-zil-btn" type="button" data-acilir-tetik title="Bildirimler" aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi bi-bell"></i>
+                        <span class="rc-zil-rozet" id="rcBildirimRozet" hidden></span>
+                    </button>
+                    <div class="rc-acilir-menu rc-zil-menu" id="rcBildirimMenu"></div>
+                </div>
                 <a class="rc-header-ic" id="rcAyarBtn" title="Ayarlar" style="display:none"><i class="bi bi-gear"></i></a>
                 {{-- "+" ve kullanıcı menüsü öğeleri sunucudan (/api/v2/kabuk: hizli_ekle, kullanici_menu) --}}
                 <div class="rc-acilir" id="rcHizliEkle" hidden>
@@ -100,6 +108,7 @@
     <script type="module" src="/js/telefon-ulke.js?v=1"></script>
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
     <script type="module" src="/js/header-araclar.js?v=3"></script>
+    <script type="module" src="/js/bildirim-zil.js?v=1"></script>
     <script type="module" src="/js/hizli-ekle.js?v=3"></script>
     <script type="module" src="/js/panel-kabuk.js?v=10"></script>
     @stack('betik')

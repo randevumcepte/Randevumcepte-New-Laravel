@@ -201,6 +201,9 @@ Route::prefix('v2')->group(function () {
         // SMS YONETIMI (raporlar, toplu/filtreli gonderim outbox, sablonlar, ayarlar, kara liste) — routes/v2/sms.php
         require __DIR__.'/v2/sms.php';
 
+        // BILDIRIMLER (kutu: liste/sayac/okundu/sil + FCM cihaz kaydi + web push ayari) — routes/v2/bildirim.php
+        require __DIR__.'/v2/bildirim.php';
+
         // BILDIRIM REKLAMLARI (yonetim: liste/form/kaydet/durum/sil/gorsel + push gonder outbox) — routes/v2/bildirim-reklam.php
         require __DIR__.'/v2/bildirim-reklam.php';
 

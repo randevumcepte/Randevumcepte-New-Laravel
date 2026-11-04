@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V2\MusteriBildirimController;
 use App\Http\Controllers\Api\V2\MusteriDersController;
 use App\Http\Controllers\Api\V2\MusteriHesapController;
 use App\Http\Controllers\Api\V2\MusteriReklamController;
@@ -28,6 +29,14 @@ Route::prefix('musteri-uygulama')->group(function () {
     // Yorum + uygunsuz yorum bildirimi.
     Route::post('/yorumlar', [MusteriHesapController::class, 'yorumYap']);
     Route::post('/yorumlar/{id}/bildir', [MusteriHesapController::class, 'yorumBildir'])->whereNumber('id');
+
+    // Bildirim kutusu + FCM cihaz kaydı (panel uçlarıyla aynı servisler).
+    Route::get('/bildirimler', [MusteriBildirimController::class, 'liste']);
+    Route::get('/bildirimler/sayac', [MusteriBildirimController::class, 'sayac']);
+    Route::post('/bildirimler/cihaz', [MusteriBildirimController::class, 'cihazKaydet']);
+    Route::delete('/bildirimler/cihaz', [MusteriBildirimController::class, 'cihazSil']);
+    Route::post('/bildirimler/tumu/okundu', [MusteriBildirimController::class, 'tumunuOku']);
+    Route::post('/bildirimler/{id}/okundu', [MusteriBildirimController::class, 'okundu'])->whereNumber('id');
 
     // Bildirim reklamları: uygulama içi kart / açılış popup + tek dokunuş kupon.
     Route::get('/reklamlar', [MusteriReklamController::class, 'liste']);

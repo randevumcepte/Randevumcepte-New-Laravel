@@ -182,6 +182,19 @@ Route::get('/v2/ayarlar/{sube?}', function ($sube = null) {
 })->whereNumber('sube');
 
 /*
+ | Panel zili tarayici push'u: FCM service worker (uzantisiz yol: nginx statik .js kuralina takilmaz; kapsam /).
+ | Ayar config/bildirim.php; tanimli degilse 404 ve web push kapali kalir.
+ */
+Route::get('/bildirim-sw', function () {
+    $ayar = array_filter(\Illuminate\Support\Arr::except((array) config('bildirim.web_push'), ['vapidKey']));
+    abort_if(empty($ayar['apiKey']), 404);
+
+    return response()->view('v2.bildirim-sw', ['ayar' => $ayar])
+        ->header('Content-Type', 'application/javascript; charset=utf-8')
+        ->header('Cache-Control', 'no-cache');
+});
+
+/*
  | Bildirim Reklamlari v2 — reklam kartlari + olustur/duzenle + yayinla/duraklat/sil + push gonder; veri
  | /api/v2/bildirim-reklam/* (Bearer); yazmalar BILDIRIM_REKLAM_V2_YAZMA_AKTIF kapaliyken 409.
  */
