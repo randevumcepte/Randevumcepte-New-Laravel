@@ -156,9 +156,9 @@ class VitrinServisi
         $sonuc = [];
         foreach ($hizmetler as $h) {
             $id = (int) ($h['kategori_id'] ?? 0);
-            $sonuc[$id] ??= ['id' => $id, 'ad' => $h['kategori_adi'] ?? '', 'hizmet_sayisi' => 0, 'hizmetler' => []];
+            $sonuc[$id] ??= ['id' => $id, 'ad' => $h['kategori_adi'] ?? '', 'hizmet_sayisi' => 0, 'satirlar' => []];
             $sonuc[$id]['hizmet_sayisi']++;
-            $sonuc[$id]['hizmetler'][] = $h['ad'];
+            $sonuc[$id]['satirlar'][] = $h;
         }
 
         return array_values($sonuc);

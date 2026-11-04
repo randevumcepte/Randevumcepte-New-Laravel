@@ -202,3 +202,15 @@ Route::get('/v2/profil/{sube?}', fn ($sube = null) => view('v2.profil', ['salonI
     ->whereNumber('sube');
 Route::get('/v2/hesabim/{sube?}', fn ($sube = null) => view('v2.hesabim', ['salonId' => (int) ($sube ?: request('sube', 0))]))
     ->whereNumber('sube');
+
+/*
+ | Isletme sitesi + musteri paneli — sayfa SEO icin sunucuda cizilir, etkilesim /api/v2 (vitrin +
+ | musteri-oturum + musteri-uygulama). Salonun kendi domain'ine gecis yapilana kadar onizleme yolu.
+ | docs/strangler-musteri-sitesi.md
+ */
+Route::prefix('/site/{salonId}')->whereNumber('salonId')->group(function () {
+    Route::get('/', [\App\Http\Controllers\SiteController::class, 'vitrin']);
+    foreach (['giris' => 'giris', 'profilim' => 'profil', 'randevularim' => 'randevular', 'sifrem' => 'sifre'] as $yol => $sayfa) {
+        Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'hesap'])->defaults('sayfa', $sayfa);
+    }
+});

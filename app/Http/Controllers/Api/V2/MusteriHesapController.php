@@ -36,6 +36,7 @@ class MusteriHesapController extends MusteriUygulamaController
         $g = $request->validate([
             'name'         => ['sometimes', 'required', 'string', 'min:2', 'max:100'],
             'email'        => ['sometimes', 'nullable', 'email', 'max:150'],
+            'ev_telefon'   => ['sometimes', 'nullable', 'string', 'max:30'],
             'meslek'       => ['sometimes', 'nullable', 'string', 'max:100'],
             'cinsiyet'     => ['sometimes', 'nullable', 'in:0,1'],
             'dogum_tarihi' => ['sometimes', 'nullable', 'date_format:Y-m-d'],

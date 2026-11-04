@@ -24,7 +24,7 @@ class MusteriRandevuServisi
             ->when($salonId, fn ($q) => $q->where('r.salon_id', $salonId))
             ->when($durum !== null, fn ($q) => $q->where('r.durum', $durum))
             ->orderByDesc('r.tarih')->orderByDesc('r.saat')
-            ->paginate($sayfaBoyu, ['r.id', 'r.tarih', 'r.saat', 'r.saat_bitis', 'r.durum', 'r.notlar', 'r.salon_id', 's.salon_adi']);
+            ->paginate($sayfaBoyu, ['r.id', 'r.tarih', 'r.saat', 'r.saat_bitis', 'r.durum', 'r.notlar', 'r.salon_id', 'r.created_at', 's.salon_adi']);
 
         $kalemler = $this->kalemler(array_column($sayfa->items(), 'id'));
 
@@ -83,6 +83,7 @@ class MusteriRandevuServisi
             'saat'              => substr((string) $r->saat, 0, 5),
             'durum'             => (int) $r->durum,
             'musteri_notu'      => $r->notlar,
+            'olusturulma'       => $r->created_at,
             'salon_id'          => (int) $r->salon_id,
             'salonlar'          => ['salon_adi' => $r->salon_adi],
             'iptal_edilebilir'  => $this->iptalEdilebilir($r),

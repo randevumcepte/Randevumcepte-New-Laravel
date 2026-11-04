@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Hash;
  */
 class MusteriProfilServisi
 {
-    private const ALANLAR = ['id', 'name', 'cep_telefon', 'email', 'meslek', 'cinsiyet', 'dogum_tarihi', 'profil_resim', 'adres'];
+    private const ALANLAR = ['id', 'name', 'cep_telefon', 'email', 'meslek', 'cinsiyet', 'ev_telefon', 'dogum_tarihi', 'profil_resim', 'adres'];
     private const SIFRE_MIN = 6;
 
     public function __construct(private MusteriTokenServisi $token) {}
@@ -35,6 +35,7 @@ class MusteriProfilServisi
             'name'         => $u->name,
             'cep_telefon'  => $u->cep_telefon,
             'email'        => $u->email,
+            'ev_telefon'   => $u->ev_telefon,
             'meslek'       => $u->meslek,
             'cinsiyet'     => $u->cinsiyet,
             'dogum_tarihi' => $u->dogum_tarihi,
@@ -46,7 +47,7 @@ class MusteriProfilServisi
 
     public function guncelle(int $userId, array $g): array
     {
-        $alanlar = array_intersect_key($g, array_flip(['name', 'email', 'meslek', 'cinsiyet', 'dogum_tarihi', 'adres']));
+        $alanlar = array_intersect_key($g, array_flip(['name', 'email', 'ev_telefon', 'meslek', 'cinsiyet', 'dogum_tarihi', 'adres']));
         if (array_key_exists('cep_telefon', $g)) {
             $alanlar['cep_telefon'] = $this->yeniTelefon($userId, (string) $g['cep_telefon']);
         }

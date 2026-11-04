@@ -83,6 +83,24 @@ Bugün müşteri uçlarının çoğu Bearer göndermiyor. Geçişte:
 - Saatler `saatler[].{saat, dolu}` aynı; zarf `veri` altında.
 - Şifre sıfırlama akışı iki ekrana dönüşür.
 
+## Web sayfaları
+
+Önizleme: `/site/{salonId}`, `/giris`, `/profilim`, `/randevularim`, `/sifrem` (`SiteController`). Host salonun kendi domain'i değilse sayfa `noindex` olur, ziyaret yazılmaz. Salon domain'lerini yeni uygulamaya yönlendirmek (geçiş) yapılmadı.
+
+Tasarım: `resources/views/site/*` eski `salondetaylari` ve `layout_salondetay`'ın HTML + CSS sınıflarıyla aynıdır; CSS `public/site/` altında kopyadır. Blade'de sorgu yok. Oturum tarayıcıda token ile (`rc_musteri_token`), header istemcide çizilir.
+
+## Henüz taşınmayanlar
+
+| Konu | Durum |
+|---|---|
+| Çarkıfelek bandı + popup (`/cark/*`) | Sayfada yok; müşteri API'si gerekli |
+| Sadakat sekmesi (`/sadakat`, ödüllerim) | Panelde yok; müşteri API'si gerekli |
+| Salon domain → yeni uygulama yönlendirmesi | Geçiş kararı bekliyor; `sitemap`, `robots`, `/personel/{id}` o zaman |
+| Grup dersi mini-site sayfası | API var (`/musteri-uygulama/grup-dersleri`), sayfa eski monolitte |
+| Giriş sayfası tasarımı | Panel kartı stilinde; eski `auth/login` görünümü taşınmadı |
+
+Bilinçli çıkarılanlar (ölü/çalışmayan): favoriler, fırsatlarım, galeri admin sil butonu (görsel silme panelden), `/randevuyorumlapuanla`, `/kampanyafirastbildirimackapa`.
+
 ## Sunucuda doğrulama
 
 ```
