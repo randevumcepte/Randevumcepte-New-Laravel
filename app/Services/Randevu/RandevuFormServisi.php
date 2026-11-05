@@ -142,7 +142,7 @@ class RandevuFormServisi
                 ->groupBy('hizmet_id')->selectRaw('hizmet_id, COUNT(*) as n')->pluck('n', 'hizmet_id');
             $hizmetler = [];
             foreach ($bolgeler as $b) {
-                $kalan = max(0, (int) $ap->seans_sayisi - (int) ($kullanilan[$b->hizmet_id] ?? 0));
+                $kalan = ($durum['sinirsiz'] ?? false) ? 1 : max(0, (int) $ap->seans_sayisi - (int) ($kullanilan[$b->hizmet_id] ?? 0));
                 if ($kalan > 0) {
                     $hizmetler[] = ['hizmet_id' => (int) $b->hizmet_id, 'ad' => $b->hizmet_adi, 'kalan' => $kalan, 'toplam' => (int) $ap->seans_sayisi,
                         'sure' => (int) ($b->sure ?? 0) ?: ($salonSure[$b->hizmet_id] ?? 30)];

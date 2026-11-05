@@ -44,7 +44,7 @@ class PaketYazServisi
         if (! $p->gecerlilik_sayi) {
             $p->gecerlilik_birim = null;
         }
-        $p->gunluk_limit = $p->sinirsiz ? max(1, (int) $p->gunluk_limit) : null;
+        $p->gunluk_limit = $p->sinirsiz && (int) $p->gunluk_limit > 0 ? (int) $p->gunluk_limit : null; // bos = her randevu seansa yazilir
         if ($p->sinirsiz) {
             $p->miktar = PaketGecerlilik::ustSinir($p->gecerlilik_sayi, $p->gecerlilik_birim, $p->gunluk_limit);
         }

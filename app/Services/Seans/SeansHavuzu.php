@@ -78,10 +78,12 @@ class SeansHavuzu
             $kul = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $x->id)->where('hizmet_id', $hizmetId)->count()
                 + ($rezerve['AP:'.$x->id.':'.$hizmetId] ?? 0);
             $gunAnahtar = PaketKullanimi::gunAnahtari((int) $x->id, $hizmetId, $tarih);
-            if ($kul >= (int) $x->seans_sayisi || ! $this->kullanim->seansUygun((int) $x->id, $hizmetId, $tarih, $rezerve[$gunAnahtar] ?? 0)) {
+            $sinirsizPaket = $this->kullanim->durum((int) $x->id)['sinirsiz'] ?? false;
+            // Sinirsizda adet kontrolu yok: yalniz sure ve (varsa) gunluk limit.
+            if ((! $sinirsizPaket && $kul >= (int) $x->seans_sayisi) || ! $this->kullanim->seansUygun((int) $x->id, $hizmetId, $tarih, $rezerve[$gunAnahtar] ?? 0)) {
                 continue;
             }
-            if ($this->kullanim->durum((int) $x->id)['sinirsiz'] ?? false) {
+            if ($sinirsizPaket) {
                 $paket = $x;
                 $sinirsiz = true;
                 break;
@@ -166,7 +168,7 @@ class SeansHavuzu
             ->mapWithKeys(fn ($s) => [$s->paket.':'.$s->hizmet => (int) $s->adet]);
         $durumlar = $this->kullanim->durumlar($paketler->pluck('id')->unique()->map(fn ($i) => (int) $i)->all());
         foreach ($paketler as $p) {
-            $kalan = (int) $p->seans_sayisi - (int) ($kullanim[$p->id.':'.$p->hizmet_id] ?? 0);
+            $kalan = ($durumlar[$p->id]['sinirsiz'] ?? false) ? 1 : (int) $p->seans_sayisi - (int) ($kullanim[$p->id.':'.$p->hizmet_id] ?? 0);
             if ($kalan > 0 && ! ($durumlar[$p->id]['suresi_doldu'] ?? false)) {
                 $kaynaklar[] = [
                     'etiket' => $p->hizmet_adi.' — '.$p->paket_adi.' (Paket)', 'hizmet_id' => (int) $p->hizmet_id, 'hizmet_adi' => $p->hizmet_adi,

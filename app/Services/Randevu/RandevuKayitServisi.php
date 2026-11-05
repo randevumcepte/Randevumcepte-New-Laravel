@@ -550,7 +550,8 @@ class RandevuKayitServisi
             $ap = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->first(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans']);
             $anahtar = 'AP:'.($ap->id ?? 0).':'.$hz;
             $gunAnahtar = PaketKullanimi::gunAnahtari((int) ($ap->id ?? 0), $hz, $tarih);
-            if ($ap && DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi
+            $sinirsizPaket = $ap && (app(PaketKullanimi::class)->durum((int) $ap->id)['sinirsiz'] ?? false);
+            if ($ap && ($sinirsizPaket || DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi)
                 && app(PaketKullanimi::class)->seansUygun((int) $ap->id, $hz, $tarih, $rezerve[$gunAnahtar] ?? 0)) {
                 $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
                 $rezerve[$gunAnahtar] = ($rezerve[$gunAnahtar] ?? 0) + 1;

@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/paketler-v2.js?v=7"></script>
+    <script type="module" src="/js/paketler-v2.js?v=8"></script>
 @endpush

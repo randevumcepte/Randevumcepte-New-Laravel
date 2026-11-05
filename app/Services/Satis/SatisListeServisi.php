@@ -375,6 +375,7 @@ class SatisListeServisi
                 'personel_id'  => $p->personel_id,
                 'personel_adi' => $p->personel->personel_adi ?? '',
                 'seans_sayisi' => (int) ($p->seans_sayisi ?? 0),
+                'sinirsiz'     => (int) ($p->sinirsiz ?? 0) === 1,
                 'prim_yuzde'   => $this->primOrani($p->personel, 'paket', $p->paket_id, $primHarita),
             ];
         }

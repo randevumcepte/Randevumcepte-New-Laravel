@@ -111,7 +111,7 @@ class AdisyonSatir
 
             $adPer = (string) ($p['personel_adi'] ?? '');
             $seansAdet = (int) ($p['seans_sayisi'] ?? 0);
-            $seansEt = $seansAdet > 0 ? '('.$seansAdet.' Seans) ' : '';
+            $seansEt = ! empty($p['sinirsiz']) ? '(Sınırsız) ' : ($seansAdet > 0 ? '('.$seansAdet.' Seans) ' : '');
             $icerik .= (string) ($p['ad'] ?? '').' (P) '.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $icerikKisa .= (string) ($p['ad'] ?? '').(! empty($p['personel_id']) ? ' ('.trim($adPer).')' : '').' (P) '.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $personelStr .= $adPer.' ';

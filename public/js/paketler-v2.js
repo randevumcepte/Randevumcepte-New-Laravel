@@ -154,7 +154,7 @@ function paketFormu(p) {
       ${alan('Paket Türü', `<select id="fTur"><option value="0">Seanslı</option><option value="1" ${p?.sinirsiz ? 'selected' : ''}>Sınırsız</option></select>`)}
       ${alan('Seans <small>(opsiyonel)</small>', `<input id="fSeans" type="number" min="0" step="1" value="${esc(p?.sinirsiz ? '' : (p?.miktar ?? ''))}">`, 'pk-seansli')}
       ${alan('Geçerlilik Süresi <small id="fSureIpucu">(opsiyonel)</small>', `<div class="pk-sure"><input id="fGecSayi" type="number" min="1" max="120" step="1" placeholder="Süre" value="${esc(p?.gecerlilik_sayi ?? '')}"><select id="fGecBirim"><option value="ay" ${p?.gecerlilik_birim === 'ay' ? 'selected' : ''}>Ay</option><option value="yil" ${p?.gecerlilik_birim === 'yil' ? 'selected' : ''}>Yıl</option></select></div><span class="rc-ipucu">Müşterinin ilk geliş tarihinden itibaren başlar.</span>`)}
-      ${alan('Günlük Kullanım Limiti', `<input id="fLimit" type="number" min="1" max="50" step="1" value="${esc(p?.gunluk_limit ?? 1)}"><span class="rc-ipucu">Hizmet başına, günde en fazla.</span>`, 'pk-sinirsizli')}
+      ${alan('Günlük Limit <small>(opsiyonel)</small>', `<input id="fLimit" type="number" min="1" max="50" step="1" value="${esc(p?.gunluk_limit ?? '')}" placeholder="Limitsiz"><span class="rc-ipucu">Boş bırakılırsa her randevu seansa yazılır.</span>`, 'pk-sinirsizli')}
       ${fiyatGizli() ? '' : alan('Fiyat (₺) <small>(opsiyonel)</small>', `<input id="fFiyat" type="number" min="0" step="0.01" value="${esc(p?.fiyat ?? '')}">`)}
       <div class="rc-alan rc-tam"><span class="rc-ipucu" id="fNot"></span></div>
     </form>`;

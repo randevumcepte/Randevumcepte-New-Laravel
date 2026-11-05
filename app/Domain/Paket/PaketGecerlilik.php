@@ -11,8 +11,9 @@ use DateTimeImmutable;
  * Sure ILK "Geldi" seansinda baslar. Bitis saklanmaz, hesaplanir: "Geldi" geri alinirsa ya da
  * gecmis tarihli seans girilirse kendiliginden duzelir. Hic gelinmemis pakette sure islemez.
  *
- * Sinirsiz pakette seans_sayisi = gun x gunluk limit (ustSinir): pratikte asilamaz, ama
- * `seans_sayisi > 0` ve kalan formulu kullanan eski ekran/mobil kod bozulmadan calisir.
+ * Sinirsiz pakette ADET KONTROLU YOKTUR: sure bitene kadar her randevu seansa yazilir, sure
+ * bitince yazilmaz. seans_sayisi (ustSinir) yalniz `seans_sayisi > 0` arayan eski sorgular/mobil
+ * icin dolu tutulan teknik bir degerdir; KURAL ICIN KULLANILMAZ, EKRANDA GOSTERILMEZ.
  */
 final class PaketGecerlilik
 {

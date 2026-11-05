@@ -49,7 +49,8 @@ class SeansYazServisi
             $mevcut = DB::table('adisyon_paket_seanslar')->where($tur->seansKolonu(), $kalem->id)
                 ->when($tur === SeansKalemTuru::PAKET, fn ($q) => $q->where('hizmet_id', $hizmetId))
                 ->count();
-            if (SeansSayaci::bosHak($toplam, $mevcut) === 0) {
+            $sinirsiz = $tur === SeansKalemTuru::PAKET && ($this->kullanim->durum((int) $kalem->id)['sinirsiz'] ?? false);
+            if (! $sinirsiz && SeansSayaci::bosHak($toplam, $mevcut) === 0) {
                 throw new GecersizIslemException('Bu hizmetin tüm seans hakları kullanılmış');
             }
 
