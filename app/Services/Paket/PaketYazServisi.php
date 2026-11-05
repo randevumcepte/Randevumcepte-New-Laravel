@@ -87,17 +87,18 @@ class PaketYazServisi
             if (isset($v['hizmetler'])) {
                 PaketHizmetler::where('paket_id', $p->id)->delete();
                 foreach ($v['hizmetler'] as $h) {
-                    PaketHizmetler::create([
+                    // Bos seans/fiyat gonderilmez: kolonlar NULL kabul etmiyor, varsayilan (0) gecerli.
+                    PaketHizmetler::create(array_filter([
                         'paket_id'  => $p->id,
                         'hizmet_id' => (int) $h['hizmet_id'],
                         'seans'     => $p->sinirsiz ? null : ($h['seans'] ?? null),
                         'fiyat'     => $h['fiyat'] ?? null,
-                    ]);
+                    ], fn ($deger) => $deger !== null));
                 }
             }
 
             if ($p->sinirsiz) {
-                PaketHizmetler::where('paket_id', $p->id)->update(['seans' => null]); // toplu randevu/etkin seans hesabina girmesin
+                PaketHizmetler::where('paket_id', $p->id)->update(['seans' => 0]); // toplu randevu/etkin seans hesabina girmesin
             }
 
             return $p;

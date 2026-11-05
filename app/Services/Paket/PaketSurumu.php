@@ -98,7 +98,8 @@ class PaketSurumu
         $mevcut = DB::table('paket_hizmetler')->where('paket_id', $paketId)->get()->keyBy('hizmet_id');
         foreach (array_unique(array_map('intval', $hizmetIdler)) as $hizmetId) {
             $eski = $mevcut->get($hizmetId);
-            PaketHizmetler::create(['paket_id' => $kopyaId, 'hizmet_id' => $hizmetId, 'seans' => $eski->seans ?? null, 'fiyat' => $eski->fiyat ?? null]);
+            // Yeni eklenen hizmette seans/fiyat gonderilmez: kolonlar NULL kabul etmiyor, varsayilan gecerli.
+            PaketHizmetler::create(['paket_id' => $kopyaId, 'hizmet_id' => $hizmetId] + ($eski ? ['seans' => $eski->seans, 'fiyat' => $eski->fiyat] : []));
         }
 
         if (Schema::hasTable('personel_prim_oranlari')) {
