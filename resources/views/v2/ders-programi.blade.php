@@ -9,5 +9,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/ders-programi-v2.js?v=1"></script>
+    <script type="module" src="/js/ders-programi-v2.js?v=2"></script>
 @endpush

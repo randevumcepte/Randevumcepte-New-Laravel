@@ -2,6 +2,7 @@
 
 namespace App\Services\Randevu;
 
+use App\Services\Paket\PaketKullanimi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\Randevular;
@@ -129,7 +130,12 @@ class RandevuFormServisi
             ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
         $aplar = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->orderBy('a.tarih')->orderBy('ap.id')
             ->get(array_merge(['ap.id', 'ap.paket_id', 'ap.seans_sayisi', 'p.paket_adi', 'a.tarih'], $pSure ? ['p.sure as paket_sure'] : []));
+        $durumlar = app(PaketKullanimi::class)->durumlar($aplar->pluck('id')->map(fn ($i) => (int) $i)->all());
         foreach ($aplar as $ap) {
+            $durum = $durumlar[$ap->id] ?? null;
+            if ($durum['suresi_doldu'] ?? false) {
+                continue; // gecerlilik bitti
+            }
             $bolgeler = DB::table('paket_hizmetler as ph')->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')->where('ph.paket_id', $ap->paket_id)
                 ->get(array_merge(['ph.hizmet_id', 'h.hizmet_adi'], $phSure ? ['ph.sure'] : []));
             $kullanilan = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)
@@ -146,6 +152,7 @@ class RandevuFormServisi
                 $sonuc[] = [
                     'tur' => 'paket', 'adi' => $ap->paket_adi, 'adisyon_paket_id' => (int) $ap->id, 'adisyon_hizmet_id' => null,
                     'satis_tarihi' => $ap->tarih, 'paket_sure' => ($ap->paket_sure ?? null) ? (int) $ap->paket_sure : null,
+                    'sinirsiz' => $durum['sinirsiz'] ?? false, 'gecerlilik_bitis' => $durum['bitis'] ?? null,
                     'hizmetler' => $hizmetler,
                 ];
             }

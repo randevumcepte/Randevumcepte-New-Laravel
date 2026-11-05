@@ -2,6 +2,7 @@
 
 namespace App\Services\Randevu;
 
+use App\Services\Paket\PaketKullanimi;
 use App\Domain\Randevu\Cakisma;
 use App\Domain\Randevu\HizmetZinciri;
 use App\Domain\Randevu\SaatKapama;
@@ -475,8 +476,8 @@ class RandevuKayitServisi
                         $telafiKullanilan[] = $telafi;
                         $seans = ['islem' => 'telafi_bagla', 'aps_id' => $telafi];
                     } else {
-                        $seans = $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve)
-                            ?? $this->seansHavuzu->yeniAday($salonId, $gi['user_id'], $hz, $rezerve);
+                        $seans = $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve, $tarih)
+                            ?? $this->seansHavuzu->yeniAday($salonId, $gi['user_id'], $hz, $rezerve, $tarih);
                     }
                 }
 
@@ -538,7 +539,7 @@ class RandevuKayitServisi
      * Bilincli fark: eski sistem (web + mobil) bu alanlari YOK SAYIP ayni hizmeti
      * iceren en eski satisi seciyordu; kullanici A paketini secse B'den dusebiliyordu.
      */
-    private function tercihEdilenSeans(int $salonId, int $userId, array $h, array &$rezerve): ?array
+    private function tercihEdilenSeans(int $salonId, int $userId, array $h, array &$rezerve, ?string $tarih = null): ?array
     {
         $hz = $h['hizmet_id'];
         if ($h['adisyon_paket_id']) {
@@ -548,8 +549,11 @@ class RandevuKayitServisi
                 ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
             $ap = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->first(['ap.id', 'ap.seans_sayisi', 'ap.kullanilan_seans', 'ap.kullanilmayan_seans']);
             $anahtar = 'AP:'.($ap->id ?? 0).':'.$hz;
-            if ($ap && DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi) {
+            $gunAnahtar = PaketKullanimi::gunAnahtari((int) ($ap->id ?? 0), $hz, $tarih);
+            if ($ap && DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)->where('hizmet_id', $hz)->count() + ($rezerve[$anahtar] ?? 0) < (int) $ap->seans_sayisi
+                && app(PaketKullanimi::class)->seansUygun((int) $ap->id, $hz, $tarih, $rezerve[$gunAnahtar] ?? 0)) {
                 $rezerve[$anahtar] = ($rezerve[$anahtar] ?? 0) + 1;
+                $rezerve[$gunAnahtar] = ($rezerve[$gunAnahtar] ?? 0) + 1;
 
                 return ['islem' => 'yeni_seans', 'adisyon_paket_id' => (int) $ap->id, 'tercih' => true,
                     'seans_no' => (int) $ap->kullanilan_seans + (int) $ap->kullanilmayan_seans + 1];

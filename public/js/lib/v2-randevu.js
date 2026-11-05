@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=5';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=6';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -757,7 +757,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
             <small>${p.tur === 'paket' ? 'Paket' : 'Tek hizmet'}${p.satis_tarihi ? ' · ' + esc(new Date(p.satis_tarihi).toLocaleDateString('tr-TR')) : ''}</small></label>
           ${p.hizmetler.map((h, hi) => `<div class="rf-ps-hizmet">
             <label><input type="checkbox" data-ps="${pi}:${hi}"> ${esc(h.ad)}</label>
-            <span class="rf-seans-rozet">${h.kalan}/${h.toplam} seans</span>
+            <span class="rf-seans-rozet">${p.sinirsiz ? 'Sınırsız' : `${h.kalan}/${h.toplam} seans`}</span>
             <span class="rf-adet" title="Bu randevuda düşülecek seans"><button type="button" data-ps-adet="${pi}:${hi}:-1">−</button><b id="psAdet${pi}_${hi}">1</b><button type="button" data-ps-adet="${pi}:${hi}:1">+</button></span>
           </div>`).join('')}
         </div>`).join('')}
@@ -803,7 +803,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         hiler.forEach((hi) => {
           const h = p.hizmetler[hi];
           if (kart.kalemler.some((k) => k.hizmet_id === h.hizmet_id)) return;
-          kart.kalemler.push({ hizmet_id: h.hizmet_id, ad: h.ad, kalan: h.kalan, toplam: h.toplam, sure: h.sure, adet: adet[`${pi}:${hi}`] || 1 });
+          kart.kalemler.push({ hizmet_id: h.hizmet_id, ad: h.ad, kalan: h.kalan, toplam: h.toplam, sinirsiz: !!f.paketler[pi].sinirsiz, sure: h.sure, adet: adet[`${pi}:${hi}`] || 1 });
         });
         kart.hizmetler = kart.kalemler.map((k) => String(k.hizmet_id));
         // Paketin TUM bolgeleri secildiyse paket suresi (Flutter: paket_sure), yoksa toplam.
@@ -822,7 +822,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
           <button type="button" class="rf-sil" title="Paketi çıkar"><i class="bi bi-trash"></i></button>
         </div>
         <div class="rf-paket-liste">${s.kalemler.map((k, j) => `<div class="rf-paket-kalem">
-          <span>${esc(k.ad)}</span><span class="rf-seans-rozet">kalan ${k.kalan}/${k.toplam}</span>
+          <span>${esc(k.ad)}</span><span class="rf-seans-rozet">${k.sinirsiz ? 'Sınırsız' : `kalan ${k.kalan}/${k.toplam}`}</span>
           <span class="rf-adet" title="Düşülecek seans"><button type="button" data-adet="-1" data-k="${j}">−</button><b>${k.adet}</b><button type="button" data-adet="1" data-k="${j}">+</button></span>
           <button type="button" class="rf-x" data-kalem-cikar="${j}" title="Çıkar">×</button></div>`).join('')}</div>
         <div class="rf-satir-1 rf-paket-sure">
@@ -980,7 +980,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
           ${(s.seanslar || []).map((x) => `
             <label class="t-seans">
               <input type="checkbox" value="${x.id}" ${x.kalan_seans > 0 ? 'checked' : ''}>
-              <div><b>${esc(x.hizmet_adi)}</b><span>${esc(x.paket_adi || 'Hizmet seansı')} · kalan ${x.kalan_seans}/${x.toplam_seans}</span></div>
+              <div><b>${esc(x.hizmet_adi)}</b><span>${esc(x.paket_adi || 'Hizmet seansı')} · ${x.sinirsiz ? 'Sınırsız' : `kalan ${x.kalan_seans}/${x.toplam_seans}`}</span></div>
               <input type="number" min="1" value="${x.default_miktar || 1}" data-miktar="${x.id}" title="Düşülecek miktar">
             </label>`).join('')}
         </div>

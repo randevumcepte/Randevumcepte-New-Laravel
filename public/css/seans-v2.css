@@ -85,3 +85,5 @@
   .st-kartlar { grid-template-columns: 1fr; }
   .st-hap { min-width: 44px; padding: 5px 8px; }
 }
+.st-gecerlilik { margin-top: 3px; font-size: 11.5px; font-weight: 600; color: #5C008E; }
+.st-gecerlilik.st-doldu { color: #c0392b; }

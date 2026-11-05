@@ -11,6 +11,12 @@ class AdisyonPaketler extends Model
 
     protected $guarded = [];
 
+    /** Sinirsiz/sureli paket bilgisi satis aninda kopyalanir (tek nokta). */
+    protected static function booted(): void
+    {
+        static::saving(fn (self $ap) => \App\Services\Paket\PaketKullanimi::satisaKopyala($ap));
+    }
+
     /** Paket adi (paketler.paket_adi). */
     public function paket()
     {

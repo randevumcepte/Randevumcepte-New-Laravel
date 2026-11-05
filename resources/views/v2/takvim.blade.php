@@ -15,5 +15,5 @@
 
 @push('betik')
     <script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.16.0/dist/event-calendar.min.js"></script>
-    <script type="module" src="/js/takvim-v2.js?v=24"></script>
+    <script type="module" src="/js/takvim-v2.js?v=25"></script>
 @endpush

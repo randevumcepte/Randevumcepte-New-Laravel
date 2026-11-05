@@ -17,8 +17,8 @@
  */
 
 import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
-import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=5';
-import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=1';
+import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=6';
+import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=2';
 
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
 

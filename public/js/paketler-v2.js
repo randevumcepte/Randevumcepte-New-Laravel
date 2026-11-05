@@ -16,7 +16,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
-import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=1';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=2';
 
 const kok = document.getElementById('rc-paket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -38,8 +38,10 @@ const paketBul = (id) => sonListe.find((p) => String(p.id) === String(id));
 
 /** "8" ya da hizmet bazlı seans varsa "8 (5 + 3)". */
 function seansMetni(p) {
+  if (p.sinirsiz) return `<span class="rc-rozet rc-rozet-mor">Sınırsız</span> <small class="pk-soluk">${esc(p.gecerlilik_metni || '')}${p.gunluk_limit ? ` · günde ${p.gunluk_limit}` : ''}</small>`;
   const hs = p.hizmetler.filter((h) => h.seans > 0);
-  return hs.length > 1 ? `${p.miktar} <small class="pk-soluk">(${hs.map((h) => h.seans).join(' + ')})</small>` : String(p.miktar || '—');
+  const sure = p.gecerlilik_metni ? ` <small class="pk-soluk">· ${esc(p.gecerlilik_metni)}</small>` : '';
+  return (hs.length > 1 ? `${p.miktar} <small class="pk-soluk">(${hs.map((h) => h.seans).join(' + ')})</small>` : String(p.miktar || '—')) + sure;
 }
 
 // ─────────────────────────── iskelet + tablo ───────────────────────────
@@ -149,7 +151,10 @@ function paketFormu(p) {
       ${alan('Paket Adı *', `<input id="fAd" required maxlength="255" value="${esc(p?.paket_adi || '')}">`, 'rc-tam')}
       ${alan('Hizmetler *', `<div class="pk-cipler" id="fHizmetler"></div><select id="fHizmetEkle"></select>`, 'rc-tam')}
       ${alan('Süre <small>(dk)</small>', `<input id="fSure" type="number" min="0" step="1" value="${esc(p?.sure ?? '')}">`)}
-      ${alan('Seans <small>(opsiyonel)</small>', `<input id="fSeans" type="number" min="0" step="1" value="${esc(p?.miktar ?? '')}">`)}
+      ${alan('Paket Türü', `<select id="fTur"><option value="0">Seanslı</option><option value="1" ${p?.sinirsiz ? 'selected' : ''}>Sınırsız</option></select>`)}
+      ${alan('Seans <small>(opsiyonel)</small>', `<input id="fSeans" type="number" min="0" step="1" value="${esc(p?.sinirsiz ? '' : (p?.miktar ?? ''))}">`, 'pk-seansli')}
+      ${alan('Geçerlilik Süresi <small id="fSureIpucu">(opsiyonel)</small>', `<div class="pk-sure"><input id="fGecSayi" type="number" min="1" max="120" step="1" placeholder="Süre" value="${esc(p?.gecerlilik_sayi ?? '')}"><select id="fGecBirim"><option value="ay" ${p?.gecerlilik_birim === 'ay' ? 'selected' : ''}>Ay</option><option value="yil" ${p?.gecerlilik_birim === 'yil' ? 'selected' : ''}>Yıl</option></select></div><span class="rc-ipucu">Müşterinin ilk geliş tarihinden itibaren başlar.</span>`)}
+      ${alan('Günlük Kullanım Limiti', `<input id="fLimit" type="number" min="1" max="50" step="1" value="${esc(p?.gunluk_limit ?? 1)}"><span class="rc-ipucu">Hizmet başına, günde en fazla.</span>`, 'pk-sinirsizli')}
       ${fiyatGizli() ? '' : alan('Fiyat (₺) <small>(opsiyonel)</small>', `<input id="fFiyat" type="number" min="0" step="0.01" value="${esc(p?.fiyat ?? '')}">`)}
       <div class="rc-alan rc-tam"><span class="rc-ipucu" id="fNot"></span></div>
     </form>`;
@@ -174,6 +179,17 @@ function paketFormu(p) {
   };
   ciz();
 
+  const turGuncelle = () => {
+    const sinirsiz = el('#fTur', ov).value === '1';
+    el('.pk-seansli', ov).hidden = sinirsiz;
+    el('.pk-sinirsizli', ov).hidden = !sinirsiz;
+    el('#fSureIpucu', ov).textContent = sinirsiz ? '*' : '(opsiyonel)';
+    el('#fGecSayi', ov).required = sinirsiz;
+    if (sinirsiz && !el('#fGecSayi', ov).value) { el('#fGecSayi', ov).value = 1; el('#fGecBirim', ov).value = 'yil'; }
+  };
+  el('#fTur', ov).onchange = turGuncelle;
+  turGuncelle();
+
   el('#pkForm', ov).addEventListener('submit', (e) => {
     e.preventDefault();
     if (!hizmetler.length) return mesaj('Devam etmek için hizmet seçmeniz gerekmektedir.', 'hata');
@@ -183,6 +199,10 @@ function paketFormu(p) {
         hizmetler: hizmetler.map(({ hizmet_id, seans, fiyat }) => ({ hizmet_id, seans, fiyat })),
         sure: sayiVeyaNull(el('#fSure', ov).value),
         miktar: sayiVeyaNull(el('#fSeans', ov).value),
+        sinirsiz: Number(el('#fTur', ov).value),
+        gecerlilik_sayi: sayiVeyaNull(el('#fGecSayi', ov).value),
+        gecerlilik_birim: el('#fGecSayi', ov).value ? el('#fGecBirim', ov).value : null,
+        gunluk_limit: sayiVeyaNull(el('#fLimit', ov).value),
       };
       if (!fiyatGizli()) d.fiyat = sayiVeyaNull(el('#fFiyat', ov).value);
       const r = p ? await yaz('PATCH', `/paket/${p.id}`, d) : await yaz('POST', '/paket', d);
@@ -206,7 +226,7 @@ function satisYap() {
     ${paketler.map((p) => `<div class="pk-satis-kalem" data-id="${p.id}">
       <div class="pk-ad">${esc(p.paket_adi)}</div>
       <div class="rc-form-izgara">
-        <div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>
+        ${p.sinirsiz ? `<div class="rc-alan"><label>Paket</label><input readonly value="Sınırsız · ${esc(p.gecerlilik_metni || '')} (ilk gelişte başlar)"></div>` : `<div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>`}
         ${fiyatGizli() ? '' : `<div class="rc-alan"><label>Fiyat (₺)</label><input type="number" min="0" step="0.01" data-fiyat value="${p.fiyat}" ${fiyatAcik ? '' : 'readonly title="Fiyat değiştirme yetkiniz yok"'}></div>`}
       </div></div>`).join('')}`;
   const ov = modalAc(fiyatGizli() ? 'Seans Sayısı' : 'Seans ve Fiyatı Belirleyin', govde, satisAltButonlari(fiyatGizli()), { ikon: 'cart-check', sabit: true });
@@ -216,7 +236,8 @@ function satisYap() {
 
   ov.querySelectorAll('[data-odeme]').forEach((btn) => btn.addEventListener('click', () => kilitle(btn, 'İşleniyor…', async () => {
     const kalemler = [...ov.querySelectorAll('.pk-satis-kalem')].map((k) => {
-      const kalem = { paket_id: Number(k.dataset.id), seans: sayiVeyaNull(el('[data-seans]', k).value) };
+      const seansAlani = el('[data-seans]', k);
+      const kalem = { paket_id: Number(k.dataset.id), seans: seansAlani ? sayiVeyaNull(seansAlani.value) : null };
       if (!fiyatGizli() && fiyatAcik) kalem.fiyat = sayiVeyaNull(el('[data-fiyat]', k).value);
       return kalem;
     });

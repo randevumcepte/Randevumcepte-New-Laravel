@@ -24,7 +24,7 @@
 import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { dersPlani } from '/js/lib/v2-ders.js?v=1';
+import { dersPlani } from '/js/lib/v2-ders.js?v=2';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
 const tablolar = {};

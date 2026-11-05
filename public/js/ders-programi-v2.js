@@ -7,7 +7,7 @@ import { qp, api, el, esc, onay, tarihStr, yazSonuc, mesaj } from '/js/lib/v2-or
 import { modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { GUNLER, dersFormu, programGetir } from '/js/lib/v2-ders.js?v=1';
+import { GUNLER, dersFormu, programGetir } from '/js/lib/v2-ders.js?v=2';
 
 const kok = document.getElementById('rc-ders-programi');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

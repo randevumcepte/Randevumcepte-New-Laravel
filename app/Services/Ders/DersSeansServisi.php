@@ -110,7 +110,8 @@ class DersSeansServisi
         $userId = (int) $k->user_id;
         // Oturum kilidi yetmez, havuz musteri bazli: es zamanli iki ders son seansi birlikte secmesin.
         DB::table('adisyonlar')->where('user_id', $userId)->where('salon_id', $salonId)->lockForUpdate()->pluck('id');
-        $aday = $this->havuz->yeniAday($salonId, $userId, $hizmetId);
+        $rezerve = [];
+        $aday = $this->havuz->yeniAday($salonId, $userId, $hizmetId, $rezerve, (string) $o->tarih);
         if (! $aday) {
             $k->update(['aps_id' => null, 'hak_dusuldu' => false]);
 

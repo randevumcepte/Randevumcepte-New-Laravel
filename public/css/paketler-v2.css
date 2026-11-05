@@ -40,3 +40,7 @@
   .pk-cip button { background: #1b1b26; color: #c9a7f0; }
   .pk-satis-ozet { color: #ededf5; }
 }
+.pk-sure { display: flex; gap: 8px; }
+.pk-sure input { flex: 1; min-width: 0; }
+.pk-sure select { flex: 0 0 84px; }
+.rc-alan[hidden] { display: none; }

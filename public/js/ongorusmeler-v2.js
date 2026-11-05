@@ -15,7 +15,7 @@ import { qp, api, el, esc, TL, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-orta
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
-import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=1';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=2';
 import { trTarih } from '/js/lib/v2-donem.js?v=1';
 import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=1';
 

@@ -7,6 +7,7 @@ use App\Domain\Seans\SeansDurumu;
 use App\Domain\Seans\SeansKalemTuru;
 use App\Domain\Seans\SeansSayaci;
 use App\Models\Salonlar;
+use App\Services\Paket\PaketKullanimi;
 use App\Support\ListeIstegi;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,7 @@ class SeansTakipServisi
     public function __construct(
         private SeansKapsam $kapsam,
         private SeansCihazServisi $cihaz,
+        private PaketKullanimi $kullanim,
     ) {}
 
     public function liste(int $salonId, ListeIstegi $l, ?int $musteriId = null): array
@@ -115,11 +117,13 @@ class SeansTakipServisi
         }
         $hizmetler = $this->kapsam->kalemHizmetleri($katalog['paket'], $katalog['hizmet']);
         $cihazli = $this->cihaz->veriOlanSeanslar($tumu->pluck('id')->all());
+        $gecerlilik = $this->kullanim->durumlar($kalemIdler['paket']);
 
-        return array_map(function ($s) use ($salonId, $seanslar, $hizmetler, $cihazli) {
+        return array_map(function ($s) use ($salonId, $seanslar, $hizmetler, $cihazli, $gecerlilik) {
             $tur = SeansKalemTuru::from($s->tur);
             $kalemSeanslari = $seanslar[$s->tur.':'.$s->id] ?? [];
-            $kartlar = $this->kartlar($tur, $s, $hizmetler[$s->tur][(int) $s->katalog_id] ?? [], $kalemSeanslari);
+            $gecerli = $tur === SeansKalemTuru::PAKET ? ($gecerlilik[(int) $s->id] ?? null) : null;
+            $kartlar = $this->kartlar($tur, $s, $hizmetler[$s->tur][(int) $s->katalog_id] ?? [], $kalemSeanslari, $gecerli);
             $lazer = LazerTespiti::adlardanBiri($s->ad) || in_array(true, array_column($kartlar, 'lazer'), true);
             $dokum = $lazer && array_filter($kalemSeanslari, fn ($x) => isset($cihazli[(int) $x->id]));
 
@@ -131,6 +135,8 @@ class SeansTakipServisi
                 'musteri'          => ['id' => (int) $s->musteri_id, 'ad' => (string) $s->musteri_adi],
                 'ad'               => (string) $s->ad,
                 'baslangic_tarihi' => self::gecerliTarih($s->baslangic),
+                'sinirsiz'         => $gecerli['sinirsiz'] ?? false,
+                'gecerlilik'       => $gecerli && $gecerli['sure'] !== '' ? ['sure' => $gecerli['sure'], 'baslangic' => $gecerli['baslangic'], 'bitis' => $gecerli['bitis'], 'suresi_doldu' => $gecerli['suresi_doldu']] : null,
                 'olusturma'        => $s->olusturma,
                 'sayac'            => SeansSayaci::hesapla(
                     SeansSayaci::kalemToplami((int) $s->seans_sayisi, $tur === SeansKalemTuru::PAKET ? count($kartlar) : 1),
@@ -149,7 +155,7 @@ class SeansTakipServisi
      *
      * @param  array<int,string>  $hizmetAdlari
      */
-    private function kartlar(SeansKalemTuru $tur, object $s, array $hizmetAdlari, array $seanslar): array
+    private function kartlar(SeansKalemTuru $tur, object $s, array $hizmetAdlari, array $seanslar, ?array $gecerli = null): array
     {
         $toplam = max(0, (int) $s->seans_sayisi);
         $kartlar = [];
@@ -162,7 +168,8 @@ class SeansTakipServisi
                 'ad'        => $ad,
                 'lazer'     => LazerTespiti::adlardanBiri($s->ad, $ad),
                 'sayac'     => SeansSayaci::hesapla($toplam, array_column($kart, 'geldi')),
-                'bos_hak'   => SeansSayaci::bosHak($toplam, count($kart)),
+                // Sinirsiz: toplam teknik tavan; yuzlerce bos daire yerine tek "yeni kullanim" dairesi.
+                'bos_hak'   => ($gecerli['sinirsiz'] ?? false) ? (($gecerli['suresi_doldu'] ?? false) ? 0 : 1) : SeansSayaci::bosHak($toplam, count($kart)),
                 'seanslar'  => array_map([self::class, 'seansDto'], $kart),
             ];
         }

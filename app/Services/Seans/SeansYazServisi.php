@@ -7,6 +7,7 @@ use App\Domain\Seans\SeansKalemTuru;
 use App\Domain\Seans\SeansSayaci;
 use App\Exceptions\GecersizIslemException;
 use App\Models\AdisyonPaketSeanslar;
+use App\Services\Paket\PaketKullanimi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  */
 class SeansYazServisi
 {
-    public function __construct(private SeansKapsam $kapsam) {}
+    public function __construct(private SeansKapsam $kapsam, private PaketKullanimi $kullanim) {}
 
     /** @return array{id:int, geldi:?int, durum:string} */
     public function ekle(SeansKalemTuru $tur, object $kalem, int $hizmetId, SeansDurumu $durum, string $tarih): array
@@ -33,6 +34,13 @@ class SeansYazServisi
         }
         if (! array_key_exists($hizmetId, $this->kapsam->hizmetler($tur, $kalem))) {
             throw new GecersizIslemException('Bu hizmet seçilen paket / hizmet satışında yok');
+        }
+
+        if ($tur === SeansKalemTuru::PAKET) {
+            $this->telafiDenetle((int) $kalem->id, $durum);
+            if (! $this->kullanim->seansUygun((int) $kalem->id, $hizmetId, $tarih)) {
+                throw new GecersizIslemException('Paketin geçerlilik süresi dolmuş veya günlük kullanım limiti aşılmış');
+            }
         }
 
         $seans = DB::transaction(function () use ($tur, $kalem, $hizmetId, $durum, $tarih) {
@@ -59,10 +67,21 @@ class SeansYazServisi
     /** @return array{id:int, silindi:bool, geldi:?int, durum:string} */
     public function durumGuncelle(object $seans, SeansDurumu $durum): array
     {
+        if ($seans->adisyon_paket_id ?? null) {
+            $this->telafiDenetle((int) $seans->adisyon_paket_id, $durum);
+        }
         $silindi = $durum === SeansDurumu::BEKLEMEDE && ! $seans->randevu_id;
         $sorgu = AdisyonPaketSeanslar::whereKey($seans->id);
         $silindi ? $sorgu->delete() : $sorgu->update(['geldi' => $durum->geldi()]);
 
         return ['id' => (int) $seans->id, 'silindi' => $silindi, 'geldi' => $durum->geldi(), 'durum' => $durum->value];
+    }
+
+    /** Sinirsiz pakette telafi anlamsiz: eksilen hak yok ki telafisi olsun. */
+    private function telafiDenetle(int $adisyonPaketId, SeansDurumu $durum): void
+    {
+        if ($durum === SeansDurumu::TELAFI && ($this->kullanim->durum($adisyonPaketId)['sinirsiz'] ?? false)) {
+            throw new GecersizIslemException('Sınırsız pakette telafi kullanılmaz');
+        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Paket;
 
+use App\Domain\Paket\PaketGecerlilik;
 use App\Domain\Paket\PaketTutari;
 use App\Models\PaketHizmetler;
 use App\Models\Paketler;
@@ -33,6 +34,11 @@ final class PaketSunumu
             'fiyat'         => $etkin['fiyat'],
             'miktar'        => $etkin['seans'],
             'sure'          => $p->sure !== null && $p->sure !== '' ? (int) $p->sure : null,
+            'sinirsiz'      => (int) $p->sinirsiz,
+            'gecerlilik_sayi'  => $p->gecerlilik_sayi !== null ? (int) $p->gecerlilik_sayi : null,
+            'gecerlilik_birim' => $p->gecerlilik_birim,
+            'gecerlilik_metni' => PaketGecerlilik::sureMetni($p->gecerlilik_sayi, $p->gecerlilik_birim),
+            'gunluk_limit'     => $p->gunluk_limit !== null ? (int) $p->gunluk_limit : null,
             'hizmetler'     => $hizmetler,
             'hizmet_adlari' => implode(', ', array_filter(array_column($hizmetler, 'hizmet_adi'))),
         ];

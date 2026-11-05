@@ -2,6 +2,7 @@
 
 namespace App\Services\Paket;
 
+use App\Domain\Paket\PaketGecerlilik;
 use App\Domain\Paket\PaketTutari;
 use App\Exceptions\BulunamadiException;
 use App\Models\PaketHizmetler;
@@ -27,6 +28,26 @@ class PaketYazServisi
         private SalonSahipligi $sahiplik,
         private PaketSorgusu $sorgu,
     ) {}
+
+    /** Tur + gecerlilik. Sinirsizda miktar = teknik tavan (PaketGecerlilik::ustSinir). */
+    private function gecerlilikYaz(Paketler $p, array $v): void
+    {
+        if (! PaketKullanimi::kolonVar()) {
+            return;
+        }
+        foreach (['sinirsiz', 'gecerlilik_sayi', 'gecerlilik_birim', 'gunluk_limit'] as $alan) {
+            if (array_key_exists($alan, $v)) {
+                $p->{$alan} = $alan === 'sinirsiz' ? (int) $v[$alan] : $v[$alan];
+            }
+        }
+        if (! $p->gecerlilik_sayi) {
+            $p->gecerlilik_birim = null;
+        }
+        $p->gunluk_limit = $p->sinirsiz ? max(1, (int) $p->gunluk_limit) : null;
+        if ($p->sinirsiz) {
+            $p->miktar = PaketGecerlilik::ustSinir($p->gecerlilik_sayi, $p->gecerlilik_birim, $p->gunluk_limit);
+        }
+    }
 
     /**
      * @param  array  $v  PaketKaydetIstegi::validated() — paket_adi, hizmetler[{hizmet_id, seans?, fiyat?}], miktar?, fiyat?, sure?
@@ -56,6 +77,7 @@ class PaketYazServisi
             $p->aktif = 1;
             $p->fiyat = $etkin['fiyat'];
             $p->miktar = $etkin['seans'];
+            $this->gecerlilikYaz($p, $v);
             $p->save();
 
             if (isset($v['hizmetler'])) {
@@ -64,10 +86,14 @@ class PaketYazServisi
                     PaketHizmetler::create([
                         'paket_id'  => $p->id,
                         'hizmet_id' => (int) $h['hizmet_id'],
-                        'seans'     => $h['seans'] ?? null,
+                        'seans'     => $p->sinirsiz ? null : ($h['seans'] ?? null),
                         'fiyat'     => $h['fiyat'] ?? null,
                     ]);
                 }
+            }
+
+            if ($p->sinirsiz) {
+                PaketHizmetler::where('paket_id', $p->id)->update(['seans' => null]); // toplu randevu/etkin seans hesabina girmesin
             }
 
             return $p;

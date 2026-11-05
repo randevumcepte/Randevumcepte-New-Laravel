@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=2';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=3';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -84,8 +84,17 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
 
   // ─────────────────────────── ÇİZİM ───────────────────────────
 
-  const sayacHaplari = (s) => `<span class="st-hap st-toplam" title="${esc(etiket.toplam)}">${s.toplam} <i class="bi ${GORSEL.toplam.ikon}"></i></span>`
-    + Object.entries(SAYAC_DURUM).map(([alan, d]) => `<span class="st-hap st-${d}" title="${esc(etiket[d] || d)}">${s[alan]} <i class="bi ${GORSEL[d].ikon}"></i></span>`).join('');
+  // Sınırsız pakette toplam/kalan teknik tavandır, adet gösterilmez.
+  const sayacHaplari = (s, sinirsiz) => `<span class="st-hap st-toplam" title="${esc(etiket.toplam)}">${sinirsiz ? '∞' : s.toplam} <i class="bi ${GORSEL.toplam.ikon}"></i></span>`
+    + Object.entries(SAYAC_DURUM).map(([alan, d]) => `<span class="st-hap st-${d}" title="${esc(etiket[d] || d)}">${sinirsiz && alan === 'bekleyen' ? '∞' : s[alan]} <i class="bi ${GORSEL[d].ikon}"></i></span>`).join('');
+
+  /** "1 Yıl · Bitiş: 05.11.2027" / "İlk gelişte başlar" / "Süresi doldu" */
+  function gecerlilikHtml(k) {
+    const g = k.gecerlilik;
+    if (!g) return '';
+    const metin = g.bitis ? `Bitiş: ${tarihTr(g.bitis)}` : 'İlk gelişte başlar';
+    return `<div class="st-gecerlilik${g.suresi_doldu ? ' st-doldu' : ''}"><i class="bi bi-hourglass-split"></i> ${esc(g.sure)} · ${g.suresi_doldu ? `Süresi doldu (${tarihTr(g.bitis)})` : metin}</div>`;
+  }
 
   function satirHtml(k) {
     const ac = acik.has(k.anahtar);
@@ -94,8 +103,8 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
       <tr class="st-satir${ac ? ' acik' : ''}" data-anahtar="${esc(k.anahtar)}">
         ${musteriId ? '' : `<td class="st-musteri">${esc(k.musteri.ad || '—')}</td>`}
         <td>${tarihTr(k.baslangic_tarihi)}</td>
-        <td class="st-ad">${esc(k.ad || '—')} <span class="rc-rozet rc-rozet-${k.tur === 'paket' ? 'mor' : 'mavi'}">${k.tur === 'paket' ? 'Paket' : 'Hizmet'}</span></td>
-        <td><span class="st-haplar">${sayacHaplari(k.sayac)}${pdf}</span></td>
+        <td class="st-ad">${esc(k.ad || '—')} <span class="rc-rozet rc-rozet-${k.tur === 'paket' ? 'mor' : 'mavi'}">${k.tur === 'paket' ? 'Paket' : 'Hizmet'}</span>${k.sinirsiz ? ' <span class="rc-rozet rc-rozet-yesil">Sınırsız</span>' : ''}${gecerlilikHtml(k)}</td>
+        <td><span class="st-haplar">${sayacHaplari(k.sayac, k.sinirsiz)}${pdf}</span></td>
         <td class="rc-sag"><button type="button" class="st-ac" data-ac="${esc(k.anahtar)}" aria-label="Seansları göster"><i class="bi bi-chevron-${ac ? 'up' : 'down'}"></i></button></td>
       </tr>
       <tr class="st-detay" data-detay="${esc(k.anahtar)}"${ac ? '' : ' hidden'}>
@@ -114,9 +123,9 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
       const mini = (ad, deger, d) => `<div><small>${ad}</small><strong class="st-y-${d}">${deger}</strong></div>`;
       return `
         <div class="st-kart">
-          <div class="st-kart-bas"><h6>${esc(h.ad || '-')}</h6><span class="rc-rozet rc-rozet-yesil">${h.sayac.toplam} Seans</span></div>
+          <div class="st-kart-bas"><h6>${esc(h.ad || '-')}</h6><span class="rc-rozet rc-rozet-yesil">${k.sinirsiz ? 'Sınırsız' : `${h.sayac.toplam} Seans`}</span></div>
           <div class="st-daireler">${daireler || '<span class="st-bos">Seans hakkı yok</span>'}</div>
-          <div class="st-mini">${mini('Kullanıldı', h.sayac.kullanilan, 'geldi')}${mini('Kalan', h.sayac.bekleyen, 'beklemede')}${mini('Kullanılmadı', h.sayac.kullanilmayan, 'gelmedi')}${mini('Telafi', h.sayac.telafi, 'telafi')}</div>
+          <div class="st-mini">${mini('Kullanıldı', h.sayac.kullanilan, 'geldi')}${mini('Kalan', k.sinirsiz ? '∞' : h.sayac.bekleyen, 'beklemede')}${mini('Kullanılmadı', h.sayac.kullanilmayan, 'gelmedi')}${mini('Telafi', h.sayac.telafi, 'telafi')}</div>
           ${h.lazer ? `<button type="button" class="rc-btn st-cihaz-btn" data-cihaz="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-lightning-charge"></i> Cihaz Bilgileri</button>` : ''}
         </div>`;
     }).join('')}</div>`;
@@ -187,7 +196,7 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
 
   function seansDuzenle(k, h, s) {
     const ov = modalAc('Seans Düzenle', bilgi(k, h, tarihSaat(s))
-      + `<div class="st-btnlar">${durumBtn('geldi', 1, 'Kullanıldı')}${durumBtn('gelmedi', 0, 'Kullanılmadı')}${durumBtn('telafi', 2, etiket.telafi || 'Telafi')}${durumBtn('beklemede', 'null', etiket.beklemede || 'Beklemede')}</div>`,
+      + `<div class="st-btnlar">${durumBtn('geldi', 1, 'Kullanıldı')}${durumBtn('gelmedi', 0, 'Kullanılmadı')}${k.sinirsiz ? '' : durumBtn('telafi', 2, etiket.telafi || 'Telafi')}${durumBtn('beklemede', 'null', etiket.beklemede || 'Beklemede')}</div>`,
     '', { ikon: 'pencil-square', dar: true });
     butonlariBagla(ov, (g) => durumYaz(s, g));
   }

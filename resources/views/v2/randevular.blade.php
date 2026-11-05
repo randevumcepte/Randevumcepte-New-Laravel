@@ -15,5 +15,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/randevular-v2.js?v=4"></script>
+    <script type="module" src="/js/randevular-v2.js?v=5"></script>
 @endpush

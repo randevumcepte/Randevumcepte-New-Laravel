@@ -63,3 +63,14 @@ Her geçişte `backend.dart`'ta çağrı `ApiClient` (Bearer) ile yapılmalı �
 
 ## Açma (kill-switch)
 `.env`: `PAKET_V2_YAZMA_AKTIF=true` (kapalıyken tüm yazma uçları 409, okuma her zaman açık).
+
+## Sınırsız / süreli paket
+Paket tanımı: `sinirsiz (0/1)`, `gecerlilik_sayi` + `gecerlilik_birim (ay|yil)`, `gunluk_limit` (yalnız sınırsızda). Satışta `adisyon_paketler`'e kopyalanır (model `saving`, tek nokta); katalog sonradan değişse de satılan paket etkilenmez. Şema eski monolitte: `2026_11_05_120000_add_sinirsiz_gecerlilik_to_paketler`.
+
+- **Süre ilk "Geldi"de başlar.** Bitiş saklanmaz: `MIN(seans_tarih where geldi=1) + süre` (`Domain\Paket\PaketGecerlilik`, veri `Services\Paket\PaketKullanimi`). "Geldi" geri alınır ya da geçmiş tarihli seans girilirse kendiliğinden düzelir. Hiç gelinmemiş pakette süre işlemez. Bitiş günü dahildir.
+- **`seans_sayisi` teknik tavan:** sınırsızda `gün × günlük limit`. `> 0` ve kalan formülü kullanan eski kod bozulmaz; istemci adet göstermez, `sinirsiz` bayrağına bakar.
+- **Seans adayı (`SeansHavuzu::yeniAday`):** süresi bitmiş / günlük limiti dolmuş paket aday olmaz; geçerli sınırsız paket FIFO'dan önce gelir. Uygun paket yoksa randevu paketsiz açılır (bugünkü "hak yok" davranışı).
+- Sınırsız pakette telafi reddedilir; toplu randevu çalışmaz (`paket_hizmetler.seans` boş).
+- Eski monolit karşılığı `App\Services\PaketGecerlilik`: iki repoda aynı kural.
+- API: paket satırına `sinirsiz, gecerlilik_sayi, gecerlilik_birim, gecerlilik_metni, gunluk_limit`; `/seans` satırına `sinirsiz, gecerlilik{sure, baslangic, bitis, suresi_doldu}`; `POST/PATCH /paket` aynı alanları alır (`sinirsiz=1` iken süre zorunlu).
+

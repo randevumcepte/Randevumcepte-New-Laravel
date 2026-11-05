@@ -409,6 +409,7 @@ class RandevuDurumServisi
                 'adisyon_paket_id' => (int) $s['adisyon_paket_id'],
                 'kalan_seans'      => max(0, $toplam - $kullanilan),
                 'toplam_seans'     => $toplam,
+                'sinirsiz'         => $ap ? (app(\App\Services\Paket\PaketKullanimi::class)->durum((int) $ap->id)['sinirsiz'] ?? false) : false,
                 'seans_no'         => (int) ($s['seans_no'] ?? 0),
                 'sure_dk'          => (int) ($rh->sure_dk ?? 0),
                 'default_miktar'   => ($rh && $rh->dusum_miktari) ? (int) $rh->dusum_miktari : 1,

@@ -2,6 +2,7 @@
 
 namespace App\Services\Ders;
 
+use App\Services\Paket\PaketKullanimi;
 use App\Domain\Ders\KatilimciDurumu;
 use App\Exceptions\GecersizIslemException;
 use App\Models\DersKatilimci;
@@ -130,7 +131,10 @@ class DersTekrarliServisi
 
         $bugun = Carbon::today();
         $tarih = Carbon::parse($kayit->baslangic_tarihi ?: $bugun)->startOfDay()->max($bugun)->copy();
-        for ($i = 0; $i < self::MAKS_GUN && $kalan > 0; $i++, $tarih->addDay()) {
+        $durum = $kayit->adisyon_paket_id ? app(PaketKullanimi::class)->durum((int) $kayit->adisyon_paket_id) : null;
+        // Sure ilk geliste baslar; henuz gelinmediyse plan baslangicindan sayilir.
+        $son = $durum ? (\App\Domain\Paket\PaketGecerlilik::bitis($durum['baslangic'] ?? $tarih->toDateString(), $durum['sayi'], $durum['birim'])) : null;
+        for ($i = 0; $i < self::MAKS_GUN && $kalan > 0 && ($son === null || $tarih->toDateString() <= $son); $i++, $tarih->addDay()) {
             foreach ($gunSablon->get($tarih->dayOfWeekIso, []) as $s) {
                 if ($kalan <= 0) {
                     break;
@@ -141,7 +145,7 @@ class DersTekrarliServisi
                 }
             }
         }
-        $sonuc['yerlesmeyen'] = $kalan;
+        $sonuc['yerlesmeyen'] = ($durum['sinirsiz'] ?? false) ? 0 : $kalan; // sinirsizda hedef teknik tavan
 
         return $sonuc;
     }

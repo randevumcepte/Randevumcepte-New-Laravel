@@ -2,7 +2,7 @@
  * v2 GRUP DERSİ ORTAK KATMANI — TEK KAYNAK (stil: css/ders-v2.css; bu modül kendisi yükler).
  * Takvim, Ders Programı, Satış, Paket, Ön Görüşme ve Müşteri Detay aynı modalları kullanır.
  * Import yolu her yerde AYNI olmalı:
- *   import { dersOturumAc, dersOturumYeni, dersFormu, dersPlani } from '/js/lib/v2-ders.js?v=1';
+ *   import { dersOturumAc, dersOturumYeni, dersFormu, dersPlani } from '/js/lib/v2-ders.js?v=2';
  *
  * Veri ve kurallar /api/v2/ders/* uçlarından (Flutter aynı uçları kullanır): durum sözlüğü,
  * kapasite → bekleme, telafi bağlama, seans düşümü burada HESAPLANMAZ.
@@ -200,7 +200,7 @@ export async function dersPlani({ salonId, musteriId, adlar = [], sessiz = false
 
   const ov = modalAc('Otomatik Ders Planı', `
     <p class="rc-ipucu">Paketin/hizmetin seanslarını seçtiğiniz sabit ders slotlarına haftalık otomatik dağıtır.</p>
-    ${alan('Paket / Hizmet', `<select id="dplKaynak">${kaynaklar.map((k, i) => `<option value="${i}">${esc(k.etiket)} • ${k.kalan_seans} seans</option>`).join('')}</select>`)}
+    ${alan('Paket / Hizmet', `<select id="dplKaynak">${kaynaklar.map((k, i) => `<option value="${i}">${esc(k.etiket)} • ${k.sinirsiz ? 'Sınırsız' : `${k.kalan_seans} seans`}</option>`).join('')}</select>`)}
     <div class="dpl-cipler" id="dplEgitmen"></div><div class="dpl-cipler" id="dplGun"></div><div id="dplSlot"></div>`,
     '<span class="dpl-ozet" id="dplOzet"></span><button class="rc-btn rc-btn-ikincil" id="dplVazgec" type="button">Vazgeç</button><button class="rc-btn rc-btn-yesil" id="dplKaydet" type="button">Planla ve Dağıt</button>',
     { ikon: 'arrow-repeat', genis: true, sabit: true });
