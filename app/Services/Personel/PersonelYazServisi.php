@@ -263,7 +263,10 @@ class PersonelYazServisi
                 continue; // o tur hic gönderilmediyse dokunma
             }
             $map = is_array($kalemler[$tur]) ? $kalemler[$tur] : [];
-            PersonelPrimOrani::where('personel_id', $personelId)->where('tur', $tur)->delete();
+            PersonelPrimOrani::where('personel_id', $personelId)->where('tur', $tur)
+                // Pasif paketin orani formda yok; silinirse eski satislarin primi degisir.
+                ->when($tur === 'paket', fn ($q) => $q->whereNotIn('kalem_id', DB::table('paketler')->where('salon_id', $salonId)->where('aktif', 0)->pluck('id')))
+                ->delete();
             foreach ($map as $kalemId => $yuzde) {
                 $kalemId = (int) $kalemId;
                 $yuzde = (float) str_replace(',', '.', (string) $yuzde);

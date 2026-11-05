@@ -74,3 +74,6 @@ Paket tanımı: `sinirsiz (0/1)`, `gecerlilik_sayi` + `gecerlilik_birim (ay|yil)
 - Eski monolit karşılığı `App\Services\PaketGecerlilik`: iki repoda aynı kural.
 - API: paket satırına `sinirsiz, gecerlilik_sayi, gecerlilik_birim, gecerlilik_metni, gunluk_limit`; `/seans` satırına `sinirsiz, gecerlilik{sure, baslangic, bitis, suresi_doldu}`; `POST/PATCH /paket` aynı alanları alır (`sinirsiz=1` iken süre zorunlu).
 
+## Satılmış paketin hizmetleri
+Satılan paket yalnız `paket_id` tutar, hizmetleri `paket_hizmetler`'den okunur. Katalogda hizmet listesi değişirse ve paket satılmışsa eski satışlar pasif (`aktif=0`) bir kopyaya taşınır (`Services\Paket\PaketSurumu`; eski panel + mobil API için `App\Services\PaketSurumu`). Katalog paketinin id'si aynı kalır; fiyat/ad/süre değişikliği kopya açmaz. Detaylı prim oranları kopyaya aktarılır, prim formu pasif paketlerin oranını silmez. Seçim listeleri `aktif=1` filtreler.
+

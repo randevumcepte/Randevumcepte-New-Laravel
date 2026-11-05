@@ -27,6 +27,7 @@ class PaketYazServisi
     public function __construct(
         private SalonSahipligi $sahiplik,
         private PaketSorgusu $sorgu,
+        private PaketSurumu $surum,
     ) {}
 
     /** Tur + gecerlilik. Sinirsizda miktar = teknik tavan (PaketGecerlilik::ustSinir). */
@@ -61,6 +62,9 @@ class PaketYazServisi
 
         $paket = DB::transaction(function () use ($salonId, $id, $yeni, $v) {
             $p = $yeni ? new Paketler(['salon_id' => $salonId]) : $this->aktifKilitli($id);
+            if (! $yeni && isset($v['hizmetler'])) {
+                $this->surum->satilmislariDondur((int) $id, array_column($v['hizmetler'], 'hizmet_id')); // satilmis paketler eski hizmetleriyle kalir
+            }
             $hizmetler = $v['hizmetler'] ?? $p->hizmetler()->get(['seans', 'fiyat'])->toArray();
             $etkin = PaketTutari::etkin(
                 array_key_exists('fiyat', $v) ? $v['fiyat'] : $p->fiyat,

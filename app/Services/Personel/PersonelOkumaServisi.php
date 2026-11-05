@@ -185,7 +185,7 @@ class PersonelOkumaServisi
         }
 
         $paketler = [];
-        foreach (DB::table('paketler')->where('salon_id', $salonId)->orderBy('paket_adi')->select('id', 'paket_adi')->get() as $pk) {
+        foreach (DB::table('paketler')->where('salon_id', $salonId)->where('aktif', 1)->orderBy('paket_adi')->select('id', 'paket_adi')->get() as $pk) {
             $paketler[] = ['id' => (int) $pk->id, 'ad' => $pk->paket_adi, 'yuzde' => $oranlar['paket'][(int) $pk->id] ?? null];
         }
 
