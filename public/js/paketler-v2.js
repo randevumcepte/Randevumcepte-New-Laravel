@@ -229,7 +229,7 @@ function satisYap() {
       <div class="pk-ad">${esc(p.paket_adi)}</div>
       <div class="rc-alan pk-satis-hizmet"><label>Hizmetler</label>
         <div class="pk-hizmet-secim" data-secim>${p.hizmetler.map((h) => hizmetSatiri(h.hizmet_id, h.hizmet_adi)).join('')}</div>
-        <select data-hizmet-ekle><option value="">+ Hizmet ekle…</option>${fv.hizmetler.filter((s) => !p.hizmetler.some((h) => h.hizmet_id === s.hizmet_id)).map((s) => `<option value="${s.hizmet_id}">${esc(s.ad)}</option>`).join('')}</select>
+        <div class="pk-hizmet-ara"><i class="bi bi-search"></i><input type="text" data-hizmet-ara placeholder="Hizmet ekle: aramak için yazın" autocomplete="off"><div class="pk-hizmet-sonuc" data-sonuc hidden></div></div>
       </div>
       <div class="rc-form-izgara">
         ${p.sinirsiz ? `<div class="rc-alan"><label>Paket</label><input readonly value="Sınırsız · ${esc(p.gecerlilik_metni || '')} (ilk gelişte başlar)"></div>` : `<div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>`}
@@ -249,16 +249,46 @@ function satisYap() {
   ov.addEventListener('change', (e) => {
     const k = e.target.closest('.pk-satis-kalem');
     if (!k) return;
-    if (e.target.matches('[data-hizmet-ekle]') && e.target.value) {
-      const s = e.target.selectedOptions[0];
-      el('[data-secim]', k).insertAdjacentHTML('beforeend', hizmetSatiri(e.target.value, s.textContent));
-      s.remove();
-      e.target.value = '';
-    } else if (e.target.matches('[data-secim] input') && !seciliHizmetler(k).length) {
+    if (e.target.matches('[data-secim] input') && !seciliHizmetler(k).length) {
       e.target.checked = true; // paket en az bir hizmet içermeli
       return mesaj('Pakette en az bir hizmet kalmalıdır.', 'hata');
     }
     fiyatGuncelle(k);
+  });
+
+  // Hizmet ekleme: yüzlerce hizmette düz liste kullanılmaz, yazdıkça süzülür (en çok 50 satır).
+  const sonucCiz = (k) => {
+    const q = el('[data-hizmet-ara]', k).value.toLocaleLowerCase('tr').trim();
+    const ekli = [...k.querySelectorAll('[data-secim] input')].map((c) => Number(c.value));
+    const liste = fv.hizmetler.filter((s) => !ekli.includes(s.hizmet_id) && s.ad.toLocaleLowerCase('tr').includes(q));
+    const kutu = el('[data-sonuc]', k);
+    kutu.innerHTML = liste.slice(0, 50).map((s) => `<button type="button" data-hizmet-ekle="${s.hizmet_id}">${esc(s.ad)}</button>`).join('')
+      + (!liste.length ? '<div class="pk-hizmet-not">Sonuç bulunamadı</div>' : liste.length > 50 ? `<div class="pk-hizmet-not">${liste.length - 50} hizmet daha var, aramayı daraltın</div>` : '');
+    kutu.hidden = false;
+  };
+  const hizmetEkle = (k, b) => {
+    el('[data-secim]', k).insertAdjacentHTML('beforeend', hizmetSatiri(b.dataset.hizmetEkle, b.textContent));
+    const giris = el('[data-hizmet-ara]', k);
+    giris.value = '';
+    giris.focus();
+    sonucCiz(k);
+    fiyatGuncelle(k);
+  };
+  ov.addEventListener('input', (e) => { if (e.target.matches('[data-hizmet-ara]')) sonucCiz(e.target.closest('.pk-satis-kalem')); });
+  ov.addEventListener('focusin', (e) => { if (e.target.matches('[data-hizmet-ara]')) sonucCiz(e.target.closest('.pk-satis-kalem')); });
+  ov.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.matches('[data-hizmet-ara]')) return;
+    e.preventDefault();
+    const k = e.target.closest('.pk-satis-kalem');
+    const ilk = el('[data-hizmet-ekle]', k);
+    if (ilk) hizmetEkle(k, ilk);
+  });
+  ov.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.pk-hizmet-ara')) ov.querySelectorAll('[data-sonuc]').forEach((s) => { s.hidden = true; });
+  });
+  ov.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-hizmet-ekle]');
+    if (b) hizmetEkle(b.closest('.pk-satis-kalem'), b);
   });
 
   // Çift tıklama / ağ tekrarı ikinci adisyon açmasın — modal başına tek anahtar.
