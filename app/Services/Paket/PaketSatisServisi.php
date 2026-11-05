@@ -3,6 +3,7 @@
 namespace App\Services\Paket;
 
 use App\Exceptions\YetkisizErisimException;
+use App\Models\AdisyonPaketler;
 use App\Models\Adisyonlar;
 use App\Services\Satis\KalemServisi;
 use App\Services\Yetki\SalonSahipligi;
@@ -27,6 +28,7 @@ class PaketSatisServisi
         private SalonSahipligi $sahiplik,
         private PaketSorgusu $sorgu,
         private KalemServisi $kalem,
+        private PaketSurumu $surum,
     ) {}
 
     /**
@@ -43,12 +45,16 @@ class PaketSatisServisi
         // Katalog fiyatlari once (salon + aktiflik denetimi), fiyat yetkisi yazmadan once.
         $kalemler = array_map(function (array $k) use ($salonId, $kim) {
             $katalog = $this->sorgu->satisTutari((int) $k['paket_id'], $salonId);
-            $fiyat = isset($k['fiyat']) ? round((float) $k['fiyat'], 2) : $katalog['fiyat'];
-            if ($fiyat !== $katalog['fiyat'] && ! $kim['fiyat_degistirebilir']) {
+            // Hizmetler degistiyse beklenen fiyat secime gore (hizmet bazli fiyat yoksa paket fiyati).
+            $hizmetler = array_values(array_map('intval', $k['hizmetler'] ?? []));
+            $this->sahiplik->hizmetOlmali($hizmetler, $salonId);
+            $beklenen = ($hizmetler ? $this->surum->secimFiyati((int) $k['paket_id'], $salonId, $hizmetler) : null) ?? $katalog['fiyat'];
+            $fiyat = isset($k['fiyat']) ? round((float) $k['fiyat'], 2) : $beklenen;
+            if ($fiyat !== $beklenen && ! $kim['fiyat_degistirebilir']) {
                 throw new YetkisizErisimException('Paket fiyatını değiştirme yetkiniz yok ('.$katalog['paket_adi'].')');
             }
 
-            return ['paket_id' => (int) $k['paket_id'], 'fiyat' => $fiyat, 'seans' => isset($k['seans']) ? (int) $k['seans'] : $katalog['seans']];
+            return ['paket_id' => (int) $k['paket_id'], 'fiyat' => $fiyat, 'seans' => isset($k['seans']) ? (int) $k['seans'] : $katalog['seans'], 'hizmetler' => $hizmetler];
         }, $v['kalemler']);
 
         $yetkiliId = (int) $kim['yetkili_id'];
@@ -56,7 +62,14 @@ class PaketSatisServisi
             function () use ($salonId, $v, $musteriId, $saticiId, $kalemler, $yetkiliId) {
                 $adisyon = Adisyonlar::ac($salonId, $musteriId, $yetkiliId, $v['tarih'] ?? null);
                 foreach ($kalemler as $k) {
-                    $this->kalem->ekle((int) $adisyon->id, 'paket', $k['paket_id'], ['personel_id' => $saticiId, 'fiyat' => $k['fiyat'], 'seans' => $k['seans']]);
+                    $eklenen = $this->kalem->ekle((int) $adisyon->id, 'paket', $k['paket_id'], ['personel_id' => $saticiId, 'fiyat' => $k['fiyat'], 'seans' => $k['seans']]);
+                    // Katalogdan farkli hizmetlerle satis: kalem o satisa ozel kopyaya baglanir, katalog degismez.
+                    $satisPaketi = $this->surum->satisPaketi($k['paket_id'], $k['hizmetler']);
+                    if ($satisPaketi !== $k['paket_id']) {
+                        $kalem = AdisyonPaketler::findOrFail($eklenen['kalem_id']);
+                        $kalem->paket_id = $satisPaketi;
+                        $kalem->save();
+                    }
                 }
 
                 return [

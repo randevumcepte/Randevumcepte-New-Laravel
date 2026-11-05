@@ -44,3 +44,6 @@
 .pk-sure input { flex: 1; min-width: 0; }
 .pk-sure select { flex: 0 0 84px; }
 .rc-alan[hidden] { display: none; }
+.pk-satis-hizmet { margin-bottom: 10px; }
+.pk-hizmet-secim { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
+.pk-hizmet-satir { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; }

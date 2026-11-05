@@ -216,6 +216,8 @@ function paketFormu(p) {
 
 // ─────────────────────────── satış yap ───────────────────────────
 
+const hizmetSatiri = (id, ad) => `<label class="pk-hizmet-satir"><input type="checkbox" value="${esc(id)}" checked> ${esc(ad)}</label>`;
+
 function satisYap() {
   const m = musteri.secili();
   if (!secili.size || !m) return mesaj('Satış yapmadan önce lütfen paket ve müşteri seçiniz.', 'hata');
@@ -225,19 +227,47 @@ function satisYap() {
     <div class="pk-satis-ozet"><i class="bi bi-person"></i> <b>${esc(m.ad)}</b></div>
     ${paketler.map((p) => `<div class="pk-satis-kalem" data-id="${p.id}">
       <div class="pk-ad">${esc(p.paket_adi)}</div>
+      <div class="rc-alan pk-satis-hizmet"><label>Hizmetler</label>
+        <div class="pk-hizmet-secim" data-secim>${p.hizmetler.map((h) => hizmetSatiri(h.hizmet_id, h.hizmet_adi)).join('')}</div>
+        <select data-hizmet-ekle><option value="">+ Hizmet ekle…</option>${fv.hizmetler.filter((s) => !p.hizmetler.some((h) => h.hizmet_id === s.hizmet_id)).map((s) => `<option value="${s.hizmet_id}">${esc(s.ad)}</option>`).join('')}</select>
+      </div>
       <div class="rc-form-izgara">
         ${p.sinirsiz ? `<div class="rc-alan"><label>Paket</label><input readonly value="Sınırsız · ${esc(p.gecerlilik_metni || '')} (ilk gelişte başlar)"></div>` : `<div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>`}
         ${fiyatGizli() ? '' : `<div class="rc-alan"><label>Fiyat (₺)</label><input type="number" min="0" step="0.01" data-fiyat value="${p.fiyat}" ${fiyatAcik ? '' : 'readonly title="Fiyat değiştirme yetkiniz yok"'}></div>`}
       </div></div>`).join('')}`;
   const ov = modalAc(fiyatGizli() ? 'Seans Sayısı' : 'Seans ve Fiyatı Belirleyin', govde, satisAltButonlari(fiyatGizli()), { ikon: 'cart-check', sabit: true });
   el('[data-kapat]', ov)?.addEventListener('click', modalKapat);
+
+  // Satışa özel hizmet seçimi: katalog değişmez. Pakette hizmet bazlı fiyat varsa fiyat seçime göre güncellenir.
+  const seciliHizmetler = (k) => [...k.querySelectorAll('[data-secim] input:checked')].map((c) => Number(c.value));
+  const fiyatGuncelle = (k) => {
+    const alan = el('[data-fiyat]', k);
+    const p = paketler.find((x) => String(x.id) === k.dataset.id);
+    if (!alan || !p.hizmetler.some((h) => h.fiyat > 0)) return;
+    alan.value = seciliHizmetler(k).reduce((t, id) => t + Number(p.hizmetler.find((h) => h.hizmet_id === id)?.fiyat ?? fv.hizmetler.find((s) => s.hizmet_id === id)?.fiyat ?? 0), 0);
+  };
+  ov.addEventListener('change', (e) => {
+    const k = e.target.closest('.pk-satis-kalem');
+    if (!k) return;
+    if (e.target.matches('[data-hizmet-ekle]') && e.target.value) {
+      const s = e.target.selectedOptions[0];
+      el('[data-secim]', k).insertAdjacentHTML('beforeend', hizmetSatiri(e.target.value, s.textContent));
+      s.remove();
+      e.target.value = '';
+    } else if (e.target.matches('[data-secim] input') && !seciliHizmetler(k).length) {
+      e.target.checked = true; // paket en az bir hizmet içermeli
+      return mesaj('Pakette en az bir hizmet kalmalıdır.', 'hata');
+    }
+    fiyatGuncelle(k);
+  });
+
   // Çift tıklama / ağ tekrarı ikinci adisyon açmasın — modal başına tek anahtar.
   const anahtar = crypto.randomUUID();
 
   ov.querySelectorAll('[data-odeme]').forEach((btn) => btn.addEventListener('click', () => kilitle(btn, 'İşleniyor…', async () => {
     const kalemler = [...ov.querySelectorAll('.pk-satis-kalem')].map((k) => {
       const seansAlani = el('[data-seans]', k);
-      const kalem = { paket_id: Number(k.dataset.id), seans: seansAlani ? sayiVeyaNull(seansAlani.value) : null };
+      const kalem = { paket_id: Number(k.dataset.id), seans: seansAlani ? sayiVeyaNull(seansAlani.value) : null, hizmetler: seciliHizmetler(k) };
       if (!fiyatGizli() && fiyatAcik) kalem.fiyat = sayiVeyaNull(el('[data-fiyat]', k).value);
       return kalem;
     });

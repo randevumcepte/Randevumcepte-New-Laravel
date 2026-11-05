@@ -22,6 +22,8 @@ class PaketSatisIstegi extends V2Istegi
             'kalemler.*.paket_id' => ['required', 'integer', 'min:1'],
             'kalemler.*.seans'    => ['nullable', 'integer', 'min:0', 'max:1000'],
             'kalemler.*.fiyat'    => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'kalemler.*.hizmetler'   => ['nullable', 'array', 'max:50'],
+            'kalemler.*.hizmetler.*' => ['integer', 'min:1'],
             'idempotency_key'     => ['required', 'string', 'max:100'],
         ];
     }
@@ -30,7 +32,7 @@ class PaketSatisIstegi extends V2Istegi
     {
         return [
             'kalemler' => 'Paket', 'kalemler.*.paket_id' => 'Paket', 'kalemler.*.seans' => 'Seans sayısı',
-            'kalemler.*.fiyat' => 'Fiyat', 'tarih' => 'Satış tarihi',
+            'kalemler.*.fiyat' => 'Fiyat', 'kalemler.*.hizmetler' => 'Hizmetler', 'tarih' => 'Satış tarihi',
         ] + parent::attributes();
     }
 }

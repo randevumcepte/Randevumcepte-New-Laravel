@@ -77,3 +77,6 @@ Paket tanımı: `sinirsiz (0/1)`, `gecerlilik_sayi` + `gecerlilik_birim (ay|yil)
 ## Satılmış paketin hizmetleri
 Satılan paket yalnız `paket_id` tutar, hizmetleri `paket_hizmetler`'den okunur. Katalogda hizmet listesi değişirse ve paket satılmışsa eski satışlar pasif (`aktif=0`) bir kopyaya taşınır (`Services\Paket\PaketSurumu`; eski panel + mobil API için `App\Services\PaketSurumu`). Katalog paketinin id'si aynı kalır; fiyat/ad/süre değişikliği kopya açmaz. Detaylı prim oranları kopyaya aktarılır, prim formu pasif paketlerin oranını silmez. Seçim listeleri `aktif=1` filtreler.
 
+## Satışta hizmet seçimi
+`POST /paket/satis` kaleminde `hizmetler: [hizmet_id]` (opsiyonel). Liste katalogla aynıysa katalog paketi, farklıysa o satışa özel pasif kopya yazılır (`PaketSurumu::satisPaketi`); katalog değişmez. Hizmetler salona ait olmalı. Pakette hizmet bazlı fiyat varsa beklenen fiyat seçime göre hesaplanır (`secimFiyati`: paket hizmeti kendi fiyatı, yeni hizmet salon fiyatı); yoksa paket fiyatı. Farklı fiyat yine `satis.indirim_uygula` ister.
+
