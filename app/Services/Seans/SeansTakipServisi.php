@@ -110,8 +110,10 @@ class SeansTakipServisi
         $tumu = DB::table('adisyon_paket_seanslar')
             ->where(fn ($w) => $w->whereIn('adisyon_paket_id', $kalemIdler['paket'])->orWhereIn('adisyon_hizmet_id', $kalemIdler['hizmet']))
             ->orderBy('seans_tarih')->orderBy('seans_saat')->orderBy('id')
-            ->get(['id', 'adisyon_paket_id', 'adisyon_hizmet_id', 'hizmet_id', 'seans_no', 'seans_tarih', 'seans_saat', 'geldi']);
+            ->get(['id', 'adisyon_paket_id', 'adisyon_hizmet_id', 'hizmet_id', 'personel_id', 'seans_no', 'seans_tarih', 'seans_saat', 'geldi']);
+        $personeller = DB::table('salon_personelleri')->whereIn('id', $tumu->pluck('personel_id')->filter()->unique())->pluck('personel_adi', 'id');
         foreach ($tumu as $s) {
+            $s->personel_adi = $personeller[$s->personel_id] ?? null;
             $tur = SeansKalemTuru::seanstan($s);
             $seanslar[$tur->value.':'.$tur->seansKalemId($s)][] = $s;
         }
@@ -186,6 +188,7 @@ class SeansTakipServisi
             'seans_no' => $s->seans_no !== null ? (int) $s->seans_no : null,
             'tarih'    => self::gecerliTarih($s->seans_tarih),
             'saat'     => $s->seans_saat ? substr((string) $s->seans_saat, 0, 5) : null,
+            'personel' => $s->personel_adi ?? null,
             'geldi'    => $durum->geldi(),
             'durum'    => $durum->value,
         ];

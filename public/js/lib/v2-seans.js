@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=3';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=4';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -115,6 +115,7 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
   function kartlarHtml(k) {
     if (!k.hizmetler.length) return '<div class="st-bos">Bu pakette hizmet detayı bulunmamaktadır.</div>';
     return `<div class="st-kartlar">${k.hizmetler.map((h) => {
+      if (k.sinirsiz) return yillikKart(k, h);
       const daireler = h.seanslar.map((s) => {
         const ipucu = `${tarihTr(s.tarih)} ${s.saat || ''} - ${etiket[s.durum] || s.durum}`;
         return `<button type="button" class="st-daire st-${s.durum}" data-seans="${s.id}" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}" title="${esc(ipucu)}"><i class="bi ${DAIRE_IKON[s.durum]}"></i></button>`;
@@ -129,6 +130,42 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
           ${h.lazer ? `<button type="button" class="rc-btn st-cihaz-btn" data-cihaz="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-lightning-charge"></i> Cihaz Bilgileri</button>` : ''}
         </div>`;
     }).join('')}</div>`;
+  }
+
+  /** Sınırsız/yıllık paket: daire yerine başlangıç-bitiş + seans dökümü. */
+  function yillikKart(k, h) {
+    const g = k.gecerlilik || {};
+    const kalanGun = g.bitis ? Math.ceil((new Date(`${g.bitis}T23:59:59`) - new Date()) / 86400000) : null;
+    const durum = g.suresi_doldu ? '<div class="st-yil-durum st-doldu">Süresi doldu</div>'
+      : (kalanGun !== null ? `<div class="st-yil-durum">${kalanGun} gün kaldı</div>` : '<div class="st-yil-durum st-bekliyor">İlk gelişte başlar</div>');
+    const bekleyen = h.seanslar.filter((s) => s.durum === 'beklemede').length;
+    const mini = (ad, deger, d) => `<div><small>${ad}</small><strong class="st-y-${d}">${deger}</strong></div>`;
+    return `
+      <div class="st-kart">
+        <div class="st-kart-bas"><h6>${esc(h.ad || '-')}</h6><span class="rc-rozet rc-rozet-mor">Sınırsız${g.sure ? ` · ${esc(g.sure)}` : ''}</span></div>
+        <div class="st-yil-tarih"><div><small>Başlangıç</small><b>${g.baslangic ? tarihTr(g.baslangic) : '—'}</b></div><i class="bi bi-arrow-right"></i><div><small>Bitiş</small><b>${g.bitis ? tarihTr(g.bitis) : '—'}</b></div></div>
+        ${durum}
+        <div class="st-mini">${mini('Kullanıldı', h.sayac.kullanilan, 'geldi')}${mini('Bekleyen', bekleyen, 'beklemede')}${mini('Kullanılmadı', h.sayac.kullanilmayan, 'gelmedi')}</div>
+        <div class="st-yil-btn"><button type="button" class="rc-btn rc-btn-birincil" data-dokum="1" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-list-ul"></i> Seans Dökümü</button>
+        ${g.suresi_doldu ? '' : `<button type="button" class="rc-btn rc-btn-ikincil" data-ekle="1" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-plus-lg"></i> Yeni Kullanım</button>`}</div>
+        ${h.lazer ? `<button type="button" class="rc-btn st-cihaz-btn" data-cihaz="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-lightning-charge"></i> Cihaz Bilgileri</button>` : ''}
+      </div>`;
+  }
+
+  function seansDokumu(k, h) {
+    const satirlar = [...h.seanslar].reverse().map((s) => `<tr><td>${tarihTr(s.tarih)}</td><td>${esc(s.saat || '—')}</td><td>${esc(s.personel || '—')}</td>
+      <td><span class="st-hap st-${s.durum}">${esc(etiket[s.durum] || s.durum)}</span></td>
+      <td class="rc-sag"><button type="button" class="rc-islem" data-duzenle="${s.id}" title="Düzenle"><i class="bi bi-pencil"></i></button></td></tr>`).join('');
+    const ov = modalAc('Seans Dökümü', satirlar
+      ? `<div class="st-yil-dokum"><table><thead><tr><th>Tarih</th><th>Saat</th><th>Personel</th><th>Durum</th><th></th></tr></thead><tbody>${satirlar}</tbody></table></div>`
+      : '<div class="st-bos">Henüz seans kaydı yok.</div>', '', { ikon: 'list-ul', altbaslik: h.ad });
+    ov.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-duzenle]');
+      if (!b) return;
+      const s = h.seanslar.find((x) => String(x.id) === b.dataset.duzenle);
+      modalKapat();
+      if (s.durum === 'telafi') telafiSor(k, h, s); else seansDuzenle(k, h, s);
+    });
   }
 
   /** Yazma sonrası sunucunun döndüğü güncel satırı yerinde yeniden çiz (sayfa yeniden yüklenmez). */
@@ -151,6 +188,7 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
     if (!k) return;
     const h = k.hizmetler.find((x) => String(x.hizmet_id) === b.dataset.hizmet);
     if (b.dataset.cihaz) return cihazAc(k, h);
+    if (b.dataset.dokum) return seansDokumu(k, h);
     if (b.dataset.ekle) return yeniSeans(k, h);
     if (b.dataset.seans) {
       const s = h.seanslar.find((x) => String(x.id) === b.dataset.seans);
