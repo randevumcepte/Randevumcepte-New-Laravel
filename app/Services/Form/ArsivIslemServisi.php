@@ -144,12 +144,13 @@ class ArsivIslemServisi
 
     public function onayla(int $arsivId, int $yapanId): void
     {
-        $this->durumYaz($arsivId, 1, 'arsiv_onayla', 'Form onaylandı', $yapanId);
+        $this->durumYaz($arsivId, ['durum' => 1, 'cevapladi' => 0], 'arsiv_onayla', 'Form onaylandı', $yapanId);
     }
 
     public function iptal(int $arsivId, int $yapanId): void
     {
-        $this->durumYaz($arsivId, 0, 'arsiv_iptal', 'Form iptal edildi', $yapanId);
+        // cevapladi korunur: iptal edilen doldurulmuş formun linki yeniden doldurulamaz.
+        $this->durumYaz($arsivId, ['durum' => 0], 'arsiv_iptal', 'Form iptal edildi', $yapanId);
     }
 
     /**
@@ -280,10 +281,10 @@ class ArsivIslemServisi
         return $a;
     }
 
-    private function durumYaz(int $arsivId, int $durum, string $action, string $aciklama, int $yapanId): void
+    private function durumYaz(int $arsivId, array $alanlar, string $action, string $aciklama, int $yapanId): void
     {
         $arsiv = $this->bul($arsivId);
-        $arsiv->fill(['durum' => $durum, 'cevapladi' => 0])->save();
+        $arsiv->fill($alanlar)->save();
         AktiviteLog::yaz((int) $arsiv->salon_id, $yapanId, $action, 'arsiv', (int) $arsiv->id, null, $aciklama);
     }
 

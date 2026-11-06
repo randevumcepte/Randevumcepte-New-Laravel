@@ -11,7 +11,7 @@ namespace App\Support\Yetki;
  * ayni anahtar eklenmeli (tanimlar + sablonlar + mobilGizliAnahtarlar), yoksa
  * web/mobil paritesi bozulur ve Flutter sahte "zorla cikis" tetikler.
  *
- * Onemli: musteri.telefon_gor yalniz Yonetici sablonunda default ACIK.
+ * Onemli: musteri.telefon_gor yalniz Personel sablonunda default KAPALI.
  */
 class YetkiSabitleri
 {
@@ -131,7 +131,7 @@ class YetkiSabitleri
 
     /**
      * Hazir sablonlar (yonetici / sekreter / personel).
-     * NOT: musteri.telefon_gor yalniz Yonetici sablonunda ACIK.
+     * NOT: musteri.telefon_gor yalniz Personel sablonunda KAPALI.
      */
     public static function sablonlar(): array
     {
@@ -186,7 +186,7 @@ class YetkiSabitleri
                     'randevu.kapanis_blok_ekle' => true, 'randevu.online_ayar' => false,
                     'musteri.liste_gor' => true, 'musteri.tum_portfoy_gor' => true,
                     'musteri.detay_gor' => true, 'musteri.ekle_duzenle' => true,
-                    'musteri.sil' => false, 'musteri.telefon_gor' => false,
+                    'musteri.sil' => false, 'musteri.telefon_gor' => true,
                     'musteri.not_yaz' => true, 'musteri.gecmis_satis_gor' => true,
                     'satis.adisyon_olustur' => true, 'satis.tahsilat_al' => true,
                     'satis.tahsilat_sil' => false, 'satis.adisyon_sil' => false,

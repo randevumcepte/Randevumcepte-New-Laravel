@@ -5,9 +5,8 @@ namespace App\Services\SistemYonetim\Izleme;
 use Illuminate\Support\Carbon;
 
 /**
- * Paylasilan tablolardaki tarihler Turkiye yerel saatiyle yazilir (eski monolit + MySQL NOW()); uygulama saat dilimi ise
- * UTC. Pencere sinirlari, gosterim ve "x once" hesabi bu yuzden acik bolgeyle yapilir: aksi halde gun sinirlari kayar,
- * duran watchdog 3 saat boyunca canli gorunur.
+ * Paylasilan tablolardaki tarihler Turkiye yerel saatiyle yazilir (eski monolit + MySQL NOW()). Pencere sinirlari, gosterim
+ * ve "x once" hesabi acik bolgeyle yapilir: aksi halde gun sinirlari kayar, duran watchdog 3 saat boyunca canli gorunur.
  */
 final class IzlemeZamani
 {

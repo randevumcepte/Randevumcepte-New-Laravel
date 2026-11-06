@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  *         personel_sifre (payload: personel_id, yeni_hesap), yetki_degisti,
  *         personel_pasif (payload: personel_id; randevu_id null),
  *         musteri_kayit (payload: user_id, yeni_hesap, cinsiyet_tahmin),
- *         kara_liste_bildirim (payload: user_id),
+ *         kara_liste_bildirim (ESKİ, artık yazılmaz; kuyruktaki eski satırlar için monolitte duruyor),
  *         sms (payload: mesajlar[{to,message}], dogrulama; randevu_id null — kasa bildirimleri / onay kodlari),
  *         ongorusme_kayit (randevu_id = on gorusme randevusu; payload: on_gorusme_id, guncelleme —
  *           musteri SMS + personel SMS/bildirim/push, ayar_id=12).

@@ -23,7 +23,6 @@ use Illuminate\Support\Str;
  * Yan etkiler v2'de URETILMEZ; ayni transaction'da v2_bildirim_kuyrugu'na yazilir:
  *   musteri_kayit       → eski kod: SMS ayari (ayar_id=4) aciksa kayit mesaji; yeni hesapta
  *                         sifre URETIP mesaja ekler; cinsiyet bossa addan tahmin eder.
- *   kara_liste_bildirim → eski kod: ayar_id=15 aciksa "kara listeye alindiniz" WA/SMS + push.
  *
  * Eskiden bilincli farklar (karar / guvenlik):
  *   - KVKK onayi YALNIZCA telefon degistiginde sifirlanir (eskisi her kayitta sifirliyordu).
@@ -113,20 +112,15 @@ class MusteriYazServisi
         return ['id' => $userId];
     }
 
-    /** Kara liste ac/kapat. Alinirken bilgilendirme mesaji kuyruga (eski: ayar_id=15). */
+    /** Kara liste ac/kapat. Musteriye mesaj gitmez, kredi harcanmaz (kullanici karari, 2026-11-06). */
     public function karaListe(int $salonId, int $userId, bool $kara, bool $modulAktif, int $yapanId): array
     {
         if ($kara && ! $modulAktif) {
             throw new GecersizIslemException('Kara liste modülü bu işletmede pasif.');
         }
 
-        DB::transaction(function () use ($salonId, $userId, $kara, $yapanId) {
-            DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $userId)
-                ->update(['kara_liste' => $kara ? 1 : 0, 'updated_at' => now()]);
-            if ($kara) {
-                BildirimKuyrugu::yaz($salonId, 'kara_liste_bildirim', null, $yapanId, ['user_id' => $userId]);
-            }
-        });
+        DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $userId)
+            ->update(['kara_liste' => $kara ? 1 : 0, 'updated_at' => now()]);
 
         AktiviteLog::yaz($salonId, $yapanId, 'musteri_karaliste_ayar', 'musteri', $userId, $this->ad($userId),
             $kara ? 'Müşteri kara listeye alındı' : 'Müşteri kara listeden çıkarıldı');

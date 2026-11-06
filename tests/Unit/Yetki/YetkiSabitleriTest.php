@@ -67,7 +67,7 @@ class YetkiSabitleriTest extends TestCase
     public function test_telefon_varsayilani_yalniz_yonetici_sablonunda_acik(): void
     {
         $this->assertTrue(Y::sablonAyarlari('yonetici')['musteri.telefon_gor']);
-        $this->assertFalse(Y::sablonAyarlari('sekreter')['musteri.telefon_gor']);
+        $this->assertTrue(Y::sablonAyarlari('sekreter')['musteri.telefon_gor']);
         $this->assertFalse(Y::sablonAyarlari('personel')['musteri.telefon_gor']);
     }
 

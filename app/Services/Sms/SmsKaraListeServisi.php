@@ -10,7 +10,7 @@ use App\Support\Yetki\YetkiSabitleri;
 
 /**
  * SMS KARA LİSTE — listeleme burada; ekle/çıkar müşteri domaininin TEK yazma yolu
- * (MusteriYazServisi::karaListe: portföy + "kara listeye alındınız" outbox'ı + aktivite logu).
+ * (MusteriYazServisi::karaListe: portföy + aktivite logu; müşteriye mesaj gitmez).
  */
 class SmsKaraListeServisi
 {
