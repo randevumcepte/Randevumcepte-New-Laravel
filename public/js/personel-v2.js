@@ -13,7 +13,7 @@
  * data-salon (blade) ya da ?sube= query'sinden.
  */
 
-import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';

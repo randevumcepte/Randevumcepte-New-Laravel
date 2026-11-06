@@ -1,5 +1,5 @@
 /** Reputation Booster ayar modalı (eski "Google Review Ayarları") — GET + PATCH /anket/ayarlar. */
-import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan } from '/js/lib/v2-ongorusme.js?v=1';

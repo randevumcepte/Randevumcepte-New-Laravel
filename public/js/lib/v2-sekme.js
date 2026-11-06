@@ -18,7 +18,7 @@
  * Modül ciz() bir {birak()} dönebilir: sekmeden çıkılırken çağrılır (zamanlayıcı/olay temizliği).
  * Her açılış kendi kabına çizer → hızlı sekme değişiminde geç gelen cevap ayrılmış kaba düşer.
  */
-import { qp, esc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, esc } from '/js/lib/v2-ortak.js?v=2';
 
 const YUKLENIYOR = '<div class="rc-sekme-yuk"><span class="rc-yukleniyor"></span></div>';
 

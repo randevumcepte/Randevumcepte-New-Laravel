@@ -1,5 +1,5 @@
 /** Giriş, şifre ve deneme formlarının ortak davranışı. */
-import { api } from '/js/lib/v2-ortak.js?v=1';
+import { api } from '/js/lib/v2-ortak.js?v=2';
 import { ilkAlanHatasi } from '/js/lib/v2-hata.js?v=1';
 
 /** Kimliksiz POST: başarıda {veri, mesaj} döner, hatada kullanıcıya gösterilecek mesajla Error fırlatır. */

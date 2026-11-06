@@ -110,7 +110,7 @@
     <script type="module" src="/js/header-araclar.js?v=4"></script>
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
     <script type="module" src="/js/hizli-ekle.js?v=4"></script>
-    <script type="module" src="/js/panel-kabuk.js?v=10"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=11"></script>
     @stack('betik')
 </body>
 </html>

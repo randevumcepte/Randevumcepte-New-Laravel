@@ -3,7 +3,7 @@
  * formlarının ortak yardımcıları. Stil: css/rapor-v2.css.
  * Import yolu her yerde AYNI olmalı:  import { masrafModal } from '/js/lib/v2-kasa-form.js?v=1';
  */
-import { api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 
 export const secim = (liste, deger, ad, secili, bos = 'Seçiniz') => `<option value="">${esc(bos)}</option>`

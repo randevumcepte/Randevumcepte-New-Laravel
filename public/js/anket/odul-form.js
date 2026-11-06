@@ -2,7 +2,7 @@
  * Ödül alanları (kupon / puan) — şablon formu ('odul_') ve Google ayarı ('google_odul_') TEK bileşen.
  * Alan adları kolon adlarıyla aynı; tip / indirim sözlükleri API'den (form-verisi).
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=2';
 import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=1';
 
 const girdi = (ad, deger, ek = '') => `<input data-odul="${ad}" value="${esc(deger ?? '')}" ${ek}>`;

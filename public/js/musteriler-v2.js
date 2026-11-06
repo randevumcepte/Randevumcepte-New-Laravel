@@ -10,7 +10,7 @@
  * Müşteri/Danışan etiketi ve stüdyo modu (`ayarlar`) — web ve Flutter aynı kararı görür.
  * Yazma uçları MUSTERI_V2_YAZMA_AKTIF kapalıyken 409 döner (toast).
  */
-import { qp, api, el, esc, TL, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, TL, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { musteriFormuAc, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
 

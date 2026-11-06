@@ -5,7 +5,7 @@
  * /listeler/{id}/musteriler, /kayit/{id}. params: {liste_id, aranacak_id} → o müşteriyi aç
  * (hatırlatma "Müşteriye git").
  */
-import { esc } from '/js/lib/v2-ortak.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=2';
 import { gorusmeKokpiti, sonucRozeti, harf } from '/js/cagri-merkezi/ortak.js?v=6';
 
 const SAYFA = 100;

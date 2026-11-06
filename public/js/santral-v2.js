@@ -9,7 +9,7 @@
  * Burada iş kuralı hesaplanmaz; yalnızca çizilir. Anons metni de sunucudan gelir.
  */
 
-import { qp, api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 

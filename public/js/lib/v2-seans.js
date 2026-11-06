@@ -13,7 +13,7 @@
  * Sayaçlar, durum etiketleri, PDF linki, lazer kararı SUNUCUDAN; burada yalnız görsel eşleme.
  * Veri GET/POST/PATCH/PUT /api/v2/seans* (Flutter ile aynı uçlar). Stil: css/seans-v2.css.
  */
-import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=1';

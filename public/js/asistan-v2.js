@@ -10,7 +10,7 @@
  * Yazma uçları ASISTAN_V2_YAZMA_AKTIF kapalıyken 409 döner; UI toast gösterir.
  */
 
-import { qp, api, el, esc, onay, yazSonuc, tarihStr, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, onay, yazSonuc, tarihStr, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=2';
 
 const kok = document.getElementById('rc-asistan');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

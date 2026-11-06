@@ -11,6 +11,17 @@ Route::get('/', function () {
  | docs/strangler-oturum.md
  */
 Route::view('/v2/giris', 'oturum.giris');
+
+/*
+ | Sistem Yonetimi — eski /sistemyonetim/v2 karsiligi. Tum ekranlar tek kabuk gorunumu + ekran
+ | modulu (public/js/sistem/<modul>.js); liste App\\Support\\SistemSayfalari, veri /api/v2/sistem/*.
+ */
+Route::view('/sistemyonetim/giris', 'sistem.giris');
+Route::redirect('/sistemyonetim', '/sistemyonetim/dashboard');
+foreach (\App\Support\SistemSayfalari::liste() as $yol => $sayfa) {
+    Route::get('/sistemyonetim/'.$yol, fn ($id = null) => view('sistem.ekran', ['sayfa' => $sayfa, 'kayitId' => $id]))
+        ->whereNumber('id');
+}
 Route::view('/v2/sifremi-unuttum', 'oturum.sifremi-unuttum');
 Route::view('/ucretsiz-denemenizi-baslatin', 'deneme.baslat');
 Route::view('/ucretsiz-deneme', 'deneme.baslat');

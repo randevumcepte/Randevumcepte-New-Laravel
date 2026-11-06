@@ -9,7 +9,7 @@
  * modalı ile aynı: ad_soyad*, telefon*, tc_kimlik_no, doğum günü (gün/ay/yıl — yıl
  * opsiyonel), email, cinsiyet, musteri_tipi (referans), ozel_notlar.
  */
-import { api, el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 
 let _formVeri = null;

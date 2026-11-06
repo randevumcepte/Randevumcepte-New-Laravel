@@ -2,7 +2,7 @@
  * SMS Yönetimi › KARA LİSTE. Veri: GET|POST /sms/kara-liste · DELETE /sms/kara-liste/{userId}.
  * Modül pasifse (acilis.kara_liste_aktif) ekleme kapalı; mevcut kayıt listelenir ve çıkarılabilir.
  */
-import { esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';

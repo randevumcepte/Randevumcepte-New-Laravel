@@ -10,7 +10,7 @@
  *     onKaydet : (cevap.veri, yeniMi) → kayıt sonrası (liste tazele / çağrıyı işaretle)
  * Çakışma iş sonucudur (veri.cakismavar='1') → onayla "yine de kaydet". Stil: css/ongorusmeler-v2.css (.og-*).
  */
-import { api, el, esc, tarihStr, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, tarihStr, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';

@@ -2,7 +2,7 @@
  * WhatsApp › İSTATİSTİK: bugün / 7 gün / 30 gün kartları + 30 günlük yığılmış grafik.
  * Veri GET /whatsapp/ozet; hesap sunucuda (Domain\Whatsapp\GonderimOzeti).
  */
-import { esc } from '/js/lib/v2-ortak.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=2';
 import { sayi } from '/js/lib/v2-donem.js?v=1';
 import { yiginCubuk, grafikleriTemizle, RENK } from '/js/lib/v2-grafik.js?v=2';

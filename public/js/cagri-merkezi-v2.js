@@ -11,7 +11,7 @@
  * Arama randevusu hatırlatması: dakikada bir /yaklasan → "Arama Randevularım" sekme sayacı +
  * sayfa üstü uyarı ("Müşteriye git" → Çalışma Ekranında o müşteri açılır).
  */
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
 import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=1';
 
 const kok = document.getElementById('rc-cagri');

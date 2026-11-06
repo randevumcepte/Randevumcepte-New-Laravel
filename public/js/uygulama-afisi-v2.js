@@ -6,8 +6,8 @@
  * Görünürlük kararları API bayraklarından (afis_hazir, link_hazir) — burada kural yok.
  * Görseller Bearer gerektirdiği için ortak lib/v2-dosya.js apiBlob ile blob alınır.
  */
-import { api, qp, esc, el, mesaj } from '/js/lib/v2-ortak.js?v=1';
-import { apiBlob, blobIndir } from '/js/lib/v2-dosya.js?v=2';
+import { api, qp, esc, el, mesaj } from '/js/lib/v2-ortak.js?v=2';
+import { apiBlob, blobIndir } from '/js/lib/v2-dosya.js?v=3';
 
 const kok = document.getElementById('rc-afis');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

@@ -62,6 +62,13 @@ return [
             'driver' => 'legacy-passport',
             'provider' => 'isletmeyetkilileri',
         ],
+
+        // Sistem yonetimi ekibi. Token subject'i "sy:<id>": ayni id isletme/musteri tablosunda baska
+        // kisiye denk gelebildigi icin token'lar guard'lar arasinda GECMEZ (AppServiceProvider).
+        'sistemyonetim-api' => [
+            'driver' => 'sistem-passport',
+            'provider' => 'sistemyoneticileri',
+        ],
     ],
 
     /*
@@ -92,6 +99,12 @@ return [
         'isletmeyetkilileri' => [
             'driver' => 'eloquent',
             'model' => \App\Models\IsletmeYetkilileri::class,
+        ],
+
+        // Sistem yonetimi ekibi — paylasilan 'sistemyoneticileri' tablosu (giris alani: email)
+        'sistemyoneticileri' => [
+            'driver' => 'eloquent',
+            'model' => \App\Models\SistemYoneticisi::class,
         ],
     ],
 

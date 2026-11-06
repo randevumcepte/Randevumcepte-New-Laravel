@@ -3,7 +3,7 @@
  * "+" menüsü aynı modalı açar. Form başına ek alanlar sunucudan (`ek_alanlar`). Stil: css/formlar-v2.css.
  * Import yolu her yerde AYNI olmalı:  import { formGonderModali } from '/js/lib/v2-form-gonder.js?v=1';
  */
-import { api, el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 

@@ -5,7 +5,7 @@
  * (ARA + sonuç + ertele/iptal + geçmiş). "Arama Randevusu" ile manuel ekleme.
  * Veri: GET /cagri-merkezi/takvim?bas=&bit= (gün), /kayit/{id}; POST /arama-randevusu.
  */
-import { el, esc, tarihStr, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, tarihStr, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';

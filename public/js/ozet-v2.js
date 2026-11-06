@@ -8,7 +8,7 @@
  * "karsilastirma" kartı Flutter içindir; web çizmez.
  */
 
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { trTarih } from '/js/lib/v2-donem.js?v=1';
 import { halka, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=3';

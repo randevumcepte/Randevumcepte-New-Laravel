@@ -6,7 +6,7 @@
  * Aynı anda tek modal açıktır (yeni modalAc öncekini kapatır). Esc / arka plana tık kapatır;
  * opt.sabit=true ise arka plan tıkı kapatmaz (uzun formlar — eski data-backdrop="static").
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=2';
 
 const ID = 'rcModal';
 

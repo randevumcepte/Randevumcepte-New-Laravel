@@ -5,7 +5,7 @@
  * Yoklama eski ekranla aynı: bağlanana kadar 4 sn, bağlıyken 15 sn; sekme arka plandayken sorgu yok.
  * Paylaşılan oturumda bağla / QR / çıkış gösterilmez (sunucu da 409 döner).
  */
-import { esc, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { esc, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { tarihSaat } from '/js/whatsapp/ortak.js?v=1';
 

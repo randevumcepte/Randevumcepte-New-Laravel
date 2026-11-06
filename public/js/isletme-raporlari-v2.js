@@ -7,7 +7,7 @@
  * yetkisiz sekme sessizce sıfır gösteriyordu). Veri /api/v2/rapor/isletme/*; burada hesap yok.
  */
 
-import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=1';

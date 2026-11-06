@@ -10,7 +10,7 @@
  *   s.secili()      // [12, 15]
  *   s.goster(false) // düzenleme modunda gizle (grup korunur)
  */
-import { esc } from '/js/lib/v2-ortak.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=2';
 
 export function subeSecici(kap, subeler = [], { baslik = 'Hangi şubelere uygulansın?' } = {}) {
   if (!kap || (subeler || []).length < 2) {

@@ -6,7 +6,7 @@
  * Veri: GET /cark/ozet, /cark/kuponlar?durum=, /cark/cevirmeler; POST /cark/kupon/dogrula,
  * /cark/kupon/{id}/kullan | /geri-al. Durum kuralı ve sekme listesi API'de (KuponDurumu).
  */
-import { el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { kilitle, ozetKart } from '/js/lib/v2-bilesen.js?v=2';
 

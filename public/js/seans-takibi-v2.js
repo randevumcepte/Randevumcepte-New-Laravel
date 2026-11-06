@@ -6,7 +6,7 @@
  * Veri /api/v2/seans* (web + Flutter AYNI uç). Yazmalar SEANS_V2_YAZMA_AKTIF kapalıyken
  * 409 döner; UI toast gösterir.
  */
-import { qp } from '/js/lib/v2-ortak.js?v=1';
+import { qp } from '/js/lib/v2-ortak.js?v=2';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=4';
 
 const kok = document.getElementById('rc-seans-takibi');

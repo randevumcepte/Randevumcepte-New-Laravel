@@ -3,7 +3,7 @@
  * cihaz formu: ad + 7 günlük çalışma/mola planı (eski #yenicihazbilgiekle). Eskide düzenleme
  * yoktu ve plan hep "çalışmıyor" kaydediliyordu — v2'de düzenlenebilir.
  */
-import { esc, el } from '/js/lib/v2-ortak.js?v=1';
+import { esc, el } from '/js/lib/v2-ortak.js?v=2';
 import { kaynakSekmesi } from '/js/ayarlar/kaynak.js?v=4';
 import { planTablosu, planBagla, planOku } from '/js/ayarlar/ortak.js?v=4';
 

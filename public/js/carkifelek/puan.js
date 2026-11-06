@@ -6,7 +6,7 @@
  * Veri: GET /sadakat; PUT /sadakat/kazanim; POST|PATCH|DELETE /sadakat/puan-odulu[/{id}];
  * POST /sadakat/puan-odulu/ornekler. Tip listesi API'den (PuanOdulTipi).
  */
-import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, sayiVeyaNull } from '/js/lib/v2-ongorusme.js?v=1';

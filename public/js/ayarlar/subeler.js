@@ -3,7 +3,7 @@
  * üyelik bitişi + "Geçiş Yap". Yeni şube açma (hesap + şifre SMS'i) eski panelde kalır
  * (yeni_sube_url sunucudan). Uç: GET /ayar/subeler.
  */
-import { api, el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 
 const trTarih = (ymd) => (ymd ? ymd.split('-').reverse().join('.') : '—');

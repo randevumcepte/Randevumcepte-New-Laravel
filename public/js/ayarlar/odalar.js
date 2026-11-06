@@ -3,7 +3,7 @@
  * (ad + personeller + hizmetler — eski #yeniodabilgiekle / #odabilgiduzenle) ve personel/hizmet
  * kolonları. Seçenekler GET /ayar/odalar/form-verisi'nden.
  */
-import { esc, el } from '/js/lib/v2-ortak.js?v=1';
+import { esc, el } from '/js/lib/v2-ortak.js?v=2';
 import { kaynakSekmesi } from '/js/ayarlar/kaynak.js?v=4';
 import { secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=4';
 

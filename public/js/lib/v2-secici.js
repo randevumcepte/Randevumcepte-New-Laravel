@@ -12,7 +12,7 @@
  *   s.secili()   // {id, ad, telefon} | null
  *   s.temizle()
  */
-import { api, esc } from '/js/lib/v2-ortak.js?v=1';
+import { api, esc } from '/js/lib/v2-ortak.js?v=2';
 
 export function musteriSecici(kap, { salonId, yol, onSec = () => {}, ipucu = 'Ad veya telefon ile arayın', baslangic = null, sabit = false }) {
   let secili = baslangic;

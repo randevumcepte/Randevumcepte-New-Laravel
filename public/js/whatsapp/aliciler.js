@@ -2,7 +2,7 @@
  * WhatsApp › ALICILARIM: numara başına mesaj sayıları (ortak veriTablosu + sunucu sayfalama).
  * Geçmiş, alıcının log id'siyle istenir (telefon maskeli olabilir; numara URL'ye düşmez).
  */
-import { esc, mesaj } from '/js/lib/v2-ortak.js?v=1';
+import { esc, mesaj } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc } from '/js/lib/v2-modal.js?v=1';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { durumRozet, tarihSaat } from '/js/whatsapp/ortak.js?v=1';

@@ -25,12 +25,13 @@ class DemoHesapKurServisi
 
     /**
      * @param  array{ad_soyad:string,cep_telefon:string,email:string,isletme_adi:string,isletme_adresi:string,salon_turu_id:int}  $g  telefon kanonik
+     * @param  array{demo_gun?:?int,sifre?:?string,il_id?:?int,ilce_id?:?int}  $secenek  sistem yonetiminden acilista; bos alan varsayilana duser
      * @return array{yetkili_id:int,salon_id:int,sifre:string}
      */
-    public function kur(array $g): array
+    public function kur(array $g, array $secenek = []): array
     {
-        $sifre = Str::password((int) config('oturum.deneme.sifre_uzunluk'), true, true, false);
-        [$yetkiliId, $salonId, $personelId] = DB::transaction(fn () => $this->cekirdek($g, $sifre));
+        $sifre = ($secenek['sifre'] ?? null) ?: Str::password((int) config('oturum.deneme.sifre_uzunluk'), true, true, false);
+        [$yetkiliId, $salonId, $personelId] = DB::transaction(fn () => $this->cekirdek($g, $sifre, $secenek));
 
         try {
             $this->ornek->olustur($salonId, $yetkiliId, $personelId);
@@ -43,7 +44,7 @@ class DemoHesapKurServisi
     }
 
     /** @return array{0:int,1:int,2:int} */
-    private function cekirdek(array $g, string $sifre): array
+    private function cekirdek(array $g, string $sifre, array $secenek): array
     {
         $yetkiliId = ZamanliKayit::ekle('isletmeyetkilileri', [
             'name' => $g['ad_soyad'], 'gsm1' => $g['cep_telefon'], 'email' => $g['email'],
@@ -52,10 +53,10 @@ class DemoHesapKurServisi
         $salonId = ZamanliKayit::ekle('salonlar', [
             'santral_aktif' => 1, 'salon_adi' => $g['isletme_adi'], 'adres' => $g['isletme_adresi'], 'salon_turu_id' => $g['salon_turu_id'],
             'randevu_saat_araligi' => 15, 'randevu_takvim_turu' => 1,
-            'uyelik_bitis_tarihi' => now()->addDays((int) config('oturum.deneme.gun'))->toDateString(),
+            'uyelik_bitis_tarihi' => now()->addDays((int) (($secenek['demo_gun'] ?? null) ?: config('oturum.deneme.gun')))->toDateString(),
             'uyelik_turu' => (int) config('oturum.deneme.uyelik_turu'), 'demo_hesabi' => 1,
             'yetkili_adi' => $g['ad_soyad'], 'yetkili_telefon' => $g['cep_telefon'],
-        ]);
+        ] + array_filter(['il_id' => $secenek['il_id'] ?? null, 'ilce_id' => $secenek['ilce_id'] ?? null]));
 
         $satirlar = fn (array $liste) => array_map(fn ($s) => $s + ['salon_id' => $salonId], $liste);
         ZamanliKayit::ekle('salon_santral_ayarlari', ['ayar_id' => 1, 'salon_id' => $salonId, 'musteri' => 0, 'personel' => 0]);

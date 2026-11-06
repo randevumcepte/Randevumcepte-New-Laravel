@@ -11,7 +11,7 @@
  * Eski panele yönlendirme YOK.
  */
 
-import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 
 const kok = document.getElementById('rc-satislar');

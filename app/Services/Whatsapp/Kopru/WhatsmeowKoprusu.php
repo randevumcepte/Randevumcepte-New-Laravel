@@ -12,29 +12,34 @@ use Illuminate\Support\Facades\Log;
  */
 class WhatsmeowKoprusu implements WhatsappKoprusu
 {
-    public function baslat(int $oturumId): KopruCevabi
+    public function baslat(int|string $oturumId): KopruCevabi
     {
         return $this->istek('post', "/session/{$oturumId}/start");
     }
 
-    public function durum(int $oturumId): KopruCevabi
+    public function durum(int|string $oturumId): KopruCevabi
     {
         return $this->istek('get', "/session/{$oturumId}/status");
     }
 
-    public function qr(int $oturumId): KopruCevabi
+    public function qr(int|string $oturumId): KopruCevabi
     {
         return $this->istek('get', "/session/{$oturumId}/qr");
     }
 
-    public function cikis(int $oturumId): KopruCevabi
+    public function cikis(int|string $oturumId): KopruCevabi
     {
         return $this->istek('post', "/session/{$oturumId}/logout");
     }
 
-    public function eslestir(int $oturumId, string $telefon): KopruCevabi
+    public function eslestir(int|string $oturumId, string $telefon): KopruCevabi
     {
         return $this->istek('post', "/session/{$oturumId}/pair-phone", ['phone' => $telefon]);
+    }
+
+    public function gonder(int|string $oturumId, string $telefon, string $mesaj): KopruCevabi
+    {
+        return $this->istek('post', "/session/{$oturumId}/send", ['to' => $telefon, 'message' => $mesaj, 'logId' => 0, 'urgent' => false]);
     }
 
     private function istek(string $metot, string $yol, array $govde = []): KopruCevabi

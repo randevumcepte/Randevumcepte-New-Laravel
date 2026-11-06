@@ -26,7 +26,7 @@
  *   t.yenile();            // filtre değişince (sayfa 1'e döner)
  *   t.kolonlarAyarla([...]) // kolon seti değişince (ör. stüdyo modu)
  */
-import { el, esc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=2';
 
 export const SAYFA_BOYLARI = [10, 25, 50, 100];
 

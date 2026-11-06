@@ -7,7 +7,7 @@
  * Veri ve kurallar /api/v2/ders/* uçlarından (Flutter aynı uçları kullanır): durum sözlüğü,
  * kapasite → bekleme, telafi bağlama, seans düşümü burada HESAPLANMAZ.
  */
-import { api, el, esc, mesaj, onay, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, mesaj, onay, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';

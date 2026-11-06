@@ -1,0 +1,20 @@
+.sw-ikon { color: #25d366; }
+.sw-form { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.sw-form .sy-form-group { margin: 0; }
+.sw-alici { min-width: 280px; flex: 1; }
+.sw-gonderen { min-width: 230px; }
+.sw-onay label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.sw-servis { background: #f3f4f6; color: #555; margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+.sw-acik { color: #16a34a; }
+.sw-kapali { color: #dc2626; }
+.sw-vurgu { color: var(--sy-primary); }
+.sw-teshis { margin-top: 8px; font-family: monospace; white-space: pre-line; }
+.sw-qr-kutu { margin-top: 16px; text-align: center; }
+.sw-qr { width: 300px; height: 300px; max-width: 100%; border: 1px solid #eee; padding: 8px; background: #fff; border-radius: 8px; margin-bottom: 8px; }
+.sw-eslestir { margin-top: 24px; padding-top: 16px; border-top: 1px dashed #ddd; }
+.sw-eslestir h4 { margin: 0 0 8px; }
+.sw-eslestir p { margin: 0 0 10px; }
+.sw-eslestir-satir { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sw-eslestir-satir input { max-width: 220px; }
+.sw-kod-kutu { margin-top: 12px; padding: 12px; background: #f5f9ff; border: 1px solid #cfe0ff; border-radius: 6px; }
+.sw-kod { font-size: 28px; font-weight: bold; letter-spacing: 4px; color: var(--sy-primary); font-family: monospace; }

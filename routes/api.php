@@ -75,6 +75,9 @@ Route::prefix('v2')->group(function () {
     // GIRIS + SIFRE SIFIRLAMA + UCRETSIZ DENEME (web + Flutter tek uc) — routes/v2/oturum.php
     require __DIR__.'/v2/oturum.php';
 
+    // SISTEM YONETIMI (ayri kimlik: sistemyoneticileri, guard sistemyonetim-api) — routes/v2/sistem.php
+    require __DIR__.'/v2/sistem.php';
+
     /*
      | KORUMALI — kisisel veri iceren TUM uclar buraya. Kimlik ZORUNLU.
      | Kapsam + yetki her controller'da GuvenlikKapisi ile uygulanir.

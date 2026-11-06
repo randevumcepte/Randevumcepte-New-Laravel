@@ -24,7 +24,7 @@
  * sekmesinin ORTAK tablosu — kolonlar eski ekranlarla aynı, satır işlemleri sunucudan
  * (`aksiyonlar`), durum rozeti v2-bilesen.css .rc-rdurum (eski dolgulu renkler).
  */
-import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=1';
 

@@ -3,7 +3,7 @@
  * ekranlarında görünür; veri /api/v2/bildirim (Flutter yönetici ile aynı uçlar).
  * Sayaç 60 sn'de bir ve sekmeye dönünce tazelenir (arka plan sekmesi sorgu atmaz); liste yalnız zil açılınca yüklenir.
  */
-import { api, el, esc, onay, pad, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, onay, pad, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 
 const POLL_MS = 60000;
 const SAYFA_BOYU = 30;

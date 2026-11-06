@@ -2,6 +2,7 @@
 
 namespace App\Services\Yetki;
 
+use App\Services\Oturum\ErisimTokenServisi;
 use App\Models\Personeller;
 use App\Models\PersonelYetkiAyari;
 use App\Support\Yetki\YetkiSabitleri;
@@ -338,18 +339,11 @@ class YetkiServisi
     }
 
     /**
-     * Sysadmin impersonation aktif mi? Eski sistemde web session anahtari
-     * ('sysadmin_impersonation_id'). Stateless API'de oturum olmadigi icin
-     * normalde false; web paneli de bu app'e tasinirsa calismaya devam eder.
+     * Sysadmin impersonation aktif mi? Bu oturum "Salon hesabina gir" ile acildiysa token id'si
+     * imp_ onekli (ErisimTokenServisi). Eski panelin session anahtarinin karsiligi.
      */
     private function impersonationAktif(): bool
     {
-        try {
-            return app()->bound('session')
-                && session()->isStarted()
-                && session()->has('sysadmin_impersonation_id');
-        } catch (\Throwable $e) {
-            return false;
-        }
+        return ErisimTokenServisi::impersonationTokeniMi(request()->attributes->get('oauth_access_token_id'));
     }
 }

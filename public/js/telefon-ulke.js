@@ -20,7 +20,7 @@
  * degistirilmezse oldugu gibi gider (sunucu mevcut numarayi korur).
  * Haric tutmak: <input type="tel" data-tel="yok">.
  */
-import { api, esc } from '/js/lib/v2-ortak.js?v=1';
+import { api, esc } from '/js/lib/v2-ortak.js?v=2';
 
 const DEGER = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 

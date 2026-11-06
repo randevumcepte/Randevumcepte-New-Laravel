@@ -11,7 +11,7 @@
  *
  * Rapor ekranlarının ortak biçimleri de buradadır: trTarih (Y-m-d[ H:i] → gg.aa.yyyy), sayi (tr tamsayı).
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=2';
 
 export const trTarih = (ymd) => (ymd ? String(ymd).slice(0, 10).split('-').reverse().join('.') : '');
 export const sayi = (n) => (Number(n) || 0).toLocaleString('tr-TR');

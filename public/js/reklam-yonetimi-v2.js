@@ -11,7 +11,7 @@
  * uçlarından — Flutter da aynı uçları kullanır; burada iş kuralı yok. Yazmalar
  * KAMPANYA_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
-import { qp, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';

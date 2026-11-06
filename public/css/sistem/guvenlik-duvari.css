@@ -1,0 +1,9 @@
+.gd-aralik { margin-top: 16px; }
+.gd-watchdog { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--gd-renk); background: var(--gd-zemin); border: 1px solid var(--gd-kenar); }
+.gd-watchdog .mdi { font-size: 16px; }
+.gd-soluk { opacity: .75; font-weight: 500; }
+.gd-calisiyor { --gd-renk: #16a34a; --gd-zemin: rgba(22, 163, 74, .12); --gd-kenar: rgba(22, 163, 74, .2); }
+.gd-durmus { --gd-renk: #dc2626; --gd-zemin: rgba(220, 38, 38, .12); --gd-kenar: rgba(220, 38, 38, .2); }
+.gd-kurulmamis { --gd-renk: #d97706; --gd-zemin: rgba(217, 119, 6, .12); --gd-kenar: rgba(217, 119, 6, .2); }
+.gd-uyari { margin-top: 12px; border-left: 4px solid var(--gd-renk); background: var(--gd-zemin); }
+#gdMetrik .value { overflow-wrap: anywhere; }

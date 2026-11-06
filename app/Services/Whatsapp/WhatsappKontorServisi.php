@@ -6,10 +6,12 @@ use App\Domain\Whatsapp\KontorDurumu;
 use App\Domain\Whatsapp\KontorPaketleri;
 use App\Domain\Whatsapp\KontorTalepMesaji;
 use App\Exceptions\BulunamadiException;
+use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Kontör bakiyesi + paket kataloğu + satın alma talebi. Bakiye, mesajların gerçekte düştüğü
@@ -31,6 +33,38 @@ class WhatsappKontorServisi
             'paketler'   => KontorPaketleri::liste(),
             'paylasilan' => $o['paylasilan'],
         ];
+    }
+
+    /**
+     * Elle kontör (eski KontorServisi::yukle): pozitif yükler, negatif düşer. Bakiye + hareket tek işlemde.
+     * Kolon koşullu: migration'ı koşmamış kurulumda yazılmaz.
+     *
+     * @return int yeni bakiye
+     */
+    public function yukle(int $salonId, int $adet, string $aciklama): int
+    {
+        if ($adet === 0) {
+            throw new GecersizIslemException('Geçersiz kontör miktarı.');
+        }
+        if (! Schema::hasColumn('salonlar', 'whatsapp_kontor')) {
+            throw new CakismaException('Kontör kolonu bu kurulumda henüz yok.');
+        }
+
+        return DB::transaction(function () use ($salonId, $adet, $aciklama) {
+            DB::table('salonlar')->where('id', $salonId)->increment('whatsapp_kontor', $adet);
+            $bakiye = (int) DB::table('salonlar')->where('id', $salonId)->value('whatsapp_kontor');
+            DB::table('whatsapp_kontor_hareketleri')->insert([
+                'salon_id'       => $salonId,
+                'tip'            => $adet > 0 ? 'yukleme' : 'harcama',
+                'adet'           => $adet,
+                'bakiye_sonrasi' => $bakiye,
+                'aciklama'       => mb_substr($aciklama, 0, 160),
+                'created_at'     => now(),
+                'updated_at'     => now(),
+            ]);
+
+            return $bakiye;
+        });
     }
 
     public function talep(int $salonId, int $yetkiliId, string $paketKodu, ?string $iletisim): void

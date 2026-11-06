@@ -1,0 +1,10 @@
+/* Yanit formundaki hazir cevap secici */
+.hc-kap { position: relative; }
+.hc-panel { position: absolute; right: 0; top: 0; width: 340px; max-width: 100%; max-height: 380px; overflow-y: auto; background: var(--sy-surface); border: 1px solid var(--sy-border-strong); border-radius: 10px; box-shadow: var(--sy-shadow-lg); z-index: 50; }
+.hc-panel[hidden] { display: none; }
+.hc-arama { padding: 10px; border-bottom: 1px solid var(--sy-border); background: var(--sy-surface-2); }
+.hc-arama .sy-input { height: 32px; font-size: 12px; padding: 6px 10px; }
+#hcListe { padding: 6px; }
+.hc-oge { padding: 10px; border-radius: 6px; cursor: pointer; border-bottom: 1px solid var(--sy-border); }
+.hc-oge:hover { background: var(--sy-primary-soft); }
+.hc-bos { padding: 14px; text-align: center; }

@@ -1,7 +1,7 @@
 /**
  * v2 island'larinin ORTAK yardimcilari — TEK KAYNAK (ekranlarda kopyalanmaz).
  *
- * Build'siz: her ekran `import { ... } from '/js/lib/v2-ortak.js?v=1'` ile alir.
+ * Build'siz: her ekran `import { ... } from '/js/lib/v2-ortak.js?v=2'` ile alir.
  * ONEMLI: import yolu (?v=N dahil) TUM ekranlarda AYNI olmali — farkli URL, tarayicida
  * ayri modul ornegi demektir (token tohumlama iki kez calisir). Bu dosya degisince
  * tum import satirlarindaki ?v= birlikte artirilir.
@@ -25,26 +25,32 @@ if (_hash.get('token')) {
 export const token = () => localStorage.getItem('rc_access_token') || '';
 
 /**
- * /api/v2 istegi. Donus: {ok, kod, govde} — govde ApiCevap zarfi
- * ({basarili, veri, mesaj}) ya da JSON degilse null.
+ * Bearer'li JSON istemcisi. Donus: {ok, kod, govde} — govde ApiCevap zarfi
+ * ({basarili, veri, mesaj}) ya da JSON degilse null. Farkli kimlikli paneller (sistem yonetimi)
+ * kendi token'i + kokuyle ayni istemciyi uretir.
  */
-export async function api(method, yol, { params, body } = {}) {
-  let url = BASE + yol;
-  if (params) {
-    const qs = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== '')),
-    ).toString();
-    if (qs) url += (url.includes('?') ? '&' : '?') + qs;
-  }
-  const headers = { Accept: 'application/json', Authorization: 'Bearer ' + token() };
-  const govdeVar = body !== undefined && body !== null;
-  if (govdeVar) headers['Content-Type'] = 'application/json';
-  const r = await fetch(url, { method, cache: 'no-store', headers, body: govdeVar ? JSON.stringify(body) : undefined });
-  const t = await r.text();
-  let govde = null;
-  try { govde = t ? JSON.parse(t) : null; } catch (_) { govde = null; }
-  return { ok: r.ok, kod: r.status, govde };
+export function apiIstemcisi(tokenOku, kok) {
+  return async (method, yol, { params, body } = {}) => {
+    let url = kok + yol;
+    if (params) {
+      const qs = new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== '')),
+      ).toString();
+      if (qs) url += (url.includes('?') ? '&' : '?') + qs;
+    }
+    const headers = { Accept: 'application/json', Authorization: 'Bearer ' + tokenOku() };
+    const govdeVar = body !== undefined && body !== null;
+    if (govdeVar) headers['Content-Type'] = 'application/json';
+    const r = await fetch(url, { method, cache: 'no-store', headers, body: govdeVar ? JSON.stringify(body) : undefined });
+    const t = await r.text();
+    let govde = null;
+    try { govde = t ? JSON.parse(t) : null; } catch (_) { govde = null; }
+    return { ok: r.ok, kod: r.status, govde };
+  };
 }
+
+/** /api/v2 istegi (isletme paneli token'i). */
+export const api = apiIstemcisi(token, BASE);
 
 export const el = (s, k = document) => k.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

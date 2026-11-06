@@ -15,8 +15,8 @@
  *     ekSekme    : {ad, etiket, ikon, panel, ac()} → arşiv sekmelerinin yanına ek sekme
  *   arsiv.veri / arsiv.yetki(k) / arsiv.veriTazele()
  */
-import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
-import { apiForm } from '/js/lib/v2-dosya.js?v=2';
+import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
+import { apiForm } from '/js/lib/v2-dosya.js?v=3';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { formGonderModali, formMusteriSecici, tlBagla, tlOku, tlYaz } from '/js/lib/v2-form-gonder.js?v=1';

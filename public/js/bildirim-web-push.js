@@ -2,7 +2,7 @@
  * Tarayıcı push kaydı — eski layout'taki Firebase bloğunun v2 karşılığı. Ayar /api/v2/bildirim/web-ayar'dan;
  * sunucuda tanımlı değilse hiçbir şey yüklenmez. Token + salon aynıysa aynı oturumda tekrar yazılmaz.
  */
-import { api, mesaj } from '/js/lib/v2-ortak.js?v=1';
+import { api, mesaj } from '/js/lib/v2-ortak.js?v=2';
 
 const FIREBASE = 'https://www.gstatic.com/firebasejs/10.13.2';
 const CIHAZ_ANAHTARI = 'rdv_device_id'; // eski panelle aynı: aynı tarayıcı tek cihaz sayılır

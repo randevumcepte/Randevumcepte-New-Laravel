@@ -6,7 +6,7 @@
  *   - düzenle (havuz hizmetinin adı/kategorisi değişirse sunucu salona özel kopya açar) / kaldır
  * Seçenekler GET /ayar/hizmetler/form-verisi'nden; yetki ve iş kuralları SUNUCUDA.
  */
-import { api, el, esc, TL, onay, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, TL, onay, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';

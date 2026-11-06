@@ -12,7 +12,7 @@
  * kapalıyken 409 döner; yazSonuc toast gösterir.
  */
 
-import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
 import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';

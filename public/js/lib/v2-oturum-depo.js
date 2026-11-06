@@ -8,7 +8,7 @@ export function oturumuKaydet({ token, ilk_sayfa: ilkSayfa }) {
 }
 
 export function oturumuTemizle() {
-  [TOKEN, ILK_SAYFA].forEach((a) => localStorage.removeItem(a));
+  [TOKEN, ILK_SAYFA, 'rc_sy_imp'].forEach((a) => localStorage.removeItem(a));
 }
 
 /** Yalnız kendi ekranlarımıza dönülür; dışarıdan verilen adres açık yönlendirme olmasın. */

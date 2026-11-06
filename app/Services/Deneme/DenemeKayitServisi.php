@@ -63,9 +63,14 @@ class DenemeKayitServisi
         $this->uyeDegil($tel);
 
         $sonuc = $this->kurulum->kur($form);
-        $gitti = $this->sms->gonder($tel, "Randevumcepte'ye hoş geldiniz. Kullanıcı adınız: {$tel} şifreniz: {$sonuc['sifre']} Panel: ".url('/v2/giris'), 'Yeni Hesap');
 
-        return ['salon_id' => $sonuc['salon_id'], 'sifre_gonderildi' => $gitti];
+        return ['salon_id' => $sonuc['salon_id'], 'sifre_gonderildi' => $this->girisBilgisiGonder($tel, $sonuc['sifre'])];
+    }
+
+    /** Yeni hesabin giris bilgileri SMS'i. */
+    public function girisBilgisiGonder(string $tel, string $sifre): bool
+    {
+        return $this->sms->gonder($tel, "Randevumcepte'ye hoş geldiniz. Kullanıcı adınız: {$tel} şifreniz: {$sifre} Panel: ".url('/v2/giris'), 'Yeni Hesap');
     }
 
     private function telefon(string $ham): string

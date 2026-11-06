@@ -11,7 +11,7 @@
  * Etiket / renk / sonuç listesi / kategori / script / personel SUNUCUDAN (ctx.acilis); burada
  * yalnız çizim + kullanıcı akışı. Yazma cevapları yazSonuc ile (409 kill-switch dahil) toast olur.
  */
-import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { randevuIslemleri, randevuTablosu } from '/js/lib/v2-randevu.js?v=6';

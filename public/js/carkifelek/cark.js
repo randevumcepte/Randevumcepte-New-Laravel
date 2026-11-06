@@ -7,7 +7,7 @@
  * dilimler + kurallar + süreler birlikte, eski web gibi), PATCH /cark/aktif, POST /cark/duyuru.
  * Kazanan / dilim sayısı / tip-değer kuralları sunucuda (Domain\Cark\DilimSeti); burada yalnız arayüz.
  */
-import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 import { subeSecici } from '/js/lib/v2-sube-secici.js?v=1';

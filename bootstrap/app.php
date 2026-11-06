@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // kimliksiz istek 'login' rotasina yonlendirilmeye calisilmaz; temiz
         // 401 JSON doner. (api grubu withRouting api: ile otomatik uygulanir.)
         $middleware->prependToGroup('api', \App\Http\Middleware\ApiJsonKabul::class);
+        $middleware->alias(['sistem.rol' => \App\Http\Middleware\SistemRolGerekli::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

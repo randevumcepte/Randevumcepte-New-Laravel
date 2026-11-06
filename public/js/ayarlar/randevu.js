@@ -5,7 +5,7 @@
  * Seçenekler (aralıklar, takvim türleri, palet) ve renk sırası SUNUCUDAN gelir.
  * Uçlar: GET/PATCH /ayar/randevu.
  */
-import { esc } from '/js/lib/v2-ortak.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=2';
 import { yukle, kaydet, kart, secim, anahtar, kaydetCubugu, gonderBagla, isaretli, deger } from '/js/ayarlar/ortak.js?v=4';
 
 const BAYRAKLAR = ['musteri_online_randevu_aktif', 'gecmis_randevulari_gizle', 'cakisma_uyarisi_aktif', 'studyo_modu', 'takvim_tek_renk_aktif', 'takvim_yazi_rengi_aktif'];

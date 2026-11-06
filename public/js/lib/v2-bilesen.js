@@ -4,7 +4,7 @@
  *   import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
  * (v=2: kilitle eklendi — kilitle kullanan ekran v=2 ile import eder; ozetKart icin v=1 de calisir.)
  */
-import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 
 /**
  * Satış (adisyon) açan modalların alt butonları — stüdyo modunda (fiyat gizli, MODEL B)

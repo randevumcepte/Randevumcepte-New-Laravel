@@ -16,7 +16,7 @@
  * Token: localStorage['rc_access_token'] (pilotta ?token=). salon: data-salon / ?sube=.
  */
 
-import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=2';
 import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=6';
 import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=2';
 

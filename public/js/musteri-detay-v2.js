@@ -14,7 +14,7 @@
  * Kartta hiçbir sekme ayrı sayfaya gitmez.
  * Görünürlük/izin kararları SUNUCUDAN (`yetkiler`, `ayarlar`); UI yeniden hesaplamaz.
  */
-import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';

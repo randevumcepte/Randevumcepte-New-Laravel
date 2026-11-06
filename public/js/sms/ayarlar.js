@@ -2,7 +2,7 @@
  * SMS Yönetimi › AYARLAR (hesap sahibi). Kartlar + hedefler sunucudan (Domain\Sms\SmsAyarKatalogu);
  * burada kural yok. Veri: acilis.ayar (ilk çizim) · PATCH /sms/ayarlar.
  */
-import { esc, yazSonuc } from '/js/lib/v2-ortak.js?v=1';
+import { esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
 
 const HEDEF = { musteri: 'Müşteri', personel: 'Personel' };

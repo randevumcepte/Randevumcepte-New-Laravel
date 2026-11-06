@@ -3,7 +3,7 @@
  * Personel kartları (atanan data, aranan, konuşulan, cevapsız, ön görüşme, satış/ciro, geciken)
  * + karta tıklayınca görüşme dökümü (filtre çipleri sunucudan). Veri: GET /cagri-merkezi/performans[/{id}].
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=2';
 import { modalAc } from '/js/lib/v2-modal.js?v=1';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=2';
 import { gecmisCiz, harf } from '/js/cagri-merkezi/ortak.js?v=6';

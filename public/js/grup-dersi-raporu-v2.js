@@ -2,7 +2,7 @@
  * Grup Dersi Raporu (v2) — eski isletmeadmin/grup_dersi_raporu.blade karşılığı: tarih aralığı,
  * doluluk/katılım/no-show kartları, eğitmen ve ders bazlı tablolar. Hesap sunucuda (Domain\Ders\DersRaporu).
  */
-import { qp, api, el, esc, tarihStr, mesaj } from '/js/lib/v2-ortak.js?v=1';
+import { qp, api, el, esc, tarihStr, mesaj } from '/js/lib/v2-ortak.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=2';
 import { alan, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';

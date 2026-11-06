@@ -1,0 +1,18 @@
+.dk-ozet { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.dk-ozet .kutu { flex: 1; min-width: 180px; background: var(--sy-surface); border: 1px solid var(--sy-border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--sy-shadow-sm); }
+.dk-ozet .k-etiket { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--sy-text-muted); font-weight: 600; }
+.dk-ozet .k-deger { font-size: 22px; font-weight: 700; margin-top: 4px; color: var(--sy-text); }
+.dk-ozet small { font-size: 13px; color: var(--sy-text-soft); }
+.dk-salon-ad { font-weight: 600; }
+.dk-salon-sub, .dk-yuzde { font-size: 11.5px; color: var(--sy-text-muted); margin-top: 2px; }
+.dk-num { font-variant-numeric: tabular-nums; }
+.dk-bar-wrap { min-width: 150px; }
+.dk-bar { height: 8px; border-radius: 6px; background: var(--sy-border); overflow: hidden; }
+.dk-bar span { display: block; height: 100%; border-radius: 6px; }
+.dk-bar-ok span { background: #2f9e6f; }
+.dk-bar-uyari span { background: #e0932f; }
+.dk-bar-kritik span { background: #d04d5e; }
+.dk-kalan-eksi { color: #d04d5e; font-weight: 700; }
+.dk-kalan-arti { color: #2f9e6f; font-weight: 600; }
+.dk-hata { color: #d04d5e; font-size: 11.5px; }
+.dk-aralik { margin-top: 14px; }
