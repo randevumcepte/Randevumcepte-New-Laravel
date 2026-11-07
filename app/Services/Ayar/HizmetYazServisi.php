@@ -28,7 +28,7 @@ class HizmetYazServisi
     /**
      * Havuzdan (sistem / salonun pasif ozel hizmetleri) toplu ekle.
      *
-     * @param  list<array{hizmet_id:int, fiyat?:?float, sure_dk?:?int, personel_ids?:list<int>, cihaz_ids?:list<int>}>  $kalemler
+     * @param  list<array{hizmet_id:int, hizmet_adi?:?string, fiyat?:?float, sure_dk?:?int, personel_ids?:list<int>, cihaz_ids?:list<int>}>  $kalemler
      */
     public function havuzdanEkle(int $salonId, int $yapanId, array $kalemler): array
     {
@@ -50,11 +50,13 @@ class HizmetYazServisi
                 $mevcut = DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $hizmetId)->orderByDesc('id')->value('id');
                 if ($mevcut) {
                     DB::table('salon_sunulan_hizmetler')->where('id', $mevcut)->update($alanlar);
-                    $idler[] = (int) $mevcut;
+                    $salonHizmetId = (int) $mevcut;
                 } else {
-                    $idler[] = (int) DB::table('salon_sunulan_hizmetler')->insertGetId($alanlar + ['salon_id' => $salonId, 'hizmet_id' => $hizmetId, 'created_at' => now()]);
+                    $salonHizmetId = (int) DB::table('salon_sunulan_hizmetler')->insertGetId($alanlar + ['salon_id' => $salonId, 'hizmet_id' => $hizmetId, 'created_at' => now()]);
                 }
+                $idler[] = $salonHizmetId;
                 $this->kategoriRengiAta($salonId, $kategoriId);
+                $hizmetId = $this->adUygula($salonId, $salonHizmetId, $havuz[$hizmetId], $k['hizmet_adi'] ?? null);
                 $this->atamaYaz($salonId, $hizmetId, $k['personel_ids'] ?? [], $k['cihaz_ids'] ?? []);
             }
 
@@ -187,6 +189,24 @@ class HizmetYazServisi
     }
 
     // ───────────────────────── yardimcilar ─────────────────────────
+
+    /**
+     * Eklenirken ad degistirildiyse (mobil form) yalniz bu salonda degisir: havuz hizmeti salona
+     * ozel kopyaya tasinir, diger salonlarin gordugu ad bozulmaz. Donus: gecerli hizmet id.
+     *
+     * @param  array{id:int, hizmet_adi:string, ozel_hizmet:bool}  $kayit  havuz satiri
+     */
+    private function adUygula(int $salonId, int $salonHizmetId, array $kayit, ?string $ad): int
+    {
+        $ad = trim((string) $ad);
+        if ($ad === '' || $ad === $kayit['hizmet_adi']) {
+            return $kayit['id'];
+        }
+        $hizmetId = $kayit['ozel_hizmet'] ? $kayit['id'] : $this->salonaOzelKopya($salonId, $salonHizmetId, $kayit['id']);
+        DB::table('hizmetler')->where('id', $hizmetId)->update(['hizmet_adi' => $ad, 'updated_at' => now()]);
+
+        return $hizmetId;
+    }
 
     /** Havuz kaydini kopyala (ozel + bu salon), salon kaydini ve bu salonun atamalarini kopyaya tasi. */
     private function salonaOzelKopya(int $salonId, int $salonHizmetId, int $hizmetId): int

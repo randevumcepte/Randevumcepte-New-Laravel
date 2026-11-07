@@ -17,8 +17,8 @@ use Illuminate\Http\Request;
  *   PUT /hesabim/fatura-bilgisi?salon_id=  {vergi_adi, vergi_no, vergi_adresi, kdv_orani?}
  *
  * Personel (rol 5) kapalı: fatura ve vergi bilgisi işletme verisidir. Eski web ucunda hiç denetim
- * yoktu; Flutter menüsü zaten yalnız hesap sahibine gösterir. Kayıt tek yazma yolundan
- * (Ayarlar → İşletme Bilgileri servisi) geçer.
+ * yoktu. mobil=1: lisans bitti ekranını mobilde her rol açıyor, bu yolda yalnız kimlik + salon
+ * kapsamı aranır. Kayıt tek yazma yolundan (Ayarlar → İşletme Bilgileri servisi) geçer.
  */
 class HesabimController extends V2Controller
 {
@@ -44,7 +44,8 @@ class HesabimController extends V2Controller
     {
         [$uid, $salonId] = $this->denetle($istek);
         $this->yazmaAcikMi();
-        $this->isletme->kaydet($salonId, $uid, $istek->validated());
+        $this->isletme->kaydet($salonId, $uid, $istek->validated(),
+            $istek->boolean('mobil') ? ['fatura_bilgi_guncelle', 'Fatura bilgileri güncellendi'] : IsletmeBilgiServisi::DENETIM);
 
         return ApiCevap::basarili($istek->validated(), 'Fatura bilgileri güncellendi.');
     }
@@ -53,6 +54,9 @@ class HesabimController extends V2Controller
     private function denetle(Request $request): array
     {
         [$uid, $salonId] = $this->salonDenetle($request, []);
+        if ($request->boolean('mobil')) {
+            return [$uid, $salonId];
+        }
         app(GuvenlikKapisi::class)->rolDisiDenetle($uid, $salonId, self::KAPALI_ROLLER, 'Hesap bilgilerini yalnızca işletme yöneticileri görebilir');
 
         return [$uid, $salonId];

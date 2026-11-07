@@ -26,7 +26,7 @@ use Illuminate\Validation\Rule;
  *   POST /cagri-merkezi/kayit/{id}/iptal               arama randevusu iptal (9)
  *   POST /cagri-merkezi/kayit/{id}/ertele              {tarih, saat}
  *   POST /cagri-merkezi/kayit/{id}/satis               {tur, katalog_id, fiyat?, seans?, adet?, personel_id?, not?, idempotency_key} → {adisyon_id}
- *   POST /cagri-merkezi/kayit/{id}/anket               memnuniyet anketi (outbox)
+ *   POST /cagri-merkezi/kayit/{id}/anket {liste_yetkisi?} memnuniyet anketi (outbox) → {mesaj, beklenen_kanal}
  *   POST /cagri-merkezi/kayit/{id}/whatsapp {mesaj}    manuel WhatsApp mesajı (outbox; bağlantı ön-kontrolü 409)
  *   POST /cagri-merkezi/arama-randevusu                {musteri_id, personel_id, tarih, saat, not?}
  *
@@ -123,7 +123,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 
     public function anket(Request $request, int $id, AnketGonderimServisi $s)
     {
-        $sonuc = $s->gonder($this->yazmaErisimi($request), $id);
+        $sonuc = $s->gonder($this->yazmaErisimi($request), $id, $request->boolean('liste_yetkisi'));
 
         return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
     }

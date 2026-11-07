@@ -14,6 +14,7 @@ Route::prefix('bildirim')->group(function () {
     Route::get('/web-ayar', [BildirimController::class, 'webAyar']);
     Route::post('/cihaz', [BildirimController::class, 'cihazKaydet']);
     Route::delete('/cihaz', [BildirimController::class, 'cihazSil']);
+    Route::post('/voip-token', [BildirimController::class, 'voipKaydet']);
     Route::post('/tumu/okundu', [BildirimController::class, 'tumunuOku']);
     Route::post('/{id}/okundu', [BildirimController::class, 'okundu'])->whereNumber('id');
     Route::delete('/{id}', [BildirimController::class, 'sil'])->whereNumber('id');

@@ -42,6 +42,44 @@ class DersTekrarliServisi
         return ['kaynaklar' => $this->havuz->kaynaklar($salonId, $userId), 'sablonlar' => $this->program->sablonlar($salonId)];
     }
 
+    /**
+     * Mobilin bugunku kaynak listesi: paket kalani hizmet basina ORTALAMA (toplam hak − toplam kullanim) / hizmet
+     * sayisi, suresi dolan paket de listelenir. Tek hizmet satislari havuzla ayni.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function kaynaklarOrtalama(int $salonId, int $userId): array
+    {
+        $tekHizmet = array_values(array_filter($this->havuz->kaynaklar($salonId, $userId), fn (array $k) => $k['adisyon_paket_id'] === null));
+        $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'ap.adisyon_id', '=', 'a.id')
+            ->join('paketler as p', 'p.id', '=', 'ap.paket_id')
+            ->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
+            ->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')
+            ->where('a.user_id', $userId)->where('a.salon_id', $salonId)
+            ->where(fn ($w) => $w->whereNull('ap.otomatik_randevu_olusturuldu')->orWhere('ap.otomatik_randevu_olusturuldu', '!=', 1));
+        $satirlar = $q->orderBy('ap.id')->get(['ap.id', 'ap.seans_sayisi', 'ph.hizmet_id', 'h.hizmet_adi', 'p.paket_adi']);
+        $paketIdler = $satirlar->pluck('id')->unique()->map(fn ($i) => (int) $i)->values()->all();
+        $kullanim = DB::table('adisyon_paket_seanslar')->whereIn('adisyon_paket_id', $paketIdler)
+            ->groupBy('adisyon_paket_id')->selectRaw('adisyon_paket_id as id, COUNT(*) as adet')->pluck('adet', 'id');
+        $durumlar = app(PaketKullanimi::class)->durumlar($paketIdler);
+        $hizmetSayisi = $satirlar->groupBy('id')->map->count();
+
+        $paket = [];
+        foreach ($satirlar as $s) {
+            $adet = (int) $hizmetSayisi[$s->id];
+            $sinirsiz = (bool) ($durumlar[$s->id]['sinirsiz'] ?? false);
+            $kalan = max(0, (int) floor(((int) $s->seans_sayisi * $adet - (int) ($kullanim[$s->id] ?? 0)) / $adet));
+            if ($kalan > 0 || $sinirsiz) {
+                $paket[] = [
+                    'etiket' => $s->hizmet_adi.' — '.$s->paket_adi.' (Paket)', 'hizmet_id' => (int) $s->hizmet_id, 'hizmet_adi' => $s->hizmet_adi,
+                    'kalan_seans' => $kalan, 'sinirsiz' => $sinirsiz, 'adisyon_paket_id' => (int) $s->id, 'adisyon_hizmet_id' => null,
+                ];
+            }
+        }
+
+        return array_merge($tekHizmet, $paket);
+    }
+
     /** @return array<int,array<string,mixed>> */
     public function liste(int $salonId, ?int $userId): array
     {
@@ -60,7 +98,8 @@ class DersTekrarliServisi
         ])->all();
     }
 
-    public function kaydet(int $salonId, ?int $kayitId, array $g, ?int $yetkiliId): array
+    /** $mobilKurali: mobilin bugunku dagitimi (paket bitisi sinir degil, terfi yok, sinirsizda yerlesmeyen sayilir). */
+    public function kaydet(int $salonId, ?int $kayitId, array $g, ?int $yetkiliId, bool $mobilKurali = false): array
     {
         $this->referans->musteriDogrula($salonId, (int) $g['musteri_id']);
         $this->referans->personelHizmetDogrula($salonId, $g['personel_id'] ?? null, (int) $g['hizmet_id']);
@@ -79,20 +118,25 @@ class DersTekrarliServisi
 
         $kayit = $kayitId ? DersTekrarliKatilim::where('salon_id', $salonId)->findOrFail($kayitId) : new DersTekrarliKatilim;
         $kayit->fill($alan)->save();
-        $sonuc = $this->dagit($kayit, $yetkiliId);
+        $sonuc = $this->dagit($kayit, $yetkiliId, $mobilKurali);
         AktiviteLog::yaz($salonId, $yetkiliId, 'ders_plani_kaydet', 'ders_plani', (int) $kayit->id, null, null, $sonuc);
 
         return ['kayit_id' => (int) $kayit->id, 'sonuc' => $sonuc];
     }
 
-    /** Plani siler; gelecek otomatik katilimlar temizlenir, bosalan yerlere bekleyenler terfi eder. */
-    public function sil(int $salonId, int $kayitId, ?int $yetkiliId): array
+    /**
+     * Plani siler; gelecek otomatik katilimlar temizlenir, bosalan yerlere bekleyenler terfi eder.
+     * $terfi=false: mobilin bugunku davranisi, bekleyen terfi etmez.
+     */
+    public function sil(int $salonId, int $kayitId, ?int $yetkiliId, bool $terfi = true): array
     {
         $kayit = DersTekrarliKatilim::where('salon_id', $salonId)->findOrFail($kayitId);
 
-        return DB::transaction(function () use ($kayit, $salonId, $yetkiliId) {
+        return DB::transaction(function () use ($kayit, $salonId, $yetkiliId, $terfi) {
             $oturumlar = $this->gelecekTemizle($kayit);
-            $this->katilim->terfiler($oturumlar, $yetkiliId);
+            if ($terfi) {
+                $this->katilim->terfiler($oturumlar, $yetkiliId);
+            }
             $kayit->delete();
             AktiviteLog::yaz($salonId, $yetkiliId, 'ders_plani_sil', 'ders_plani', (int) $kayit->id);
 
@@ -101,18 +145,20 @@ class DersTekrarliServisi
     }
 
     /** @return array{olusan:int,oturum_olusturulan:int,dolu_atlanan:int,yerlesmeyen:int,hedef:int,gecmis:int} */
-    private function dagit(DersTekrarliKatilim $kayit, ?int $yetkiliId): array
+    private function dagit(DersTekrarliKatilim $kayit, ?int $yetkiliId, bool $mobilKurali = false): array
     {
         $bosalan = $this->gelecekTemizle($kayit);
         try {
-            return $this->yerlestir($kayit);
+            return $this->yerlestir($kayit, $mobilKurali);
         } finally {
-            $this->katilim->terfiler($bosalan, $yetkiliId); // eski slotta bekleyenler bos yer yaninda kalmasin
+            if (! $mobilKurali) {
+                $this->katilim->terfiler($bosalan, $yetkiliId); // eski slotta bekleyenler bos yer yaninda kalmasin
+            }
         }
     }
 
     /** @return array{olusan:int,oturum_olusturulan:int,dolu_atlanan:int,yerlesmeyen:int,hedef:int,gecmis:int} */
-    private function yerlestir(DersTekrarliKatilim $kayit): array
+    private function yerlestir(DersTekrarliKatilim $kayit, bool $mobilKurali = false): array
     {
         $mevcut = DersKatilimci::where('tekrarli_id', $kayit->id)->where('durum', '!=', KatilimciDurumu::IPTAL->value)->count();
         $hedef = (int) $kayit->toplam_seans;
@@ -131,7 +177,7 @@ class DersTekrarliServisi
 
         $bugun = Carbon::today();
         $tarih = Carbon::parse($kayit->baslangic_tarihi ?: $bugun)->startOfDay()->max($bugun)->copy();
-        $durum = $kayit->adisyon_paket_id ? app(PaketKullanimi::class)->durum((int) $kayit->adisyon_paket_id) : null;
+        $durum = ! $mobilKurali && $kayit->adisyon_paket_id ? app(PaketKullanimi::class)->durum((int) $kayit->adisyon_paket_id) : null;
         // Sure ilk geliste baslar; henuz gelinmediyse plan baslangicindan sayilir.
         $son = $durum ? (\App\Domain\Paket\PaketGecerlilik::bitis($durum['baslangic'] ?? $tarih->toDateString(), $durum['sayi'], $durum['birim'])) : null;
         for ($i = 0; $i < self::MAKS_GUN && $kalan > 0 && ($son === null || $tarih->toDateString() <= $son); $i++, $tarih->addDay()) {

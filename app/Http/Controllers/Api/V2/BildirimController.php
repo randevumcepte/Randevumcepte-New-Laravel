@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Bildirim\CihazSahibi;
+use App\Http\Requests\Bildirim\VoipTokenIstegi;
 use App\Services\Bildirim\BildirimKutusu;
 use App\Services\Bildirim\BildirimKutusuFabrikasi;
 use App\Services\Bildirim\BildirimYazServisi;
+use App\Services\Bildirim\CihazKayitServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -19,6 +21,7 @@ use Illuminate\Http\Request;
  *   DELETE /bildirim/{id}                 DELETE /bildirim
  *   POST   /bildirim/cihaz {salon_id, token, platform, cihaz?, app_bundle?}
  *   DELETE /bildirim/cihaz {salon_id, token}
+ *   POST   /bildirim/voip-token {token, android_fcm_token?}
  *   GET    /bildirim/web-ayar             → tarayıcı push ayarı (herkese açık anahtarlar) | null
  */
 class BildirimController extends V2Controller
@@ -43,6 +46,15 @@ class BildirimController extends V2Controller
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($yaz->tumunuSil($this->kutu($request)), 'Tüm bildirimler silindi');
+    }
+
+    /** Kimlik token'dan; hesabın tüm salonlardaki personel kayıtlarına yazılır. Salon istenmez. */
+    public function voipKaydet(VoipTokenIstegi $request, CihazKayitServisi $cihazlar)
+    {
+        $this->yazmaAcikMi();
+        $v = $request->validated();
+
+        return ApiCevap::basarili(['guncellenen' => $cihazlar->voipKaydet((int) $this->kullanici()->id, $v['token'], $v['android_fcm_token'] ?? null)]);
     }
 
     public function webAyar()

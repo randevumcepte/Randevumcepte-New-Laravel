@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Services\Oturum\MobilBayraklar;
 use App\Services\Oturum\OturumServisi;
 use App\Services\Oturum\SifreSifirlamaServisi;
 use App\Services\Oturum\TekKullanimlikGirisServisi;
@@ -71,6 +72,7 @@ class OturumController extends V2Controller
             $request->attributes->get('oauth_access_token_id'),
             (int) $request->user()->getAuthIdentifier(),
             $request->attributes->get('hesap_tipi'),
+            MobilBayraklar::mobilToken($request),
         ));
     }
 

@@ -31,6 +31,7 @@ class KatilimciServisi
     public function __construct(
         private MusteriOkumaServisi $musteri,
         private ListeOlusturmaServisi $liste,
+        private KatilimSmsServisi $sms,
     ) {}
 
     /**
@@ -114,6 +115,17 @@ class KatilimciServisi
             ->update(['tekrar_arandi' => null, 'tekrar_aranacak' => null, 'tekrar_arama_tarih_saat' => null, 'kilitli' => 0, 'kilitli_zaman' => null, 'updated_at' => now()]);
         AktiviteLog::yaz((int) $kampanya->salon_id, $yetkiliId, 'kampanya_tekrar_ara', 'kampanya', (int) $kampanya->id, (string) $kampanya->paket_isim,
             $adet.' ulaşılamayan katılımcı yeniden aranmak üzere sıraya alındı', ['adet' => $adet]);
+
+        return $adet;
+    }
+
+    /** Katılım anketine cevap vermeyenlere (durum boş) kampanya metnini yeniden gönderir (eski kampanyatekrarsmsgonder). */
+    public function tekrarSms(object $kampanya, int $yetkiliId): int
+    {
+        $bekleyenler = $this->temel((int) $kampanya->id)->whereNull('kk.durum')->get(['kk.user_id', 'u.cep_telefon']);
+        $adet = $this->sms->gonder((int) $kampanya->salon_id, $yetkiliId, $bekleyenler, (string) $kampanya->mesaj, 'kampanyakatilim/'.$kampanya->id);
+        AktiviteLog::yaz((int) $kampanya->salon_id, $yetkiliId, 'kampanya_tekrar_sms', 'kampanya', (int) $kampanya->id, (string) $kampanya->paket_isim,
+            $adet.' katılımcıya SMS yeniden gönderildi', ['adet' => $adet]);
 
         return $adet;
     }

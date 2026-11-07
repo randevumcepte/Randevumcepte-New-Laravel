@@ -13,6 +13,7 @@ use InvalidArgumentException;
  *   - birlestir == '1' ise sonraki satir AYNI baslangicta baslar (paralel).
  * Fark: eski kodda bos sure_dk bazi yerlerde 0, bazi yerlerde 60, kayitta 30
  * sayiliyordu (kontrol ile kayit tutarsizdi). Burada sure ZORUNLU (>= 5 dk).
+ * $serbest (mobil istek): eski kayit kurali; bos sure 30 dk, alt sinir yok, gece yarisini gecen saat basa sarar.
  */
 final class HizmetZinciri
 {
@@ -21,19 +22,22 @@ final class HizmetZinciri
      * @param  array<int,array{sure_dk:mixed,birlestir?:mixed}>  $hizmetler
      * @return array<int,array{saat:string,saat_bitis:string,sure_dk:int}>  ayni index
      */
-    public static function satirlar(string $baslangic, array $hizmetler): array
+    public static function satirlar(string $baslangic, array $hizmetler, bool $serbest = false): array
     {
         $t = self::dakika($baslangic);
         $sonuc = [];
         foreach (array_values($hizmetler) as $i => $h) {
-            $sure = (int) ($h['sure_dk'] ?? 0);
-            if ($sure < 5) {
+            $sure = self::sure($h, $serbest);
+            if (! $serbest && $sure < 5) {
                 throw new InvalidArgumentException('Hizmet '.($i + 1).': süre en az 5 dk olmalı.');
             }
             $bas = $t;
             $bit = $bas + $sure;
             if ($bit > 24 * 60) {
-                throw new InvalidArgumentException('Randevu gece yarısını geçemez.');
+                if (! $serbest) {
+                    throw new InvalidArgumentException('Randevu gece yarısını geçemez.');
+                }
+                $bit %= 24 * 60;
             }
             $sonuc[] = ['saat' => self::saat($bas), 'saat_bitis' => self::saat($bit), 'sure_dk' => $sure];
             if ((string) ($h['birlestir'] ?? '') !== '1') {
@@ -45,11 +49,18 @@ final class HizmetZinciri
     }
 
     /** Randevu basligi bitisi — eski kod TUM surelerin toplami (paralel dahil). */
-    public static function toplamBitis(string $baslangic, array $hizmetler): string
+    public static function toplamBitis(string $baslangic, array $hizmetler, bool $serbest = false): string
     {
-        $toplam = array_sum(array_map(fn ($h) => (int) ($h['sure_dk'] ?? 0), $hizmetler));
+        $bitis = self::dakika($baslangic) + array_sum(array_map(fn ($h) => self::sure($h, $serbest), $hizmetler));
 
-        return self::saat(min(self::dakika($baslangic) + $toplam, 24 * 60));
+        return self::saat($serbest ? $bitis % (24 * 60) : min($bitis, 24 * 60));
+    }
+
+    private static function sure(array $hizmet, bool $serbest): int
+    {
+        $sure = $hizmet['sure_dk'] ?? null;
+
+        return $serbest && ! is_numeric($sure) ? 30 : (int) $sure;
     }
 
     public static function dakika(string $saat): int

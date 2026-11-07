@@ -5,6 +5,7 @@ namespace App\Services\Online;
 use App\Support\EskiPanelLinki;
 use App\Support\KvkkMaske;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Isletmenin herkese acik vitrini (mini site + uygulama ana sayfasi). Eski
@@ -30,6 +31,98 @@ class VitrinServisi
         $salonlar = array_map(fn ($id) => $this->marka($this->kapi->salon($id)), $idler);
 
         return ['salon_id' => $salonlar[0]['id'] ?? null, 'subeler' => $salonlar];
+    }
+
+    /** Uygulama acilisi (v1 salonAyarlariByBundle): herhangi bir sube aciksa randevu dugmesi gorunur. */
+    public function markaOzeti(string $bundle): array
+    {
+        $subeler = DB::table('salonlar')->where('app_bundle', $bundle)->orderBy('id')->get(['id', 'salon_adi', 'musteri_online_randevu_aktif', 'uyelik_bitis_tarihi']);
+        if ($subeler->isEmpty()) {
+            return ['musteri_online_randevu_aktif' => 0, 'lisans_aktif' => 0, 'uyelik_bitis_tarihi' => null, 'salon_adi' => null];
+        }
+        $acik = $subeler->filter(fn ($s) => (int) ($s->musteri_online_randevu_aktif ?? 0) === 1);
+        $bugun = strtotime('today');
+        $lisansli = $subeler->contains(fn ($s) => ! empty($s->uyelik_bitis_tarihi) && strtotime((string) $s->uyelik_bitis_tarihi) >= $bugun);
+
+        return [
+            'musteri_online_randevu_aktif' => $acik->isNotEmpty() ? 1 : 0,
+            'lisans_aktif'                 => $lisansli ? 1 : 0,
+            'uyelik_bitis_tarihi'          => $subeler->filter(fn ($s) => ! empty($s->uyelik_bitis_tarihi))->max('uyelik_bitis_tarihi'),
+            'salon_adi'                    => $subeler->first()->salon_adi,
+            'bundle_baslik'                => Schema::hasTable('app_bundle_ayarlari') ? DB::table('app_bundle_ayarlari')->where('app_bundle', $bundle)->value('bundle_baslik') : null,
+            'sube_sayisi'                  => $subeler->count(),
+            'online_aktif_sube_sayisi'     => $acik->count(),
+        ];
+    }
+
+    /** Magaza surumu ve linkleri (v1 versiyonAppKontrol): once marka ayari, yoksa markanin ilk subesi. */
+    public function surum(string $bundle): array
+    {
+        $ayar = Schema::hasTable('app_bundle_ayarlari') ? DB::table('app_bundle_ayarlari')->where('app_bundle', $bundle)->first() : null;
+        $kaynak = $ayar && (! empty($ayar->android_son_versiyon) || ! empty($ayar->ios_son_versiyon))
+            ? $ayar
+            : DB::table('salonlar')->where('app_bundle', $bundle)->orderBy('id')->first();
+
+        return [
+            'ios_latest'     => $kaynak->ios_son_versiyon ?? '',
+            'android_latest' => $kaynak->android_son_versiyon ?? '',
+            'huawei_latest'  => $kaynak->huawei_son_versiyon ?? '',
+            'play_store'     => $kaynak->android_uygulama ?? '',
+            'app_store'      => $kaynak->ios_uygulama ?? '',
+            'app_gallery'    => $kaynak->huawei_uygulama ?? '',
+        ];
+    }
+
+    /**
+     * Markanin tum subelerinin yorumlari (v1 salonyorumlari): sayfasiz, ad "Ahmet Y." bicimi. Yorum yazarinin id'si
+     * disari verilmez; `kendi` istegi yapan musterinin yorumunu gosterir. Yorum birakma markanin ilk subesine islenir.
+     */
+    public function markaYorumlari(string $bundle, ?int $userId): array
+    {
+        $salonlar = $this->kapi->bundleSalonlari($bundle);
+        $dagilim = array_fill_keys(['1', '2', '3', '4', '5'], 0);
+        if (! $salonlar) {
+            return ['ortalama' => 0, 'toplam_puan' => 0, 'toplam_yorum' => 0, 'dagilim' => $dagilim, 'yorumlar' => [], 'salon_id' => null, 'kullanici_yorum_yapabilir' => false];
+        }
+        $puanlar = DB::table('salon_puanlar')->whereIn('salon_id', $salonlar)->whereBetween('puan', [1, 5])->get(['user_id', 'puan']);
+        $kisiPuani = [];
+        foreach ($puanlar as $p) {
+            $dagilim[(string) (int) round((float) $p->puan)]++;
+            $kisiPuani[$p->user_id] = (int) round((float) $p->puan);
+        }
+        $yorumlar = DB::table('salon_yorumlar as y')->leftJoin('users as u', 'u.id', '=', 'y.user_id')->whereIn('y.salon_id', $salonlar)
+            ->orderByDesc('y.updated_at')->get(['y.id', 'y.user_id', 'y.yorum', 'y.updated_at', 'u.name']);
+
+        return [
+            'ortalama'     => $puanlar->count() ? round((float) $puanlar->avg('puan'), 1) : 0,
+            'toplam_puan'  => $puanlar->count(),
+            'toplam_yorum' => $yorumlar->count(),
+            'dagilim'      => $dagilim,
+            'yorumlar'     => $yorumlar->map(fn ($y) => [
+                'id'            => (int) $y->id,
+                'kendi'         => $userId !== null && (int) $y->user_id === $userId,
+                'kullanici_adi' => $this->adSonHarf((string) $y->name),
+                'puan'          => $kisiPuani[$y->user_id] ?? 0,
+                'yorum'         => $y->yorum,
+                'tarih'         => $y->updated_at,
+            ])->all(),
+            'salon_id'     => $salonlar[0],
+            'kullanici_yorum_yapabilir' => $userId !== null && ! $yorumlar->contains(fn ($y) => (int) $y->user_id === $userId),
+        ];
+    }
+
+    private function adSonHarf(string $ad): string
+    {
+        $parcalar = preg_split('/\s+/', trim($ad));
+        if (trim($ad) === '') {
+            return 'Müşteri';
+        }
+        if (count($parcalar) === 1) {
+            return $parcalar[0];
+        }
+        $son = array_pop($parcalar);
+
+        return implode(' ', $parcalar).' '.mb_substr($son, 0, 1, 'UTF-8').'.';
     }
 
     public function vitrin(int $salonId): array
@@ -119,6 +212,7 @@ class VitrinServisi
             'studyo_modu'                  => (bool) ($s->studyo_modu ?? false),
             'grup_dersi_aktif'             => (bool) ($s->grup_dersi_aktif ?? false),
             'randevu_saat_araligi'         => (int) ($s->randevu_saat_araligi ?: 30),
+            'randevu_takvim_turu'          => $s->randevu_takvim_turu ?? null,
         ];
     }
 

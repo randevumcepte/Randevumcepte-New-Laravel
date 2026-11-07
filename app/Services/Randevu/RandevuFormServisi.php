@@ -175,16 +175,8 @@ class RandevuFormServisi
     /** Hizmet basina EN SON salon_sunulan_hizmetler kaydi; santral haric; duzenlemede randevunun pasif hizmetleri dahil. */
     public function hizmetler(int $salonId, ?int $randevuId): array
     {
-        $randevuHizmetleri = $randevuId
-            ? DB::table('randevu_hizmetler')->where('randevu_id', $randevuId)->whereNotNull('hizmet_id')->pluck('hizmet_id')->all()
-            : [];
-        $sonIdler = DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)
-            ->where(fn ($w) => $w->where('santral_hizmeti', '!=', 1)->orWhereNull('santral_hizmeti'))
-            ->where(fn ($w) => $w->where('aktif', 1)->when($randevuHizmetleri, fn ($x) => $x->orWhereIn('hizmet_id', $randevuHizmetleri)))
-            ->groupBy('hizmet_id')->selectRaw('MAX(id) as id')->pluck('id');
-
         return DB::table('salon_sunulan_hizmetler as ssh')->join('hizmetler as h', 'h.id', '=', 'ssh.hizmet_id')
-            ->whereIn('ssh.id', $sonIdler)->orderBy('h.hizmet_adi')
+            ->whereIn('ssh.id', $this->sonHizmetKayitlari($salonId, $randevuId))->orderBy('h.hizmet_adi')
             ->get(['ssh.hizmet_id', 'h.hizmet_adi', 'ssh.sure_dk', 'ssh.baslangic_fiyat', 'ssh.hizmet_kategori_id', 'ssh.bolum', 'ssh.aktif'])
             ->map(fn ($h) => [
                 'hizmet_id'   => (int) $h->hizmet_id,
@@ -195,6 +187,19 @@ class RandevuFormServisi
                 'bolum'       => $h->bolum,
                 'aktif'       => (bool) $h->aktif,
             ])->all();
+    }
+
+    /** Hizmet basina en son salon_sunulan_hizmetler.id; santral haric; duzenlemede randevunun pasif hizmetleri dahil. */
+    public function sonHizmetKayitlari(int $salonId, ?int $randevuId): \Illuminate\Support\Collection
+    {
+        $randevuHizmetleri = $randevuId
+            ? DB::table('randevu_hizmetler')->where('randevu_id', $randevuId)->whereNotNull('hizmet_id')->pluck('hizmet_id')->all()
+            : [];
+
+        return DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)
+            ->where(fn ($w) => $w->where('santral_hizmeti', '!=', 1)->orWhereNull('santral_hizmeti'))
+            ->where(fn ($w) => $w->where('aktif', 1)->when($randevuHizmetleri, fn ($x) => $x->orWhereIn('hizmet_id', $randevuHizmetleri)))
+            ->groupBy('hizmet_id')->selectRaw('MAX(id) as id')->pluck('id');
     }
 
     public function haritalar(int $salonId): array

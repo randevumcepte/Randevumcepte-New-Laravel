@@ -4,13 +4,12 @@ namespace App\Providers;
 
 use App\Domain\Oturum\TokenTipi;
 use App\Services\Oturum\ErisimTokenServisi;
-use GuzzleHttp\Psr7\HttpFactory;
+use App\Services\Oturum\IstekTokeni;
+use App\Services\Oturum\MobilBayraklar;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
-use League\OAuth2\Server\ResourceServer;
-use Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -78,22 +77,19 @@ class AppServiceProvider extends ServiceProvider
     {
         $provider = Auth::createUserProvider($config['provider'] ?? null);
 
-        return new RequestGuard(function ($request) use ($provider, $idCoz, $kabul, $hesapTuru) {
+        $guard = new RequestGuard(function ($request) use ($provider, $idCoz, $kabul, $hesapTuru) {
             try {
-                // Illuminate isteğini PSR-7'ye çevir (ResourceServer PSR bekler)
-                $guzzle = new HttpFactory();
-                $psrFactory = new PsrHttpFactory($guzzle, $guzzle, $guzzle, $guzzle);
-                $psr = $psrFactory->createRequest($request);
-
                 // Kriptografik + revocation doğrulaması (imza, exp, oauth_access_tokens.revoked)
-                $validated = app(ResourceServer::class)->validateAuthenticatedRequest($psr);
+                $validated = app(IstekTokeni::class)->dogrula($request);
+                $kapsam = (array) $validated->getAttribute('oauth_scopes');
+                MobilBayraklar::uygula($request, $kapsam);
 
                 $id = $idCoz((string) $validated->getAttribute('oauth_user_id'));
                 if ($id === null) {
                     return null;
                 }
                 $tokenId = $validated->getAttribute('oauth_access_token_id');
-                $tip = TokenTipi::coz((array) $validated->getAttribute('oauth_scopes'));
+                $tip = TokenTipi::coz($kapsam);
                 if ($hesapTuru !== null && ! $this->tokenTipiUygun($tip, $hesapTuru, $tokenId)) {
                     return null;
                 }
@@ -107,9 +103,15 @@ class AppServiceProvider extends ServiceProvider
                 return $kullanici && $kabul($kullanici) ? $kullanici : null;
             } catch (\Throwable $e) {
                 // Gecersiz/suresi dolmus/iptal edilmis token -> kimliksiz
+                MobilBayraklar::temizle($request);
+
                 return null;
             }
         }, $app['request'], $provider);
+        // Bayraklar guncel istekten silinir: guard onbellekte kalsa da istek nesnesi guncel kalir.
+        $app->refresh('request', $guard, 'setRequest');
+
+        return $guard;
     }
 
     private function tokenTipiUygun(?string $tip, string $beklenen, ?string $tokenId): bool

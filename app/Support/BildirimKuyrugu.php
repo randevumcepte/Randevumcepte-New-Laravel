@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  *           musteri SMS + personel SMS/bildirim/push, ayar_id=12).
  *         anket_link (payload: gonderim_id; randevu_id null — v2'de oluşturulan anket gönderiminin linkini WA-first/SMS yollar),
  *         anket_gonder (ESKİ, artık yazılmaz; kuyruktaki eski satırlar için monolitte duruyor),
- *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi manuel WhatsApp),
+ *         whatsapp_mesaj (payload: user_id, mesaj, gonderim_tipi — Çağrı Merkezi ve müşteri kartı manuel WhatsApp),
  *         cark_duyuru (payload: baslik, mesaj; randevu_id null — Çarkıfelek "müşterilere duyur" push'u),
  *         sistem_bildirim (payload: mesaj; randevu_id null — sistem sahibine WA+SMS, ör. WhatsApp kontör talebi),
  *         kampanya_olustur (payload: kampanya_id; randevu_id null — Reklam Yönetimi yeni kampanya → personel push'u),
@@ -46,6 +46,12 @@ class BildirimKuyrugu
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    /** Müşteriye manuel WhatsApp mesajı (Çağrı Merkezi, müşteri kartı). */
+    public static function whatsappMesaji(int $salonId, ?int $yetkiliId, int $userId, string $mesaj): void
+    {
+        self::yaz($salonId, 'whatsapp_mesaj', null, $yetkiliId, ['user_id' => $userId, 'mesaj' => $mesaj, 'gonderim_tipi' => 'manuel_musteri']);
     }
 
     /**

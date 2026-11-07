@@ -45,7 +45,8 @@ class DersProgramServisi
             ])->all();
     }
 
-    public function sablonKaydet(int $salonId, ?int $sablonId, array $g, ?int $yetkiliId): array
+    /** $terfi=false: mobilin bugunku davranisi, kapasite artisi bekleyeni terfi ettirmez. */
+    public function sablonKaydet(int $salonId, ?int $sablonId, array $g, ?int $yetkiliId, bool $terfi = true): array
     {
         $this->referans->personelHizmetDogrula($salonId, $g['personel_id'] ?? null, $g['hizmet_id'] ?? null);
         $alan = [
@@ -55,7 +56,7 @@ class DersProgramServisi
             'kapasite' => (int) $g['kapasite'], 'aktif' => true,
         ] + array_intersect_key($g, array_flip(['renk'])); // gonderilmezse mevcut deger korunur
 
-        return DB::transaction(function () use ($salonId, $sablonId, $alan, $yetkiliId) {
+        return DB::transaction(function () use ($salonId, $sablonId, $alan, $yetkiliId, $terfi) {
             $senkron = 0;
             if ($sablonId) {
                 $s = DersProgramiSablonu::where('salon_id', $salonId)->findOrFail($sablonId);
@@ -63,7 +64,9 @@ class DersProgramServisi
                 $senkron = $this->gelecekOturumlar($salonId, $s->id)->update(array_intersect_key($alan, array_flip(
                     ['hizmet_id', 'ders_tipi', 'personel_id', 'saat', 'saat_bitis', 'kapasite', 'renk'],
                 )));
-                $this->katilim->terfiler($this->gelecekOturumlar($salonId, $s->id)->pluck('id')->all(), $yetkiliId);
+                if ($terfi) {
+                    $this->katilim->terfiler($this->gelecekOturumlar($salonId, $s->id)->pluck('id')->all(), $yetkiliId);
+                }
             } else {
                 $s = DersProgramiSablonu::create($alan);
             }
@@ -97,7 +100,8 @@ class DersProgramServisi
         });
     }
 
-    public function yayinla(int $salonId, string $baslangic, ?string $bitis, ?int $hafta, ?int $yetkiliId): array
+    /** $renkKopyala=false: mobilin bugunku davranisi, oturum sablon rengini almaz. */
+    public function yayinla(int $salonId, string $baslangic, ?string $bitis, ?int $hafta, ?int $yetkiliId, bool $renkKopyala = true): array
     {
         try {
             $aralik = YayinAraligi::olustur($baslangic, $bitis, $hafta, Salonlar::studyoModu($salonId));
@@ -105,7 +109,7 @@ class DersProgramServisi
             throw new GecersizIslemException($e->getMessage());
         }
 
-        return DB::transaction(function () use ($salonId, $aralik, $yetkiliId) {
+        return DB::transaction(function () use ($salonId, $aralik, $yetkiliId, $renkKopyala) {
             // Kilit: es zamanli iki yayin ayni tarihleri iki kez uretmesin.
             $sablonlar = DersProgramiSablonu::where('salon_id', $salonId)->where('aktif', 1)->lockForUpdate()->get();
             if ($sablonlar->isEmpty()) {
@@ -124,7 +128,7 @@ class DersProgramServisi
 
                         continue;
                     }
-                    $this->oturumUret($s, $tarih);
+                    $this->oturumUret($s, $tarih, $renkKopyala);
                     $olusan++;
                 }
             }
@@ -135,12 +139,12 @@ class DersProgramServisi
     }
 
     /** Sablon + tarihten oturum (yayin ve otomatik ders plani ORTAK). */
-    public function oturumUret(DersProgramiSablonu $s, string $tarih): DersOturumu
+    public function oturumUret(DersProgramiSablonu $s, string $tarih, bool $renkKopyala = true): DersOturumu
     {
         return DersOturumu::create([
             'salon_id' => $s->salon_id, 'sube_id' => $s->sube_id, 'personel_id' => $s->personel_id, 'ders_tipi' => $s->ders_tipi,
             'hizmet_id' => $s->hizmet_id, 'tarih' => $tarih, 'saat' => $s->saat, 'saat_bitis' => $s->saat_bitis,
-            'kapasite' => $s->kapasite, 'sablon_id' => $s->id, 'renk' => $s->renk, 'aktif' => true,
+            'kapasite' => $s->kapasite, 'sablon_id' => $s->id, 'renk' => $renkKopyala ? $s->renk : null, 'aktif' => true,
         ]);
     }
 

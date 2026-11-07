@@ -32,21 +32,24 @@ class ErisimTokenServisi
 
     private const IMPERSONATION_ADI_ONEKI = 'impersonation:';
 
-    /** @param  string  $tip  TokenTipi: token yalniz bu hesap turunun uclarinda gecer */
-    public function uret(int $userId, string $tip): string
+    /**
+     * @param  string  $tip  TokenTipi: token yalniz bu hesap turunun uclarinda gecer
+     * @param  bool  $mobil  uygulama girisi: istekteki mobil bayraklar yalniz bu kapsamla etkilidir
+     */
+    public function uret(int $userId, string $tip, bool $mobil = false): string
     {
-        return $this->imzala($userId, (string) $userId, self::TOKEN_ADI, (new DateTimeImmutable())->modify('+'.(int) config('online.token_gun').' days'), '', [$tip]);
+        return $this->imzala($userId, (string) $userId, self::TOKEN_ADI, (new DateTimeImmutable())->modify('+'.(int) config('online.token_gun').' days'), '', TokenTipi::kapsam($tip, $mobil));
     }
 
     /** Bitimine az kalan token icin yeni token; erken cagrida null. Eski token suresince gecerli kalir (cevap kaybolursa oturum dusmesin). */
-    public function yenile(string $tokenId, int $userId, string $tip): ?string
+    public function yenile(string $tokenId, int $userId, string $tip, bool $mobil = false): ?string
     {
         $bitis = DB::table('oauth_access_tokens')->where('id', $tokenId)->value('expires_at');
         if ($bitis !== null && strtotime((string) $bitis) > time() + (int) config('oturum.token_yenile_gun') * 86400) {
             return null;
         }
 
-        return $this->uret($userId, $tip);
+        return $this->uret($userId, $tip, $mobil);
     }
 
     public function sistemYoneticisiUret(int $id): string

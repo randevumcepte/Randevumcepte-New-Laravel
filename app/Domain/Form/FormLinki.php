@@ -16,9 +16,11 @@ final class FormLinki
     /**
      * Müşteri mesajı.
      *
+     * $genelLink: mobil Tekrar Gönder her klasik formda genel sayfayı gönderir (form 9-13 dahil).
+     *
      * @param array{id:int,user_id:int,form_id:int,is_sozlesme?:mixed,dogrulama_kodu:string} $arsiv
      */
-    public static function musteriMesaji(string $host, array $arsiv, bool $dinamik): string
+    public static function musteriMesaji(string $host, array $arsiv, bool $dinamik, bool $genelLink = false): string
     {
         $id = (int) $arsiv['id'];
         $uid = (int) $arsiv['user_id'];
@@ -31,7 +33,7 @@ final class FormLinki
         if ($dinamik) {
             return ' Onam formunu doldurmak için: '.$kok.'onam-form/'.$id.'/'.$uid.' | Onay Kodu: '.$kod;
         }
-        $sayfa = SabitFormlar::sayfa((int) $arsiv['form_id']) ?? 'musteriformdoldurma';
+        $sayfa = ($genelLink ? null : SabitFormlar::sayfa((int) $arsiv['form_id'])) ?? 'musteriformdoldurma';
 
         return ' Formu doldurmak için : '.$kok.$sayfa.'/'.$id.'/'.$uid.' Onay Kodu:'.$kod;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Whatsapp;
 
+use App\Domain\Whatsapp\GonderimEngeli;
 use App\Domain\Whatsapp\WhatsappDurumu;
 use Illuminate\Support\Facades\DB;
 
@@ -45,5 +46,43 @@ class WhatsappOturumServisi
         $o = $this->coz($salonId);
 
         return $o !== null && ($o['saglayici'] !== 'baileys' || $o['durum']->bagli);
+    }
+
+    /** Kuyruğa yazmadan görülebilen engel kodu (GonderimEngeli) ya da null. Tavan, oturumu paylaşan salonların toplamıdır. */
+    public function gonderimEngeli(int $salonId): ?string
+    {
+        $o = $this->coz($salonId);
+        if ($o === null) {
+            return null;
+        }
+        $oturum = $o['oturum'];
+        $saat = (int) now()->format('H');
+        $mesaiIci = ! config('whatsapp.business_hours.enforce', false)
+            || ($saat >= (int) config('whatsapp.business_hours.start', 9) && $saat < (int) config('whatsapp.business_hours.end', 21));
+
+        return GonderimEngeli::coz(
+            $o['saglayici'],
+            (int) ($oturum->whatsapp_gunluk_limit ?: config('whatsapp.default_daily_limit', 200)),
+            $this->bugunGonderilen((int) $oturum->id),
+            $mesaiIci,
+            $o['durum']->kontorluDonem,
+            $o['durum']->kontor,
+        );
+    }
+
+    /** Anket linkinin çıkacağı kanal: WhatsApp açık ve engel yoksa whatsapp, aksi halde SMS (eski anketSmsGonder kuralı). */
+    public function beklenenKanal(int $salonId): string
+    {
+        $o = $this->coz($salonId);
+
+        return $o !== null && $o['durum']->bagli && $this->gonderimEngeli($salonId) === null ? 'whatsapp' : 'sms';
+    }
+
+    private function bugunGonderilen(int $oturumSalonId): int
+    {
+        $salonlar = DB::table('salonlar')->where('whatsapp_paylasilan_salon_id', $oturumSalonId)->pluck('id')->push($oturumSalonId)->all();
+
+        return DB::table('whatsapp_gonderim_loglari')->whereIn('salon_id', $salonlar)->where('durum', 1)
+            ->whereDate('gonderim_tarihi', now()->toDateString())->count();
     }
 }

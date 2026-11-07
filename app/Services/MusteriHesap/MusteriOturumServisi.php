@@ -10,6 +10,7 @@ use App\Exceptions\GirisHatasiException;
 use App\Services\Online\OnlineSalonKapisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\Hesap\MusteriHesabi;
+use App\Services\Oturum\PlatformMesaj;
 use App\Support\BildirimKuyrugu;
 use App\Support\OnayKodu;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ use Illuminate\Support\Str;
 class MusteriOturumServisi
 {
     private const SIFRE_KOD_AMAC = 'musteri_sifre';
+    private const UYGULAMA_SIFRE_UZUNLUK = 6;
 
     public function __construct(
         private ErisimTokenServisi $token,
@@ -35,6 +37,7 @@ class MusteriOturumServisi
         private PortfoyKaydi $portfoy,
         private MusteriProfilServisi $profil,
         private OnlineSalonKapisi $kapi,
+        private PlatformMesaj $mesaj,
     ) {}
 
     public function giris(string $telefonHam, string $sifre, ?int $salonId, string $ip): array
@@ -86,6 +89,53 @@ class MusteriOturumServisi
         RateLimiter::hit('musteri-kayit-ip:'.$ip, 3600);
 
         return ['sifre_gerekli' => false] + $this->oturumAc($userId, $salonId);
+    }
+
+    /**
+     * Musteri uygulamasi kaydi (v1 yenimusteridanisankaydi): yeni numaraya hesap ve marka subelerine portfoy acar, sifre
+     * SMS ile gider, musteri giris ekranina doner. Kayitli numara kayitli:true alir (ekran girise yonlendirir) ve hicbir
+     * sey degismez: kimliksiz istekle sifre degistirilmez, pasif kayit acilmaz, baska salonun musterisi portfoye eklenmez.
+     *
+     * @return array{kayitli:bool}
+     */
+    public function sifreyleKayit(array $g, string $ip): array
+    {
+        $this->botKapisi($g, $ip);
+        $tel = $this->telefon($g['cep_telefon']);
+        $salonId = (int) $g['salon_id'];
+        $this->kapi->salon($salonId);
+        if ($this->hesap->telefonlaBul($tel) !== null) {
+            return ['kayitli' => true];
+        }
+        $telAnahtar = 'musteri-kayit-tel:'.$tel;
+        if (RateLimiter::tooManyAttempts($telAnahtar, (int) config('online.kayit_tel_gunluk'))) {
+            throw new CokFazlaIstekException();
+        }
+
+        $salonlar = array_values(array_unique(array_merge([$salonId], $this->markaSalonlari($g['app_bundle'] ?? null))));
+        $sifre = Str::random(self::UYGULAMA_SIFRE_UZUNLUK);
+        $gonderildi = $this->mesaj->kod($tel, $this->kapi->markaAdi($g['app_bundle'] ?? null).' uygulama şifreniz  : '.$sifre, 'Sifre', $salonId);
+        if (! $gonderildi) {
+            throw new GecersizIslemException('Şifreniz gönderilemedi. Lütfen daha sonra tekrar deneyin.');
+        }
+        DB::transaction(function () use ($g, $tel, $salonlar, $sifre) {
+            $userId = (int) DB::table('users')->insertGetId([
+                'name' => trim((string) $g['ad_soyad']), 'cep_telefon' => $tel, 'password' => Hash::make($sifre), 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            foreach ($salonlar as $salon) {
+                $this->portfoy->garantile($salon, $userId);
+            }
+        });
+        RateLimiter::hit($telAnahtar, 86400);
+        RateLimiter::hit('musteri-kayit-ip:'.$ip, 3600);
+
+        return ['kayitli' => false];
+    }
+
+    /** @return int[] ana uygulama marka sayilmaz */
+    private function markaSalonlari(?string $bundle): array
+    {
+        return $bundle && $bundle !== config('oturum.ana_uygulama_bundle') ? $this->kapi->bundleSalonlari($bundle) : [];
     }
 
     /** Numara kayitli olsa da olmasa da ayni cevap: hesap varligi sizdirilmaz. */

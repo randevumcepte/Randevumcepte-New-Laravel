@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V2\WhatsappBaglantiController;
 use App\Http\Controllers\Api\V2\WhatsappController;
 use App\Http\Controllers\Api\V2\WhatsappGonderimController;
 use App\Http\Controllers\Api\V2\WhatsappKontorController;
+use App\Http\Controllers\Api\V2\WhatsappMusteriController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,6 +17,9 @@ Route::prefix('whatsapp')->group(function () {
     Route::put('/kanal', [WhatsappController::class, 'kanalDegistir']);
     Route::get('/linkler', [WhatsappController::class, 'linkler']);
     Route::put('/linkler', [WhatsappController::class, 'linkKaydet']);
+
+    Route::get('/musteri-durum', [WhatsappMusteriController::class, 'durum']);
+    Route::post('/musteri-mesaj', [WhatsappMusteriController::class, 'gonder']);
 
     Route::get('/durum', [WhatsappBaglantiController::class, 'durum']);
     Route::get('/qr', [WhatsappBaglantiController::class, 'qr']);

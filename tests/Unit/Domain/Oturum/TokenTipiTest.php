@@ -7,6 +7,22 @@ use PHPUnit\Framework\TestCase;
 
 class TokenTipiTest extends TestCase
 {
+    public function test_mobil_kapsam_hesap_tipini_bozmaz_ve_uretilen_kapsamdan_okunur(): void
+    {
+        $kapsam = TokenTipi::kapsam(TokenTipi::MUSTERI, true);
+
+        $this->assertSame(TokenTipi::MUSTERI, TokenTipi::coz($kapsam));
+        $this->assertTrue(TokenTipi::mobilMi($kapsam));
+        $this->assertSame(TokenTipi::ISLETME, TokenTipi::coz([TokenTipi::MOBIL, TokenTipi::ISLETME]));
+    }
+
+    public function test_web_ve_tipsiz_token_mobil_sayilmaz(): void
+    {
+        $this->assertFalse(TokenTipi::mobilMi(TokenTipi::kapsam(TokenTipi::ISLETME, false)));
+        $this->assertFalse(TokenTipi::mobilMi([]));
+        $this->assertFalse(TokenTipi::mobilMi([TokenTipi::MOBIL]));
+    }
+
     public function test_tipli_token_yalniz_kendi_turunde_gecer(): void
     {
         $this->assertTrue(TokenTipi::kabul(TokenTipi::MUSTERI, TokenTipi::MUSTERI, false, null, 'v2-web'));

@@ -43,9 +43,7 @@ class WhatsappMesajServisi
             throw new CakismaException('WhatsApp bağlı değil. Önce WhatsApp ayarlarından QR okutun.');
         }
 
-        BildirimKuyrugu::yaz($e->salonId, 'whatsapp_mesaj', null, $e->yetkiliId, [
-            'user_id' => (int) $musteri->id, 'mesaj' => mb_substr($mesaj, 0, self::MAKS_UZUNLUK), 'gonderim_tipi' => 'manuel_musteri',
-        ]);
+        BildirimKuyrugu::whatsappMesaji($e->salonId, $e->yetkiliId, (int) $musteri->id, mb_substr($mesaj, 0, self::MAKS_UZUNLUK));
         AktiviteLog::yaz($e->salonId, $e->yetkiliId, 'cagri_whatsapp_gonder', 'aranacak_musteri', $aranacakId, (string) $musteri->name ?: null,
             'Çağrı merkezinden WhatsApp mesajı gönderildi', ['user_id' => (int) $musteri->id, 'uzunluk' => mb_strlen($mesaj)]);
 

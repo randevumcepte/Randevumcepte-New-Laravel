@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\Ayar\AyarSozluk;
 use App\Http\Requests\Ayar\HavuzHizmetIstegi;
 use App\Http\Requests\Ayar\HizmetIstegi;
 use App\Http\Requests\Ayar\HizmetKategoriIstegi;
@@ -54,10 +55,14 @@ class HizmetController extends AyarTabanController
         return ApiCevap::basarili($this->yaz->yeniEkle($salonId, $yapanId, $request->veri()), 'Hizmet başarıyla eklendi');
     }
 
-    /** POST /api/v2/ayar/hizmetler/havuzdan  body: {salon_id, hizmetler[]} */
+    /**
+     * POST /api/v2/ayar/hizmetler/havuzdan  body: {salon_id, sekme_yetkisi?, hizmetler[]}
+     * sekme_yetkisi (mobil): mobil menu yalniz kategori_yonet ile de aciliyor, kayit ayni kuralla gecer.
+     */
     public function havuzdanEkle(HavuzHizmetIstegi $request)
     {
-        [$yapanId, $salonId] = $this->yetkiliYazma($request, self::TANIM);
+        $yetki = $request->boolean('sekme_yetkisi') ? AyarSozluk::yetki('hizmetler') : self::TANIM;
+        [$yapanId, $salonId] = $this->yetkiliYazma($request, $yetki);
 
         return ApiCevap::basarili($this->yaz->havuzdanEkle($salonId, $yapanId, $request->validated('hizmetler')), 'Hizmet(-ler) başarıyla eklendi');
     }

@@ -55,7 +55,7 @@ class FormSablonServisi
     /**
      * Yeni şablon ($id null) ya da güncelleme.
      *
-     * @param array{form_adi:?string,aciklama:?string,is_sozlesme:bool,sorular:mixed} $g
+     * @param array{form_adi:?string,aciklama:?string,is_sozlesme:bool,sorular:mixed,mobil?:bool} $g
      */
     public function kaydet(int $salonId, ?int $id, array $g, int $yapanId): array
     {
@@ -64,7 +64,7 @@ class FormSablonServisi
             throw new GecersizIslemException('Form adı zorunludur.');
         }
         try {
-            $sorular = SablonSorulari::normalize($g['sorular'] ?? null);
+            $sorular = SablonSorulari::normalize($g['sorular'] ?? null, ! empty($g['mobil']));
         } catch (\InvalidArgumentException $e) {
             throw new GecersizIslemException($e->getMessage());
         }

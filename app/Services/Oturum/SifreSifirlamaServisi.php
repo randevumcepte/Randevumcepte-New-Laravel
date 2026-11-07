@@ -2,13 +2,16 @@
 
 namespace App\Services\Oturum;
 
+use App\Domain\Oturum\TokenTipi;
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
+use App\Services\Online\OnlineSalonKapisi;
 use App\Services\Oturum\Hesap\HesapListesi;
 use App\Services\Oturum\Hesap\OturumHesabi;
 use App\Support\OnayKodu;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 /**
  * Iki adimli sifre sifirlama: SMS kodu + yeni sifre. Eski kodun aciklari kapatildi:
@@ -20,8 +23,43 @@ use Illuminate\Support\Facades\RateLimiter;
 class SifreSifirlamaServisi
 {
     private const SALON_YOK = 0;
+    private const UYGULAMA_SIFRE_UZUNLUK = 6;
 
-    public function __construct(private HesapListesi $hesaplar, private PlatformMesaj $sms) {}
+    public function __construct(private HesapListesi $hesaplar, private PlatformMesaj $sms, private OnlineSalonKapisi $marka) {}
+
+    /**
+     * Uygulamanin "Sifremi Gonder" ekrani (v1 sifregonder): tek adimda yeni sifre SMS ile gider, numara kayitli degilse
+     * ekran uyari gosterir. Kimliksiz uctur: yalniz musteri hesabi aranir (v1 de oyleydi), isletme yetkilisinin sifresi ve
+     * oturumlari bu yoldan degismez; yetkili numarasi kayitsiz numara ile ayni cevabi alir. Hesap kilitlemeyi sinirlamak icin numara basina bekleme ve IP siniri vardir; beklemede yeni
+     * sifre uretilmez, eski sifre gecerli kalir. Mesaj gitmezse sifre degismez.
+     *
+     * @return bool numara kayitli mi
+     */
+    public function yeniSifreGonder(string $telefonHam, ?string $bundle, string $ip): bool
+    {
+        $tel = TelefonNumarasi::kanonik($telefonHam);
+        if (! TelefonNumarasi::gecerliMi($tel)) {
+            throw new GecersizIslemException('Geçerli bir telefon numarası girin.');
+        }
+        if (! RateLimiter::attempt('oturum-sifre-ip:'.$ip, (int) config('oturum.sifre_kodu_ip_gunluk'), fn () => true, 86400)) {
+            throw new CokFazlaIstekException();
+        }
+        [$hesap, $id] = $this->hesapBul($tel, TokenTipi::MUSTERI);
+        if (! $hesap) {
+            return false;
+        }
+        if ($this->korunuyor($hesap, $id) || ! RateLimiter::attempt('oturum-sifre-tel:'.$tel, 1, fn () => true, (int) config('oturum.sifre_kodu_tel_sn'))) {
+            return true;
+        }
+        $sifre = Str::random(self::UYGULAMA_SIFRE_UZUNLUK);
+        $gitti = $this->sms->kod($tel, $this->marka->markaAdi($bundle).' uygulama şifreniz: '.$sifre, 'Sifre', $hesap->mesajSalonu($id, $bundle));
+        if (! $gitti) {
+            throw new GecersizIslemException('Şifreniz gönderilemedi. Lütfen daha sonra tekrar deneyin.');
+        }
+        $hesap->sifreGuncelle($id, $sifre);
+
+        return true;
+    }
 
     public function kodGonder(string $telefonHam, ?string $tur, string $ip): void
     {

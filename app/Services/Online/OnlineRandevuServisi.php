@@ -30,10 +30,11 @@ class OnlineRandevuServisi
     ) {}
 
     /**
-     * @param  array{tarih:string,saat:string,kalemler:array,not?:?string,kaynak:string,idempotency_key?:?string}  $g
+     * @param  array{tarih:string,saat:string,kalemler:array,not?:?string,kaynak:string,idempotency_key?:?string,mobil?:bool}  $g
      */
     public function olustur(int $salonId, int $userId, array $g): array
     {
+        // Online kapali veya lisansi dolmus salona her yoldan kapali. Mobil bayrak yalniz gizli personel secimini acar.
         $salon = $this->kapi->randevuyaAcikSalon($salonId);
         if (! RandevuYazma::acik($salonId)) {
             throw new CakismaException(RandevuYazma::KAPALI_MESAJ);
@@ -50,10 +51,11 @@ class OnlineRandevuServisi
     private function yaz(object $salon, int $userId, array $g): array
     {
         $salonId = (int) $salon->id;
-        DB::table('salon_personelleri')->whereIn('id', $this->musaitlik->adayPersoneller($salonId, $g['kalemler']))
+        $mobil = ! empty($g['mobil']);
+        DB::table('salon_personelleri')->whereIn('id', $this->musaitlik->adayPersoneller($salonId, $g['kalemler'], $mobil))
             ->orderBy('id')->lockForUpdate()->pluck('id');
 
-        $yerlesim = $this->musaitlik->yerlesim($salon, $g['tarih'], $g['saat'], $g['kalemler']);
+        $yerlesim = $this->musaitlik->yerlesim($salon, $g['tarih'], $g['saat'], $g['kalemler'], $mobil);
         if ($yerlesim === null) {
             throw new CakismaException('Seçtiğiniz saat artık uygun değil. Lütfen başka bir saat seçiniz.');
         }

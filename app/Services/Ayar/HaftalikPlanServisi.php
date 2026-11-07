@@ -2,8 +2,8 @@
 
 namespace App\Services\Ayar;
 
+use App\Domain\Ayar\HaftalikPlan;
 use App\Domain\Ayar\HaftalikSaat;
-use App\Exceptions\GecersizIslemException;
 use App\Support\HaftalikSaatDeposu;
 
 /**
@@ -11,7 +11,7 @@ use App\Support\HaftalikSaatDeposu;
  *
  * Plan bicimi her yerde ayni (web + Flutter): {haftanin_gunu, gun_adi, calisiyor, baslangic_saati,
  * bitis_saati, mola_var, mola_baslangic_saati, mola_bitis_saati}. Kaydi olmayan gun varsayilanla
- * doner. Yazmada calisilan gun / mola icin bitis > baslangic zorunlu (eskide kontrol yoktu).
+ * doner. Yazma kurali HaftalikPlan'da.
  */
 class HaftalikPlanServisi
 {
@@ -43,38 +43,24 @@ class HaftalikPlanServisi
     }
 
     /**
-     * Dogrula + sil-ve-yaz (cagiran transaction acar). Donus: calisilan gun sayisi.
+     * Dogrula + sil-ve-yaz (cagiran transaction acar). Donus: yazilan yarinin acik gun sayisi
+     * (iki yari yazilirsa calisilan gun). $yalniz ve $geceDevri icin bkz. HaftalikPlan.
      *
      * @param  list<array>  $gunler  HaftalikPlanKurallari ile dogrulanmis 7 gun
      */
-    public function yaz(string $sahip, int $sahipId, array $gunler): int
+    public function yaz(string $sahip, int $sahipId, array $gunler, ?string $yalniz = null, bool $geceDevri = false): int
     {
-        $calisma = [];
-        $mola = [];
-        foreach ($gunler as $g) {
-            $gun = (int) $g['haftanin_gunu'];
-            $ad = HaftalikSaat::GUNLER[$gun];
-            $bas = HaftalikSaat::saat($g['baslangic_saati'] ?? null);
-            $bit = HaftalikSaat::saat($g['bitis_saati'] ?? null);
-            $mBas = HaftalikSaat::saat($g['mola_baslangic_saati'] ?? null);
-            $mBit = HaftalikSaat::saat($g['mola_bitis_saati'] ?? null);
-            $calisiyor = ! empty($g['calisiyor']);
-            $molaVar = ! empty($g['mola_var']);
+        ['calisma' => $calisma, 'mola' => $mola] = HaftalikPlan::satirlar($gunler, $yalniz, $geceDevri);
 
-            if ($calisiyor && ! HaftalikSaat::sirali($bas, $bit)) {
-                throw new GecersizIslemException("{$ad}: çalışma bitiş saati başlangıçtan sonra olmalı.");
-            }
-            if ($molaVar && ! HaftalikSaat::sirali($mBas, $mBit)) {
-                throw new GecersizIslemException("{$ad}: mola bitiş saati başlangıçtan sonra olmalı.");
-            }
-
-            $calisma[] = ['haftanin_gunu' => $gun, 'calisiyor' => (int) $calisiyor, 'baslangic_saati' => $bas, 'bitis_saati' => $bit];
-            $mola[] = ['haftanin_gunu' => $gun, 'mola_var' => (int) $molaVar, 'baslangic_saati' => $mBas, 'bitis_saati' => $mBit];
+        if ($calisma !== null) {
+            HaftalikSaatDeposu::yaz($sahip, $sahipId, HaftalikSaatDeposu::CALISMA, $calisma);
+        }
+        if ($mola !== null) {
+            HaftalikSaatDeposu::yaz($sahip, $sahipId, HaftalikSaatDeposu::MOLA, $mola);
         }
 
-        HaftalikSaatDeposu::yaz($sahip, $sahipId, HaftalikSaatDeposu::CALISMA, $calisma);
-        HaftalikSaatDeposu::yaz($sahip, $sahipId, HaftalikSaatDeposu::MOLA, $mola);
-
-        return count(array_filter($calisma, fn ($c) => $c['calisiyor']));
+        return $calisma !== null
+            ? count(array_filter($calisma, fn ($c) => $c['calisiyor']))
+            : count(array_filter($mola ?? [], fn ($c) => $c['mola_var']));
     }
 }

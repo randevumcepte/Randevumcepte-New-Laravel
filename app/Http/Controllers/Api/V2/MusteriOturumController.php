@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
 use App\Services\MusteriHesap\MusteriOturumServisi;
+use App\Services\MusteriHesap\MusteriTokenYenilemeServisi;
+use App\Services\Oturum\SifreSifirlamaServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -15,6 +17,9 @@ use Illuminate\Http\Request;
  *        → {sifre_gerekli:true} ya da {sifre_gerekli:false, token, user_type, musteri}
  *   POST /musteri-oturum/sifre-kodu {cep_telefon, salon_id}
  *   POST /musteri-oturum/sifre-sifirla {cep_telefon, salon_id, kod, yeni_sifre}
+ *   POST /musteri-oturum/kayit {sifre_gonder:true, app_bundle?, ...}      → {kayitli} (uygulama: sifre SMS ile gider; kayitli numarada hicbir sey degismez)
+ *   POST /musteri-oturum/sifre-gonder {cep_telefon, app_bundle?}          → {bulundu} (uygulama: tek adimda yeni sifre; yalniz musteri hesabi)
+ *   POST /musteri-oturum/yenile (Bearer, suresi dolmus olabilir)          → {token|null, expires_at} (yalniz imzali musteri token'i)
  */
 class MusteriOturumController extends Controller
 {
@@ -40,9 +45,24 @@ class MusteriOturumController extends Controller
             'salon_id'     => ['required', 'integer'],
             '_hp'          => ['nullable', 'string'],
             'form_sure_sn' => ['nullable', 'integer'],
+            'app_bundle'   => ['nullable', 'string', 'max:190'],
         ]);
 
-        return ApiCevap::basarili($this->servis->kayit($g, (string) $request->ip()));
+        return ApiCevap::basarili($request->boolean('sifre_gonder')
+            ? $this->servis->sifreyleKayit($g, (string) $request->ip())
+            : $this->servis->kayit($g, (string) $request->ip()));
+    }
+
+    public function sifreGonder(Request $request, SifreSifirlamaServisi $sifre)
+    {
+        $g = $request->validate(['cep_telefon' => ['required', 'string', 'max:30'], 'app_bundle' => ['nullable', 'string', 'max:190']]);
+
+        return ApiCevap::basarili(['bulundu' => $sifre->yeniSifreGonder($g['cep_telefon'], $g['app_bundle'] ?? null, (string) $request->ip())]);
+    }
+
+    public function yenile(Request $request, MusteriTokenYenilemeServisi $yenileme)
+    {
+        return ApiCevap::basarili($yenileme->yenile($request->bearerToken()));
     }
 
     public function sifreKodu(Request $request)

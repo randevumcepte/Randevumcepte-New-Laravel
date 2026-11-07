@@ -27,6 +27,12 @@ final class DersMesaji
         return self::giris($ad, $tarih, $saat, $ders).' dersinde yeriniz açıldı, kaydınız onaylandı. Görüşmek üzere ✨';
     }
 
+    /** Mobil uygulamanin bugunku terfi metni (mobil yolunda korunur). */
+    public static function terfiMobil(string $ad, string $tarih, string $saat, ?string $ders): string
+    {
+        return self::giris($ad, $tarih, $saat, $ders).' dersinde yeriniz açıldı, rezervasyonunuz onaylandı ✨';
+    }
+
     public static function iptal(string $ad, string $tarih, string $saat, ?string $ders): string
     {
         return self::giris($ad, $tarih, $saat, $ders).' dersiniz iptal edilmiştir. Bilginize.';

@@ -129,7 +129,7 @@ class MusteriYazServisi
     }
 
     /** Saglik bilgileri (users satiri — kisi bazli, tum salonlarda ortak; eski davranis). */
-    public function saglikKaydet(int $salonId, int $userId, array $alanlar, int $yapanId): array
+    public function saglikKaydet(int $salonId, int $userId, array $alanlar, ?int $yapanId): array
     {
         $guncel = [];
         foreach (array_keys(MusteriSozluk::SAGLIK_SORULARI) as $k) {

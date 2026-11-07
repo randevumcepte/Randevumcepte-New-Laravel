@@ -34,6 +34,8 @@ use Illuminate\Support\Facades\DB;
  *   - Dakika paketi NET hesap (DakikaPaketServisi).
  *   - gelmedi eski kodda yetkisizdi; v2'de randevu.duzenle_iptal (controller).
  *   - iptal yalnizca aktif (durum<2), onayla yalnizca bekleyen (durum=0) randevuda.
+ * $mobil=true (uygulama istegi) bu farklari kapatir, eski mobil sonucu ve mesaji verir;
+ * varsayilan (web) davranis degismez.
  *
  * YAN ETKILER (Faz 2b — outbox): SMS/WA, FCM, uygulama-ici bildirim, dogrulama/
  * KVKK kodu ve seans kullanim push'u v2'de URETILMEZ; 'v2_bildirim_kuyrugu'na
@@ -52,7 +54,7 @@ class RandevuDurumServisi
      *
      * @param  array{dogrulama_kodu?:mixed,kvkk_kodu?:mixed,seans_secim_destek?:bool,secilen_seans_idler?:array|null,seans_miktarlari?:array}  $g
      */
-    public function geldi(int $randevuId, array $g, ?int $yetkiliId, bool $yaz): array
+    public function geldi(int $randevuId, array $g, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
         $salonId = (int) $randevu->salon_id;
@@ -104,7 +106,7 @@ class RandevuDurumServisi
             return [
                 'hatali'      => '4',
                 'mesaj'       => 'Seans secimi yapilmali',
-                'seanslar'    => $this->seansSecimListesi($randevuId, $seanslar),
+                'seanslar'    => $this->seansSecimListesi($randevuId, $seanslar, $mobil),
                 'musteri_adi' => DB::table('users')->where('id', $randevu->user_id)->value('name') ?? '',
                 'tarih'       => $randevu->tarih ?? '',
                 'saat'        => $randevu->saat ?? '',
@@ -112,7 +114,7 @@ class RandevuDurumServisi
         }
 
         $seansPlan  = SeansDurumGecisi::geldi($seanslar, $secilen, (array) ($g['seans_miktarlari'] ?? []));
-        $dakikaPlan = $this->dakika->dusumPlani($randevuId);
+        $dakikaPlan = $this->dakika->dusumPlani($randevuId, $mobil);
 
         $plan = [
             'randevu'      => ['randevuya_geldi' => 1],
@@ -155,7 +157,7 @@ class RandevuDurumServisi
      * GELMEDI. $seansDusumu: null = sor (paket seansi varsa seansDusmeOnayi doner),
      * true = telafi-disi seanslar geldi=0, false = seanslara dokunma.
      */
-    public function gelmedi(int $randevuId, ?bool $seansDusumu, ?int $yetkiliId, bool $yaz): array
+    public function gelmedi(int $randevuId, ?bool $seansDusumu, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
         $salonId = (int) $randevu->salon_id;
@@ -173,7 +175,7 @@ class RandevuDurumServisi
             'randevu'             => ['randevuya_geldi' => 0],
             'seans'               => $seansPlan,
             'kalem_seansa_geldi'  => ($seanslar && $seansDusumu) ? 0 : null,
-            'dakika_iade'         => $this->dakika->iadePlani($randevuId),
+            'dakika_iade'         => $this->dakika->iadePlani($randevuId, $mobil),
         ];
 
         if (! $yaz) {
@@ -195,12 +197,12 @@ class RandevuDurumServisi
         return $this->sonuc(['mesaj' => 'Başarılı'], $plan, true);
     }
 
-    /** GELDI/GELMEDI ISARETINI KALDIR (telafi slotu korunur). */
-    public function isaretKaldir(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    /** GELDI/GELMEDI ISARETINI KALDIR (telafi slotu korunur; mobilde eski kural: tum seanslar). */
+    public function isaretKaldir(int $randevuId, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
         $salonId = (int) $randevu->salon_id;
-        $seansPlan = SeansDurumGecisi::isaretKaldir($this->seanslar($randevuId));
+        $seansPlan = SeansDurumGecisi::isaretKaldir($this->seanslar($randevuId), ! $mobil);
         $plan = ['randevu' => ['randevuya_geldi' => null], 'kalem_seansa_geldi' => null, 'seans' => $seansPlan];
 
         if (! $yaz) {
@@ -224,14 +226,18 @@ class RandevuDurumServisi
      * (telafi hakki), randevuya_geldi=0, kalemler seansa_geldi=0. Yalnizca
      * paket/seans randevusunda. TELAFI RANDEVUSU (ucretsiz duzeltme, prim devri)
      * AYRI islemdir → TelafiRandevuServisi.
+     * Mobilde eski sonuc: iptal durumuna bakilmaz, hata 200 + hata=true ile doner, mesaj eski metindir.
      */
-    public function seansTelafisi(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    public function seansTelafisi(int $randevuId, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
-        if ((int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
+        if (! $mobil && (int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
             throw new GecersizIslemException('İptal edilmiş randevuda seans telafisi yapılamaz.');
         }
         $seanslar = $this->seanslar($randevuId);
+        if (! $seanslar && $mobil) {
+            return ['hata' => true, 'mesaj' => 'Bu randevu paket/seans randevusu değil, telafi işaretlenemez.'];
+        }
         if (! $seanslar) {
             throw new GecersizIslemException('Bu randevu paket/seans randevusu değil; seans telafisi yapılamaz. (Ücretsiz düzeltme için "Telafi randevusu" kullanın.)');
         }
@@ -252,22 +258,23 @@ class RandevuDurumServisi
         AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_telafi', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Seans telafisi: randevunun seansları telafi hakkına alındı');
 
-        return $this->sonuc(['telafi' => true, 'mesaj' => 'Seans telafisi kaydedildi'], $plan, true);
+        return $this->sonuc(['telafi' => true, 'mesaj' => $mobil ? 'Telafi olarak işaretlendi' : 'Seans telafisi kaydedildi'], $plan, true);
     }
 
     /**
      * IPTAL (isletme tarafi, durum=2). Bekleyen (durum=0) bir talepte bu RED'dir.
      * Telafi-disi seanslar silinir → paket bakiyesi geri doner.
+     * Mobilde eski kural: tum seanslar silinir, zaten iptal edilmis randevu da yeniden yazilir.
      */
-    public function iptal(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    public function iptal(int $randevuId, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
-        if ((int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
+        if (! $mobil && (int) $randevu->durum >= Randevular::IPTAL_EDILDI) {
             throw new CakismaException('Randevu zaten iptal edilmiş / reddedilmiş');
         }
         $salonId = (int) $randevu->salon_id;
         $red = (int) $randevu->durum === Randevular::BEKLENIYOR;
-        $seansPlan = SeansDurumGecisi::iptal($this->seanslar($randevuId));
+        $seansPlan = SeansDurumGecisi::iptal($this->seanslar($randevuId), ! $mobil);
         $plan = ['randevu' => ['durum' => Randevular::IPTAL_EDILDI], 'red' => $red, 'seans' => $seansPlan];
         $bildirimler = ['randevu_iptal'];
 
@@ -307,11 +314,11 @@ class RandevuDurumServisi
         AktiviteLog::yaz($salonId, null, 'randevu_iptal', 'randevu', $randevuId, $this->musteriAdi($randevu), 'Randevu müşteri tarafından iptal edildi');
     }
 
-    /** ONAYLA (bekleyen online talep → onaylandi). */
-    public function onayla(int $randevuId, ?int $yetkiliId, bool $yaz): array
+    /** ONAYLA (bekleyen online talep → onaylandi). Mobilde eski kural: durum aranmaz. */
+    public function onayla(int $randevuId, ?int $yetkiliId, bool $yaz, bool $mobil = false): array
     {
         $randevu = $this->randevu($randevuId);
-        if ((int) $randevu->durum !== Randevular::BEKLENIYOR) {
+        if (! $mobil && (int) $randevu->durum !== Randevular::BEKLENIYOR) {
             throw new CakismaException('Yalnızca onay bekleyen randevu onaylanabilir');
         }
         $salonId = (int) $randevu->salon_id;
@@ -385,10 +392,12 @@ class RandevuDurumServisi
     }
 
     /** Hatali '4' seans secim listesi — eski mobil alan adlariyla birebir. */
-    private function seansSecimListesi(int $randevuId, array $seanslar): array
+    private function seansSecimListesi(int $randevuId, array $seanslar, bool $mobil = false): array
     {
         $hizmetAdlari = DB::table('hizmetler')->whereIn('id', array_filter(array_column($seanslar, 'hizmet_id')))->pluck('hizmet_adi', 'id');
-        $kalemler = RandevuHizmetler::where('randevu_id', $randevuId)->get(['hizmet_id', 'sure_dk', 'dusum_miktari'])->keyBy('hizmet_id');
+        $kalemler = RandevuHizmetler::where('randevu_id', $randevuId)->orderBy('id')->get(['hizmet_id', 'sure_dk', 'dusum_miktari']);
+        // Ayni hizmet iki kalemse mobil ilkini okur (eski first()), web sonuncuyu.
+        $kalemler = ($mobil ? $kalemler->unique('hizmet_id') : $kalemler)->keyBy('hizmet_id');
 
         $liste = [];
         foreach ($seanslar as $s) {

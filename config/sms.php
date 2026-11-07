@@ -12,6 +12,9 @@ return [
         'gonderim_url' => env('SMS_VOICETELEKOM_GONDERIM_URL', 'http://smsvt.voicetelekom.com:9587/sms/create'),
         'rapor_sayfa' => 1000,      // saglayici ust siniri
         'rapor_maks_sayfa' => 20,   // 20.000 paket: sonsuz dongu sigortasi (eski kodla ayni)
+        // Kendi hesabi olmayan salonun saat boslugu kampanya SMS'i (eski kodla ayni ortak hesap).
+        'ortak_kullanici' => env('SMS_VOICETELEKOM_ORTAK_KULLANICI', ''),
+        'ortak_sifre' => env('SMS_VOICETELEKOM_ORTAK_SIFRE', ''),
     ],
     'efetech' => [
         'bakiye_url' => env('SMS_EFETECH_BAKIYE_URL', 'https://api.efetech.net.tr/v2/get/balance'),

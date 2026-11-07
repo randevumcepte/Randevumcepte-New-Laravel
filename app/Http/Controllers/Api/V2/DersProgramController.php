@@ -42,7 +42,7 @@ class DersProgramController extends DersTabanController
         [$uid, $salonId] = $this->sablonSalonu($id, self::YAZ);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->sablonKaydet($salonId, $id, $request->validated(), $uid), 'Ders güncellendi.');
+        return ApiCevap::basarili($this->servis->sablonKaydet($salonId, $id, $request->validated(), $uid, ! $this->mobilYolu()), 'Ders güncellendi.');
     }
 
     public function sablonSil(int $id)
@@ -59,7 +59,7 @@ class DersProgramController extends DersTabanController
         $this->yazmaAcikMi();
         $g = $request->validated();
 
-        return ApiCevap::basarili($this->servis->yayinla($salonId, $g['baslangic'] ?? date('Y-m-d'), $g['bitis'] ?? null, $g['hafta'] ?? null, $uid));
+        return ApiCevap::basarili($this->servis->yayinla($salonId, $g['baslangic'] ?? date('Y-m-d'), $g['bitis'] ?? null, $g['hafta'] ?? null, $uid, ! $this->mobilYolu()));
     }
 
     /** @return array{0:int,1:int} */

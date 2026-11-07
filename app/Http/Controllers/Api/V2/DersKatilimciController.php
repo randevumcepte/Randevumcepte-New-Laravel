@@ -28,7 +28,8 @@ class DersKatilimciController extends DersTabanController
         [$uid, $salonId] = $this->kayitSalonu($this->oturum->salonId($id), self::YAZ, 'Ders bulunamadı');
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->ekle($id, (int) $request->validated('musteri_id'), $this->personelId($uid, $salonId), $uid), null, 201);
+        return ApiCevap::basarili($this->servis->ekle($id, (int) $request->validated('musteri_id'), $this->personelId($uid, $salonId), $uid,
+            $this->mobilYolu() ? DersKatilimServisi::ZATEN_EKLI_MOBIL : DersKatilimServisi::ZATEN_KAYITLI), null, 201);
     }
 
     public function cikar(int $id)
@@ -36,7 +37,7 @@ class DersKatilimciController extends DersTabanController
         [$uid] = $this->kayitSalonu($this->oturum->katilimciSalonId($id), self::SIL, 'Katılımcı bulunamadı');
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->cikar($id, $uid));
+        return ApiCevap::basarili($this->servis->cikar($id, $uid, $this->mobilYolu()));
     }
 
     public function durum(KatilimciDurumIstegi $request, int $id)
@@ -44,6 +45,6 @@ class DersKatilimciController extends DersTabanController
         [$uid] = $this->kayitSalonu($this->oturum->katilimciSalonId($id), self::OKU, 'Katılımcı bulunamadı');
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->durumGuncelle($id, KatilimciDurumu::from($request->validated('yeni_durum')), $uid));
+        return ApiCevap::basarili($this->servis->durumGuncelle($id, KatilimciDurumu::from($request->validated('yeni_durum')), $uid, $this->mobilYolu()));
     }
 }

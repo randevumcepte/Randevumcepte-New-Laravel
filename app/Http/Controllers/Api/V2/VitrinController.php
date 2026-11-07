@@ -15,11 +15,14 @@ use Illuminate\Http\Request;
  * Musteri kimligi gerektirmez, kisisel veri dondurmez (yorum adlari maskeli).
  *
  *   GET /vitrin/coz?domain=|app_bundle=
+ *   GET /vitrin/marka?app_bundle=            uygulama acilisi: randevu dugmesi, lisans, marka adi
+ *   GET /vitrin/surum?app_bundle=            magaza surumu
+ *   GET /vitrin/marka-yorumlari?app_bundle=  markanin tum yorumlari (token varsa kendi yorumu isaretli)
  *   GET /vitrin/{salonId}
  *   GET /vitrin/{salonId}/yorumlar?page=
  *   GET /vitrin/{salonId}/randevu-secenekleri
- *   GET /vitrin/{salonId}/personeller?hizmet_id=
- *   GET /vitrin/{salonId}/saatler?tarih=&kalemler[0][hizmet_id]=&kalemler[0][personel_id]=
+ *   GET /vitrin/{salonId}/personeller?hizmet_id=&mobil=
+ *   GET /vitrin/{salonId}/saatler?tarih=&kalemler[0][hizmet_id]=&kalemler[0][personel_id]=&mobil=
  */
 class VitrinController extends Controller
 {
@@ -34,6 +37,26 @@ class VitrinController extends Controller
         }
 
         return ApiCevap::basarili($this->vitrin->coz($domain ?: null, $bundle ?: null));
+    }
+
+    public function marka(Request $request)
+    {
+        return ApiCevap::basarili($this->vitrin->markaOzeti($this->bundle($request)));
+    }
+
+    public function surum(Request $request)
+    {
+        return ApiCevap::basarili($this->vitrin->surum($this->bundle($request)));
+    }
+
+    public function markaYorumlari(Request $request)
+    {
+        return ApiCevap::basarili($this->vitrin->markaYorumlari($this->bundle($request), auth('api')->id()));
+    }
+
+    private function bundle(Request $request): string
+    {
+        return trim((string) $request->query('app_bundle')) ?: throw new GecersizIslemException('app_bundle zorunlu');
     }
 
     public function goster(int $salonId)
@@ -55,7 +78,7 @@ class VitrinController extends Controller
     {
         $request->validate(['hizmet_id' => ['required', 'integer']]);
 
-        return ApiCevap::basarili($this->secenek->hizmetPersonelleri($salonId, $request->integer('hizmet_id')));
+        return ApiCevap::basarili($this->secenek->hizmetPersonelleri($salonId, $request->integer('hizmet_id'), $request->boolean('mobil')));
     }
 
     public function saatler(Request $request, OnlineMusaitlikServisi $musaitlik, int $salonId)
@@ -67,6 +90,6 @@ class VitrinController extends Controller
             'kalemler.*.personel_id' => ['nullable', 'integer'],
         ]);
 
-        return ApiCevap::basarili($musaitlik->saatler($salonId, $g['tarih'], $g['kalemler']));
+        return ApiCevap::basarili($musaitlik->saatler($salonId, $g['tarih'], $g['kalemler'], $request->boolean('mobil')));
     }
 }

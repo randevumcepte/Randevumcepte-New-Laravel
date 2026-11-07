@@ -23,13 +23,13 @@ final class SaatKapama
      *
      * @return string[] Y-m-d listesi
      */
-    public static function tarihler(string $baslangic, int $tekrarSayisi = 1, ?string $siklik = null): array
+    public static function tarihler(string $baslangic, int $tekrarSayisi = 1, ?string $siklik = null, int $maks = self::MAKS_TEKRAR): array
     {
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $baslangic) || strtotime($baslangic) === false) {
             throw new InvalidArgumentException('Tarih geçersiz.');
         }
-        if ($tekrarSayisi > self::MAKS_TEKRAR) {
-            throw new InvalidArgumentException('En fazla '.self::MAKS_TEKRAR.' tekrar yapılabilir.');
+        if ($tekrarSayisi > $maks) {
+            throw new InvalidArgumentException('En fazla '.$maks.' tekrar yapılabilir.');
         }
         $tarihler = [$baslangic];
         if ($tekrarSayisi <= 1) {

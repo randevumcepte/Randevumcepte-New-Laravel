@@ -31,7 +31,7 @@ class ArsivListeServisi
     /**
      * @param array{gonder:bool} $yetkiler
      */
-    public function liste(int $salonId, string $sekme, ?int $musteriId, ListeIstegi $istek, array $yetkiler): array
+    public function liste(int|array $salonId, string $sekme, ?int $musteriId, ListeIstegi $istek, array $yetkiler): array
     {
         $sekme = ArsivDurum::sekme($sekme);
         $taban = $this->tabanSorgu($salonId, $musteriId, $istek->likeDeseni());
@@ -47,7 +47,7 @@ class ArsivListeServisi
             ->forPage($istek->sayfa, $istek->sayfaBoyu)
             ->get([
                 'a.id', 'a.salon_id', 'a.user_id', 'a.form_id', 'a.personel_id', 'a.durum', 'a.cevapladi', 'a.cevapladi2',
-                'a.is_sozlesme', 'a.harici_belge', 'a.uzanti', 'a.created_at',
+                'a.is_sozlesme', 'a.harici_belge', 'a.sozlesme_adi', 'a.uzanti', 'a.created_at',
                 'u.name as musteri_adi', 'p.personel_adi', 'f.form_adi',
                 DB::raw(self::BASLIK_SQL.' as baslik'),
             ])
@@ -57,12 +57,27 @@ class ArsivListeServisi
         return ['data' => $satirlar, 'sekme' => $sekme, 'ozet' => $ozet] + ListeIstegi::meta($istek->sayfa, $istek->sayfaBoyu, $toplam);
     }
 
+    /**
+     * Müşteri uygulaması: kendi belgeleri, beyaz liste. Panel linkleri ve aksiyonlar yoktur.
+     *
+     * @param array<int,int> $salonIdler
+     */
+    public function musteriListesi(array $salonIdler, int $userId, string $sekme, ListeIstegi $istek): array
+    {
+        $sayfa = $this->liste($salonIdler, $sekme, $userId, $istek, ['gonder' => false]);
+        $alanlar = array_flip(['id', 'tarih', 'created_at', 'baslik', 'tur', 'durum', 'cevapladi', 'cevapladi2',
+            'is_sozlesme', 'harici_belge', 'sozlesme_adi', 'uzanti', 'musteri', 'personel', 'form']);
+        $sayfa['data'] = array_map(fn (array $satir) => array_intersect_key($satir, $alanlar), $sayfa['data']);
+
+        return $sayfa;
+    }
+
     /** Tek satır (işlem sonrası istemci satırı tazelemek isterse). */
     public function satir(int $arsivId, array $yetkiler): ?array
     {
         $s = $this->tabanSorgu(null, null, null)->where('a.id', $arsivId)->first([
             'a.id', 'a.salon_id', 'a.user_id', 'a.form_id', 'a.personel_id', 'a.durum', 'a.cevapladi', 'a.cevapladi2',
-            'a.is_sozlesme', 'a.harici_belge', 'a.uzanti', 'a.created_at',
+            'a.is_sozlesme', 'a.harici_belge', 'a.sozlesme_adi', 'a.uzanti', 'a.created_at',
             'u.name as musteri_adi', 'p.personel_adi', 'f.form_adi', DB::raw(self::BASLIK_SQL.' as baslik'),
         ]);
 
@@ -74,13 +89,13 @@ class ArsivListeServisi
     /** Başlık: form adı; form_id=0 (harici/sözleşme) ise harici_belge. */
     private const BASLIK_SQL = "CASE WHEN a.form_id != 0 THEN f.form_adi ELSE a.harici_belge END";
 
-    private function tabanSorgu(?int $salonId, ?int $musteriId, ?string $like)
+    private function tabanSorgu(int|array|null $salonId, ?int $musteriId, ?string $like)
     {
         return DB::table('arsiv as a')
             ->leftJoin('formtaslaklari as f', 'f.id', '=', 'a.form_id')
             ->leftJoin('users as u', 'u.id', '=', 'a.user_id')
             ->leftJoin('salon_personelleri as p', 'p.id', '=', 'a.personel_id')
-            ->when($salonId !== null, fn ($q) => $q->where('a.salon_id', $salonId))
+            ->when($salonId !== null, fn ($q) => $q->whereIn('a.salon_id', (array) $salonId))
             ->when($musteriId, fn ($q) => $q->where('a.user_id', $musteriId))
             ->when($like, fn ($q) => $q->where(function ($w) use ($like) {
                 $w->where('u.name', 'like', $like)
@@ -137,6 +152,7 @@ class ArsivListeServisi
             'cevapladi2'   => $s->cevapladi2 === null ? null : (int) $s->cevapladi2,
             'is_sozlesme'  => (int) ($s->is_sozlesme ?? 0),
             'harici_belge' => $s->harici_belge,
+            'sozlesme_adi' => $s->sozlesme_adi ?? null,
             'uzanti'       => $s->uzanti,
             'durum_bilgi'  => ArsivDurum::durum($ham),
             'aksiyonlar'   => ArsivDurum::aksiyonlar($ham, $yetkiler),

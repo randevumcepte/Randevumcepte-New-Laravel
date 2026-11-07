@@ -28,7 +28,8 @@ class DersOturumController extends DersTabanController
     {
         [$uid, $salonId] = $this->dersSalonu($request, self::OKU);
         $tarih = $request->input('tarih', date('Y-m-d'));
-        $kisit = $this->servis->kisitliPersonel($salonId, $uid, $this->yetkiVar($uid, $salonId, 'randevu.tum_personel_gor'));
+        // Mobil ana sayfa dersleri tum salon icin listeler; web'de rol 5 yalniz kendi derslerini gorur.
+        $kisit = $this->mobilYolu() ? null : $this->servis->kisitliPersonel($salonId, $uid, $this->yetkiVar($uid, $salonId, 'randevu.tum_personel_gor'));
 
         return ApiCevap::basarili($this->servis->liste(
             $salonId,
@@ -50,7 +51,10 @@ class DersOturumController extends DersTabanController
         [$uid, $salonId] = $this->dersSalonu($request, self::YAZ);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->kaydet($salonId, null, $request->validated(), $this->personelId($uid, $salonId), $uid), 'Ders oluşturuldu.', 201);
+        // Mobilde olusturan, formda secilen egitmendir; secilmediyse islemi yapan.
+        $olusturan = $this->mobilYolu() && $request->validated('personel_id') ? (int) $request->validated('personel_id') : $this->personelId($uid, $salonId);
+
+        return ApiCevap::basarili($this->servis->kaydet($salonId, null, $request->validated(), $olusturan, $uid), 'Ders oluşturuldu.', 201);
     }
 
     public function guncelle(OturumIstegi $request, int $id)
@@ -58,7 +62,7 @@ class DersOturumController extends DersTabanController
         [$uid, $salonId] = $this->oturumSalonu($id, self::YAZ);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->kaydet($salonId, $id, $request->validated(), null, $uid), 'Ders güncellendi.');
+        return ApiCevap::basarili($this->servis->kaydet($salonId, $id, $request->validated(), null, $uid, ! $this->mobilYolu()), 'Ders güncellendi.');
     }
 
     public function iptal(int $id)
@@ -66,7 +70,7 @@ class DersOturumController extends DersTabanController
         [$uid] = $this->oturumSalonu($id, self::SIL);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->iptal($id, $uid), 'Ders iptal edildi.');
+        return ApiCevap::basarili($this->servis->iptal($id, $uid, $this->mobilYolu()), 'Ders iptal edildi.');
     }
 
     public function musteriAra(Request $request, RandevuFormServisi $form)

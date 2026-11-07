@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V2\MusteriController;
 use App\Http\Controllers\Api\V2\MusteriOlcumController;
+use App\Http\Controllers\Api\V2\MusteriTelefonKontrolController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +19,7 @@ Route::prefix('musteri')->group(function () {
     Route::get('/form-verisi', [MusteriController::class, 'formVerisi']);
     Route::post('/', [MusteriController::class, 'kaydet']);
 
+    Route::post('/telefon-kontrol', [MusteriTelefonKontrolController::class, 'kontrol'])->middleware('throttle:30,1');
     Route::delete('/olcum/{olcumId}', [MusteriOlcumController::class, 'sil'])->whereNumber('olcumId');
 
     Route::prefix('{id}')->whereNumber('id')->group(function () {

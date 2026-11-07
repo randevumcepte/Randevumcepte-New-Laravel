@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Asistan\GorevTuru;
+use App\Domain\Asistan\MobilGorevGorunumu;
 use App\Exceptions\GecersizIslemException;
 use App\Services\Asistan\AsistanAyarServisi;
 use App\Services\Asistan\AsistanGorevIptalServisi;
@@ -16,6 +17,8 @@ use Illuminate\Http\Request;
  * AYNI uclari tuketir.
  *
  * KVKK: kimlik + kapsam + rol 5 (personel) degil (eski personelmi() yonlendirmesi).
+ * Mobil yolu (mobil_gorunum, mobil=1): mobil uygulama gorevleri rol ayirmadan gosterir. Esdeger kural: kimlik +
+ * salon kapsami; liste ve metinler mobilin bugunkuyle aynidir. Web davranisi degismez.
  * Yazmalar config('asistan.yazma_aktif') kill-switch arkasinda (kapaliyken 409).
  */
 class AsistanController extends V2Controller
@@ -27,10 +30,14 @@ class AsistanController extends V2Controller
     /** GET /api/v2/asistan/gorevler?salon_id=&tarih=Y-m-d(varsayilan bugun)&page=&per_page= */
     public function gorevler(Request $request, AsistanGorevServisi $servis)
     {
-        $salonId = $this->salon($request);
+        $gorunum = MobilGorevGorunumu::tryFrom((string) $request->input('mobil_gorunum'));
+        $salonId = $gorunum ? $this->salonDenetle($request, [])[1] : $this->salon($request);
         $tarih = (string) $request->input('tarih', date('Y-m-d'));
         if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $tarih) || ! strtotime($tarih)) {
             throw new GecersizIslemException('tarih Y-m-d biçiminde olmalı');
+        }
+        if ($gorunum) {
+            return ApiCevap::basarili($servis->mobilListe($salonId, $tarih, $gorunum, (int) $request->input('page', 1)));
         }
         $sayfaBoyu = max(1, min(100, (int) $request->input('per_page', 25)));
 
@@ -38,12 +45,12 @@ class AsistanController extends V2Controller
     }
 
     /** POST /api/v2/asistan/gorev/{tur}/{id}/iptal  (tur: randevu|alacak|kampanya) */
-    public function iptal(string $tur, int $id, AsistanGorevIptalServisi $servis)
+    public function iptal(Request $request, string $tur, int $id, AsistanGorevIptalServisi $servis)
     {
         $user = $this->kullanici();
         $gorevTuru = GorevTuru::from($tur); // route kisiti gecersiz turu zaten eler
         $salonId = $this->bulundu($servis->salonId($gorevTuru, $id), 'Görev bulunamadı');
-        $this->kapi->yoneticiDenetle($user->id, $salonId);
+        $request->boolean('mobil') ? $this->kapi->kapsamDenetle($user->id, $salonId) : $this->kapi->yoneticiDenetle($user->id, $salonId);
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili(null, $servis->iptalEt($gorevTuru, $id, $salonId, (int) $user->id));

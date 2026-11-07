@@ -37,7 +37,8 @@ abstract class DersIstegi extends FormRequest
             'personel_id' => ['nullable', 'integer'],
             'hizmet_id'   => ['nullable', 'integer'],
             'saat'        => ['required', 'date_format:H:i'],
-            'saat_bitis'  => ['required', 'date_format:H:i', 'after:saat'],
+            // Mobil form bitis saatini denetlemez, bugunku kaydi korunur.
+            'saat_bitis'  => $this->boolean('mobil') ? ['required', 'date_format:H:i'] : ['required', 'date_format:H:i', 'after:saat'],
             'kapasite'    => ['required', 'integer', 'min:1', 'max:1000'],
             'renk'        => ['nullable', 'string', 'max:20'],
         ];

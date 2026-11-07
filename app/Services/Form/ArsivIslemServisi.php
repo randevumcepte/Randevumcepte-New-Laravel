@@ -119,15 +119,16 @@ class ArsivIslemServisi
     /**
      * Formu yeniden gönder: yeni onay kodu, cevap/durum sıfırlanır (onaylı/iptal kayıt
      * yeniden bekleyene döner — eskiyle aynı). Kara listedeki müşteriye gönderilmez.
+     * $genelLink (mobil): form 9-13 genel sayfaya gider, harici belge reddedilmez (mobilin bugünkü sonucu).
      */
-    public function tekrarGonder(int $arsivId, int $yapanId): array
+    public function tekrarGonder(int $arsivId, int $yapanId, bool $genelLink = false): array
     {
         $arsiv = $this->bul($arsivId);
-        if (ArsivDurum::tur($arsiv->toArray()) === ArsivDurum::TUR_HARICI) {
+        if (! $genelLink && ArsivDurum::tur($arsiv->toArray()) === ArsivDurum::TUR_HARICI) {
             throw new GecersizIslemException('Harici belge gönderilemez.');
         }
 
-        return DB::transaction(function () use ($arsiv, $yapanId) {
+        return DB::transaction(function () use ($arsiv, $yapanId, $genelLink) {
             $arsiv->fill(['cevapladi' => 0, 'durum' => null, 'dogrulama_kodu' => FormLinki::dogrulamaKodu()])->save();
 
             $gonderildi = false;
@@ -135,7 +136,7 @@ class ArsivIslemServisi
                 $dinamik = (bool) FormTaslaklari::whereKey($arsiv->form_id)->value('is_dinamik');
                 $gonderildi = $this->kuyrugaYaz((int) $arsiv->salon_id, $yapanId, $arsiv, [[
                     'to'      => $this->musteriTelefonu((int) $arsiv->user_id, null),
-                    'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), $dinamik),
+                    'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), $dinamik, $genelLink),
                 ]], true);
             }
             AktiviteLog::yaz((int) $arsiv->salon_id, $yapanId, 'form_gonder', 'arsiv', (int) $arsiv->id, null,
@@ -194,6 +195,8 @@ class ArsivIslemServisi
      * Hizmet sözleşmesi oluştur + müşteriye imza linki (web sozlesmeOlustur birebir):
      * salon yetkilisi oluştururken panelde imzalar (çift taraflı; cevapladi2=1).
      * sadece_kaydet: arşive yazılır, müşteriye mesaj gitmez (form.gonder yetkisi olmayan).
+     * mobil_sozlesme: mobilin bugünkü sonucu korunur. İmza isteğe bağlı, salon imzası olsa da
+     * cevapladi2=0 ("Form Bekleniyor"), işlem yapan personel yazılmaz, SMS bildirimi kapalı.
      */
     public function sozlesmeOlustur(int $salonId, int $yapanId, array $g, string $ip): array
     {
@@ -203,8 +206,12 @@ class ArsivIslemServisi
             throw new GecersizIslemException('Müşteri ve cep telefon zorunlu.');
         }
         $this->portfoyDenetle($salonId, $userId);
+        $mobil = ! empty($g['mobil_sozlesme']);
         $imza = (string) ($g['salon_imza'] ?? '');
-        if (! str_starts_with($imza, 'data:image/') || strlen($imza) < 500) {
+        if (! str_starts_with($imza, 'data:image/')) {
+            $imza = '';
+        }
+        if (! $mobil && strlen($imza) < 500) {
             throw new GecersizIslemException('Salon yetkilisi imzası zorunludur. Lütfen imza alanına imzanızı atın.');
         }
         $hizmetId = ! empty($g['hizmet_id']) ? (int) $g['hizmet_id'] : null;
@@ -231,9 +238,16 @@ class ArsivIslemServisi
                 'odeme_plani_json'  => json_encode($plan['plan'], JSON_UNESCAPED_UNICODE),
             ];
         }
-        $olusturan = $this->yapanPersonel($salonId, $yapanId);
+        $olusturan = $mobil ? null : $this->yapanPersonel($salonId, $yapanId);
+        $imzaAlanlari = $imza === '' ? [] : [
+            'salon_imza'            => $imza,
+            'salon_yetkili_ad'      => trim((string) ($g['salon_yetkili_ad'] ?? '')) ?: null,
+            'salon_yetkili_telefon' => TelefonNumarasi::kanonik($g['salon_yetkili_telefon'] ?? null) ?: null,
+            'salon_imza_ip'         => $ip,
+            'salon_imza_zaman'      => now(),
+        ];
 
-        return DB::transaction(function () use ($salonId, $yapanId, $g, $userId, $telefon, $imza, $hizmetId, $paketId, $toplam, $kapora, $odeme, $taksit, $olusturan, $ip) {
+        return DB::transaction(function () use ($salonId, $yapanId, $g, $userId, $telefon, $imzaAlanlari, $hizmetId, $paketId, $toplam, $kapora, $odeme, $taksit, $olusturan, $mobil) {
             $arsiv = Arsiv::create([
                 'salon_id'              => $salonId,
                 'user_id'               => $userId,
@@ -252,14 +266,9 @@ class ArsivIslemServisi
                 'sozlesme_metni'        => trim((string) ($g['sozlesme_metni'] ?? '')) ?: null,
                 'odeme_sekli'           => $odeme,
                 'gecerlilik_tarihi'     => ($g['gecerlilik_tarihi'] ?? null) ?: null,
-                'salon_imza'            => $imza,
-                'salon_yetkili_ad'      => trim((string) ($g['salon_yetkili_ad'] ?? '')) ?: null,
-                'salon_yetkili_telefon' => TelefonNumarasi::kanonik($g['salon_yetkili_telefon'] ?? null) ?: null,
-                'salon_imza_ip'         => $ip,
-                'salon_imza_zaman'      => now(),
                 'cevapladi'             => 0,
-                'cevapladi2'            => 1,
-            ] + $taksit);
+                'cevapladi2'            => $mobil ? 0 : 1,
+            ] + $imzaAlanlari + $taksit);
 
             AktiviteLog::yaz($salonId, $yapanId, 'sozlesme_olustur', 'sozlesme', (int) $arsiv->id,
                 'Hizmet Sözleşmesi — '.$this->musteriAdi($userId), 'Hizmet sözleşmesi oluşturuldu', ['user_id' => $userId]);
@@ -267,7 +276,7 @@ class ArsivIslemServisi
             $gonderildi = empty($g['sadece_kaydet']) && $this->kuyrugaYaz($salonId, $yapanId, $arsiv, [[
                 'to'      => $this->musteriTelefonu($userId, $telefon),
                 'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), false),
-            ]], true);
+            ]], ! $mobil);
 
             return ['arsiv_id' => (int) $arsiv->id, 'gonderildi' => $gonderildi];
         });

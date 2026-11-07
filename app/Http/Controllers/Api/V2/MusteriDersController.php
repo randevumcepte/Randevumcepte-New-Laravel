@@ -29,7 +29,7 @@ class MusteriDersController extends MusteriUygulamaController
 
     public function rezervasyon(Request $request, int $oturumId)
     {
-        $sonuc = $this->servis->rezervasyon($this->salonZorunlu($request), $oturumId, $this->musteriId());
+        $sonuc = $this->servis->rezervasyon($this->salonZorunlu($request), $oturumId, $this->musteriId(), $request->boolean('mobil'));
 
         return ApiCevap::basarili($sonuc, $sonuc['mesaj'], 201);
     }

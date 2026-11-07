@@ -434,4 +434,105 @@ class DersAkisTest extends TestCase
         $this->assertSame(2, $tekrarli->sil(self::SALON, $sonuc['kayit_id'], 5)['temizlenen']);
         $this->assertSame(0, DersKatilimci::where('user_id', 10)->count());
     }
+
+    /* ---------- Mobil yolu: mobil uygulamanin bugunku davranisi, web varsayilanlari degismez ---------- */
+
+    public function test_mobil_cikarma_tek_kisiyi_terfi_ettirir_ve_mobil_metni_gider(): void
+    {
+        $o = $this->oturum(1);
+        $ilk = $this->katilim()->ekle($o->id, 10, null, 5);
+        $b1 = $this->katilim()->ekle($o->id, 11, null, 5);
+        $b2 = $this->katilim()->ekle($o->id, 12, null, 5);
+        DersOturumu::whereKey($o->id)->update(['kapasite' => 2]);
+
+        $this->katilim()->cikar($ilk['katilimci_id'], 5, true);
+
+        $this->assertSame('rezerve', DersKatilimci::find($b1['katilimci_id'])->durum);
+        $this->assertSame('bekleme', DersKatilimci::find($b2['katilimci_id'])->durum);
+        $son = DB::table('v2_bildirim_kuyrugu')->orderByDesc('id')->value('payload');
+        $this->assertStringContainsString('rezervasyonunuz onaylandı ✨', json_decode($son, true)['mesaj']);
+    }
+
+    public function test_mobil_ekleme_zaten_ekli_metni(): void
+    {
+        $o = $this->oturum();
+        $this->katilim()->ekle($o->id, 10, null, 5);
+
+        $this->expectException(CakismaException::class);
+        $this->expectExceptionMessage('Bu musteri zaten ekli.');
+        $this->katilim()->ekle($o->id, 10, null, 5, DersKatilimServisi::ZATEN_EKLI_MOBIL);
+    }
+
+    public function test_mobil_bekleme_satiri_isaretlenir(): void
+    {
+        $o = $this->oturum(1);
+        $this->katilim()->ekle($o->id, 10, null, 5);
+        $b = $this->katilim()->ekle($o->id, 11, null, 5);
+
+        $sonuc = $this->katilim()->durumGuncelle($b['katilimci_id'], KatilimciDurumu::GELDI, 5, true);
+
+        $this->assertSame('geldi', $sonuc['durum']);
+        $this->assertSame('geldi', DersKatilimci::find($b['katilimci_id'])->durum);
+    }
+
+    public function test_mobil_rezerveye_donus_telafiyi_de_siler_web_korur(): void
+    {
+        $this->seansSat(10, 5);
+        $o = $this->oturum();
+        $k = $this->katilim()->ekle($o->id, 10, null, 5);
+
+        $this->katilim()->durumGuncelle($k['katilimci_id'], KatilimciDurumu::TELAFI, 5);
+        $webde = $this->katilim()->durumGuncelle($k['katilimci_id'], KatilimciDurumu::REZERVE, 5);
+        $this->assertSame('telafi_korundu', $webde['dusum']);
+        $this->assertSame(1, DB::table('adisyon_paket_seanslar')->where('geldi', 2)->count());
+
+        DB::table('adisyon_paket_seanslar')->delete();
+        $this->katilim()->durumGuncelle($k['katilimci_id'], KatilimciDurumu::TELAFI, 5, true);
+        $mobilde = $this->katilim()->durumGuncelle($k['katilimci_id'], KatilimciDurumu::REZERVE, 5, true);
+        $this->assertSame('iade', $mobilde['dusum']);
+        $this->assertSame(0, DB::table('adisyon_paket_seanslar')->count());
+    }
+
+    public function test_mobil_ders_iptali_hak_iade_etmez_bekleyene_bildirmez(): void
+    {
+        $this->seansSat(10, 5);
+        $o = $this->oturum(1);
+        $k = $this->katilim()->ekle($o->id, 10, null, 5);
+        $this->katilim()->ekle($o->id, 11, null, 5);
+        $this->katilim()->durumGuncelle($k['katilimci_id'], KatilimciDurumu::GELDI, 5, true);
+        DB::table('v2_bildirim_kuyrugu')->delete();
+
+        $sonuc = app(DersOturumServisi::class)->iptal($o->id, 5, true);
+
+        $this->assertSame(1, $sonuc['bildirilen']);
+        $this->assertSame(1, DB::table('adisyon_paket_seanslar')->count());
+        $this->assertTrue((bool) DersKatilimci::find($k['katilimci_id'])->hak_dusuldu);
+    }
+
+    public function test_mobil_duzenleme_kapasite_artisinda_terfi_ettirmez(): void
+    {
+        $o = $this->oturum(1);
+        $this->katilim()->ekle($o->id, 10, null, 5);
+        $b = $this->katilim()->ekle($o->id, 11, null, 5);
+
+        app(DersOturumServisi::class)->kaydet(self::SALON, $o->id, ['tarih' => $o->tarih, 'saat' => '09:00', 'saat_bitis' => '10:00', 'kapasite' => 3], null, 5, false);
+
+        $this->assertSame('bekleme', DersKatilimci::find($b['katilimci_id'])->durum);
+    }
+
+    public function test_mobil_rezervasyon_metinleri(): void
+    {
+        $o = $this->oturum();
+        $this->katilim()->rezerveEt($o->id, self::SALON, 10);
+
+        try {
+            $this->katilim()->rezerveEt($o->id, self::SALON, 10, true);
+            $this->fail('Mukerrer rezervasyon reddedilmeliydi');
+        } catch (CakismaException $e) {
+            $this->assertSame('Bu derse zaten kayıtlısınız.', $e->getMessage());
+        }
+
+        $this->expectExceptionMessage('Ders bulunamadı veya iptal edilmiş.');
+        $this->katilim()->rezerveEt(9999, self::SALON, 10, true);
+    }
 }

@@ -54,15 +54,24 @@ class AyarErisimServisi
         ];
     }
 
-    public function temaYazabilir(int $yetkiliId, int $salonId): bool
+    /**
+     * Mobil Görünüm menusu rolu salon_personelleri.role_id'den okur; $personelRolu ile o kayit da sayilir
+     * (cok salonlu kullanicida model_has_roles satiri eksik olabilir). Yalniz bu salonun kaydi aranir.
+     */
+    public function temaYazabilir(int $yetkiliId, int $salonId, bool $personelRolu = false): bool
     {
-        return (bool) array_intersect(self::TEMA_YAZAN_ROLLER, $this->kapsam->salonRolleri($yetkiliId, $salonId));
+        if (array_intersect(self::TEMA_YAZAN_ROLLER, $this->kapsam->salonRolleri($yetkiliId, $salonId))) {
+            return true;
+        }
+
+        return $personelRolu && DB::table('salon_personelleri')->where('yetkili_id', $yetkiliId)
+            ->where('salon_id', $salonId)->whereIn('role_id', self::TEMA_YAZAN_ROLLER)->exists();
     }
 
     /** Kapsam controller'da; burada yalniz rol kurali. */
-    public function temaYazmaDenetle(int $yetkiliId, int $salonId): void
+    public function temaYazmaDenetle(int $yetkiliId, int $salonId, bool $personelRolu = false): void
     {
-        if (! $this->temaYazabilir($yetkiliId, $salonId)) {
+        if (! $this->temaYazabilir($yetkiliId, $salonId, $personelRolu)) {
             throw new YetkisizErisimException('Tema yalnızca hesap sahibi / yönetici tarafından değiştirilebilir');
         }
     }

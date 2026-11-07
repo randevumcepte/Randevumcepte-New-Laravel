@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\Iletisim\MusteriKartiYetkisi;
 use App\Domain\Whatsapp\BaglantiDurumu;
 use App\Domain\Whatsapp\GonderimDurumu;
 use App\Domain\Whatsapp\WhatsappSayfasi;
@@ -17,7 +18,7 @@ use Illuminate\Http\Request;
  *
  *   GET /whatsapp                    sekmeler, sözlükler, kanal, linkler, kontör (tek istek)
  *   GET /whatsapp/kanal · PUT {aktif} hatırlatma kanalı
- *   GET /whatsapp/linkler · PUT       mesaja eklenen işletme bağlantıları (kısmi kayıt)
+ *   GET /whatsapp/linkler · PUT       mesaja eklenen işletme bağlantıları (kısmi kayıt; musteri_karti=1 kart kuralı)
  *
  * Eşleme: docs/strangler-whatsapp.md
  */
@@ -67,7 +68,11 @@ class WhatsappController extends WhatsappTabanController
 
     public function linkKaydet(WhatsappLinkIstegi $request)
     {
-        [$uid, $salonId] = $this->yazilacakSalon($request);
+        // musteri_karti=1: mesaj penceresindeki "Düzenle"; kartı açabilen personel de kaydeder. Web göndermez.
+        [$uid, $salonId] = $request->boolean('musteri_karti')
+            ? $this->salonDenetle($request, [self::YETKI, ...MusteriKartiYetkisi::ANAHTARLAR])
+            : $this->salon($request);
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->ayar->linkKaydet($salonId, $uid, $request->validated()), 'Bağlantılar kaydedildi');
     }

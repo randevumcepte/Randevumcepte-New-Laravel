@@ -76,4 +76,16 @@ class SeansDurumGecisiTest extends TestCase
         $this->assertSame([10, 11], $p['sil']);
         $this->assertSame([], $p['guncelle']);
     }
+
+    public function test_mobil_isaret_kaldir_telafi_dahil_hepsini_bosaltir(): void
+    {
+        $p = SeansDurumGecisi::isaretKaldir($this->seanslar(), false);
+        $this->assertSame([10, 11, 12, 13], array_keys($p['guncelle']));
+        $this->assertSame(['geldi' => null], $p['guncelle'][12]);
+    }
+
+    public function test_mobil_iptal_telafi_dahil_hepsini_siler(): void
+    {
+        $this->assertSame([10, 11, 12, 13], SeansDurumGecisi::iptal($this->seanslar(), false)['sil']);
+    }
 }

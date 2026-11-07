@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
  *   POST   /kampanya/{id}/katilimcilar            {user_id}      → müşteriyi ekle
  *   DELETE /kampanya/{id}/katilimcilar/{kid}                     → çıkar (kupon kullanılmışsa 409)
  *   POST   /kampanya/{id}/tekrar-ara                             → ulaşılamayanları yeniden sıraya al (arama)
+ *   POST   /kampanya/{id}/tekrar-sms                             → katılım cevabı bekleyenlere SMS
  *   POST   /kampanya/{id}/personele-ata           {personel_id, durum} → Çağrı Merkezi arama listesi
  *
  * Eski ad: katilimDurumu → durum (Flutter 1..4 sayılarıyla aynı).
@@ -56,6 +57,14 @@ class KampanyaKatilimciController extends KampanyaTabanController
         $adet = $this->katilimci->tekrarAra($k, $uid);
 
         return ApiCevap::basarili(['adet' => $adet], $adet ? $adet.' kişi yeniden aranmak üzere sıraya alındı' : 'Tekrar aranacak ulaşılamayan katılımcı yok');
+    }
+
+    public function tekrarSms(int $id)
+    {
+        [$uid, , $k] = $this->kampanya($id);
+        $this->yazmaAcikMi();
+
+        return ApiCevap::basarili(['adet' => $this->katilimci->tekrarSms($k, $uid)], 'SMS başarıyla gönderildi');
     }
 
     public function personeleAta(Request $request, int $id)

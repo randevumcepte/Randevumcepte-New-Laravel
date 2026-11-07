@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
  *   PATCH /api/v2/randevu/{id}   → randevu.duzenle_iptal
  * Cakisma bir HATA degil, is sonucudur: basarili zarf + veri.cakismavar='1'.
  * 'dry_run' varsayilan true; gercek yazma RandevuYazma (config/randevu.php).
+ * 'mobil=1' uygulama istegi: eski mobilde yetki anahtari aranmaz (kimlik + salon kapsami aranir),
+ * kayit kurallari RandevuKayitServisi'nde eski mobil sonucunu verir.
  */
 class RandevuKayitController extends V2Controller
 {
@@ -51,11 +53,12 @@ class RandevuKayitController extends V2Controller
     private function calistir(Request $request, int $salonId, string $yetki, array $girdi)
     {
         $user = $this->kullanici();
-        $this->kapi->denetle($user->id, $salonId, [$yetki]);
+        $mobil = $request->boolean('mobil');
+        $mobil ? $this->kapi->kapsamDenetle($user->id, $salonId) : $this->kapi->denetle($user->id, $salonId, [$yetki]);
 
         $yaz = RandevuYazma::yazilacakMi($request, $salonId);
 
-        $sonuc = $this->servis->kaydet($salonId, $girdi, (int) $user->id, $yaz);
+        $sonuc = $this->servis->kaydet($salonId, $girdi + ['mobil' => $mobil], (int) $user->id, $yaz);
 
         return ApiCevap::basarili($sonuc, $sonuc['cakismavar'] === '1' ? 'Çakışma var' : ($yaz ? 'Randevu kaydedildi' : 'DRY-RUN'));
     }

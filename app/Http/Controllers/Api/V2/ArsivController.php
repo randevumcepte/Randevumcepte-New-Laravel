@@ -101,12 +101,12 @@ class ArsivController extends V2Controller
         return ApiCevap::basarili($sonuc, $sonuc['gonderildi'] ? 'Form başarıyla gönderildi' : 'Form başarıyla kaydedildi');
     }
 
-    /** POST /api/v2/form/arsiv/{id}/gonder — formu müşteriye yeniden gönder (form.gonder) */
-    public function tekrarGonder(int $id)
+    /** POST /api/v2/form/arsiv/{id}/gonder {genel_link?} — formu müşteriye yeniden gönder (form.gonder) */
+    public function tekrarGonder(Request $request, int $id)
     {
         $uid = $this->arsivKapsami($id, ['form.gonder']);
         $this->yazmaAcikMi();
-        $sonuc = $this->islem->tekrarGonder($id, $uid);
+        $sonuc = $this->islem->tekrarGonder($id, $uid, $request->boolean('genel_link'));
 
         return ApiCevap::basarili($sonuc, $sonuc['gonderildi'] ? 'Form başarıyla gönderildi' : 'Müşteri kara listede; mesaj gönderilmedi');
     }
@@ -162,6 +162,7 @@ class ArsivController extends V2Controller
         $g['kapora'] = $this->tutar($request->input('kapora')) ?? 0;
         $g['taksit_tutari'] = $this->tutar($request->input('taksit_tutari'));
         $g['sadece_kaydet'] = $sadeceKaydet;
+        $g['mobil_sozlesme'] = $request->boolean('mobil_sozlesme');
 
         return ApiCevap::basarili(
             $this->islem->sozlesmeOlustur($salonId, $uid, $g, (string) $request->ip()),

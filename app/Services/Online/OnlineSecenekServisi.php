@@ -37,18 +37,23 @@ class OnlineSecenekServisi
         ], array_filter($this->form->hizmetler($salonId, null), fn ($h) => $h['aktif'])));
     }
 
-    /** Hizmeti yapabilen personel; o hizmete kimse atanmamissa tum uygun personel (eski kural). */
-    public function hizmetPersonelleri(int $salonId, int $hizmetId): array
+    /**
+     * Hizmeti yapabilen personel; o hizmete kimse atanmamissa tum uygun personel (eski kural).
+     *
+     * @param  bool  $mobil  imzali mobil token'li musteri (kimliksiz istekte bayrak silinir): takvimde gizli personel de
+     *                       secilebilir, ad personel kaydindaki addir, sira id
+     */
+    public function hizmetPersonelleri(int $salonId, int $hizmetId, bool $mobil = false): array
     {
-        $idler = $this->uygunPersonelIdleri($salonId, $hizmetId);
+        $idler = $this->uygunPersonelIdleri($salonId, $hizmetId, $mobil);
 
-        return array_values(array_filter($this->personeller($salonId), fn ($p) => in_array($p['id'], $idler, true)));
+        return array_values(array_filter($this->personeller($salonId, $mobil), fn ($p) => in_array($p['id'], $idler, true)));
     }
 
     /** @return int[] */
-    public function uygunPersonelIdleri(int $salonId, int $hizmetId): array
+    public function uygunPersonelIdleri(int $salonId, int $hizmetId, bool $mobil = false): array
     {
-        $tum = $this->aktifPersonelSorgusu($salonId)->orderBy('id')->pluck('id')->map(fn ($x) => (int) $x)->all();
+        $tum = $this->aktifPersonelSorgusu($salonId, $mobil)->orderBy('id')->pluck('id')->map(fn ($x) => (int) $x)->all();
         $atanan = DB::table('personel_sunulan_hizmetler')->where('hizmet_id', $hizmetId)->whereIn('personel_id', $tum)
             ->pluck('personel_id')->map(fn ($x) => (int) $x)->all();
 
@@ -56,15 +61,15 @@ class OnlineSecenekServisi
     }
 
     /** Musteriye gosterilebilir alanlar (acik liste). */
-    public function personeller(int $salonId): array
+    public function personeller(int $salonId, bool $mobil = false): array
     {
-        return $this->aktifPersonelSorgusu($salonId)
+        return $this->aktifPersonelSorgusu($salonId, $mobil)
             ->leftJoin('isletmeyetkilileri as y', 'y.id', '=', 'sp.yetkili_id')
-            ->orderBy('sp.takvim_sirasi')->orderBy('sp.id')
+            ->when(! $mobil, fn ($q) => $q->orderBy('sp.takvim_sirasi'))->orderBy('sp.id')
             ->get(['sp.id', 'sp.personel_adi', 'sp.unvan', 'sp.cinsiyet', 'sp.uzmanlik', 'sp.yillik_tecrube', 'sp.instagram', 'sp.aciklama', 'y.name as yetkili_adi', 'y.profil_resim'])
             ->map(fn ($p) => [
                 'id'             => (int) $p->id,
-                'personel_adi'   => $p->yetkili_adi ?: $p->personel_adi,
+                'personel_adi'   => $mobil ? $p->personel_adi : ($p->yetkili_adi ?: $p->personel_adi),
                 'unvan'          => $p->unvan,
                 'cinsiyet'       => $p->cinsiyet,
                 'uzmanlik'       => $p->uzmanlik,
@@ -75,8 +80,9 @@ class OnlineSecenekServisi
             ])->all();
     }
 
-    private function aktifPersonelSorgusu(int $salonId)
+    private function aktifPersonelSorgusu(int $salonId, bool $mobil = false)
     {
-        return DB::table('salon_personelleri as sp')->where('sp.salon_id', $salonId)->where('sp.aktif', 1)->where('sp.takvimde_gorunsun', 1);
+        return DB::table('salon_personelleri as sp')->where('sp.salon_id', $salonId)->where('sp.aktif', 1)
+            ->when(! $mobil, fn ($q) => $q->where('sp.takvimde_gorunsun', 1));
     }
 }

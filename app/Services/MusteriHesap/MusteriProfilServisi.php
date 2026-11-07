@@ -78,6 +78,13 @@ class MusteriProfilServisi
         return $this->goster($userId);
     }
 
+    /** Musteri uygulamasi profil formu: giris yapmis musteri mevcut sifre sormadan yeni sifre belirler (v1 davranisi); diger oturumlar duser. */
+    public function sifreAta(int $userId, string $yeni, ?string $oturumTokenId): void
+    {
+        DB::table('users')->where('id', $userId)->update(['password' => Hash::make($yeni), 'updated_at' => now()]);
+        $this->token->digerleriniIptal($userId, $oturumTokenId);
+    }
+
     public function sifreDegistir(int $userId, string $mevcut, string $yeni, ?string $oturumTokenId): void
     {
         $hash = (string) DB::table('users')->where('id', $userId)->value('password');

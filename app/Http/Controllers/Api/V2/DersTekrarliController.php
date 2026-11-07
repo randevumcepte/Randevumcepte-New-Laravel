@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V2;
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Requests\Ders\TekrarliIstegi;
 use App\Models\DersTekrarliKatilim;
+use App\Models\Salonlar;
 use App\Services\Ders\DersTekrarliServisi;
 use App\Services\Studyo\StudyoPolitikaServisi;
 use App\Support\ApiCevap;
@@ -32,7 +33,9 @@ class DersTekrarliController extends DersTabanController
         $this->studyoZorunlu($salonId);
         $request->validate(['musteri_id' => ['required', 'integer']]);
 
-        return ApiCevap::basarili($this->servis->kaynaklar($salonId, $request->integer('musteri_id')));
+        return ApiCevap::basarili($this->mobilYolu()
+            ? ['kaynaklar' => $this->servis->kaynaklarOrtalama($salonId, $request->integer('musteri_id'))]
+            : $this->servis->kaynaklar($salonId, $request->integer('musteri_id')));
     }
 
     public function liste(Request $request)
@@ -48,7 +51,7 @@ class DersTekrarliController extends DersTabanController
         $this->studyoZorunlu($salonId);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->kaydet($salonId, null, $request->validated(), $uid), 'Ders planı oluşturuldu.', 201);
+        return ApiCevap::basarili($this->servis->kaydet($salonId, null, $request->validated(), $uid, $this->mobilYolu()), 'Ders planı oluşturuldu.', 201);
     }
 
     public function guncelle(TekrarliIstegi $request, int $id)
@@ -65,7 +68,7 @@ class DersTekrarliController extends DersTabanController
         [$uid, $salonId] = $this->planSalonu($id);
         $this->yazmaAcikMi();
 
-        return ApiCevap::basarili($this->servis->sil($salonId, $id, $uid), 'Ders planı silindi.');
+        return ApiCevap::basarili($this->servis->sil($salonId, $id, $uid, ! $this->mobilYolu()), 'Ders planı silindi.');
     }
 
     /** @return array{0:int,1:int} */
@@ -76,7 +79,9 @@ class DersTekrarliController extends DersTabanController
 
     private function studyoZorunlu(int $salonId): void
     {
-        if (! $this->politika->getir($salonId)->tekrarliKatilim()) {
+        // Mobil yalniz stüdyo modunu arar, modul kapali stüdyoda da calisir.
+        $acik = $this->mobilYolu() ? Salonlar::studyoModu($salonId) : $this->politika->getir($salonId)->tekrarliKatilim();
+        if (! $acik) {
             throw new YetkisizErisimException('Otomatik ders planı yalnızca stüdyo modunda kullanılır');
         }
     }

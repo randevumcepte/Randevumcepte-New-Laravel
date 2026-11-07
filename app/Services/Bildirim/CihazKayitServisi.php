@@ -58,6 +58,16 @@ class CihazKayitServisi
             ->update(['aktif' => 0, 'updated_at' => now()]);
     }
 
+    /**
+     * Gelen çağrı push kimliği — eski voipTokenKaydet: hesabın tüm personel kayıtlarına yazılır. Kural eskiyle
+     * aynı: fcm_token gönderilen değerle (gönderilmezse NULL) yazılır. Hedef giriş yapan hesaptır, id istemciden alınmaz.
+     */
+    public function voipKaydet(int $yetkiliId, string $token, ?string $fcmToken): int
+    {
+        return DB::table('salon_personelleri')->where('yetkili_id', $yetkiliId)
+            ->update(['voip_push_token' => $token, 'fcm_token' => $fcmToken]);
+    }
+
     private function bundle(CihazSahibi $sahip, string $platform, ?string $bundle): ?string
     {
         if ($platform === CihazPlatformu::WEB->value && $sahip->salonId) {

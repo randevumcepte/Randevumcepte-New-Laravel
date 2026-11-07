@@ -90,3 +90,16 @@ Saf Domain testleri `tests/Unit/Domain/Ders`, `tests/Unit/Domain/Studyo`. Akış
 ```
 php artisan test --filter='DersAkisTest|DersKurallariTest|StudyoPolitikasiTest'
 ```
+
+## Mobil yolu (`mobil=1`)
+
+Flutter işletme ekranları `/ders/*` uçlarını `mobil=1` ile çağırır; web parametreyi göndermez, davranışı değişmez. Parametre mobilin bugünkü davranışını korur:
+
+- Yetki: yetki anahtarı ve modül kapısı yerine kimlik + salon kapsamı.
+- Liste: `/ders/oturum` rol 5 için de tüm salon.
+- İptal: hak iadesi yok, bekleme listesine mesaj yok.
+- Çıkarma: tek kişi terfi eder, metin `rezervasyonunuz onaylandı`.
+- Durum: bekleme satırı işaretlenebilir, Rezerve'ye dönüşte telafi de silinir (`iade`).
+- Düzenleme ve otomatik plan: terfi yok; `saat_bitis` için `after:saat` aranmaz.
+- Yayın: şablon rengi oturuma kopyalanmaz.
+- Otomatik plan: paket kalanı ortalama, paket bitişi sınır değil, sınırsızda `yerlesmeyen` sayılır.

@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Anket\GonderimFiltresi;
 use App\Domain\Anket\ReputasyonEsikleri;
+use App\Domain\Iletisim\MusteriKartiYetkisi;
 use App\Domain\Rapor\RaporDonemi;
 use App\Services\Anket\AnketAyarServisi;
 use App\Services\Anket\AnketFormServisi;
 use App\Services\Anket\AnketGonderimSorgusu;
 use App\Services\Anket\AnketGonderServisi;
 use App\Services\Pazarlama\AnketOzetServisi;
+use App\Services\Whatsapp\WhatsappOturumServisi;
 use App\Support\ApiCevap;
 use App\Support\ListeIstegi;
 use Illuminate\Http\Request;
@@ -23,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  *   GET   /anket/gonderimler?salon_id=&filtre=&donem=&baslangic=&bitis= + ListeIstegi
  *   GET   /anket/gonderimler/{id}             {gonderim, sorular, cevaplar, sablon_ad, musteri_ad}
  *   PATCH /anket/gonderimler/{id}/web-gizle {gizle}
- *   POST  /anket/hizli-gonder {salon_id, user_id}  (outbox → WhatsApp-first / SMS)
+ *   POST  /anket/hizli-gonder {salon_id, user_id, musteri_karti?}  (outbox → WhatsApp-first / SMS) → {.., beklenen_kanal}
  *
  * Yetki: pazarlama.anket_yonet; açık telefon musteri.telefon_gor. Yazmalar ANKET_V2_YAZMA_AKTIF arkasında.
  */
@@ -80,12 +82,14 @@ class AnketController extends AnketTabanController
         return ApiCevap::basarili($this->gonderimler->getir($id, $this->telGor($uid, $salonId)));
     }
 
-    public function hizliGonder(Request $request, AnketGonderServisi $gonderici)
+    /** musteri_karti=1: kart ve takvimden gönderim; kartı açabilen personel de gönderir. Web göndermez. */
+    public function hizliGonder(Request $request, AnketGonderServisi $gonderici, WhatsappOturumServisi $oturum)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, self::YETKI);
+        [$uid, $salonId] = $this->salonDenetle($request, $request->boolean('musteri_karti') ? [self::YETKI, ...MusteriKartiYetkisi::ANAHTARLAR] : self::YETKI);
         $this->yazmaAcikMi();
         $userId = (int) $request->validate(['user_id' => ['required', 'integer', 'min:1']])['user_id'];
+        $sonuc = $gonderici->hizli($salonId, $userId, $uid);
 
-        return ApiCevap::basarili($gonderici->hizli($salonId, $userId, $uid), 'Anket gönderim kuyruğuna alındı', 201);
+        return ApiCevap::basarili($sonuc + ['beklenen_kanal' => $oturum->beklenenKanal($salonId)], 'Anket gönderim kuyruğuna alındı', 201);
     }
 }

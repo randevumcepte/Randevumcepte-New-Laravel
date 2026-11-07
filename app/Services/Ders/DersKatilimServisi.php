@@ -17,6 +17,14 @@ use Illuminate\Support\Facades\DB;
  */
 class DersKatilimServisi
 {
+    public const ZATEN_KAYITLI = 'Bu kişi derse zaten kayıtlı.';
+
+    public const ZATEN_EKLI_MOBIL = 'Bu musteri zaten ekli.';
+
+    private const ZATEN_KAYITLI_DANISAN_MOBIL = 'Bu derse zaten kayıtlısınız.';
+
+    private const DERS_YOK_DANISAN_MOBIL = 'Ders bulunamadı veya iptal edilmiş.';
+
     public function __construct(
         private DersSeansServisi $seans,
         private DersBildirim $bildirim,
@@ -28,12 +36,12 @@ class DersKatilimServisi
      *
      * @return array{katilimci_id:int,katilimci_durum:string,telafi_baglandi:bool}
      */
-    public function ekle(int $oturumId, int $userId, ?int $ekleyenPersonelId, ?int $yetkiliId): array
+    public function ekle(int $oturumId, int $userId, ?int $ekleyenPersonelId, ?int $yetkiliId, string $zatenKayitliMesaj = self::ZATEN_KAYITLI): array
     {
-        return DB::transaction(function () use ($oturumId, $userId, $ekleyenPersonelId, $yetkiliId) {
+        return DB::transaction(function () use ($oturumId, $userId, $ekleyenPersonelId, $yetkiliId, $zatenKayitliMesaj) {
             $oturum = $this->kilitliOturum($oturumId);
             $this->referans->musteriDogrula((int) $oturum->salon_id, $userId);
-            $k = $this->kayitAc($oturum, $userId, ['ekleyen_personel_id' => $ekleyenPersonelId]);
+            $k = $this->kayitAc($oturum, $userId, ['ekleyen_personel_id' => $ekleyenPersonelId], $zatenKayitliMesaj);
             $durum = $k->durumu();
             $telafi = $durum !== KatilimciDurumu::BEKLEME && $this->seans->telafiBagla($oturum, $k);
             $this->bildirim->kayit($oturum, $userId, $durum, $yetkiliId);
@@ -44,45 +52,55 @@ class DersKatilimServisi
 
     /**
      * Online rezervasyon (musteri): kontenjan tutar, dusum yok (dusum "Geldi"de), bildirim yok.
+     * $mobilMetni: mobil uygulamanin bugunku hata metinleri.
      *
      * @return array{katilimci_id:int,katilimci_durum:string}
      */
-    public function rezerveEt(int $oturumId, int $salonId, int $userId): array
+    public function rezerveEt(int $oturumId, int $salonId, int $userId, bool $mobilMetni = false): array
     {
-        return DB::transaction(function () use ($oturumId, $salonId, $userId) {
-            $oturum = $this->kilitliOturum($oturumId);
-            if ((int) $oturum->salon_id !== $salonId) {
-                throw new BulunamadiException('Ders bulunamadı');
+        return DB::transaction(function () use ($oturumId, $salonId, $userId, $mobilMetni) {
+            $oturum = DersOturumu::whereKey($oturumId)->lockForUpdate()->first();
+            if (! $oturum || (int) $oturum->salon_id !== $salonId) {
+                throw new BulunamadiException($mobilMetni ? self::DERS_YOK_DANISAN_MOBIL : 'Ders bulunamadı');
+            }
+            if ($mobilMetni && $oturum->iptalMi()) {
+                throw new BulunamadiException(self::DERS_YOK_DANISAN_MOBIL);
             }
             if ($oturum->basladiMi()) {
                 throw new GecersizIslemException('Geçmiş bir derse rezervasyon yapılamaz.');
             }
-            $k = $this->kayitAc($oturum, $userId, ['not' => 'online']);
+            $k = $this->kayitAc($oturum, $userId, ['not' => 'online'], $mobilMetni ? self::ZATEN_KAYITLI_DANISAN_MOBIL : self::ZATEN_KAYITLI);
 
             return ['katilimci_id' => (int) $k->id, 'katilimci_durum' => $k->durum];
         });
     }
 
-    /** Dersten cikar: hak geri verilir (telafi korunur), kontenjan bosalir, ilk bekleyen terfi eder. */
-    public function cikar(int $katilimciId, ?int $yetkiliId): array
+    /**
+     * Dersten cikar: hak geri verilir (telafi korunur), kontenjan bosalir, ilk bekleyen terfi eder.
+     * $mobilTerfi: mobilin bugunku davranisi, tek kisi terfi eder ve mobil metni gider.
+     */
+    public function cikar(int $katilimciId, ?int $yetkiliId, bool $mobilTerfi = false): array
     {
-        return DB::transaction(function () use ($katilimciId, $yetkiliId) {
+        return DB::transaction(function () use ($katilimciId, $yetkiliId, $mobilTerfi) {
             [$k, $oturum] = $this->kilitliKatilimci($katilimciId);
             $dusum = $k->hak_dusuldu ? $this->seans->hakGeriVer($k) : null;
             $k->update(['durum' => KatilimciDurumu::IPTAL->value]);
-            $this->terfiEt($oturum, $yetkiliId);
+            $this->terfiEt($oturum, $yetkiliId, $mobilTerfi);
 
             return ['katilimci_id' => (int) $k->id, 'dusum' => $dusum];
         });
     }
 
-    /** Elle durum isareti. Bekleme/iptal satiri isaretlenemez (kapasiteyi asmasin). */
-    public function durumGuncelle(int $katilimciId, KatilimciDurumu $yeni, ?int $yetkiliId): array
+    /**
+     * Elle durum isareti. Bekleme/iptal satiri isaretlenemez (kapasiteyi asmasin).
+     * $mobilKurali: mobilin bugunku davranisi, her satir isaretlenir ve iade telafiyi de siler.
+     */
+    public function durumGuncelle(int $katilimciId, KatilimciDurumu $yeni, ?int $yetkiliId, bool $mobilKurali = false): array
     {
-        return DB::transaction(function () use ($katilimciId, $yeni, $yetkiliId) {
+        return DB::transaction(function () use ($katilimciId, $yeni, $yetkiliId, $mobilKurali) {
             [$k, $oturum] = $this->kilitliKatilimci($katilimciId);
 
-            return $this->isaretle($oturum, $k, $yeni, $yetkiliId);
+            return $this->isaretle($oturum, $k, $yeni, $yetkiliId, $mobilKurali);
         });
     }
 
@@ -110,7 +128,7 @@ class DersKatilimServisi
     }
 
     /** Bos kontenjan kadar bekleyeni sirayla rezerveye al + "yeriniz acildi". Cagiran kilidi tutar. */
-    public function terfiEt(DersOturumu $oturum, ?int $yetkiliId): void
+    public function terfiEt(DersOturumu $oturum, ?int $yetkiliId, bool $mobilTerfi = false): void
     {
         if ($oturum->iptalMi()) {
             return;
@@ -119,10 +137,10 @@ class DersKatilimServisi
         if ($bos <= 0) {
             return;
         }
-        $bekleyenler = DersKatilimci::where('oturum_id', $oturum->id)->where('durum', KatilimciDurumu::BEKLEME->value)->orderBy('id')->limit($bos)->get();
+        $bekleyenler = DersKatilimci::where('oturum_id', $oturum->id)->where('durum', KatilimciDurumu::BEKLEME->value)->orderBy('id')->limit($mobilTerfi ? 1 : $bos)->get();
         foreach ($bekleyenler as $bekleyen) {
             $bekleyen->update(['durum' => KatilimciDurumu::REZERVE->value]);
-            $this->bildirim->terfi($oturum, (int) $bekleyen->user_id, $yetkiliId);
+            $this->bildirim->terfi($oturum, (int) $bekleyen->user_id, $yetkiliId, $mobilTerfi);
         }
     }
 
@@ -143,20 +161,22 @@ class DersKatilimServisi
         });
     }
 
-    private function isaretle(DersOturumu $oturum, DersKatilimci $k, KatilimciDurumu $yeni, ?int $yetkiliId): array
+    private function isaretle(DersOturumu $oturum, DersKatilimci $k, KatilimciDurumu $yeni, ?int $yetkiliId, bool $mobilKurali = false): array
     {
-        if ($oturum->iptalMi()) {
-            throw new CakismaException('Bu ders iptal edilmiş.'); // iptalde satirlar 'rezerve' kalir
-        }
-        if (! $k->durumu()->kontenjanTutar()) {
-            throw new CakismaException($k->durumu() === KatilimciDurumu::IPTAL ? 'Bu kayıt iptal edilmiş.' : 'Bekleme listesindeki kişi işaretlenemez.');
+        if (! $mobilKurali) {
+            if ($oturum->iptalMi()) {
+                throw new CakismaException('Bu ders iptal edilmiş.'); // iptalde satirlar 'rezerve' kalir
+            }
+            if (! $k->durumu()->kontenjanTutar()) {
+                throw new CakismaException($k->durumu() === KatilimciDurumu::IPTAL ? 'Bu kayıt iptal edilmiş.' : 'Bekleme listesindeki kişi işaretlenemez.');
+            }
         }
         $k->update(['durum' => $yeni->value]);
 
-        return ['katilimci_id' => (int) $k->id, 'durum' => $yeni->value, 'dusum' => $this->seans->durumaUygula($oturum, $k, $yeni, $yetkiliId)];
+        return ['katilimci_id' => (int) $k->id, 'durum' => $yeni->value, 'dusum' => $this->seans->durumaUygula($oturum, $k, $yeni, $yetkiliId, ! $mobilKurali)];
     }
 
-    private function kayitAc(DersOturumu $oturum, int $userId, array $ek): DersKatilimci
+    private function kayitAc(DersOturumu $oturum, int $userId, array $ek, string $zatenKayitliMesaj = self::ZATEN_KAYITLI): DersKatilimci
     {
         if ($oturum->iptalMi()) {
             throw new CakismaException('Bu ders iptal edilmiş.');
@@ -164,7 +184,7 @@ class DersKatilimServisi
         $zatenVar = DersKatilimci::where('oturum_id', $oturum->id)->where('user_id', $userId)
             ->where('durum', '!=', KatilimciDurumu::IPTAL->value)->exists();
         if ($zatenVar) {
-            throw new CakismaException('Bu kişi derse zaten kayıtlı.');
+            throw new CakismaException($zatenKayitliMesaj);
         }
 
         return DersKatilimci::create([

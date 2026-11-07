@@ -42,6 +42,12 @@ use InvalidArgumentException;
  *   - Musteri portfoyu, hizmet ve kaynaklar ayni salona ait olmali.
  *   - Eski "baslangic saati ayni" cakisma kontrolu kaynaksiz satirda tum salonu
  *     eslestiriyordu; kaynak yoksa atlanir. Guncellenen randevu kendisiyle cakismaz.
+ *
+ * 'mobil' girdisi (uygulama istegi) yukaridaki farklari kapatir, eski mobil sonucunu verir: iptal edilmis
+ * randevu duzenlenir, tekrar alani eski kuralla okunur, cikarilan hizmetin seansi randevuda kalir, bos sure
+ * 30 dk sayilir, secilen satis yerine en eski satistan dusulur, kaynaksiz satir ve randevunun kendisi eski
+ * kontrolde cakisir, guncelleme olusturani yazar. Musteri portfoyu, hizmet ve kaynaklarin salona ait olma
+ * kurali mobilde de gecerlidir (salon kapsami). Varsayilan (web, online) davranis degismez.
  */
 class RandevuKayitServisi
 {
@@ -51,6 +57,9 @@ class RandevuKayitServisi
 
     /** Musterinin kendi olusturdugu randevu: randevular'daki kolon adi kaynakla ayni. */
     private const MUSTERI_KAYNAKLARI = ['web', 'uygulama'];
+
+    /** Eski mobilde tekrar sinirsizdi; istemciden gelen sayi sunucuyu kilitlemesin diye bir yillik gunluk tavan. */
+    private const MOBIL_MAKS_TEKRAR = 366;
 
     public function __construct(private SeansHavuzu $seansHavuzu) {}
 
@@ -93,6 +102,7 @@ class RandevuKayitServisi
     private function dogrula(int $salonId, array $g): array
     {
         $eski = null;
+        $mobil = ! empty($g['mobil']);
         $randevuId = (int) ($g['randevu_id'] ?? 0);
         if ($randevuId) {
             $eski = DB::table('randevular')->where('id', $randevuId)->first();
@@ -102,7 +112,7 @@ class RandevuKayitServisi
             if ((int) $eski->user_id === Randevular::KAPALI_SAAT_USER_ID) {
                 throw new GecersizIslemException('Kapalı saat bloğu randevu olarak düzenlenemez.');
             }
-            if ((int) $eski->durum >= Randevular::IPTAL_EDILDI) {
+            if (! $mobil && (int) $eski->durum >= Randevular::IPTAL_EDILDI) {
                 throw new GecersizIslemException('İptal edilmiş randevu düzenlenemez.');
             }
         }
@@ -157,11 +167,9 @@ class RandevuKayitServisi
 
         try {
             $saat = substr(SaatKapama::saat((string) ($g['randevu_saati'] ?? '')), 0, 5);
-            $tekrar = ! $eski && filter_var($g['tekrarlayan'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $tarihler = SaatKapama::tarihler((string) ($g['randevu_tarihi'] ?? ''),
-                $tekrar ? (int) ($g['tekrar_sayisi'] ?? 1) : 1, $tekrar ? ($g['tekrar_sikligi'] ?? null) : null);
-            $satirlar = HizmetZinciri::satirlar($saat, $hizmetler);
-            $bitis = HizmetZinciri::toplamBitis($saat, $hizmetler);
+            $tarihler = $mobil ? $this->mobilTarihler($g, (bool) $eski) : $this->tarihler($g, (bool) $eski);
+            $satirlar = HizmetZinciri::satirlar($saat, $hizmetler, $mobil);
+            $bitis = HizmetZinciri::toplamBitis($saat, $hizmetler, $mobil);
         } catch (InvalidArgumentException $e) {
             throw new GecersizIslemException($e->getMessage());
         }
@@ -183,11 +191,30 @@ class RandevuKayitServisi
         return [
             'eski' => $eski, 'user_id' => $userId, 'hizmetler' => $hizmetler, 'satirlar' => $satirlar,
             'yardimcilar' => $yardimcilar, 'tarihler' => $tarihler, 'saat' => $saat, 'bitis' => $bitis,
-            'durum' => $durum, 'notlar' => trim((string) ($g['notlar'] ?? '')) ?: null,
+            'durum' => $durum, 'notlar' => $mobil ? (string) ($g['notlar'] ?? '') : (trim((string) ($g['notlar'] ?? '')) ?: null),
             'kaynak' => in_array($g['kaynak'] ?? null, self::MUSTERI_KAYNAKLARI, true) ? $g['kaynak'] : self::KAYNAK_SALON,
             'zaman_degisti' => $zamanDegisti, 'hizmet_degisti' => $hizmetDegisti,
             'override' => (string) ($g['cakisanrandevuekle'] ?? '') === '1',
+            'mobil' => $mobil,
         ];
+    }
+
+    private function tarihler(array $g, bool $guncelleme): array
+    {
+        $tekrar = ! $guncelleme && filter_var($g['tekrarlayan'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        return SaatKapama::tarihler((string) ($g['randevu_tarihi'] ?? ''),
+            $tekrar ? (int) ($g['tekrar_sayisi'] ?? 1) : 1, $tekrar ? ($g['tekrar_sikligi'] ?? null) : null);
+    }
+
+    /** Eski kural: 'tekrarlayan' degerine bakilmaz, sayi ve siklik yeter; guncellemede son tarih kalir. */
+    private function mobilTarihler(array $g, bool $guncelleme): array
+    {
+        $siklik = $g['tekrar_sikligi'] ?? null;
+        $tarihler = SaatKapama::tarihler((string) ($g['randevu_tarihi'] ?? ''),
+            $siklik ? (int) ($g['tekrar_sayisi'] ?? 1) : 1, $siklik, self::MOBIL_MAKS_TEKRAR);
+
+        return $guncelleme ? [end($tarihler)] : $tarihler;
     }
 
     // ═════════════════════════════ CAKISMA ═════════════════════════════
@@ -214,7 +241,7 @@ class RandevuKayitServisi
 
         $eskiKontrol = '';
         if ($yumusak && (! $gi['eski'] || $gi['zaman_degisti'])) {
-            $eskiKontrol = $this->eskiCakismaKontrolu($salonId, $gi, $haric);
+            $eskiKontrol = $this->eskiCakismaKontrolu($salonId, $gi, $gi['mobil'] ? null : $haric);
         }
 
         $oda = $this->odaDoluMu($salonId, $gi, $haric);
@@ -325,7 +352,7 @@ class RandevuKayitServisi
             foreach ($gi['hizmetler'] as $i => $h) {
                 $bas = $gi['satirlar'][$i]['saat'];
 
-                if ($h['personel_id'] || $h['cihaz_id'] || $h['oda_id']) {
+                if ($gi['mobil'] || $h['personel_id'] || $h['cihaz_id'] || $h['oda_id']) {
                     $ayni = DB::table('randevular as r')->join('randevu_hizmetler as rh', 'rh.randevu_id', '=', 'r.id')
                         ->join('hizmetler as hz', 'rh.hizmet_id', '=', 'hz.id')
                         ->leftJoin('salon_personelleri as sp', 'rh.personel_id', '=', 'sp.id')
@@ -476,7 +503,7 @@ class RandevuKayitServisi
                         $telafiKullanilan[] = $telafi;
                         $seans = ['islem' => 'telafi_bagla', 'aps_id' => $telafi];
                     } else {
-                        $seans = $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve, $tarih)
+                        $seans = ($gi['mobil'] ? null : $this->tercihEdilenSeans($salonId, $gi['user_id'], $h, $rezerve, $tarih))
                             ?? $this->seansHavuzu->yeniAday($salonId, $gi['user_id'], $hz, $rezerve, $tarih);
                     }
                 }
@@ -505,7 +532,7 @@ class RandevuKayitServisi
         $serbest = [];
         foreach ($havuz as $hz => $liste) {
             foreach ($liste as $idx => $aps) {
-                if ($idx >= ($tuketilen[$hz] ?? 0) && $aps->geldi === null) {
+                if (! $gi['mobil'] && $idx >= ($tuketilen[$hz] ?? 0) && $aps->geldi === null) {
                     $serbest[] = (int) $aps->id;
                 }
             }
@@ -594,7 +621,9 @@ class RandevuKayitServisi
             ];
             if ($eski) {
                 $randevuId = (int) $eski->id;
-                DB::table('randevular')->where('id', $randevuId)->update($alanlar);
+                // Eski mobil guncellemesi olusturani ve kaynagi da yazar.
+                DB::table('randevular')->where('id', $randevuId)->update($alanlar + ($gi['mobil']
+                    ? [$gi['kaynak'] => 1, 'olusturan_personel_id' => $yetkiliId, 'olusturan_user_id' => null] : []));
                 $silinenRh = DB::table('randevu_hizmetler')->where('randevu_id', $randevuId)->pluck('id')->map(fn ($x) => (int) $x)->all();
                 DB::table('randevu_hizmetler')->where('randevu_id', $randevuId)->delete();
                 if ($eski->on_gorusme_id) {

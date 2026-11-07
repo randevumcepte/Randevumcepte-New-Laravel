@@ -75,7 +75,8 @@ class DersOturumServisi
         ];
     }
 
-    public function kaydet(int $salonId, ?int $oturumId, array $g, ?int $personelId, ?int $yetkiliId): array
+    /** $terfi=false: mobilin bugunku davranisi, kapasite artisi bekleyeni terfi ettirmez. */
+    public function kaydet(int $salonId, ?int $oturumId, array $g, ?int $personelId, ?int $yetkiliId, bool $terfi = true): array
     {
         $this->referans->personelHizmetDogrula($salonId, $g['personel_id'] ?? null, $g['hizmet_id'] ?? null);
         $alan = [
@@ -90,7 +91,9 @@ class DersOturumServisi
                 throw new CakismaException('İptal edilmiş ders düzenlenemez.');
             }
             $o->update($alan);
-            $this->katilim->terfiler([(int) $o->id], $yetkiliId); // kapasite artmis olabilir
+            if ($terfi) {
+                $this->katilim->terfiler([(int) $o->id], $yetkiliId); // kapasite artmis olabilir
+            }
         } else {
             $o = DersOturumu::create($alan + ['salon_id' => $salonId, 'sube_id' => $salonId, 'aktif' => true, 'olusturan_personel_id' => $personelId]);
         }
@@ -101,19 +104,22 @@ class DersOturumServisi
 
     /**
      * Soft iptal: dusulen haklar geri verilir (telafi korunur), katilimcilara bildirim gider.
-     * Bilincli fark: eski mobil uc hak iadesi yapmiyor ve beklemedekine bildirmiyordu; web kanonik.
+     * Web kanonik. $mobilKurali: mobilin bugunku davranisi, hak iadesi yok, beklemedekine bildirim yok.
      */
-    public function iptal(int $oturumId, ?int $yetkiliId): array
+    public function iptal(int $oturumId, ?int $yetkiliId, bool $mobilKurali = false): array
     {
-        return DB::transaction(function () use ($oturumId, $yetkiliId) {
+        return DB::transaction(function () use ($oturumId, $yetkiliId, $mobilKurali) {
             $o = DersOturumu::whereKey($oturumId)->lockForUpdate()->first() ?? throw new BulunamadiException('Ders bulunamadı');
             if ($o->iptalMi()) {
                 return ['oturum_id' => (int) $o->id, 'bildirilen' => 0];
             }
             $katilimcilar = $o->katilimcilar()->where('durum', '!=', KatilimciDurumu::IPTAL->value)->get();
-            $katilimcilar->where('hak_dusuldu', true)->each(fn (DersKatilimci $k) => $this->seans->hakGeriVer($k));
+            if (! $mobilKurali) {
+                $katilimcilar->where('hak_dusuldu', true)->each(fn (DersKatilimci $k) => $this->seans->hakGeriVer($k));
+            }
             $o->update(['aktif' => false, 'iptal' => true]);
-            $alicilar = $katilimcilar->pluck('user_id')->unique()->all();
+            $alicilar = ($mobilKurali ? $katilimcilar->filter(fn (DersKatilimci $k) => $k->durumu() !== KatilimciDurumu::BEKLEME) : $katilimcilar)
+                ->pluck('user_id')->unique()->all();
             $this->bildirim->iptal($o, $alicilar, $yetkiliId);
             AktiviteLog::yaz((int) $o->salon_id, $yetkiliId, 'ders_iptal', 'ders', (int) $o->id, $o->ad().' '.$o->tarih);
 

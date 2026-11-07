@@ -17,19 +17,33 @@ class MusteriRandevuServisi
 {
     public function __construct(private RandevuDurumServisi $durum) {}
 
-    public function liste(int $userId, ?int $salonId, ?int $durum, int $sayfaBoyu): array
+    /**
+     * @param  array{app_bundle?:?string,tarih1?:?string,tarih2?:?string,kaynaklar?:array<int,string>}  $mobil
+     *         musteri uygulamasi: marka kapsami, tarih araligi, olusturma kaynagi (salon|web|uygulama). Bossa davranis degismez.
+     * @param  bool  $personelNotu  yalniz imzali mobil token: mini site cevabinda alan bos kalir (site bu alani okumaz)
+     */
+    public function liste(int $userId, ?int $salonId, ?int $durum, int $sayfaBoyu, array $mobil = [], bool $personelNotu = false): array
     {
+        $kaynaklar = array_values(array_intersect($mobil['kaynaklar'] ?? [], ['salon', 'web', 'uygulama']));
         $sayfa = DB::table('randevular as r')->join('salonlar as s', 's.id', '=', 'r.salon_id')
             ->where('r.user_id', $userId)
             ->when($salonId, fn ($q) => $q->where('r.salon_id', $salonId))
             ->when($durum !== null, fn ($q) => $q->where('r.durum', $durum))
-            ->orderByDesc('r.tarih')->orderByDesc('r.saat')
-            ->paginate($sayfaBoyu, ['r.id', 'r.tarih', 'r.saat', 'r.saat_bitis', 'r.durum', 'r.notlar', 'r.salon_id', 'r.created_at', 's.salon_adi']);
+            ->when($mobil['app_bundle'] ?? null, fn ($q, $b) => $q->where('s.app_bundle', $b))
+            ->when($mobil['tarih1'] ?? null, fn ($q, $t) => $q->where('r.tarih', '>=', $t))
+            ->when($mobil['tarih2'] ?? null, fn ($q, $t) => $q->where('r.tarih', '<=', $t))
+            ->when($kaynaklar, fn ($q) => $q->where(function ($w) use ($kaynaklar) {
+                foreach ($kaynaklar as $k) {
+                    $w->orWhere('r.'.$k, 1);
+                }
+            }))
+            ->orderByDesc('r.tarih')->orderByDesc('r.saat')->orderByDesc('r.id')
+            ->paginate($sayfaBoyu, ['r.id', 'r.tarih', 'r.saat', 'r.saat_bitis', 'r.durum', 'r.notlar', 'r.personel_notu', 'r.tahsilat_eklendi', 'r.salon_id', 'r.created_at', 's.salon_adi']);
 
         $kalemler = $this->kalemler(array_column($sayfa->items(), 'id'));
 
         return [
-            'data'         => array_map(fn ($r) => $this->sunum($r, $kalemler[$r->id] ?? []), $sayfa->items()),
+            'data'         => array_map(fn ($r) => $this->sunum($r, $kalemler[$r->id] ?? [], $personelNotu), $sayfa->items()),
             'current_page' => $sayfa->currentPage(),
             'last_page'    => $sayfa->lastPage(),
             'total'        => $sayfa->total(),
@@ -75,7 +89,7 @@ class MusteriRandevuServisi
     }
 
     /** Alan adlari Flutter Randevu.fromJson ile uyumlu (hizmetler[].hizmetler.hizmet_adi, salonlar.salon_adi). */
-    private function sunum(object $r, $kalemler): array
+    private function sunum(object $r, $kalemler, bool $personelNotu): array
     {
         return [
             'id'                => (int) $r->id,
@@ -83,6 +97,8 @@ class MusteriRandevuServisi
             'saat'              => substr((string) $r->saat, 0, 5),
             'durum'             => (int) $r->durum,
             'musteri_notu'      => $r->notlar,
+            'personel_notu'     => $personelNotu ? $r->personel_notu : null,
+            'tahsilat_eklendi'  => (int) (bool) $r->tahsilat_eklendi,
             'olusturulma'       => $r->created_at,
             'salon_id'          => (int) $r->salon_id,
             'salonlar'          => ['salon_adi' => $r->salon_adi],

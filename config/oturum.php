@@ -15,6 +15,14 @@ return [
     'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', true),
     'kopru_token_adi'    => 'v2-web',
 
+    // Yetki veya dogrulamayi gevseten ya da eski mobil sonucunu secen istek alanlari. Yalniz imzali mobil token'la
+    // etkilidir: diger her istekte (web token'i, musteri web token'i, kimliksiz) controller'a ulasmadan silinir
+    // (Services/Oturum/MobilBayraklar). Web bu alanlari gondermez. Yeni mobil bayrak BURAYA eklenir.
+    'mobil_bayraklari' => [
+        'mobil', 'mobil_gorunum', 'mobil_sablon', 'mobil_sozlesme', 'musteri_karti', 'sekme_yetkisi', 'personel_rolu',
+        'gece_devri', 'yalniz', 'liste_yetkisi', 'liste_menusu', 'yalniz_salon', 'kara_liste_atla', 'genel_link',
+    ],
+
     // Kod ve deneme mesajlari once sistem WhatsApp hattindan gider (false: yalniz SMS).
     'kod_whatsapp' => (bool) env('OTURUM_KOD_WHATSAPP', true),
 

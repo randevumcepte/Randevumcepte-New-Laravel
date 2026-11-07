@@ -260,6 +260,51 @@ class OturumApiTest extends TestCase
         $this->postJson('/api/v2/oturum/sifre-sifirla', $istek + ['kod' => $kod, 'yeni_sifre' => 'baska12345'])->assertStatus(422);
     }
 
+    public function test_mobil_token_yalniz_bundle_ile_acilan_oturuma_uretilir(): void
+    {
+        $this->yetkili([['uyelik_turu' => 1, 'app_bundle' => 'com.marka.app']]);
+        $token = $this->app->make(ErisimTokenServisi::class);
+
+        $this->giris(['kimlik' => self::TEL, 'password' => 'gizli123', 'hesap_turu' => 'isletme'])->assertOk();
+        $token->shouldHaveReceived('uret')->with(Mockery::any(), 'isletme', false)->once();
+
+        $this->giris(['kimlik' => self::TEL, 'password' => 'gizli123', 'hesap_turu' => 'isletme', 'app_bundle' => 'com.marka.app'])->assertOk();
+        $token->shouldHaveReceived('uret')->with(Mockery::any(), 'isletme', true)->once();
+    }
+
+    public function test_kayitli_numara_kimliksiz_kayitla_degismez(): void
+    {
+        $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
+        $sifre = Hash::make('eski-sifre');
+        $user = DB::table('users')->insertGetId(['name' => 'Eski Ad', 'cep_telefon' => self::TEL, 'password' => $sifre]);
+        DB::table('musteri_portfoy')->insert(['salon_id' => $salon, 'user_id' => $user, 'aktif' => 0]);
+        $baskaSalon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Baska', 'sms_secret' => 'GIZLI']);
+
+        foreach ([$salon, $baskaSalon] as $salonId) {
+            $this->postJson('/api/v2/musteri-oturum/kayit', ['ad_soyad' => 'Yeni Ad', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salonId, 'sifre_gonder' => true])
+                ->assertOk()->assertJsonPath('veri.kayitli', true);
+        }
+
+        $satir = DB::table('users')->where('id', $user)->first();
+        $this->assertSame($sifre, $satir->password);
+        $this->assertSame('Eski Ad', $satir->name);
+        $this->assertSame(0, (int) DB::table('musteri_portfoy')->where('salon_id', $salon)->value('aktif'));
+        $this->assertFalse(DB::table('musteri_portfoy')->where('salon_id', $baskaSalon)->exists());
+        $this->assertSame([], $this->smsler);
+    }
+
+    public function test_kimliksiz_sifre_gonder_isletme_hesabina_dokunmaz(): void
+    {
+        $id = $this->yetkili([['uyelik_turu' => 1]]);
+        $sifre = DB::table('isletmeyetkilileri')->where('id', $id)->value('password');
+
+        $this->postJson('/api/v2/musteri-oturum/sifre-gonder', ['cep_telefon' => self::TEL])
+            ->assertOk()->assertJsonPath('veri.bulundu', false);
+
+        $this->assertSame($sifre, DB::table('isletmeyetkilileri')->where('id', $id)->value('password'));
+        $this->assertSame([], $this->smsler);
+    }
+
     public function test_kayitsiz_numara_ayni_cevabi_alir_ve_sms_gitmez(): void
     {
         $this->postJson('/api/v2/oturum/sifre-kodu', ['cep_telefon' => self::TEL])->assertOk();

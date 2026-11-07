@@ -16,6 +16,7 @@ namespace App\Domain\Randevu;
  * Eski monolitten BILINCLI farklar (v2 duzeltmesi):
  *   - isaretKaldir: eski kod telafi slotunu da null'luyordu (hak kayboluyordu).
  *   - iptal: eski kod telafi slotunu da siliyordu (hak kayboluyordu).
+ * Mobil istek ($telafiKorunur=false) eski sonucu korur; web varsayilani degismez.
  */
 final class SeansDurumGecisi
 {
@@ -83,21 +84,25 @@ final class SeansDurumGecisi
         return self::telafiDisinaUygula($seanslar, ['geldi' => 0]);
     }
 
-    /** ISARET KALDIR: telafi-disi seanslar geldi=null (telafi korunur). */
-    public static function isaretKaldir(array $seanslar): array
+    /** ISARET KALDIR: telafi-disi seanslar geldi=null (telafi korunur). $telafiKorunur=false: hepsi. */
+    public static function isaretKaldir(array $seanslar, bool $telafiKorunur = true): array
     {
+        if (! $telafiKorunur) {
+            return ['guncelle' => array_fill_keys(array_map(fn ($s) => (int) $s['id'], $seanslar), ['geldi' => null]), 'sil' => []];
+        }
+
         return self::telafiDisinaUygula($seanslar, ['geldi' => null]);
     }
 
     /**
      * IPTAL: telafi-disi seanslar silinir → paket bakiyesine geri doner.
-     * Telafi slotu korunur (bekleyen hak bir sonraki randevuya baglanabilir).
+     * Telafi slotu korunur (bekleyen hak bir sonraki randevuya baglanabilir). $telafiKorunur=false: hepsi silinir.
      */
-    public static function iptal(array $seanslar): array
+    public static function iptal(array $seanslar, bool $telafiKorunur = true): array
     {
         $sil = [];
         foreach ($seanslar as $s) {
-            if (! self::telafiMi($s)) {
+            if (! $telafiKorunur || ! self::telafiMi($s)) {
                 $sil[] = (int) $s['id'];
             }
         }

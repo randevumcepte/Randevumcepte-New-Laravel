@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V2\MusteriBildirimController;
+use App\Http\Controllers\Api\V2\MusteriCarkController;
 use App\Http\Controllers\Api\V2\MusteriDersController;
 use App\Http\Controllers\Api\V2\MusteriHesapController;
 use App\Http\Controllers\Api\V2\MusteriReklamController;
+use App\Http\Controllers\Api\V2\MusteriResimController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,12 +21,29 @@ Route::prefix('musteri-uygulama')->group(function () {
     Route::delete('/ben/resim', [MusteriHesapController::class, 'resimKaldir']);
     Route::post('/ben/sifre', [MusteriHesapController::class, 'sifreDegistir']);
     Route::post('/ben/cikis', [MusteriHesapController::class, 'cikis']);
+    Route::patch('/ben/saglik', [MusteriHesapController::class, 'saglik']);
+    Route::get('/ozet', [MusteriHesapController::class, 'ozet']);
+    Route::post('/hesap-silme-talebi', [MusteriHesapController::class, 'hesapSilmeTalebi']);
 
     // Randevularım + online randevu oluşturma + paket seçimi.
     Route::get('/randevular', [MusteriHesapController::class, 'randevular']);
     Route::post('/randevular', [MusteriHesapController::class, 'randevuOlustur']);
     Route::post('/randevular/{id}/iptal', [MusteriHesapController::class, 'randevuIptal'])->whereNumber('id');
     Route::get('/paketlerim', [MusteriHesapController::class, 'paketlerim']);
+    Route::get('/seanslar', [MusteriHesapController::class, 'seanslar']);
+
+    // Islem fotograflari.
+    Route::get('/resimler', [MusteriResimController::class, 'liste']);
+    Route::post('/resimler', [MusteriResimController::class, 'ekle']);
+    Route::delete('/resimler', [MusteriResimController::class, 'sil']);
+    Route::patch('/resimler/not', [MusteriResimController::class, 'notYaz']);
+
+    // Carkifelek + puan odulleri.
+    Route::get('/cark', [MusteriCarkController::class, 'durum']);
+    Route::post('/cark/cevir', [MusteriCarkController::class, 'cevir']);
+    Route::get('/cark/odullerim', [MusteriCarkController::class, 'odullerim']);
+    Route::get('/cark/puan-odulleri', [MusteriCarkController::class, 'puanOdullerim']);
+    Route::post('/cark/puan-odulleri/{odulId}/talep', [MusteriCarkController::class, 'puanOdulTalep'])->whereNumber('odulId');
 
     // Yorum + uygunsuz yorum bildirimi.
     Route::post('/yorumlar', [MusteriHesapController::class, 'yorumYap']);

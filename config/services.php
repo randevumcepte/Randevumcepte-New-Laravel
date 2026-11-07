@@ -28,6 +28,17 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+     | Google Cloud TTS: env adlari eski monolitle ayni. Anahtar yoksa istemci cihaz sesine duser.
+     | Chirp3-HD pitch desteklemez, proje veya bolgede kapaliysa fallback sese duser.
+     */
+    'google_tts' => [
+        'key'            => env('GOOGLE_TTS_API_KEY', ''),
+        'voice'          => env('GOOGLE_TTS_VOICE', 'tr-TR-Chirp3-HD-Charon'),
+        'voice_fallback' => env('GOOGLE_TTS_VOICE_FALLBACK', 'tr-TR-Wavenet-E'),
+        'rate'           => (float) env('GOOGLE_TTS_RATE', 0.95),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

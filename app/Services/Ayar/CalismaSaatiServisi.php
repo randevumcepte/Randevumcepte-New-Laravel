@@ -2,6 +2,7 @@
 
 namespace App\Services\Ayar;
 
+use App\Domain\Ayar\HaftalikPlan;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 
@@ -19,13 +20,18 @@ class CalismaSaatiServisi
         return ['gunler' => $this->plan->oku('salon', $salonId)];
     }
 
-    /** @param  list<array>  $gunler  dogrulanmis 7 gun */
-    public function kaydet(int $salonId, int $yapanId, array $gunler): array
+    /**
+     * @param  list<array>  $gunler  dogrulanmis 7 gun
+     * @param  ?string  $yalniz  mobil ekranlar yalniz kendi yarisini kaydeder (HaftalikPlan)
+     * @param  bool  $geceDevri  mobil ekranin kaydettigi 10:00-00:00 gibi saatler (HaftalikPlan)
+     */
+    public function kaydet(int $salonId, int $yapanId, array $gunler, ?string $yalniz = null, bool $geceDevri = false): array
     {
-        $calisilan = DB::transaction(fn () => $this->plan->yaz('salon', $salonId, $gunler));
+        $acikGun = DB::transaction(fn () => $this->plan->yaz('salon', $salonId, $gunler, $yalniz, $geceDevri));
 
         AktiviteLog::yaz($salonId, $yapanId, 'calisma_saatleri_guncelle', 'salon', $salonId,
-            'Çalışma saatleri', 'İşletme çalışma / mola saatleri güncellendi', ['calisilan_gun' => $calisilan]);
+            'Çalışma saatleri', 'İşletme çalışma / mola saatleri güncellendi',
+            $yalniz === HaftalikPlan::MOLA ? ['mola_olan_gun' => $acikGun] : ['calisilan_gun' => $acikGun]);
 
         return $this->getir($salonId);
     }

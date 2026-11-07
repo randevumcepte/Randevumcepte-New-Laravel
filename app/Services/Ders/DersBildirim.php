@@ -21,9 +21,9 @@ class DersBildirim
         $this->oturumMesaji($o, $userId, $metin, 'ders_bildirim', $yetkiliId);
     }
 
-    public function terfi(DersOturumu $o, int $userId, ?int $yetkiliId): void
+    public function terfi(DersOturumu $o, int $userId, ?int $yetkiliId, bool $mobilMetni = false): void
     {
-        $this->oturumMesaji($o, $userId, DersMesaji::terfi(...), 'ders_bekleme_terfi', $yetkiliId);
+        $this->oturumMesaji($o, $userId, $mobilMetni ? DersMesaji::terfiMobil(...) : DersMesaji::terfi(...), 'ders_bekleme_terfi', $yetkiliId);
     }
 
     /** @param int[] $userIdler */

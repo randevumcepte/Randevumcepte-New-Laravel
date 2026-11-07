@@ -5,6 +5,7 @@ namespace App\Services\Online;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Musteri tarafi uclarinin ortak salon cozumu + online randevu kapisi — TEK KAYNAK.
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
  */
 class OnlineSalonKapisi
 {
+    private const PLATFORM_ADI = 'Randevumcepte';
+
     public function salon(int $salonId): object
     {
         $salon = DB::table('salonlar')->where('id', $salonId)->first();
@@ -53,6 +56,17 @@ class OnlineSalonKapisi
         }
 
         return $salon;
+    }
+
+    /** Mesajlarda gorunen marka adi: marka basligi, yoksa ilk sube, yoksa platform adi. */
+    public function markaAdi(?string $bundle): string
+    {
+        if (! $bundle) {
+            return self::PLATFORM_ADI;
+        }
+        $baslik = Schema::hasTable('app_bundle_ayarlari') ? DB::table('app_bundle_ayarlari')->where('app_bundle', $bundle)->value('bundle_baslik') : null;
+
+        return $baslik ?: (DB::table('salonlar')->where('app_bundle', $bundle)->orderBy('id')->value('salon_adi') ?: self::PLATFORM_ADI);
     }
 
     /** @return int[] */

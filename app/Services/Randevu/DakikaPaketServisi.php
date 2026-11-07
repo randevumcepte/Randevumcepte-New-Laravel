@@ -14,13 +14,15 @@ use Illuminate\Support\Facades\DB;
  * HIC dusmuyordu. Burada kalem basina NET = kullanim − iade sayilir:
  *   geldi : NET == 0 olan kalemden dus
  *   iade  : NET  > 0 olan kalemin son kullanim(lar)ini iade et
+ * Mobil istek ($mobil=true) eski kurali korur: kaleme kullanim yazilmissa tekrar dusmez,
+ * iade yazilmissa tekrar iade etmez. Web varsayilani NET kalir.
  *
  * Bu sinif CAGIRAN transaction'i icinde calisir (kendi transaction'i yok).
  */
 class DakikaPaketServisi
 {
     /** Geldi'de dusulecek kalemler (plan — yazmaz). */
-    public function dusumPlani(int $randevuId): array
+    public function dusumPlani(int $randevuId, bool $mobil = false): array
     {
         $plan = [];
         $rhler = DB::table('randevu_hizmetler')
@@ -29,7 +31,7 @@ class DakikaPaketServisi
             ->get(['id', 'musteri_dakika_paketi_id', 'paket_dakika', 'sure_dk']);
 
         foreach ($rhler as $rh) {
-            if ($this->net((int) $rh->id) > 0) {
+            if ($mobil ? $this->hareketVar((int) $rh->id, 'randevu_kullanim') : $this->net((int) $rh->id) > 0) {
                 continue; // zaten dusulmus
             }
             $dakika = (int) ($rh->paket_dakika ?? $rh->sure_dk ?? 0);
@@ -43,7 +45,7 @@ class DakikaPaketServisi
     }
 
     /** Gelmedi'de iade edilecek kullanim hareketleri (plan — yazmaz). */
-    public function iadePlani(int $randevuId): array
+    public function iadePlani(int $randevuId, bool $mobil = false): array
     {
         $plan = [];
         $kullanimlar = DB::table('musteri_dakika_paket_hareketleri')
@@ -53,8 +55,10 @@ class DakikaPaketServisi
             ->get(['id', 'musteri_dakika_paketi_id', 'randevu_hizmet_id', 'dakika']);
 
         foreach ($kullanimlar->groupBy('randevu_hizmet_id') as $rhId => $grup) {
-            $net = $this->net((int) $rhId);
-            foreach ($grup->take(max(0, $net)) as $h) {
+            $iadeler = $mobil
+                ? ($this->hareketVar((int) $rhId, 'iade') ? collect() : $grup->sortBy('id')->take(1))
+                : $grup->take(max(0, $this->net((int) $rhId)));
+            foreach ($iadeler as $h) {
                 $plan[] = ['hareket_id' => (int) $h->id, 'rh_id' => (int) $rhId, 'paket_id' => (int) $h->musteri_dakika_paketi_id, 'dakika' => abs((int) $h->dakika)];
             }
         }
@@ -118,6 +122,11 @@ class DakikaPaketServisi
             ->first();
 
         return (int) ($sayim->k ?? 0) - (int) ($sayim->i ?? 0);
+    }
+
+    private function hareketVar(int $rhId, string $tur): bool
+    {
+        return DB::table('musteri_dakika_paket_hareketleri')->where('randevu_hizmet_id', $rhId)->where('tur', $tur)->exists();
     }
 
     private function hareketYaz(int $paketId, int $randevuId, int $rhId, int $dakika, string $tur, ?string $aciklama, ?int $personelId): void

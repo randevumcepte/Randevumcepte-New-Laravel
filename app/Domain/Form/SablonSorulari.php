@@ -87,12 +87,14 @@ final class SablonSorulari
     }
 
     /**
+     * $mobil: mobil düzenleyici boş metinli elemanı ve kendi `zorunlu` değerini saklar, uzunluk kesilmez.
+     *
      * @param mixed $girdi dizi ya da JSON string
      * @return array<int,array{tip:string,soru:string,zorunlu:bool}>
      *
      * @throws \InvalidArgumentException
      */
-    public static function normalize(mixed $girdi): array
+    public static function normalize(mixed $girdi, bool $mobil = false): array
     {
         if (is_string($girdi)) {
             $girdi = json_decode($girdi, true);
@@ -112,13 +114,13 @@ final class SablonSorulari
             }
             $otomatik = self::TIPLER[$tip][0] === self::GRUP_OTOMATIK;
             $metin = $otomatik ? $tip : trim((string) ($s['soru'] ?? ''));
-            if ($metin === '') {
+            if ($metin === '' && ! $mobil) {
                 continue;
             }
             $sorular[] = [
                 'tip'     => $tip,
-                'soru'    => mb_substr($metin, 0, self::MAKS_UZUNLUK),
-                'zorunlu' => self::TIPLER[$tip][7] === true,
+                'soru'    => $mobil ? $metin : mb_substr($metin, 0, self::MAKS_UZUNLUK),
+                'zorunlu' => $mobil ? ! empty($s['zorunlu']) : self::TIPLER[$tip][7] === true,
             ];
         }
 

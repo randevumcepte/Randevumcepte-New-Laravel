@@ -29,6 +29,9 @@ class IsletmeBilgiServisi
         'vergi_adresi', 'kdv_orani', 'meta_description',
     ];
 
+    /** Varsayılan denetim kaydı: [kod, açıklama]. */
+    public const DENETIM = ['ayarlar_guncelle', 'Temel ayarlar güncellendi'];
+
     public function __construct(private IsletmeGorselServisi $gorsel) {}
 
     public function getir(int $salonId): array
@@ -60,8 +63,11 @@ class IsletmeBilgiServisi
         ];
     }
 
-    /** @param  array  $g  dogrulanmis alanlar (ALANLAR alt kumesi + opsiyonel anahtar_kelimeler[]) */
-    public function kaydet(int $salonId, int $yapanId, array $g): array
+    /**
+     * @param  array  $g  dogrulanmis alanlar (ALANLAR alt kumesi + opsiyonel anahtar_kelimeler[])
+     * @param  array{0:string,1:string}  $denetim  denetim kaydi [kod, aciklama]
+     */
+    public function kaydet(int $salonId, int $yapanId, array $g, array $denetim = self::DENETIM): array
     {
         $eski = DB::table('salonlar')->where('id', $salonId)->first(['salon_adi', 'telefon_1', 'whatsapp']);
         if (! $eski) {
@@ -85,8 +91,8 @@ class IsletmeBilgiServisi
         });
 
         $yeni = $this->getir($salonId);
-        AktiviteLog::yaz($salonId, $yapanId, 'ayarlar_guncelle', 'salon', $salonId,
-            $yeni['salon_adi'], 'Temel ayarlar güncellendi', [
+        AktiviteLog::yaz($salonId, $yapanId, $denetim[0], 'salon', $salonId,
+            $yeni['salon_adi'], $denetim[1], [
                 'eski' => (array) $eski,
                 'yeni' => ['salon_adi' => $yeni['salon_adi'], 'telefon_1' => $yeni['telefon_1'], 'whatsapp' => $yeni['whatsapp']],
             ]);

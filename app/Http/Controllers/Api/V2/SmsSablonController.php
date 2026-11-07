@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 /**
  * SMS şablonları. Her yazma güncel listeyi döner ({taslaklar[]}).
  *
- *   GET    /sms/sablonlar?salon_id=
+ *   GET    /sms/sablonlar?salon_id=&yalniz_salon=
  *   POST   /sms/sablonlar          {baslik, icerik}
  *   PATCH  /sms/sablonlar/{id}     {baslik, icerik}
  *   DELETE /sms/sablonlar/{id}?salon_id=
@@ -18,8 +18,15 @@ class SmsSablonController extends SmsTabanController
 {
     public function __construct(private SmsSablonServisi $sablon) {}
 
+    /** yalniz_salon=1: seçici listesi (yalnız kendi şablonları); salon üyesi okur, kişisel veri yoktur. */
     public function liste(Request $request)
     {
+        if ($request->boolean('yalniz_salon')) {
+            [, $salonId] = $this->salonDenetle($request, []);
+
+            return ApiCevap::basarili(['taslaklar' => $this->sablon->salonunKendi($salonId)]);
+        }
+
         [, $salonId] = $this->salon($request);
 
         return ApiCevap::basarili(['taslaklar' => $this->sablon->liste($salonId)]);

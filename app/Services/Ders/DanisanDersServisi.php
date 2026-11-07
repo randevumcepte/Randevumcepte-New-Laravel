@@ -44,12 +44,12 @@ class DanisanDersServisi
     }
 
     /** Paket hakki ZORUNLU degil (eski kararla ayni): kontenjan varsa herkes rezervasyon yapar. */
-    public function rezervasyon(int $salonId, int $oturumId, int $userId): array
+    public function rezervasyon(int $salonId, int $oturumId, int $userId, bool $mobilMetni = false): array
     {
         if (! $this->politika->getir($salonId)->onlineRezervasyon()) {
             throw new GecersizIslemException('Online rezervasyon bu işletmede kapalı.');
         }
-        $sonuc = $this->katilim->rezerveEt($oturumId, $salonId, $userId);
+        $sonuc = $this->katilim->rezerveEt($oturumId, $salonId, $userId, $mobilMetni);
 
         return $sonuc + ['mesaj' => $sonuc['katilimci_durum'] === KatilimciDurumu::BEKLEME->value
             ? 'Kapasite dolu olduğu için BEKLEME listesine eklendiniz. Yer açılırsa bilgilendirileceksiniz.'

@@ -11,7 +11,8 @@ use Illuminate\Http\Request;
  * Eski /isletmeyonetim/form-sablonlari* ve v1 form-sablonlari-* / sozlesme-varsayilan-*
  * karşılığı. Eskide yazma uçlarında yetki denetimi YOKTU; burada:
  *   - liste/getir: form.olustur VEYA form.gonder
- *   - ekle/düzenle/sil/sırala: form.olustur
+ *   - ekle/düzenle/sil/sırala: form.olustur; `mobil_sablon=1` ile form.gonder de yeter
+ *     (mobil Form Yönetimi'ne form.gonder ile giren Sekreter bugün şablon yönetir)
  *   - varsayılan sözleşme metni kaydet: form.gonder (eskiyle aynı)
  * Yazmalar config('form.yazma_aktif') kill-switch arkasında.
  */
@@ -42,7 +43,7 @@ class FormSablonController extends V2Controller
     /** POST /api/v2/form/sablon  |  PATCH /api/v2/form/sablon/{id}  body: {salon_id, form_adi, aciklama, is_sozlesme, sorular[]} */
     public function kaydet(Request $request, ?int $id = null)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, ['form.olustur']);
+        [$uid, $salonId] = $this->salonDenetle($request, $this->yazmaYetkisi($request));
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->servis->kaydet($salonId, $id, [
@@ -51,13 +52,14 @@ class FormSablonController extends V2Controller
             'is_sozlesme' => $request->boolean('is_sozlesme'),
             // Flutter (v1 uyumu) sorular_json string gönderebilir; web dizi gönderir.
             'sorular'     => $request->input('sorular', $request->input('sorular_json')),
+            'mobil'       => $request->boolean('mobil_sablon'),
         ], $uid), $id !== null ? 'Form şablonu güncellendi.' : 'Form şablonu oluşturuldu.');
     }
 
     /** DELETE /api/v2/form/sablon/{id}?salon_id= */
     public function sil(Request $request, int $id)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, ['form.olustur']);
+        [$uid, $salonId] = $this->salonDenetle($request, $this->yazmaYetkisi($request));
         $this->yazmaAcikMi();
         $this->servis->sil($salonId, $id, $uid);
 
@@ -67,7 +69,7 @@ class FormSablonController extends V2Controller
     /** PATCH /api/v2/form/sablon/{id}/sira  body: {salon_id, yon: yukari|asagi} — güncel listeyi döner */
     public function sirala(Request $request, int $id)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, ['form.olustur']);
+        [$uid, $salonId] = $this->salonDenetle($request, $this->yazmaYetkisi($request));
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->servis->sirala($salonId, $id, (string) $request->input('yon'), $uid));
@@ -91,5 +93,11 @@ class FormSablonController extends V2Controller
             $this->servis->sozlesmeMetniKaydet($salonId, $request->input('sozlesme_metni'), $uid),
             'Bu metin varsayılan sözleşme şartlarınız olarak kaydedildi. Bundan sonra otomatik dolu gelecek.'
         );
+    }
+
+    /** @return array<int,string> */
+    private function yazmaYetkisi(Request $request): array
+    {
+        return $request->boolean('mobil_sablon') ? ['form.olustur', 'form.gonder'] : ['form.olustur'];
     }
 }

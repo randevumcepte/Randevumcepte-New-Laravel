@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Tek giris ucu: web paneli (hesap_turu=isletme) ve Flutter (bundle ile, her iki hesap turu).
- * Yanlis denemeler kimlik+IP bazinda sayilir.
+ * Yanlis denemeler kimlik+IP bazinda sayilir. Bundle ile acilan oturum imzali mobil token alir, web girisi almaz.
  */
 class OturumServisi
 {
@@ -48,7 +48,7 @@ class OturumServisi
         $hesap->cihazKaydet($id, $g['bildirim_id'] ?? null, $g['cihaz_bilgi'] ?? null, $bundle);
 
         return [
-            'token'      => $this->token->uret($id, $hesap->tur()),
+            'token'      => $this->token->uret($id, $hesap->tur(), $bundle !== null),
             'token_type' => 'Bearer',
             'expires_at' => $this->token->bitisTarihi(),
             'user_type'  => $hesap->kullaniciTipi(),
@@ -56,12 +56,12 @@ class OturumServisi
     }
 
     /** @return array{token:?string,expires_at:?string} token null: yenilemeye henuz gerek yok */
-    public function yenile(?string $tokenId, int $userId, ?string $tip): array
+    public function yenile(?string $tokenId, int $userId, ?string $tip, bool $mobil = false): array
     {
         if (! $tokenId || ! $tip) {
             throw new GirisHatasiException('Oturumunuzu yeniden açmanız gerekiyor.');
         }
-        $token = $this->token->yenile($tokenId, $userId, $tip);
+        $token = $this->token->yenile($tokenId, $userId, $tip, $mobil);
 
         return ['token' => $token, 'expires_at' => $token ? $this->token->bitisTarihi() : null];
     }

@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
  */
 Route::prefix('vitrin')->middleware('throttle:120,1')->group(function () {
     Route::get('/coz', [VitrinController::class, 'coz']);
+    Route::get('/marka', [VitrinController::class, 'marka']);
+    Route::get('/surum', [VitrinController::class, 'surum']);
+    Route::get('/marka-yorumlari', [VitrinController::class, 'markaYorumlari']);
     Route::get('/{salonId}', [VitrinController::class, 'goster'])->whereNumber('salonId');
     Route::get('/{salonId}/yorumlar', [VitrinController::class, 'yorumlar'])->whereNumber('salonId');
     Route::get('/{salonId}/randevu-secenekleri', [VitrinController::class, 'randevuSecenekleri'])->whereNumber('salonId');
@@ -22,4 +25,6 @@ Route::prefix('musteri-oturum')->middleware('throttle:20,1')->group(function () 
     Route::post('/kayit', [MusteriOturumController::class, 'kayit']);
     Route::post('/sifre-kodu', [MusteriOturumController::class, 'sifreKodu']);
     Route::post('/sifre-sifirla', [MusteriOturumController::class, 'sifreSifirla']);
+    Route::post('/sifre-gonder', [MusteriOturumController::class, 'sifreGonder']);
+    Route::post('/yenile', [MusteriOturumController::class, 'yenile']);
 });

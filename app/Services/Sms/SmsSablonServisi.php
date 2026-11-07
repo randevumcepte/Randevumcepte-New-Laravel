@@ -25,6 +25,15 @@ class SmsSablonServisi
             ])->all();
     }
 
+    /** Yalnız salonun kendi şablonları, eklenme sırasıyla (kampanya ve etkinlik seçicisi). Kişisel veri içermez. */
+    public function salonunKendi(int $salonId): array
+    {
+        return DB::table('sms_taslaklari')->where('salon_id', $salonId)->orderBy('id')
+            ->get(['id', 'baslik', 'taslak_icerik'])
+            ->map(fn ($t) => ['id' => (int) $t->id, 'baslik' => (string) $t->baslik, 'taslak_icerik' => (string) $t->taslak_icerik])
+            ->all();
+    }
+
     /** @return array<int,array> güncel liste (istemci yeniden istemez). */
     public function ekle(int $yetkiliId, int $salonId, string $baslik, string $icerik): array
     {

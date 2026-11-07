@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\YetkisizErisimException;
 use App\Services\Randevu\RandevuFormServisi;
+use App\Services\Randevu\RandevuMobilFormServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
@@ -15,19 +16,27 @@ use Illuminate\Http\Request;
  *   GET /api/v2/randevu/musteri-ara?salon_id=&q=            (portfoy aramasi, maskeli telefon)
  *   GET /api/v2/randevu/musteri-paketleri?salon_id=&user_id= (kalan seansli paket/hizmet satislari)
  * Yetki: randevu.olustur VEYA randevu.duzenle_iptal. Telefon: musteri.telefon_gor.
+ * form-verisi?mobil=1: uygulama formlarinin alanlari (RandevuMobilFormServisi). Eski mobilde yetki anahtari
+ * aranmadigi icin yalniz kimlik + salon kapsami; telefon yine musteri.telefon_gor.
  */
 class RandevuFormController extends V2Controller
 {
     public function __construct(
         private RandevuFormServisi $servis,
+        private RandevuMobilFormServisi $mobilForm,
         private GuvenlikKapisi $kapi,
         private YetkiServisi $yetki,
     ) {}
 
     public function formVerisi(Request $request)
     {
-        [$uid, $salonId] = $this->kapsam($request);
         $randevuId = $request->filled('randevu_id') ? (int) $request->input('randevu_id') : null;
+        if ($request->boolean('mobil')) {
+            [$uid, $salonId] = $this->salonDenetle($request, []);
+
+            return ApiCevap::basarili($this->mobilForm->veri($salonId, $randevuId, (string) $request->input('musteri_ara', ''), $this->telGor($uid, $salonId)));
+        }
+        [$uid, $salonId] = $this->kapsam($request);
 
         return ApiCevap::basarili($this->servis->formVerisi($salonId, $randevuId, $this->telGor($uid, $salonId)));
     }

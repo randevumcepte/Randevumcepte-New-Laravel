@@ -44,11 +44,11 @@ class DersSeansServisi
     ) {}
 
     /** Yeni duruma gore dus ya da iade et. Donus: yukaridaki sabitler ya da null (etki yok). */
-    public function durumaUygula(DersOturumu $o, DersKatilimci $k, KatilimciDurumu $yeni, ?int $yetkiliId): ?string
+    public function durumaUygula(DersOturumu $o, DersKatilimci $k, KatilimciDurumu $yeni, ?int $yetkiliId, bool $telafiKoru = true): ?string
     {
         $geldi = SeansEtkisi::geldiDegeri($yeni, Salonlar::studyoModu((int) $o->salon_id));
         if ($geldi === null) {
-            return $k->hak_dusuldu ? $this->hakGeriVer($k) : null;
+            return $k->hak_dusuldu ? $this->hakGeriVer($k, $telafiKoru) : null;
         }
 
         return $this->dus($o, $k, $geldi, $yetkiliId);
@@ -72,11 +72,14 @@ class DersSeansServisi
         return true;
     }
 
-    /** Dusumu geri al: normal seans silinir (hak geri doner), telafi korunur. */
-    public function hakGeriVer(DersKatilimci $k): string
+    /**
+     * Dusumu geri al: normal seans silinir (hak geri doner), telafi korunur.
+     * $telafiKoru=false: mobilin elle durum degisikligindeki bugunku davranis, telafi de silinir.
+     */
+    public function hakGeriVer(DersKatilimci $k, bool $telafiKoru = true): string
     {
         $aps = $k->aps_id ? AdisyonPaketSeanslar::find($k->aps_id) : null;
-        $telafi = $aps && (int) $aps->geldi === SeansDurumu::TELAFI->geldi();
+        $telafi = $telafiKoru && $aps && (int) $aps->geldi === SeansDurumu::TELAFI->geldi();
         if ($telafi) {
             $aps->update(['seans_tarih' => self::BOSTA_TELAFI_TARIHI]);
         } else {

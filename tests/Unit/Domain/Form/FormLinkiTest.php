@@ -27,6 +27,14 @@ class FormLinkiTest extends TestCase
         $this->assertStringContainsString('/musteriformdoldurma6/7/42', FormLinki::musteriMesaji(self::H, $this->a(['form_id' => 13]), false));
     }
 
+    public function test_genel_link_istenirse_ozel_sayfa_kullanilmaz(): void
+    {
+        $this->assertStringContainsString('/musteriformdoldurma/7/42 Onay Kodu:1234', FormLinki::musteriMesaji(self::H, $this->a(['form_id' => 9]), false, true));
+        $this->assertStringContainsString('/musteriformdoldurma/7/42 Onay Kodu:1234', FormLinki::musteriMesaji(self::H, $this->a(['form_id' => 13]), false, true));
+        $this->assertStringContainsString('/onam-form/7/42', FormLinki::musteriMesaji(self::H, $this->a(), true, true));
+        $this->assertStringContainsString('/sozlesme/7/42', FormLinki::musteriMesaji(self::H, $this->a(['form_id' => 0, 'is_sozlesme' => 1]), false, true));
+    }
+
     public function test_dinamik_ve_sozlesme_linki(): void
     {
         $this->assertStringContainsString('/onam-form/7/42 | Onay Kodu: 1234', FormLinki::musteriMesaji(self::H, $this->a(), true));

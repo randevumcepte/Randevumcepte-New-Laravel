@@ -11,6 +11,16 @@ return [
     'zaman_asimi_sn' => (int) env('WHATSAPP_REQUEST_TIMEOUT', 10),
 
     /*
+     | Musteri kartinda gonderim oncesi engel denetimi; env adlari ve varsayilanlar eski monolitle ayni.
+     */
+    'default_daily_limit' => (int) env('WHATSAPP_DEFAULT_DAILY_LIMIT', 200),
+    'business_hours' => [
+        'enforce' => (bool) env('WHATSAPP_BUSINESS_HOURS_ENFORCE', false),
+        'start'   => (int) env('WHATSAPP_BUSINESS_START', 9),
+        'end'     => (int) env('WHATSAPP_BUSINESS_END', 21),
+    ],
+
+    /*
      | WhatsApp Yönetimi gerçek YAZMA (bağla/çıkış, kanal, işletme linkleri, kontör talebi) ETKİN mi?
      | Varsayılan AÇIK (3 Kas 2026 kararı: tüm v2 yazmaları açık; env ile kapatılabilir). Kapalıyken
      | yazma uçları 409 döner. Okuma her zaman açık.

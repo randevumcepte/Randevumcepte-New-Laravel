@@ -24,6 +24,9 @@ class RotaKorumaTest extends TestCase
         'api/v2/oturum/sifre-sifirla',
         'api/v2/deneme/*',
         'api/v2/sistem/oturum/giris',
+        'api/v2/ses/*',
+        // Harici tarayicida acilir, token tasiyamaz: imzali ve kisa omurlu link (asagidaki test imzayi dogrular).
+        'api/v2/form/sablon/{id}/bos-pdf',
     ];
 
     public function test_kimliksiz_uc_yalniz_izinli_listede_olur(): void
@@ -41,5 +44,14 @@ class RotaKorumaTest extends TestCase
         }
 
         $this->assertSame([], $korumasiz);
+    }
+
+    public function test_bos_form_pdf_rotasi_imza_ister(): void
+    {
+        $rota = Route::getRoutes()->getByName('v2.form.bos-pdf');
+
+        $this->assertNotNull($rota);
+        $this->assertSame('api/v2/form/sablon/{id}/bos-pdf', $rota->uri());
+        $this->assertContains('signed:relative', $rota->gatherMiddleware());
     }
 }

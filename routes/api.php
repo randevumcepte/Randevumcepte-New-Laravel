@@ -48,6 +48,9 @@ Route::prefix('v2')->group(function () {
     /*
      | PUBLIC — kisisel veri ICERMEZ (yalnizca servis + DB sagligi).
      */
+    // Imzali bos form PDF linki (kisisel veri yok).
+    require __DIR__.'/v2/form-acik.php';
+
     Route::get('/health', function () {
         $veritabani = 'down';
 
@@ -71,6 +74,9 @@ Route::prefix('v2')->group(function () {
 
     // ISLETME VITRINI + MUSTERI OTURUMU (kimliksiz, kisisel veri dondurmez) — routes/v2/vitrin.php
     require __DIR__.'/v2/vitrin.php';
+
+    // SES DOSYASI (token yerine sureli imza; ses calar baslik gonderemez) — routes/v2/ses-dosyasi.php
+    require __DIR__.'/v2/ses-dosyasi.php';
 
     // GIRIS + SIFRE SIFIRLAMA + UCRETSIZ DENEME (web + Flutter tek uc) — routes/v2/oturum.php
     require __DIR__.'/v2/oturum.php';
@@ -258,6 +264,9 @@ Route::prefix('v2')->group(function () {
         // SALON HATIRLATMA KARTLARI (genel kartlar rol 1/2/3, arama randevusu atanan personele) — routes/v2/hatirlatma.php
         require __DIR__.'/v2/hatirlatma.php';
 
+        // PATRON ASISTANI + METIN SESLENDIRME — routes/v2/yardimci.php
+        require __DIR__.'/v2/yardimci.php';
+
         // CARKIFELEK + SADAKAT (cark ayari, kupon/kazananlar, hatirlatma, puan odulleri, kazanim kurali) — routes/v2/cark.php
         require __DIR__.'/v2/cark.php';
 
@@ -286,6 +295,7 @@ Route::prefix('v2')->group(function () {
         Route::patch('/form/sablon/{id}', [FormSablonController::class, 'kaydet'])->whereNumber('id');
         Route::delete('/form/sablon/{id}', [FormSablonController::class, 'sil'])->whereNumber('id');
         Route::patch('/form/sablon/{id}/sira', [FormSablonController::class, 'sirala'])->whereNumber('id');
+        require __DIR__.'/v2/form.php';
 
         /*
          | E-ASISTAN ("Asistanım") — gorev listesi + gorev iptal + ayarlar. Kimlik +
@@ -314,7 +324,9 @@ Route::prefix('v2')->group(function () {
      | Kimlik token'dan; govdedeki user_id kullanilmaz. Isletme token'i bu gruba giremez.
      */
     Route::middleware('auth:api')->group(function () {
+        require __DIR__.'/v2/form-musteri.php';
         require __DIR__.'/v2/musteri-uygulama.php';
+        require __DIR__.'/v2/kampanya-musteri.php';
     });
 
 });

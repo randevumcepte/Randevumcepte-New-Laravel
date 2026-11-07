@@ -58,12 +58,12 @@ class AyarController extends AyarTabanController
         return ApiCevap::basarili($this->saatler->getir($this->okumaSalonu($request, 'calisma_saatleri')));
     }
 
-    /** PUT /api/v2/ayar/calisma-saatleri  body: {salon_id, gunler[7]} */
+    /** PUT /api/v2/ayar/calisma-saatleri  body: {salon_id, gunler[7], yalniz?, gece_devri?} (son ikisi mobil) */
     public function calismaSaatleriKaydet(CalismaSaatiIstegi $request)
     {
         [$yapanId, $salonId] = $this->yazmaSalonu($request, 'calisma_saatleri');
 
-        return ApiCevap::basarili($this->saatler->kaydet($salonId, $yapanId, $request->validated('gunler')), 'Çalışma saatleri başarıyla kaydedildi');
+        return ApiCevap::basarili($this->saatler->kaydet($salonId, $yapanId, $request->validated('gunler'), $request->validated('yalniz'), $request->boolean('gece_devri')), 'Çalışma saatleri başarıyla kaydedildi');
     }
 
     /** GET /api/v2/ayar/musteri-indirimleri?salon_id= */
@@ -90,11 +90,11 @@ class AyarController extends AyarTabanController
         ]);
     }
 
-    /** PUT /api/v2/ayar/tema  body: {salon_id, preset, customSeedArgb?, brightnessMode} — rol 1-3 */
+    /** PUT /api/v2/ayar/tema  body: {salon_id, preset, customSeedArgb?, brightnessMode, personel_rolu?} — rol 1-3 */
     public function temaKaydet(TemaIstegi $request)
     {
         [$yapanId, $salonId] = $this->kapsamSalonu($request);
-        $this->erisim->temaYazmaDenetle($yapanId, $salonId);
+        $this->erisim->temaYazmaDenetle($yapanId, $salonId, $request->boolean('personel_rolu'));
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->tema->kaydet($salonId, $yapanId, $request->veri()), 'Tema kaydedildi');
