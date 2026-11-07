@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Services\Randevu\RandevuOkumaServisi;
+use App\Services\Randevu\TakvimAyrintiServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
@@ -19,13 +20,14 @@ class RandevuController extends V2Controller
 {
     public function __construct(
         private RandevuOkumaServisi $servis,
+        private TakvimAyrintiServisi $ayrinti,
         private GuvenlikKapisi $kapi,
         private YetkiServisi $yetki,
     ) {}
 
     /**
      * GET /api/v2/randevu/takvim  (auth:isletmeyonetim-api)
-     * Sorgu: salon_id (zorunlu), tarih1, tarih2, personel_id, takvim_turu.
+     * Sorgu: salon_id (zorunlu), tarih1, tarih2, personel_id, takvim_turu, ayrinti (1: baslik, detay, renk, liste).
      * Eski /randevular/{salon}/0 ucunun yapisal karsiligi.
      */
     public function takvim(Request $request)
@@ -54,6 +56,10 @@ class RandevuController extends V2Controller
             $request->input('takvim_turu'),
             (int) $user->id,
         );
+
+        if ($request->boolean('ayrinti')) {
+            $veri = $this->ayrinti->ekle($veri, $salonId, $request->input('tarih1'), $request->input('tarih2'), $personelId, (int) $user->id);
+        }
 
         return ApiCevap::basarili($veri);
     }

@@ -157,11 +157,13 @@ class RandevuTakvimYazServisi
 
         [$basTarih, $yeniSaat] = $this->tarihSaat((string) ($g['baslangic'] ?? ''));
         [$bitTarih, $yeniBitis] = $this->tarihSaat((string) ($g['bitis'] ?? ''));
-        if ($basTarih !== $rh->randevu_tarih || $bitTarih !== $rh->randevu_tarih) {
+        // Gun sonuna tasinan randevunun bitisi ertesi gun 00:00 olarak gelir; bu gun degisikligi degildir.
+        $gunSonu = $yeniBitis === '00:00:00' && $bitTarih === date('Y-m-d', strtotime($rh->randevu_tarih.' +1 day'));
+        if ($basTarih !== $rh->randevu_tarih || ($bitTarih !== $rh->randevu_tarih && ! $gunSonu)) {
             throw new GecersizIslemException('Sürükle-bırak ile gün değiştirilemez; günü değiştirmek için randevuyu düzenleyin.');
         }
         try {
-            $sure = SaatKapama::sureDk($yeniSaat, $yeniBitis);
+            $sure = $gunSonu ? intdiv(strtotime('1970-01-02 00:00:00') - strtotime('1970-01-01 '.$yeniSaat), 60) : SaatKapama::sureDk($yeniSaat, $yeniBitis);
         } catch (InvalidArgumentException $e) {
             throw new GecersizIslemException($e->getMessage());
         }

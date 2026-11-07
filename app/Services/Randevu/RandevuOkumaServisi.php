@@ -67,6 +67,32 @@ class RandevuOkumaServisi
         $tarih1 = $tarih1 ?: date('Y-m-d');
         $tarih2 = $tarih2 ?: date('Y-m-d');
 
+        ['personelId' => $personelId, 'personelRolu' => $personelRolu, 'takvimTuru' => $takvimTuru] = $this->kapsam($salonId, $personelId, $takvimTuru, $callerYetkiliId);
+
+        $satirlar = $this->hamSatirlar($salonId, $tarih1, $tarih2, $personelId, $takvimTuru, $personelRolu);
+        $merged   = self::birlestir($satirlar);
+        $grupDersi = Salonlar::grupDersiAktif($salonId);
+
+        return [
+            'randevular' => array_values(array_map(fn ($r) => $this->disaSatir($r), $merged)),
+            'resources'  => $this->kaynaklar($salonId, $personelId, $takvimTuru, $personelRolu, $satirlar),
+            'takvim_turu'=> $takvimTuru,
+            // Grup dersi bloklari ayri anahtarda (randevu sozlesmesi degismez). Bloklar personel
+            // sutununa oturdugu icin yalniz personel takviminde; rol-5 kisiti $personelId'den gelir.
+            'grup_dersi_aktif' => $grupDersi,
+            'dersler'    => $grupDersi && $takvimTuru === 1 ? $this->dersOturum->takvimOlaylari($salonId, $tarih1, $tarih2, $personelId) : [],
+            'baslangic'  => $tarih1,
+            'bitis'      => $tarih2,
+        ];
+    }
+
+    /**
+     * Takvimin kapsami: gecerli takvim turu, kisitlanacak personel ve rol.
+     *
+     * @return array{personelId:?int,personelRolu:int,takvimTuru:int}
+     */
+    public function kapsam(int $salonId, ?int $personelId, $takvimTuru, ?int $callerYetkiliId): array
+    {
         // Ekrandan secilen tur (0 kategori / 1 personel / 2 cihaz / 3 oda); gecersiz
         // ya da bossa salonun varsayilan takvim turu.
         $takvimTuru = in_array((string) $takvimTuru, ['0', '1', '2', '3'], true)
@@ -85,22 +111,10 @@ class RandevuOkumaServisi
             }
         }
 
-        $personelRolu = $this->personelRolunuCoz($salonId, $personelId, $callerYetkiliId);
-
-        $satirlar = $this->hamSatirlar($salonId, $tarih1, $tarih2, $personelId, $takvimTuru, $personelRolu);
-        $merged   = self::birlestir($satirlar);
-        $grupDersi = Salonlar::grupDersiAktif($salonId);
-
         return [
-            'randevular' => array_values(array_map(fn ($r) => $this->disaSatir($r), $merged)),
-            'resources'  => $this->kaynaklar($salonId, $personelId, $takvimTuru, $personelRolu, $satirlar),
-            'takvim_turu'=> $takvimTuru,
-            // Grup dersi bloklari ayri anahtarda (randevu sozlesmesi degismez). Bloklar personel
-            // sutununa oturdugu icin yalniz personel takviminde; rol-5 kisiti $personelId'den gelir.
-            'grup_dersi_aktif' => $grupDersi,
-            'dersler'    => $grupDersi && $takvimTuru === 1 ? $this->dersOturum->takvimOlaylari($salonId, $tarih1, $tarih2, $personelId) : [],
-            'baslangic'  => $tarih1,
-            'bitis'      => $tarih2,
+            'personelId'   => $personelId,
+            'personelRolu' => $this->personelRolunuCoz($salonId, $personelId, $callerYetkiliId),
+            'takvimTuru'   => $takvimTuru,
         ];
     }
 
@@ -176,6 +190,7 @@ class RandevuOkumaServisi
         $tahsilatByAh = DB::table('tahsilat_hizmetler')
             ->whereIn('adisyon_hizmet_id', $ahIds)
             ->select('adisyon_hizmet_id', DB::raw('SUM(tutar) as toplam'))
+            ->groupBy('adisyon_hizmet_id')
             ->pluck('toplam', 'adisyon_hizmet_id');
 
         // APS: paket-kaynagi (merge) + telafi rozeti (6. segment).
