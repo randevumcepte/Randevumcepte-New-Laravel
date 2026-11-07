@@ -187,6 +187,9 @@ Route::prefix('v2')->group(function () {
         Route::patch('/personel/{id}/yetki', [PersonelYetkiController::class, 'kaydet'])->whereNumber('id');
 
         // STOK YONETIMI (urun, tanim, hareket, alis, transfer, sayim, hizli satis) — routes/v2/stok.php
+        // ORTAK SECIM LISTELERI (hizmet, cihaz, oda, sehir, salon ayari) — routes/v2/secici.php
+        require __DIR__.'/v2/secici.php';
+
         require __DIR__.'/v2/stok.php';
 
         // OZET (dashboard: kartlar, liste sekmeleri, hizli eylemler) — routes/v2/ozet.php
