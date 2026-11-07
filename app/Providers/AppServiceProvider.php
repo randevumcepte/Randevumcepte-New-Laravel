@@ -46,8 +46,11 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function legacyPassportGuardKaydet(): void
     {
+        // Auth::extend kapanisi AuthManager'a baglar: icinde $this bu sinif degildir.
+        $tokenGuard = $this->tokenGuard(...);
+
         // Yalniz sayisal subject: sistem yoneticisi token'i ("sy:<id>") isletme/musteri ucuna giremez.
-        Auth::extend('legacy-passport', fn ($app, $name, array $config) => $this->tokenGuard(
+        Auth::extend('legacy-passport', fn ($app, $name, array $config) => $tokenGuard(
             $app,
             $config,
             fn (string $sub) => ctype_digit($sub) ? (int) $sub : null,
@@ -55,7 +58,7 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         // Yalniz "sy:<id>" subject + aktif hesap: pasif edilen yonetici token'i suresi dolmadan da duser.
-        Auth::extend('sistem-passport', fn ($app, $name, array $config) => $this->tokenGuard(
+        Auth::extend('sistem-passport', fn ($app, $name, array $config) => $tokenGuard(
             $app,
             $config,
             fn (string $sub) => ErisimTokenServisi::sistemSubjecttenId($sub),
