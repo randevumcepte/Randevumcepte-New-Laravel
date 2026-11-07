@@ -9,7 +9,7 @@ return [
     'ana_uygulama_bundle' => 'com.randevumcepte.randevumcepte',
 
     // Apple/Google inceleme hesaplari: sifreleri sifirlanamaz, SMS gitmez.
-    'korunan_hesaplar' => ['isletme' => [3], 'musteri' => [46120]],
+    'korunan_hesaplar' => ['isletme' => [3], 'musteri' => [123244]],
 
     // Tipsiz token gecisi: yeni uygulama yeni girise gecene kadar acik; sonra OTURUM_TIPSIZ_TOKEN_KABUL=false.
     'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', true),
