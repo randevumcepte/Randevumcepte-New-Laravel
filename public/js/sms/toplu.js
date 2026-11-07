@@ -140,7 +140,7 @@ export async function ciz(kap, ctx) {
     secim.idler.clear();
     kap.querySelectorAll('#tpListe input').forEach((c) => { c.checked = false; });
     seciliCiz();
-    sonucuIzle(r.govde.veri.gonderim_id);
+    if (r.govde.veri.gonderim_id) sonucuIzle(r.govde.veri.gonderim_id);
   }
 
   /** Kuyruk sonucunu kısa süre izler; sonuç gelmezse kullanıcı Raporlar'dan takip eder. */

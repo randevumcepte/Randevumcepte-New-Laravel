@@ -56,15 +56,12 @@ class WhatsappOturumServisi
             return null;
         }
         $oturum = $o['oturum'];
-        $saat = (int) now()->format('H');
-        $mesaiIci = ! config('whatsapp.business_hours.enforce', false)
-            || ($saat >= (int) config('whatsapp.business_hours.start', 9) && $saat < (int) config('whatsapp.business_hours.end', 21));
 
         return GonderimEngeli::coz(
             $o['saglayici'],
             (int) ($oturum->whatsapp_gunluk_limit ?: config('whatsapp.default_daily_limit', 200)),
             $this->bugunGonderilen((int) $oturum->id),
-            $mesaiIci,
+            $this->mesaiIcindeMi(),
             $o['durum']->kontorluDonem,
             $o['durum']->kontor,
         );
@@ -78,7 +75,17 @@ class WhatsappOturumServisi
         return $o !== null && $o['durum']->bagli && $this->gonderimEngeli($salonId) === null ? 'whatsapp' : 'sms';
     }
 
-    private function bugunGonderilen(int $oturumSalonId): int
+    /** Eski withinBusinessHours: enforce kapalıysa her saat. */
+    public function mesaiIcindeMi(): bool
+    {
+        $saat = (int) now()->format('H');
+
+        return ! config('whatsapp.business_hours.enforce', false)
+            || ($saat >= (int) config('whatsapp.business_hours.start', 9) && $saat < (int) config('whatsapp.business_hours.end', 21));
+    }
+
+    /** Oturum sahibi salonun bugünkü başarılı gönderimi; oturumu paylaşan alt salonlar dahil. */
+    public function bugunGonderilen(int $oturumSalonId): int
     {
         $salonlar = DB::table('salonlar')->where('whatsapp_paylasilan_salon_id', $oturumSalonId)->pluck('id')->push($oturumSalonId)->all();
 

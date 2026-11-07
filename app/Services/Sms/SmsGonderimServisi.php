@@ -10,15 +10,16 @@ use App\Exceptions\GecersizIslemException;
 use App\Services\Sms\Bakiye\SmsBakiyeServisi;
 use App\Services\Sms\Gonderim\SmsKuyrukServisi;
 use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\Cache;
 
 /**
  * TOPLU / FİLTRELİ SMS — alıcı çözümü, maliyet önizlemesi, kuyruğa yazma.
  *
  * Gönderim v2'nin kendi kuyruğuyla yapılır (SmsKuyrukServisi + `sms:kuyruk-isle`); canlı monolite kod
- * gerektirmez. Şimdilik yalnız VoiceTelekom: Efetech yolu eski kodda WhatsApp önceliğiyle çalışır, onsuz
- * taşınırsa davranış değişir → Efetech salonları eski panelden gönderir. Cevap "kuyruğa alındı"dır;
- * sonuç GET /sms/gonderim/{id} ile izlenir.
+ * gerektirmez. VoiceTelekom bu kuyruktadır, cevap "kuyruğa alındı"dır ve sonuç GET /sms/gonderim/{id} ile izlenir.
+ * Efetech salonları eski job yoluna gider (`sms_toplu` outbox satırı, SmsTopluGonderIsi): izlenecek
+ * gönderim kaydı yoktur, `gonderim_id` null döner.
  */
 class SmsGonderimServisi
 {
@@ -42,9 +43,6 @@ class SmsGonderimServisi
         if (! $saglayici->hesapTanimli($salon)) {
             throw new GecersizIslemException('İşletmenin SMS hesabı tanımlı değil.');
         }
-        if ($saglayici !== SmsSaglayici::VoiceTelekom) {
-            throw new GecersizIslemException('Bu işletmenin SMS sağlayıcısı için gönderim henüz v2\'de açık değil. Lütfen eski panelden gönderin.');
-        }
         $cozum = $this->alici->cozumle($salonId, $kisit, $idler);
         if (! $cozum['telefonlar']) {
             throw new GecersizIslemException('Seçili müşteriler kara listede ya da telefonsuz olduğu için mesaj gönderilemedi.');
@@ -56,12 +54,18 @@ class SmsGonderimServisi
             throw new CakismaException('Bu mesaj az önce aynı alıcılara gönderildi. Birkaç dakika sonra tekrar deneyebilirsiniz.');
         }
 
-        $gonderimId = $this->kuyruk->ekle($salonId, $yetkiliId, [
+        $icerik = [
             'telefonlar' => $cozum['telefonlar'],
             'mesaj'      => $mesaj,
             'tur'        => $tur->value,
             'baslik'     => $tur->saglayiciBasligi(),
-        ]);
+        ];
+        $gonderimId = null;
+        if ($saglayici === SmsSaglayici::VoiceTelekom) {
+            $gonderimId = $this->kuyruk->ekle($salonId, $yetkiliId, $icerik);
+        } else {
+            BildirimKuyrugu::yaz($salonId, 'sms_toplu', null, $yetkiliId, $icerik);
+        }
         $adet = count($cozum['telefonlar']);
         AktiviteLog::yaz($salonId, $yetkiliId, 'toplu_sms_gonder', 'toplu_sms', null, $adet.' alıcı', 'Toplu SMS gönderimi kuyruğa alındı', [
             'alici_sayisi' => $adet, 'tur' => $tur->kod(), 'mesaj_ozet' => mb_substr($mesaj, 0, 140),

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Domain\Bildirim\BildirimKuyrukDurumu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -41,7 +42,7 @@ class BildirimKuyrugu
             'randevu_id' => $randevuId,
             'yetkili_id' => $yetkiliId,
             'payload'    => $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null,
-            'durum'      => 0,
+            'durum'      => BildirimKuyrukDurumu::yeniSatir(),
             'deneme'     => 0,
             'created_at' => now(),
             'updated_at' => now(),

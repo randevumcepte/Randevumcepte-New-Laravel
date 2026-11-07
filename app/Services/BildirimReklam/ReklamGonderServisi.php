@@ -2,6 +2,7 @@
 
 namespace App\Services\BildirimReklam;
 
+use App\Domain\Bildirim\BildirimKuyrukDurumu;
 use App\Domain\BildirimReklam\ReklamDurumu;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
@@ -59,7 +60,7 @@ class ReklamGonderServisi
 
     private function bekleyenVar(int $reklamId): bool
     {
-        return DB::table('v2_bildirim_kuyrugu')->where('tur', self::OUTBOX_TURU)->whereIn('durum', [0, 3])
+        return DB::table('v2_bildirim_kuyrugu')->where('tur', self::OUTBOX_TURU)->whereIn('durum', [BildirimKuyrukDurumu::ESKI_ISLEYICI, 3, BildirimKuyrukDurumu::BEKLIYOR, BildirimKuyrukDurumu::ISLENIYOR])
             ->where('payload', 'like', '{"reklam_id":'.$reklamId.',%')->exists();
     }
 

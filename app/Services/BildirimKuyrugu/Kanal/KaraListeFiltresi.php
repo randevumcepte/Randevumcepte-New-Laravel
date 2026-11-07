@@ -1,0 +1,185 @@
+<?php
+
+namespace App\Services\BildirimKuyrugu\Kanal;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Merkezi kara liste suzgeci; eski KaraListeServisi ile birebir. musteri_portfoy.kara_liste=1 olan musteriye SMS, WhatsApp
+ * ve push gitmez; musterinin kendi aksiyonu olan guvenlik mesajlari muaftir. Hata olursa engellemez (fail-open).
+ *
+ * Eskiden gelen ve KORUNAN hata: telefondan aramada ltrim($norm, '9') '905...' icin '05...' uretir; kanonik '5XXXXXXXXX'
+ * kayitlari eslesmez. user_id verilmeyen mesajlarda kanonik numarali kara liste musterisi suzulmez.
+ */
+class KaraListeFiltresi
+{
+    public const MUAF_TIPLER = ['sifre_sifirlama', 'geldi_dogrulama_kodu', 'cark_kodu', 'kara_liste_bildirim'];
+
+    /** Eskideki gibi surec boyunca onbellekli (queue:work'te yeniden baslatmaya kadar). */
+    private static array $salonAktif = [];
+
+    public static function tipMuaf(?string $gonderimTipi): bool
+    {
+        return $gonderimTipi && in_array($gonderimTipi, self::MUAF_TIPLER, true);
+    }
+
+    public static function salonAktifMi(mixed $salonId): bool
+    {
+        $salonId = (int) $salonId;
+        if ($salonId <= 0) {
+            return true;
+        }
+        if (array_key_exists($salonId, self::$salonAktif)) {
+            return self::$salonAktif[$salonId];
+        }
+        try {
+            if (! Schema::hasColumn('salonlar', 'kara_liste_aktif')) {
+                return self::$salonAktif[$salonId] = true;
+            }
+            $v = DB::table('salonlar')->where('id', $salonId)->value('kara_liste_aktif');
+
+            return self::$salonAktif[$salonId] = $v === null ? true : (int) $v === 1;
+        } catch (\Throwable) {
+            return self::$salonAktif[$salonId] = true;
+        }
+    }
+
+    /** @return bool true = engelli */
+    public static function engelliMi(mixed $salonId, ?string $telefon = null, ?int $userId = null, ?string $gonderimTipi = null): bool
+    {
+        if (self::tipMuaf($gonderimTipi)) {
+            return false;
+        }
+        $salonId = (int) $salonId;
+        if ($salonId <= 0 || ! self::salonAktifMi($salonId)) {
+            return false;
+        }
+
+        try {
+            if ($userId) {
+                return self::portfoyKara($salonId, [$userId]);
+            }
+            $norm = KanalTelefonu::normalize($telefon);
+            if ($norm === null) {
+                return false;
+            }
+            $userIds = DB::table('users')->where(fn ($q) => $q->where('cep_telefon', $norm)->orWhere('cep_telefon', ltrim($norm, '9')))
+                ->pluck('id')->all();
+
+            return $userIds ? self::portfoyKara($salonId, $userIds) : false;
+        } catch (\Throwable $e) {
+            Log::warning('[KARA-LISTE] engelliMi hata: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * [['to'=>..., 'message'=>..., 'user_id'?=>...], ...] dizisinden kara listedekileri cikarir.
+     *
+     * @return array suzulmus dizi; anahtarlar yeniden numaralanir
+     */
+    public static function topluSuz(mixed $salonId, array $mesajlar, ?string $gonderimTipi = null): array
+    {
+        if (self::tipMuaf($gonderimTipi)) {
+            return $mesajlar;
+        }
+        $salonId = (int) $salonId;
+        if ($salonId <= 0 || ! $mesajlar || ! self::salonAktifMi($salonId)) {
+            return $mesajlar;
+        }
+
+        try {
+            $telefonlar = [];
+            $hazirUserIds = [];
+            foreach ($mesajlar as $m) {
+                if (! empty($m['user_id'])) {
+                    $hazirUserIds[(int) $m['user_id']] = true;
+
+                    continue;
+                }
+                $t = KanalTelefonu::normalize($m['to'] ?? null);
+                if ($t !== null) {
+                    $telefonlar[$t] = true;
+                }
+            }
+
+            $telUserIdleri = self::telefonKullanicilari(array_map('strval', array_keys($telefonlar)));
+            $tumUserIds = array_keys($hazirUserIds);
+            foreach ($telUserIdleri as $ids) {
+                $tumUserIds = array_merge($tumUserIds, $ids);
+            }
+            $tumUserIds = array_values(array_unique(array_map('intval', $tumUserIds)));
+            if (! $tumUserIds) {
+                return $mesajlar;
+            }
+
+            $kara = DB::table('musteri_portfoy')->whereIn('user_id', $tumUserIds)->where('salon_id', $salonId)->where('kara_liste', 1)->pluck('user_id')->all();
+            if (! $kara) {
+                return $mesajlar;
+            }
+            $karaKume = array_flip(array_map('intval', $kara));
+
+            $kalan = [];
+            foreach ($mesajlar as $m) {
+                if (! self::mesajEngelli($m, $karaKume, $telUserIdleri)) {
+                    $kalan[] = $m;
+                }
+            }
+            if (count($kalan) !== count($mesajlar)) {
+                Log::info('[KARA-LISTE] toplu suzuldu', [
+                    'salon_id' => $salonId, 'tip' => $gonderimTipi,
+                    'gelen' => count($mesajlar), 'dusen' => count($mesajlar) - count($kalan), 'kalan' => count($kalan),
+                ]);
+            }
+
+            return $kalan;
+        } catch (\Throwable $e) {
+            Log::warning('[KARA-LISTE] topluSuz hata: '.$e->getMessage());
+
+            return $mesajlar;
+        }
+    }
+
+    /** @return array<string, list<int>> normalize telefon → kullanici id'leri */
+    private static function telefonKullanicilari(array $telefonlar): array
+    {
+        if (! $telefonlar) {
+            return [];
+        }
+        $onekisiz = array_values(array_filter(array_map(fn ($t) => ltrim($t, '9'), $telefonlar)));
+        $satirlar = DB::table('users')->whereIn('cep_telefon', array_merge($telefonlar, $onekisiz))->get(['id', 'cep_telefon']);
+
+        $harita = [];
+        foreach ($satirlar as $u) {
+            $tn = KanalTelefonu::normalize($u->cep_telefon);
+            if ($tn !== null) {
+                $harita[$tn][] = (int) $u->id;
+            }
+        }
+
+        return $harita;
+    }
+
+    private static function mesajEngelli(array $m, array $karaKume, array $telUserIdleri): bool
+    {
+        if (! empty($m['user_id']) && isset($karaKume[(int) $m['user_id']])) {
+            return true;
+        }
+        $tn = KanalTelefonu::normalize($m['to'] ?? null);
+        foreach ($tn !== null ? ($telUserIdleri[$tn] ?? []) : [] as $uid) {
+            if (isset($karaKume[$uid])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function portfoyKara(int $salonId, array $userIds): bool
+    {
+        return DB::table('musteri_portfoy')->whereIn('user_id', $userIds)->where('salon_id', $salonId)->where('kara_liste', 1)->exists();
+    }
+}

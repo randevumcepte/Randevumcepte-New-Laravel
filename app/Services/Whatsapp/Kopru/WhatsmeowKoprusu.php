@@ -42,6 +42,12 @@ class WhatsmeowKoprusu implements WhatsappKoprusu
         return $this->istek('post', "/session/{$oturumId}/send", ['to' => $telefon, 'message' => $mesaj, 'logId' => 0, 'urgent' => false]);
     }
 
+    /** Outbox gönderimi (eski WhatsAppService::sendViaBaileys): gövde çağıranda, kod 202 kuyruğa alındı demektir. */
+    public function gonderimIstegi(int|string $oturumId, array $govde): KopruCevabi
+    {
+        return $this->istek('post', "/session/{$oturumId}/send", $govde);
+    }
+
     private function istek(string $metot, string $yol, array $govde = []): KopruCevabi
     {
         try {
