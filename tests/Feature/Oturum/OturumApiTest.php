@@ -187,6 +187,9 @@ class OturumApiTest extends TestCase
         $this->assertStringNotContainsString('GIZLI', $govde);
         $this->assertStringNotContainsString('password', $govde);
         $this->assertStringNotContainsString('dogrulama_kodu', $govde);
+        // Softphone kimligi ve personel listesi web girisine gitmez.
+        $this->assertStringNotContainsString('dahili', $govde);
+        $this->assertStringNotContainsString('personeller', $govde);
     }
 
     public function test_yanlis_sifre_401_ve_cok_denemede_429(): void
@@ -379,5 +382,32 @@ class OturumApiTest extends TestCase
 
         $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '654321'])->assertStatus(422);
         $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '123456'])->assertOk();
+    }
+
+    public function test_sifre_kodu_yeniden_isteyince_sms_ile_gider(): void
+    {
+        $this->whatsappKur(true);
+        $this->yetkili([['uyelik_turu' => 1]]);
+        $istek = ['cep_telefon' => self::TEL, 'hesap_turu' => 'isletme'];
+
+        $this->postJson('/api/v2/oturum/sifre-kodu', $istek)->assertOk();
+        $this->assertCount(1, $this->whatsapplar);
+        $this->assertSame([], $this->smsler);
+
+        RateLimiter::clear('oturum-sifre-tel:'.TelefonNumarasi::kanonik(self::TEL));
+        $this->postJson('/api/v2/oturum/sifre-kodu', $istek)->assertOk();
+        $this->assertCount(1, $this->whatsapplar);
+        $this->assertCount(1, $this->smsler);
+    }
+
+    public function test_mobil_giris_kendi_dahili_hattini_alir(): void
+    {
+        $this->yetkili([['uyelik_turu' => 1]]);
+
+        $r = $this->giris(['kimlik' => self::TEL, 'password' => 'gizli123', 'app_bundle' => self::ANA_BUNDLE])->assertOk();
+
+        $satir = $r->json('veri.user.yetkili_olunan_isletmeler.0');
+        $this->assertArrayHasKey('dahili_no_webrtc', $satir);
+        $this->assertArrayHasKey('personeller', $satir['salonlar']);
     }
 }

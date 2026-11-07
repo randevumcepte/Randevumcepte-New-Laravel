@@ -40,7 +40,7 @@ class DenemeKayitServisi
         $sure = (int) config('oturum.deneme.kod_sure_sn');
         Cache::put($this->bekleyenAnahtari($tel), ['cep_telefon' => $tel] + $form, $sure);
         $kod = OnayKodu::uret(self::KOD_AMAC, self::SALON_YOK, $this->kodSahibi($tel));
-        if (! $this->sms->gonder($tel, 'Randevumcepte üyelik doğrulama kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.', 'Uyelik Dogrulama')) {
+        if (! $this->sms->kod($tel, 'Randevumcepte üyelik doğrulama kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.', 'Uyelik Dogrulama')) {
             Cache::forget($this->bekleyenAnahtari($tel));
             throw new GecersizIslemException("Doğrulama SMS'i gönderilemedi. Lütfen numaranızı kontrol edip tekrar deneyiniz.");
         }

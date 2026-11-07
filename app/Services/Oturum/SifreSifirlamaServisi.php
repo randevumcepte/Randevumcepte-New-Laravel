@@ -40,7 +40,7 @@ class SifreSifirlamaServisi
             return;
         }
         $kod = OnayKodu::uret($this->amac($hesap), self::SALON_YOK, $id);
-        $this->sms->gonder($tel, 'Randevumcepte şifre yenileme kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.', 'Sifre Yenileme');
+        $this->sms->kod($tel, 'Randevumcepte şifre yenileme kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.', 'Sifre Yenileme');
     }
 
     public function sifirla(string $telefonHam, string $kod, string $yeniSifre, ?string $tur): void

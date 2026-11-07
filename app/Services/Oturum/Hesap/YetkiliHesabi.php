@@ -96,11 +96,13 @@ class YetkiliHesabi implements OturumHesabi
             'user' => $this->suz($yetkili, self::YETKILI_ALANLARI) + [
                 'yetkili_olunan_isletmeler' => array_map(fn ($p) => [
                     'id' => (int) $p->id, 'salon_id' => (int) $p->salon_id, 'yetkili_id' => $id, 'role_id' => $p->role_id, 'aktif' => (int) $p->aktif,
-                    // Kendi dahili hatti: mobil softphone kaydi bu alanlarla kurulur.
-                    'dahili_no' => $p->dahili_no ?? null, 'dahili_no_webrtc' => $p->dahili_no_webrtc ?? null, 'dahili_sifre_webrtc' => $p->dahili_sifre_webrtc ?? null,
-                    'salonlar' => $this->suz($salonlar[$p->salon_id], self::SALON_ALANLARI) + [
+                    'salonlar' => $this->suz($salonlar[$p->salon_id], self::SALON_ALANLARI) + ($bundle ? [
                         'personeller' => $kadro->get($p->salon_id, collect())->map(fn ($k) => $this->suz($k, self::KADRO_ALANLARI))->values()->all(),
-                    ],
+                    ] : []),
+                ] + ($bundle ? [
+                    // Kendi dahili hatti: mobil softphone kaydi bu alanlarla kurulur; web softphone kendi ucunu kullanir.
+                    'dahili_no' => $p->dahili_no ?? null, 'dahili_no_webrtc' => $p->dahili_no_webrtc ?? null, 'dahili_sifre_webrtc' => $p->dahili_sifre_webrtc ?? null,
+                ] : []),
                 ], $personeller),
             ],
             'musteri'   => '',

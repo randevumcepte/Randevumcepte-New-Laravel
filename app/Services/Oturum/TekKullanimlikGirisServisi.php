@@ -8,7 +8,6 @@ use App\Exceptions\GecersizIslemException;
 use App\Services\Oturum\Hesap\HesapListesi;
 use App\Services\Oturum\Hesap\OturumHesabi;
 use App\Support\OnayKodu;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -45,9 +44,7 @@ class TekKullanimlikGirisServisi
         }
 
         $kod = $this->kodUret($tel);
-        $anahtar = 'oturum-kod-kanal:'.$tel;
-        $this->mesaj->gonder($tel, 'Randevumcepte giriş kodunuz: '.$kod.'. Kod '.intdiv((int) $ayar['sure_sn'], 60).' dakika geçerlidir. Kimseyle paylaşmayın.', 'Giris Kodu', ! Cache::has($anahtar));
-        Cache::put($anahtar, 1, (int) $ayar['sure_sn']);
+        $this->mesaj->kod($tel, 'Randevumcepte giriş kodunuz: '.$kod.'. Kod '.intdiv((int) $ayar['sure_sn'], 60).' dakika geçerlidir. Kimseyle paylaşmayın.', 'Giris Kodu');
     }
 
     /** @param array{cep_telefon:string,kod:string,hesap_turu?:?string,app_bundle?:?string,cihaz_bilgi?:?string,bildirim_id?:?string} $g */
