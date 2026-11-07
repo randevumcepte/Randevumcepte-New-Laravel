@@ -6,7 +6,6 @@ use App\Domain\Randevu\TakvimRenkAyari;
 use App\Models\DersOturumu;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
-use App\Services\Yetki\YetkiServisi;
 use App\Support\KvkkMaske;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -18,7 +17,6 @@ use Illuminate\Support\Facades\DB;
  * web ve mobil ayni cevabi kullanir.
  *
  * Yetki: musteri notu yalniz musteri.not_yaz, telefon yalniz musteri.telefon_gor ile gider.
- * Listede yalniz ekranlarin okudugu alanlar doner; saglik, maas ve prim alanlari gonderilmez.
  */
 class TakvimAyrintiServisi
 {
@@ -28,13 +26,9 @@ class TakvimAyrintiServisi
 
     private const BEYAZ = '0xFFFFFFFF';
 
-    private const MUSTERI_ALANLARI = ['id', 'name', 'cep_telefon', 'email', 'cinsiyet', 'dogum_tarihi', 'il_id'];
-
-    private const PERSONEL_ALANLARI = ['id', 'personel_adi', 'salon_id', 'unvan', 'cinsiyet', 'renk', 'takvim_sirasi', 'takvimde_gorunsun', 'aktif'];
-
     public function __construct(
         private RandevuOkumaServisi $okuma,
-        private YetkiServisi $yetki,
+        private RandevuAyrintiSunumu $sunum,
     ) {}
 
     public function ekle(array $takvim, int $salonId, ?string $tarih1, ?string $tarih2, ?int $personelId, int $yetkiliId): array
@@ -45,10 +39,7 @@ class TakvimAyrintiServisi
         $kapsam = $this->okuma->kapsam($salonId, $personelId, $tur, $yetkiliId);
 
         $renk = TakvimRenkAyari::salondan(DB::table('salonlar')->where('id', $salonId)->first());
-        $yetki = [
-            'not' => $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'musteri.not_yaz'),
-            'tel' => $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'musteri.telefon_gor'),
-        ];
+        $yetki = $this->sunum->yetkiler($yetkiliId, $salonId);
 
         $rhler = RandevuHizmetler::with('randevu.users')->whereIn('id', array_column($takvim['randevular'], 'rh_id'))->get()->keyBy('id');
         $s = $this->sozluk($salonId, $rhler);
@@ -64,7 +55,7 @@ class TakvimAyrintiServisi
         $takvim['resources'] = $kaynaklar;
         $takvim['ayrinti'] = [
             'saat_araligi'  => $this->saatAraligi($salonId, $tarih1, $olaylar),
-            'personeller'   => DB::table('salon_personelleri')->where('salon_id', $salonId)->where('takvimde_gorunsun', true)->get(self::PERSONEL_ALANLARI),
+            'personeller'   => DB::table('salon_personelleri')->where('salon_id', $salonId)->where('takvimde_gorunsun', true)->get(RandevuAyrintiSunumu::PERSONEL_ALANLARI),
             'randevu_liste' => $this->liste($salonId, $tarih1, $tarih2, $yetki),
             'ders_bloklari' => $takvim['grup_dersi_aktif'] && $tur === 1
                 ? $this->dersBloklari($salonId, $tarih1, $tarih2, $kapsam['personelRolu'] === 5 ? $kapsam['personelId'] : null, $renk, $siraRenk, $siraYazi, $s)
@@ -350,39 +341,8 @@ class TakvimAyrintiServisi
     /** Duzenleme ve tahsilat penceresinin okudugu randevular. Kapali saat bu listede yoktur. */
     private function liste(int $salonId, string $tarih1, string $tarih2, array $yetki): array
     {
-        $randevular = Randevular::with('hizmetler')->where('salon_id', $salonId)
+        return $this->sunum->satirlar(Randevular::with('hizmetler')->where('salon_id', $salonId)
             ->where('user_id', '!=', Randevular::KAPALI_SAAT_USER_ID)
-            ->where('tarih', '>=', $tarih1)->where('tarih', '<=', $tarih2)->get();
-        $kalemler = $randevular->pluck('hizmetler')->flatten(1);
-
-        $hizmet = DB::table('hizmetler')->whereIn('id', $kalemler->pluck('hizmet_id')->filter()->unique())->get()->keyBy('id');
-        $personel = DB::table('salon_personelleri')->whereIn('id', $kalemler->pluck('personel_id')->filter()->unique())->get(self::PERSONEL_ALANLARI)->keyBy('id');
-        $cihaz = DB::table('cihazlar')->whereIn('id', $kalemler->pluck('cihaz_id')->filter()->unique())->get()->keyBy('id');
-        $oda = DB::table('odalar')->whereIn('id', $kalemler->pluck('oda_id')->filter()->unique())->get()->keyBy('id');
-        $musteri = DB::table('users')->whereIn('id', $randevular->pluck('user_id')->filter()->unique())->get(self::MUSTERI_ALANLARI)->keyBy('id');
-
-        return $randevular->map(function (Randevular $r) use ($hizmet, $personel, $cihaz, $oda, $musteri, $yetki) {
-            $satir = $r->attributesToArray();
-            if (! $yetki['not']) {
-                unset($satir['notlar'], $satir['musteri_notu']);
-            }
-            if (! $yetki['tel'] && ! empty($satir['telefon'])) {
-                $satir['telefon'] = KvkkMaske::telefon($satir['telefon']);
-            }
-
-            $m = (array) ($musteri[$r->user_id] ?? []);
-            if ($m && ! $yetki['tel']) {
-                $m['cep_telefon'] = KvkkMaske::telefon($m['cep_telefon']);
-            }
-            $satir['users'] = $m ?: ['id' => $r->user_id, 'name' => null];
-            $satir['hizmetler'] = $r->hizmetler->map(fn (RandevuHizmetler $k) => $k->attributesToArray() + [
-                'hizmetler'   => $hizmet[$k->hizmet_id] ?? null,
-                'personeller' => $personel[$k->personel_id] ?? null,
-                'cihaz'       => $cihaz[$k->cihaz_id] ?? null,
-                'oda'         => $oda[$k->oda_id] ?? null,
-            ])->all();
-
-            return $satir;
-        })->all();
+            ->where('tarih', '>=', $tarih1)->where('tarih', '<=', $tarih2)->get(), $yetki);
     }
 }

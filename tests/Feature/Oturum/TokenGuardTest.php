@@ -35,6 +35,11 @@ class TokenGuardTest extends TestCase
         $this->withToken('gecersiz')->getJson('/api/v2/sms/bakiye')->assertUnauthorized();
     }
 
+    public function test_randevu_listesi_ayrintisi_tokensiz_401_doner(): void
+    {
+        $this->getJson('/api/v2/randevu/liste?salon_id=20&ayrinti=1')->assertUnauthorized();
+    }
+
     public function test_takvim_ayrintisi_tokensiz_401_doner(): void
     {
         $this->getJson('/api/v2/randevu/takvim?salon_id=20&ayrinti=1')->assertUnauthorized();

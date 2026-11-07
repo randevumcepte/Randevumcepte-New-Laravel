@@ -2,6 +2,7 @@
 
 namespace App\Services\Randevu;
 
+use App\Models\Randevular;
 use App\Domain\Randevu\RandevuDurumu;
 use App\Domain\Randevu\RandevuZamani;
 use App\Services\Musteri\PortfoyKapsami;
@@ -69,21 +70,31 @@ class RandevuListeServisi
     }
 
     /**
-     * @param  array{musteri_id?:?int, kisit_personel_id?:?int, zaman?:?array, kaynak?:?string, durum?:?string, hizmet_id?:?int}  $f
+     * @param  array{musteri_id?:?int, kisit_personel_id?:?int, personel_id?:?int, cihaz_id?:?int, zaman?:?array, kaynak?:?string, durum?:?string, hizmet_id?:?int}  $f
      * @param  array{onayla?:bool, duzenle_iptal?:bool, telefon_gor?:bool}  $yetki  satir `aksiyonlar` + telefon
      */
     public function listele(int $salonId, array $f, ListeIstegi $l, array $yetki = []): array
     {
-        $kaynak = isset(self::KAYNAKLAR[$f['kaynak'] ?? '']) ? $f['kaynak'] : null;
+        // Tek kaynak ya da virgullu liste (herhangi biri).
+        $kaynaklar = array_values(array_intersect(explode(',', (string) ($f['kaynak'] ?? '')), array_keys(self::KAYNAKLAR)));
         $durum = RandevuDurumu::filtre($f['durum'] ?? null);
 
         $q = DB::table('randevular as r')->leftJoin('users as u', 'u.id', '=', 'r.user_id')->where('r.salon_id', $salonId)
+            ->where('r.user_id', '!=', Randevular::KAPALI_SAAT_USER_ID)
             ->when($f['musteri_id'] ?? null, fn ($q, $uid) => $q->where('r.user_id', $uid))
             ->when($f['zaman'] ?? null, fn ($q, $z) => $q->whereBetween('r.tarih', [$z['baslangic'], $z['bitis']]))
-            ->when($kaynak, fn ($q, $k) => $q->where('r.'.$k, 1))
+            ->when($kaynaklar, fn ($q, $liste) => $q->where(function ($w) use ($liste) {
+                foreach ($liste as $k) {
+                    $w->orWhere('r.'.$k, 1);
+                }
+            }))
             ->when($durum, fn ($q, $d) => $this->durumKosulu($q, $d))
             ->when($f['hizmet_id'] ?? null, fn ($q, $hid) => $q->whereExists(fn ($e) => $e->selectRaw('1')
                 ->from('randevu_hizmetler as fh')->whereColumn('fh.randevu_id', 'r.id')->where('fh.hizmet_id', $hid)))
+            ->when(($f['personel_id'] ?? null) || ($f['cihaz_id'] ?? null), fn ($q) => $q->whereExists(fn ($e) => $e->selectRaw('1')
+                ->from('randevu_hizmetler as sk')->whereColumn('sk.randevu_id', 'r.id')
+                ->when($f['personel_id'] ?? null, fn ($x, $pid) => $x->where('sk.personel_id', $pid))
+                ->when($f['cihaz_id'] ?? null, fn ($x, $cid) => $x->where('sk.cihaz_id', $cid))))
             ->when($f['kisit_personel_id'] ?? null, fn ($q, $pid) => $q->whereExists(fn ($e) => $e->selectRaw('1')
                 ->from('randevu_hizmetler as rk')->whereColumn('rk.randevu_id', 'r.id')
                 ->where('rk.personel_id', $pid)->whereRaw('COALESCE(rk.yardimci_personel,0) != 1')))

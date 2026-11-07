@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Randevu\RandevuZamani;
 use App\Exceptions\GecersizIslemException;
+use App\Services\Randevu\RandevuAyrintiSunumu;
 use App\Services\Randevu\RandevuListeServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
@@ -14,12 +15,12 @@ use Illuminate\Http\Request;
  * Randevular LISTESI (eski /isletmeyonetim/randevular-liste + randevulistefiltre) — ince
  * controller. Eski ekran gibi ozel yetki istemez (salon kapsami yeter); personel kapsami
  * ve satir yetkileri RandevuListeServisi::kapsam (musteri karti ile ayni kural).
- *   GET /api/v2/randevu/liste             ?salon_id&donem&baslangic&bitis&kaynak&durum&hizmet_id + ListeIstegi
+ *   GET /api/v2/randevu/liste             ?salon_id&donem&baslangic&bitis&kaynak&durum&hizmet_id&musteri_id&personel_id&cihaz_id&ayrinti + ListeIstegi
  *   GET /api/v2/randevu/liste/secenekler  ?salon_id  (zaman / durum / kaynak / hizmet filtreleri)
  */
 class RandevuListeController extends V2Controller
 {
-    public function __construct(private RandevuListeServisi $liste, private GuvenlikKapisi $kapi) {}
+    public function __construct(private RandevuListeServisi $liste, private RandevuAyrintiSunumu $sunum, private GuvenlikKapisi $kapi) {}
 
     public function index(Request $request)
     {
@@ -33,7 +34,14 @@ class RandevuListeController extends V2Controller
             'kaynak'            => $request->input('kaynak'),
             'durum'             => $request->input('durum'),
             'hizmet_id'         => $request->integer('hizmet_id') ?: null,
+            'musteri_id'        => $request->integer('musteri_id') ?: null,
+            'personel_id'       => $request->integer('personel_id') ?: null,
+            'cihaz_id'          => $request->integer('cihaz_id') ?: null,
         ], ListeIstegi::istekten($request, 25, RandevuListeServisi::SIRALANABILIR, 'tarih', 'desc'), $k['yetki']);
+
+        if ($request->boolean('ayrinti')) {
+            $sonuc['data'] = $this->sunum->listeyeEkle($sonuc['data'], $uid, $salonId);
+        }
 
         return ApiCevap::basarili($sonuc + ['donem' => $zaman]);
     }
