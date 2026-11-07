@@ -12,9 +12,9 @@
 
     <form id="kodGirisFormu" novalidate hidden>
         <input class="ot-alan" type="text" name="kod" inputmode="numeric" maxlength="6" placeholder="Giriş Kodu" autocomplete="one-time-code" required>
-        <button class="ot-baglanti ot-sag" type="button" id="kodYenidenGonder" disabled></button>
+        <button class="ot-metin-dugme" type="button" id="kodYenidenGonder" disabled></button>
         <button class="ot-dugme" type="submit">GİRİŞ YAP</button>
-        <button class="ot-baglanti" type="button" id="numaraDegistir">Numarayı değiştir</button>
+        <button class="ot-metin-dugme" type="button" id="numaraDegistir">Numarayı değiştir</button>
     </form>
 
     <form id="girisFormu" novalidate hidden>
@@ -27,7 +27,7 @@
         <button class="ot-dugme" type="submit">GİRİŞ YAP</button>
     </form>
 
-    <button class="ot-baglanti" type="button" id="yontemDegistir">Şifre ile giriş</button>
+    <button class="ot-metin-dugme" type="button" id="yontemDegistir">Şifre ile giriş</button>
     <div class="ot-ayrac"><span>VEYA</span></div>
     <p class="ot-alt">Hesabınız yok mu? <a class="ot-baglanti" href="/ucretsiz-denemenizi-baslatin">Hemen kayıt olun!</a></p>
 @endsection
