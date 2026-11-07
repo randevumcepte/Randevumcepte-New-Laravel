@@ -29,8 +29,8 @@ use Illuminate\Http\Request;
  *   GET    /musteri/{id}/randevular                      randevu listesi (sayfali)
  *   POST   /musteri · PATCH /musteri/{id}                ekle / duzenle    (musteri.ekle_duzenle)
  *   DELETE /musteri/{id}                                 portfoyden cikar  (musteri.sil)
- *   PATCH  /musteri/{id}/kara-liste  {kara_liste}        (ekle_duzenle + personel rolu degil)
- *   PATCH  /musteri/{id}/saglik                          (ekle_duzenle + personel rolu degil)
+ *   PATCH  /musteri/{id}/kara-liste  {kara_liste}        (musteri.ekle_duzenle)
+ *   PATCH  /musteri/{id}/saglik                          (musteri.ekle_duzenle)
  * Satislar sekmesi: mevcut GET /satislar?musteri_id= (musteri.gecmis_satis_gor istisnasi orada).
  */
 class MusteriController extends MusteriTabanController
@@ -109,13 +109,13 @@ class MusteriController extends MusteriTabanController
         $yetkiler = $this->yetkiler($uid, $salonId);
         $personelRolu = in_array(5, $kapsam->salonRolleri($uid, $salonId), true);
 
-        // Personel rolu: saglik / kara liste / belgeler eski ekranda gizliydi.
-        $yetkiler['saglik'] = $yetkiler['ekle_duzenle'] && ! $personelRolu;
+        // Saglik ve kara liste musteri.ekle_duzenle ile acilir (mobille ayni); belgeler personelde gizli.
+        $yetkiler['saglik'] = $yetkiler['ekle_duzenle'];
         $yetkiler['kara_liste'] = $yetkiler['saglik'];
         $yetkiler['belgeler'] = ! $personelRolu;
 
         return ApiCevap::basarili([
-            'musteri'  => $this->okuma->detay($salonId, $id, $kisit, ['telefon' => $yetkiler['telefon_gor'], 'saglik' => ! $personelRolu]),
+            'musteri'  => $this->okuma->detay($salonId, $id, $kisit, ['telefon' => $yetkiler['telefon_gor'], 'saglik' => true]),
             'ayarlar'  => $this->okuma->salonAyarlari($salonId),
             'yetkiler' => $yetkiler,
         ]);
@@ -173,7 +173,6 @@ class MusteriController extends MusteriTabanController
     public function karaListe(Request $request, int $id)
     {
         [$uid, $salonId] = $this->musteriDenetle($request, $id, 'musteri.ekle_duzenle');
-        $this->yoneticiDenetle($uid, $salonId);
         $this->yazmaAcikMi();
 
         $kara = filter_var($request->input('kara_liste'), FILTER_VALIDATE_BOOLEAN);
@@ -187,7 +186,6 @@ class MusteriController extends MusteriTabanController
     public function saglik(SaglikIstegi $request, int $id)
     {
         [$uid, $salonId] = $this->musteriDenetle($request, $id, 'musteri.ekle_duzenle');
-        $this->yoneticiDenetle($uid, $salonId);
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->saglikKaydet($salonId, $id, $request->validated(), $uid), 'Sağlık bilgileri kaydedildi.');
