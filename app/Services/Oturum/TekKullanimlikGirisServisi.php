@@ -8,6 +8,7 @@ use App\Exceptions\GecersizIslemException;
 use App\Services\Oturum\Hesap\HesapListesi;
 use App\Services\Oturum\Hesap\OturumHesabi;
 use App\Support\OnayKodu;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -52,8 +53,8 @@ class TekKullanimlikGirisServisi
     public function dogrula(array $g): array
     {
         $tel = $this->telefon($g['cep_telefon']);
-        $hesaplar = $this->hesaplariBul($tel, $g['hesap_turu'] ?? null);
-        if (! $hesaplar || ! $this->kodDogruMu($tel, $g['kod'], $hesaplar)) {
+        $hesaplar = $this->dogrulananHesaplar($tel, $g['kod'], $this->hesaplariBul($tel, $g['hesap_turu'] ?? null));
+        if (! $hesaplar) {
             throw new GecersizIslemException('Kod hatalı veya süresi dolmuş.');
         }
 
@@ -78,16 +79,31 @@ class TekKullanimlikGirisServisi
         return $sonuc;
     }
 
-    private function kodDogruMu(string $tel, string $kod, array $hesaplar): bool
+    /**
+     * Kodun actigi hesaplar. Inceleme hesabi yalniz sabit kodla, diger hesaplar yalniz gonderilen kodla
+     * girer: ayni numaraya bagli olmalari birbirinin kodunu gecersiz kilmaz.
+     *
+     * @param  array<int,array{0:OturumHesabi,1:int}>  $hesaplar
+     * @return array<int,array{0:OturumHesabi,1:int}>
+     */
+    private function dogrulananHesaplar(string $tel, string $kod, array $hesaplar): array
     {
-        $inceleme = (string) config('oturum.tek_kullanimlik.inceleme_kodu');
-        foreach ($hesaplar as [$hesap, $id]) {
-            if ($this->korunuyor($hesap, $id)) {
-                return $inceleme !== '' && hash_equals($inceleme, trim($kod));
-            }
-        }
+        $inceleme = array_values(array_filter($hesaplar, fn ($h) => $this->korunuyor($h[0], $h[1])));
+        $normal = array_values(array_filter($hesaplar, fn ($h) => ! $this->korunuyor($h[0], $h[1])));
 
-        return OnayKodu::dogrula(self::AMAC, self::SALON_YOK, $this->sahip($tel), $kod);
+        $sabit = (string) config('oturum.tek_kullanimlik.inceleme_kodu');
+        if ($inceleme && $sabit !== '' && hash_equals($sabit, trim($kod))) {
+            return $inceleme;
+        }
+        if ($normal && OnayKodu::dogrula(self::AMAC, self::SALON_YOK, $this->sahip($tel), $kod)) {
+            return $normal;
+        }
+        // Numara ve kod yazilmaz; neden ayirt edilir.
+        Log::info('Giris kodu reddedildi', [
+            'normal_hesap' => count($normal), 'inceleme_hesabi' => count($inceleme), 'kod_bekleniyor' => OnayKodu::bekliyorMu(self::AMAC, self::SALON_YOK, $this->sahip($tel)),
+        ]);
+
+        return [];
     }
 
     private function kodUret(string $tel): string

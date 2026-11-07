@@ -32,6 +32,12 @@ final class OnayKodu
         return $kod;
     }
 
+    /** Bu baglam icin gecerli bir kod var mi (tani icin; kodu tuketmez). */
+    public static function bekliyorMu(string $amac, int $salonId, int $yetkiliId): bool
+    {
+        return Cache::has(self::anahtar($amac, $salonId, $yetkiliId));
+    }
+
     /** Kod dogru ve baglam ayniysa true (ve kod tuketilir); degilse deneme sayaci artar. */
     public static function dogrula(string $amac, int $salonId, int $yetkiliId, ?string $kod, array $baglam = []): bool
     {

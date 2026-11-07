@@ -470,4 +470,19 @@ class OturumApiTest extends TestCase
 
         $this->assertCount(1, $this->smsler);
     }
+
+    public function test_inceleme_hesabiyla_ayni_numaradaki_hesap_gonderilen_kodla_girer(): void
+    {
+        $id = $this->yetkili([['uyelik_turu' => 1]]);
+        DB::table('users')->insert(['name' => 'Musteri', 'cep_telefon' => self::TEL, 'password' => Hash::make('gizli123')]);
+        config(['oturum.korunan_hesaplar.isletme' => [$id], 'oturum.tek_kullanimlik.inceleme_kodu' => '123456']);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $kod = $this->altiHane($this->smsler);
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $kod])
+            ->assertOk()->assertJsonPath('veri.user_type', '0');
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '123456'])
+            ->assertOk()->assertJsonPath('veri.user_type', '1');
+    }
 }
