@@ -54,12 +54,16 @@ class OnGorusmeYazServisi
     public function kaydet(int $salonId, ?int $id, array $v, int $yetkiliId): array
     {
         $eski = $id ? $this->acikKayit($id) : null;
-        $neden = GorusmeNedeni::olustur($v['neden_tur'], (int) $v['neden_id']);
-        $this->nedenSalonaAitOlmali($neden, $salonId);
+        $neden = ! empty($v['neden_tur']) ? GorusmeNedeni::olustur($v['neden_tur'], (int) $v['neden_id']) : null;
+        if ($neden) {
+            $this->nedenSalonaAitOlmali($neden, $salonId);
+        }
 
-        $personelId = (int) $v['personel_id'];
+        $personelId = ! empty($v['personel_id']) ? (int) $v['personel_id'] : null;
         $odaId = $this->odaCoz($salonId, $v['oda_id'] ?? null);
-        $this->sahiplik->personelOlmali($personelId, $salonId);
+        if ($personelId) {
+            $this->sahiplik->personelOlmali($personelId, $salonId);
+        }
         if (! empty($v['musteri_id'])) {
             $this->sahiplik->musteriOlmali((int) $v['musteri_id'], $salonId);
         }
@@ -90,7 +94,7 @@ class OnGorusmeYazServisi
                 'aciklama' => $v['aciklama'] ?? null, 'musteri_tipi' => $v['musteri_tipi'] ?? null,
                 'hatirlatma_tarihi' => $tarih, 'on_gorusme_saati' => $saat.':00', 'personel_id' => $personelId,
                 'updated_at' => now(),
-            ] + $neden->kolonlar();
+            ] + ($neden?->kolonlar() ?? ['paket_id' => null, 'urun_id' => null, 'hizmet_id' => null]);
 
             if ($eski) {
                 $ogId = (int) $eski->id;
@@ -111,7 +115,7 @@ class OnGorusmeYazServisi
 
         AktiviteLog::yaz($salonId, $yetkiliId, $eski ? 'ongorusme_guncelle' : 'ongorusme_ekle', 'ongorusme', $sonuc['id'], $sonuc['ad'],
             $eski ? 'Ön görüşme güncellendi' : 'Yeni ön görüşme oluşturuldu',
-            ['tarih' => $tarih, 'saat' => $saat, 'neden' => $neden->anahtar(), 'personel_id' => $personelId]);
+            ['tarih' => $tarih, 'saat' => $saat, 'neden' => $neden?->anahtar(), 'personel_id' => $personelId]);
 
         return ['cakismavar' => '0', 'cakisanunsurlar' => 'Başarılı', 'yazildi' => true, 'id' => $sonuc['id'], 'randevu_id' => $sonuc['randevu_id']];
     }
@@ -188,7 +192,7 @@ class OnGorusmeYazServisi
      *
      * @return array{0:int, 1:int[], 2:int[]} [randevu id, yeni rh id'leri, silinen rh id'leri]
      */
-    private function randevuYaz(int $salonId, int $ogId, ?int $randevuId, int $userId, int $personelId, ?int $odaId, string $tarih, string $saat, string $bitis, int $yetkiliId): array
+    private function randevuYaz(int $salonId, int $ogId, ?int $randevuId, int $userId, ?int $personelId, ?int $odaId, string $tarih, string $saat, string $bitis, int $yetkiliId): array
     {
         $alanlar = ['user_id' => $userId, 'salon_id' => $salonId, 'tarih' => $tarih, 'saat' => $saat.':00', 'saat_bitis' => $bitis.':00', 'updated_at' => now()];
         $silinen = [];

@@ -5,14 +5,14 @@ namespace App\Http\Requests\OnGorusme;
 use App\Http\Requests\V2Istegi;
 
 /**
- * POST /ongorusme/{id}/satis-yapilmadi — sebep notu zorunlu (eski swal ile aynı).
+ * POST /ongorusme/{id}/satis-yapilmadi — sebep notu opsiyonel (mobil pencere boş kayda izin verir).
  * Eski istemci adı: satisyapilmamasebebi → not.
  */
 class OnGorusmeSatisYapilmadiIstegi extends V2Istegi
 {
     protected function alanKurallari(): array
     {
-        return ['not' => ['required', 'string', 'max:1000']];
+        return ['not' => ['nullable', 'string', 'max:1000']];
     }
 
     public function attributes(): array

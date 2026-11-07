@@ -31,11 +31,12 @@ class OnGorusmeKaydetIstegi extends V2Istegi
             'meslek'             => ['nullable', 'string', 'max:255'],
             'il_id'              => ['nullable', 'integer', 'min:1'],
             'aciklama'           => ['nullable', 'string', 'max:2000'],
-            'neden_tur'          => ['required', Rule::in(GorusmeNedeni::turler())],
-            'neden_id'           => ['required', 'integer', 'min:1'],
+            // Neden ve personel opsiyonel: mobil form bunlarsiz kayda izin verir (web formu kendi zorunlu tutar).
+            'neden_tur'          => ['nullable', Rule::in(GorusmeNedeni::turler())],
+            'neden_id'           => ['nullable', 'required_with:neden_tur', 'integer', 'min:1'],
             'tarih'              => ['required', 'date_format:Y-m-d'],
             'saat'               => ['required', 'date_format:H:i'],
-            'personel_id'        => ['required', 'integer', 'min:1'],
+            'personel_id'        => ['nullable', 'integer', 'min:1'],
             'oda_id'             => ['nullable', 'integer', 'min:1'],
             'cakisanrandevuekle' => ['nullable', 'boolean'],
         ];
@@ -62,7 +63,7 @@ class OnGorusmeKaydetIstegi extends V2Istegi
         // "Yok"). cinsiyet 0 = Kadın olduğundan yalnız boş / "null" temizlenir.
         $bos = fn ($v) => $v === '' || $v === 'null' ? null : $v;
         $secimYok = fn ($v) => $v === '0' || $v === 0 ? null : $bos($v);
-        $this->merge(array_map($secimYok, $this->only(['musteri_id', 'oda_id', 'il_id', 'musteri_tipi'])));
+        $this->merge(array_map($secimYok, $this->only(['musteri_id', 'oda_id', 'il_id', 'musteri_tipi', 'personel_id'])));
         $this->merge(array_map($bos, $this->only(['cinsiyet', 'email', 'telefon'])));
 
         try {

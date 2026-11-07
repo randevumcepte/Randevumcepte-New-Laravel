@@ -123,7 +123,7 @@ class OnGorusmeController extends V2Controller
     {
         [$uid, $salonId] = $this->kayitDenetle($id, self::YAZ);
         $this->yazmaAcikMi();
-        $sonuc->satisYapilmadi($salonId, $id, $request->validated()['not'], $uid);
+        $sonuc->satisYapilmadi($salonId, $id, (string) ($request->validated()['not'] ?? ''), $uid);
 
         return ApiCevap::basarili($this->sorgu->getir($id, $this->ctx($uid, $salonId)), 'Ön görüşme durumu SATIŞ YAPILMADI olarak güncellendi');
     }
