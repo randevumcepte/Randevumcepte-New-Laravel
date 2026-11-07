@@ -37,10 +37,22 @@ class TekKullanimlikGirisServisi
             throw new CokFazlaIstekException();
         }
 
-        $hesaplar = array_filter($this->hesaplariBul($tel, $tur), fn ($h) => ! $this->korunuyor($h[0], $h[1]));
-        if (! $hesaplar
-            || ! RateLimiter::attempt('oturum-kod-tel:'.$tel, 1, fn () => true, (int) $ayar['yeniden_sn'])
-            || ! RateLimiter::attempt('oturum-kod-tel-saat:'.$tel, (int) $ayar['tel_saatlik'], fn () => true, 3600)) {
+        $bulunan = $this->hesaplariBul($tel, $tur);
+        $hesaplar = array_filter($bulunan, fn ($h) => ! $this->korunuyor($h[0], $h[1]));
+        // Cevap her durumda ayni (numara yoklanmasin); neden yalniz logda, numara yazilmaz.
+        if (! $hesaplar) {
+            Log::info('Giris kodu gonderilmedi', ['neden' => $bulunan ? 'inceleme_hesabi' : 'hesap_yok', 'tur' => $tur]);
+
+            return;
+        }
+        if (! RateLimiter::attempt('oturum-kod-tel:'.$tel, 1, fn () => true, (int) $ayar['yeniden_sn'])) {
+            Log::info('Giris kodu gonderilmedi', ['neden' => 'yeniden_gonderme_bekleniyor', 'tur' => $tur]);
+
+            return;
+        }
+        if (! RateLimiter::attempt('oturum-kod-tel-saat:'.$tel, (int) $ayar['tel_saatlik'], fn () => true, 3600)) {
+            Log::info('Giris kodu gonderilmedi', ['neden' => 'saatlik_sinir', 'tur' => $tur]);
+
             return;
         }
 

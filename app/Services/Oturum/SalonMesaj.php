@@ -42,6 +42,8 @@ class SalonMesaj
         try {
             $salon = $this->hesap->bul($salonId);
             if (! $salon || ! SmsSaglayici::salondan($salon)->hesapTanimli($salon)) {
+                Log::info('SalonMesaj SMS hesabi tanimli degil', ['salon_id' => $salonId]);
+
                 return false;
             }
             $this->sms->gonder($salon, $telefon, $mesaj, $baslik, (int) config('oturum.platform_sms.zaman_asimi_sn'));

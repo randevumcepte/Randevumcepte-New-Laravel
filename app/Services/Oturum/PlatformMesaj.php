@@ -44,13 +44,21 @@ class PlatformMesaj
         $whatsappDene = ! Cache::has($anahtar);
         Cache::put($anahtar, 1, self::KANAL_HAFIZA_SN);
 
-        if ($salonId !== null
-            && (($whatsappDene && $this->salon->whatsapp($salonId, $telefon, $mesaj)) || $this->salon->sms($salonId, $telefon, $mesaj, $baslik))) {
+        if ($salonId !== null && $whatsappDene && $this->salon->whatsapp($salonId, $telefon, $mesaj)) {
+            Log::info('Dogrulama kodu gonderildi', ['kanal' => 'salon_whatsapp', 'salon_id' => $salonId]);
+
+            return true;
+        }
+        if ($salonId !== null && $this->salon->sms($salonId, $telefon, $mesaj, $baslik)) {
+            Log::info('Dogrulama kodu gonderildi', ['kanal' => 'salon_sms', 'salon_id' => $salonId]);
+
             return true;
         }
 
         $sonuc = $this->gonder($telefon, $mesaj, $baslik, $whatsappDene);
-        if (! $sonuc) {
+        if ($sonuc) {
+            Log::info('Dogrulama kodu gonderildi', ['kanal' => 'platform', 'salon_id' => $salonId]);
+        } else {
             Log::error('Dogrulama kodu hicbir kanaldan gonderilemedi', ['salon_id' => $salonId]);
         }
 
