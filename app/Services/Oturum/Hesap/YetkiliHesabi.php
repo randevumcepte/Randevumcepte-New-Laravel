@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Hash;
 class YetkiliHesabi implements OturumHesabi
 {
     /** Cevaba cikan yetkili alanlari; password ve dogrulama_kodu asla cikmaz. */
+    /** Santral raporunun dahili filtresi icin ayni salonun personeli; maas ve prim cikmaz. */
+    private const KADRO_ALANLARI = ['id', 'personel_adi', 'dahili_no', 'role_id'];
+
     private const YETKILI_ALANLARI = ['id', 'name', 'email', 'profil_resim', 'gsm1', 'cinsiyet', 'sms_gonderimi', 'unvan', 'aktif'];
 
     /**
@@ -84,6 +87,7 @@ class YetkiliHesabi implements OturumHesabi
         }
         $yetkili = DB::table('isletmeyetkilileri')->where('id', $id)->first();
         $salonlar = DB::table('salonlar')->whereIn('id', array_column($personeller, 'salon_id'))->get()->keyBy('id');
+        $kadro = DB::table('salon_personelleri')->whereIn('salon_id', array_column($personeller, 'salon_id'))->where('aktif', 1)->get()->groupBy('salon_id');
         foreach ($personeller as $p) {
             AktiviteLog::yaz((int) $p->salon_id, $id, 'login', 'kullanici', $id, (string) $yetkili->name, 'Panele giriş yapıldı');
         }
@@ -92,7 +96,11 @@ class YetkiliHesabi implements OturumHesabi
             'user' => $this->suz($yetkili, self::YETKILI_ALANLARI) + [
                 'yetkili_olunan_isletmeler' => array_map(fn ($p) => [
                     'id' => (int) $p->id, 'salon_id' => (int) $p->salon_id, 'yetkili_id' => $id, 'role_id' => $p->role_id, 'aktif' => (int) $p->aktif,
-                    'salonlar' => $this->suz($salonlar[$p->salon_id], self::SALON_ALANLARI),
+                    // Kendi dahili hatti: mobil softphone kaydi bu alanlarla kurulur.
+                    'dahili_no' => $p->dahili_no ?? null, 'dahili_no_webrtc' => $p->dahili_no_webrtc ?? null, 'dahili_sifre_webrtc' => $p->dahili_sifre_webrtc ?? null,
+                    'salonlar' => $this->suz($salonlar[$p->salon_id], self::SALON_ALANLARI) + [
+                        'personeller' => $kadro->get($p->salon_id, collect())->map(fn ($k) => $this->suz($k, self::KADRO_ALANLARI))->values()->all(),
+                    ],
                 ], $personeller),
             ],
             'musteri'   => '',

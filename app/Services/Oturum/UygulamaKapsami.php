@@ -35,7 +35,7 @@ class UygulamaKapsami
             ->where('p.yetkili_id', $yetkiliId)->where('p.aktif', 1)
             ->when($this->anaUygulamaMi($bundle), fn ($q) => $q->where('s.uyelik_turu', '!=', 3))
             ->when($this->markaMi($bundle), fn ($q) => $q->where('s.app_bundle', $bundle))
-            ->orderBy('p.id')->get(['p.id', 'p.salon_id', 'p.yetkili_id', 'p.role_id', 'p.aktif'])
+            ->orderBy('p.id')->get(['p.*'])
             ->unique('salon_id')->values()->all();
     }
 }
