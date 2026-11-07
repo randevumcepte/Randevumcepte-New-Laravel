@@ -9,6 +9,7 @@ use App\Http\Requests\Musteri\SaglikIstegi;
 use App\Services\Musteri\MusteriListeServisi;
 use App\Services\Musteri\MusteriOkumaServisi;
 use App\Services\Musteri\MusteriYazServisi;
+use App\Services\Randevu\RandevuAyrintiSunumu;
 use App\Services\Randevu\RandevuListeServisi;
 use App\Services\Yetki\KapsamServisi;
 use App\Support\ApiCevap;
@@ -132,12 +133,17 @@ class MusteriController extends MusteriTabanController
         [$uid, $salonId] = $this->musteriDenetle($request, $id, self::DETAY);
         $k = $randevu->kapsam($uid, $salonId);
 
-        return ApiCevap::basarili($randevu->listele(
+        $sonuc = $randevu->listele(
             $salonId,
             ['musteri_id' => $id, 'kisit_personel_id' => $k['kisit_personel_id']],
             ListeIstegi::istekten($request, 10, RandevuListeServisi::SIRALANABILIR, 'tarih', 'desc'),
             $k['yetki'],
-        ));
+        );
+        if ($request->boolean('ayrinti')) {
+            $sonuc['data'] = app(RandevuAyrintiSunumu::class)->listeyeEkle($sonuc['data'], $uid, $salonId);
+        }
+
+        return ApiCevap::basarili($sonuc);
     }
 
     // ===================== YAZMA (kill-switch: MUSTERI_V2_YAZMA_AKTIF) =====================
