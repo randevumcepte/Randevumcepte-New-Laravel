@@ -9,6 +9,7 @@ use App\Services\Oturum\ErisimTokenServisi;
 use App\Support\DosyaYukleme;
 use App\Support\EskiPanelLinki;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -110,9 +111,30 @@ class MusteriProfilServisi
     /** Flutter marka cozumu icin: musteri_olunan_salonlar (salon_id + temel salon alanlari). */
     private function salonlar(int $userId): array
     {
-        return DB::table('musteri_portfoy as mp')->join('salonlar as s', 's.id', '=', 'mp.salon_id')
-            ->where('mp.user_id', $userId)->where('mp.aktif', 1)
-            ->get(['s.id', 's.salon_adi', 's.app_bundle', 's.domain', 's.telefon_1', 's.musteri_online_randevu_aktif', 's.studyo_modu', 's.grup_dersi_aktif', 's.uyelik_bitis_tarihi'])
+        return $this->salonSatirlari(DB::table('musteri_portfoy as mp')->join('salonlar as s', 's.id', '=', 'mp.salon_id')
+            ->where('mp.user_id', $userId)->where('mp.aktif', 1));
+    }
+
+    /**
+     * Uygulama acilisi icin salonlar. Marka uygulamasi markanin salonlarini gorur (portfoy kaydi pasif olsa
+     * da: giris yapan kisi yine o markanin uygulamasindadir). Ana uygulamada aktif kayit yoksa pasifler
+     * doner; salonu olmayan musteri "lisans yok" ekranina dusmesin.
+     *
+     * @param  int[]  $markaSalonlari  bos: marka uygulamasi degil
+     */
+    public function acilisSalonlari(int $userId, array $markaSalonlari): array
+    {
+        if ($markaSalonlari) {
+            return $this->salonSatirlari(DB::table('salonlar as s')->whereIn('s.id', $markaSalonlari));
+        }
+
+        return $this->salonlar($userId)
+            ?: $this->salonSatirlari(DB::table('musteri_portfoy as mp')->join('salonlar as s', 's.id', '=', 'mp.salon_id')->where('mp.user_id', $userId));
+    }
+
+    private function salonSatirlari(Builder $q): array
+    {
+        return $q->get(['s.id', 's.salon_adi', 's.app_bundle', 's.domain', 's.telefon_1', 's.musteri_online_randevu_aktif', 's.studyo_modu', 's.grup_dersi_aktif', 's.uyelik_bitis_tarihi'])
             ->map(fn ($s) => ['salon_id' => (int) $s->id, 'salonlar' => (array) $s])->all();
     }
 }

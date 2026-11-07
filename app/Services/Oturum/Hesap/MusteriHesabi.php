@@ -76,9 +76,7 @@ class MusteriHesabi implements OturumHesabi
         $musteri = $this->profil->goster($id);
         // Profil ve saglik ekranlari: kisinin kendi kaydi. SELECT *: semada olmayan kolon girisi dusurmesin.
         $musteri += array_intersect_key((array) DB::table('users')->where('id', $id)->first(), array_flip(MusteriProfilAlanlari::LISTE));
-        if ($this->kapsam->markaMi($bundle)) {
-            $musteri['salonlar'] = array_values(array_filter($musteri['salonlar'], fn ($s) => $s['salonlar']['app_bundle'] === $bundle));
-        }
+        $musteri['salonlar'] = $this->profil->acilisSalonlari($id, $this->kapsam->markaMi($bundle) ? $this->kapsam->markaSalonlari($bundle) : []);
 
         return ['user' => '', 'musteri' => $musteri, 'ilk_sayfa' => null];
     }

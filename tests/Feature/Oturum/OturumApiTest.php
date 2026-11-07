@@ -485,4 +485,15 @@ class OturumApiTest extends TestCase
         $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '123456'])
             ->assertOk()->assertJsonPath('veri.user_type', '1');
     }
+
+    public function test_pasif_portfoylu_musteri_marka_salonunu_gorur(): void
+    {
+        $salonId = DB::table('salonlar')->insertGetId(['salon_adi' => 'Marka', 'app_bundle' => 'com.ornek.marka', 'uyelik_bitis_tarihi' => '2030-01-01']);
+        $id = DB::table('users')->insertGetId(['name' => 'Musteri', 'cep_telefon' => self::TEL, 'password' => Hash::make('gizli123')]);
+        DB::table('musteri_portfoy')->insert(['salon_id' => $salonId, 'user_id' => $id, 'aktif' => 0]);
+
+        $this->giris(['kimlik' => self::TEL, 'password' => 'gizli123', 'app_bundle' => 'com.ornek.marka'])->assertOk()
+            ->assertJsonPath('veri.musteri.salonlar.0.salon_id', $salonId)
+            ->assertJsonPath('veri.musteri.salonlar.0.salonlar.uyelik_bitis_tarihi', '2030-01-01');
+    }
 }
