@@ -11,7 +11,7 @@
     </form>
 
     <form id="kodGirisFormu" novalidate hidden>
-        <input class="ot-alan" type="text" name="kod" inputmode="numeric" maxlength="6" placeholder="Giriş Kodu" autocomplete="one-time-code" required>
+        <input class="ot-alan" type="password" name="kod" inputmode="numeric" maxlength="6" placeholder="Giriş Kodu" autocomplete="one-time-code" required>
         <button class="ot-metin-dugme" type="button" id="kodYenidenGonder" disabled></button>
         <button class="ot-dugme" type="submit">GİRİŞ YAP</button>
         <button class="ot-metin-dugme" type="button" id="numaraDegistir">Numarayı değiştir</button>
