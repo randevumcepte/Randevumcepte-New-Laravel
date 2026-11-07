@@ -73,10 +73,11 @@ class GorusmeSonucServisi
     /**
      * Normal salon randevusu verildi → "Randevu Verildi" rozeti + sonuç OTOMATİK 8 (Randevu
      * Oluşturuldu). Kayıt LİSTEDE KALIR; bekleyen arama randevusuysa hatırlatma susar.
+     * $yalnizBekleyen: takvim damgası yalnız önceki durum 3 ise basılır (Flutter normal randevu akışı).
      */
-    public function randevuVerildi(CagriMerkeziErisim $e, int $aranacakId): array
+    public function randevuVerildi(CagriMerkeziErisim $e, int $aranacakId, bool $yalnizBekleyen = false): array
     {
-        return $this->tamamla($e, $aranacakId, AramaSonucu::RANDEVU_OLUSTURULDU, ['randevu_olusturuldu' => 1], true, 'cagri_randevu_verildi');
+        return $this->tamamla($e, $aranacakId, AramaSonucu::RANDEVU_OLUSTURULDU, ['randevu_olusturuldu' => 1], true, 'cagri_randevu_verildi', $yalnizBekleyen);
     }
 
     /** Arama randevusunu iptal et (9): bekleyen kuyruktan çıkar, takvimde "İptal" görünür. */
@@ -123,12 +124,13 @@ class GorusmeSonucServisi
 
     // ───────────────────────────── iç adımlar ─────────────────────────────
 
-    private function tamamla(CagriMerkeziErisim $e, int $aranacakId, AramaSonucu $sonuc, array $ek, bool $gecmis, string $islem): array
+    private function tamamla(CagriMerkeziErisim $e, int $aranacakId, AramaSonucu $sonuc, array $ek, bool $gecmis, string $islem, bool $yalnizBekleyen = false): array
     {
-        $uid = DB::transaction(function () use ($e, $aranacakId, $sonuc, $ek, $gecmis) {
+        $uid = DB::transaction(function () use ($e, $aranacakId, $sonuc, $ek, $gecmis, $yalnizBekleyen) {
             $k = $this->erisim->kayit($aranacakId, $e, true);
+            $damgala = ! $yalnizBekleyen || (int) $k->durum === AramaSonucu::TEKRAR_ARANACAK->value;
             DB::table('aranacak_musteriler')->where('id', $aranacakId)
-                ->update(SonucKaydiPlani::tamamla($sonuc, $k->ar_tamamlandi_at, now()->format('Y-m-d H:i:s')) + $ek + ['updated_at' => now()]);
+                ->update(SonucKaydiPlani::tamamla($sonuc, $k->ar_tamamlandi_at, now()->format('Y-m-d H:i:s'), $damgala) + $ek + ['updated_at' => now()]);
             if ($gecmis) {
                 $this->gecmiseYaz($e, $k, (int) $k->arama_id, $sonuc->value, '');
             }

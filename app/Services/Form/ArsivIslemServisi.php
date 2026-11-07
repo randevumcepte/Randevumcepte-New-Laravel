@@ -37,7 +37,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ArsivIslemServisi
 {
-    private const ODEME_SEKILLERI = ['pesin', 'taksit', 'kredi_karti'];
+    /** nakit/havale yalnız mobil formdan gelir; web seçenekleri FormEkranVerisiServisi'ndedir. */
+    private const ODEME_SEKILLERI = ['pesin', 'taksit', 'kredi_karti', 'nakit', 'havale'];
 
     /** Arşiv kaydının salonu (kapsam denetimi için; yoksa null). */
     public function salonId(int $arsivId): ?int
@@ -99,8 +100,12 @@ class ArsivIslemServisi
 
             $gonderildi = false;
             if (empty($g['sadece_kaydet'])) {
-                $mesajlar = [['to' => $this->musteriTelefonu((int) $g['user_id'], $g['telefon'] ?? null),
-                    'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), (bool) $form->is_dinamik)]];
+                $mesajlar = [];
+                // Mobil form kara listedeki musteriye link gondermez; web davranisi degismez.
+                if (empty($g['kara_liste_atla']) || ! $this->karaListede($salonId, (int) $g['user_id'])) {
+                    $mesajlar[] = ['to' => $this->musteriTelefonu((int) $g['user_id'], $g['telefon'] ?? null),
+                        'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), (bool) $form->is_dinamik)];
+                }
                 if ($personelId && ($pm = FormLinki::personelMesaji(EskiPanelLinki::host(), $arsiv->toArray(), (bool) $form->is_dinamik, $personelId))) {
                     $mesajlar[] = ['to' => (string) Personeller::whereKey($personelId)->value('cep_telefon'), 'message' => $pm];
                 }
@@ -126,9 +131,7 @@ class ArsivIslemServisi
             $arsiv->fill(['cevapladi' => 0, 'durum' => null, 'dogrulama_kodu' => FormLinki::dogrulamaKodu()])->save();
 
             $gonderildi = false;
-            $karaListe = (int) DB::table('musteri_portfoy')->where('user_id', $arsiv->user_id)
-                ->where('salon_id', $arsiv->salon_id)->value('kara_liste') === 1;
-            if ($arsiv->user_id && ! $karaListe) {
+            if ($arsiv->user_id && ! $this->karaListede((int) $arsiv->salon_id, (int) $arsiv->user_id)) {
                 $dinamik = (bool) FormTaslaklari::whereKey($arsiv->form_id)->value('is_dinamik');
                 $gonderildi = $this->kuyrugaYaz((int) $arsiv->salon_id, $yapanId, $arsiv, [[
                     'to'      => $this->musteriTelefonu((int) $arsiv->user_id, null),
@@ -156,6 +159,8 @@ class ArsivIslemServisi
     /**
      * Harici belge yükle. Dosya eski monolitin public/formlar dizinine BENZERSİZ adla
      * yazılır (eskide aynı adlı dosyalar birbirini eziyordu); uzantı beyaz listede.
+     * Personel opsiyoneldir (eski mobil formu seçtirmez; web formu kendi zorunlu tutar):
+     * seçilmezse işlemi yapanın personel kaydı yazılır.
      */
     public function hariciBelgeEkle(int $salonId, int $yapanId, array $g, ?UploadedFile $dosya): array
     {
@@ -166,21 +171,19 @@ class ArsivIslemServisi
         if (empty($g['user_id'])) {
             throw new GecersizIslemException('Müşteri/danışan seçiniz.');
         }
-        if (empty($g['personel_id'])) {
-            throw new GecersizIslemException('İşlemi yapacak personeli seçiniz.');
-        }
         $this->portfoyDenetle($salonId, (int) $g['user_id']);
-        $personelId = $this->personelDenetle($salonId, (int) $g['personel_id']);
+        $personelId = ! empty($g['personel_id']) ? $this->personelDenetle($salonId, (int) $g['personel_id']) : null;
+        $olusturan = $this->yapanPersonel($salonId, $yapanId);
         $uzanti = $this->dosyaKaydet($dosya);
 
         $arsiv = Arsiv::create([
             'salon_id'       => $salonId,
             'user_id'        => (int) $g['user_id'],
-            'personel_id'    => $personelId,
+            'personel_id'    => $personelId ?? ($olusturan ?: 0),
             'form_id'        => 0,
             'harici_belge'   => mb_substr($baslik, 0, 250),
             'uzanti'         => $uzanti,
-            'form_olusturan' => $this->yapanPersonel($salonId, $yapanId),
+            'form_olusturan' => $olusturan,
         ]);
         AktiviteLog::yaz($salonId, $yapanId, 'harici_belge_ekle', 'arsiv', (int) $arsiv->id, $baslik, 'Harici belge eklendi');
 
@@ -190,6 +193,7 @@ class ArsivIslemServisi
     /**
      * Hizmet sözleşmesi oluştur + müşteriye imza linki (web sozlesmeOlustur birebir):
      * salon yetkilisi oluştururken panelde imzalar (çift taraflı; cevapladi2=1).
+     * sadece_kaydet: arşive yazılır, müşteriye mesaj gitmez (form.gonder yetkisi olmayan).
      */
     public function sozlesmeOlustur(int $salonId, int $yapanId, array $g, string $ip): array
     {
@@ -260,7 +264,7 @@ class ArsivIslemServisi
             AktiviteLog::yaz($salonId, $yapanId, 'sozlesme_olustur', 'sozlesme', (int) $arsiv->id,
                 'Hizmet Sözleşmesi — '.$this->musteriAdi($userId), 'Hizmet sözleşmesi oluşturuldu', ['user_id' => $userId]);
 
-            $gonderildi = $this->kuyrugaYaz($salonId, $yapanId, $arsiv, [[
+            $gonderildi = empty($g['sadece_kaydet']) && $this->kuyrugaYaz($salonId, $yapanId, $arsiv, [[
                 'to'      => $this->musteriTelefonu($userId, $telefon),
                 'message' => FormLinki::musteriMesaji(EskiPanelLinki::host(), $arsiv->toArray(), false),
             ]], true);
@@ -314,6 +318,12 @@ class ArsivIslemServisi
         }
 
         return (string) DB::table('users')->where('id', $userId)->value('cep_telefon');
+    }
+
+    private function karaListede(int $salonId, int $userId): bool
+    {
+        return (int) DB::table('musteri_portfoy')->where('user_id', $userId)
+            ->where('salon_id', $salonId)->value('kara_liste') === 1;
     }
 
     private function portfoyDenetle(int $salonId, int $userId): void

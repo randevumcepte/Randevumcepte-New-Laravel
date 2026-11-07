@@ -44,16 +44,17 @@ class ListeOlusturmaServisi
 
     /**
      * Canlı önizleme: filtreye uyan sayı, filtresiz aranabilir toplam ve sayfalı müşteri listesi
-     * (sıra no ile — aralık seçimi ekranla aynı).
+     * (sıra no ile — aralık seçimi ekranla aynı). $offset + $limit verilirse sayfa yerine o dilim döner;
+     * $idler → filtreye uyan tüm id'ler isim sırasıyla eklenir (seçimi istemcide tutan ekran).
      */
-    public function onizleme(CagriMerkeziErisim $e, AramaFiltresi $f, int $sayfa, int $boy): array
+    public function onizleme(CagriMerkeziErisim $e, AramaFiltresi $f, int $sayfa, int $boy, ?int $offset = null, ?int $limit = null, bool $idler = false): array
     {
         $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::ListeYonet);
         $toplam = $this->filtre->say($e->salonId, $f->aramasiz());
         $listeToplam = $f->ara !== null ? $this->filtre->say($e->salonId, $f) : $toplam;
         $satirlar = $this->filtre->sorgu($e->salonId, $f)->distinct()
-            ->forPage($sayfa, $boy)->get(['mp.user_id', 'u.name', 'u.cep_telefon', 'u.cinsiyet', 'mp.created_at']);
-        $ilkSira = ($sayfa - 1) * $boy;
+            ->skip($offset ?? ($sayfa - 1) * $boy)->take($limit ?? $boy)->get(['mp.user_id', 'u.name', 'u.cep_telefon', 'u.cinsiyet', 'mp.created_at']);
+        $ilkSira = $offset ?? ($sayfa - 1) * $boy;
         $maske = $e->maskele();
 
         return [
@@ -67,7 +68,7 @@ class ListeOlusturmaServisi
                 'sira' => $f->ara === null ? $ilkSira + $i + 1 : null,
                 'kayit_tarihi' => $m->created_at ? substr((string) $m->created_at, 0, 10) : null,
             ])->all(),
-        ] + ListeIstegi::meta($sayfa, $boy, $listeToplam);
+        ] + ($idler ? ['musteri_idler' => $this->filtre->idler($e->salonId, $f)] : []) + ListeIstegi::meta($sayfa, $boy, $listeToplam);
     }
 
     /**

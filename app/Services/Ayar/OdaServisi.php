@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  *
  * odalar.personel_id = ilk secili personel (eski takvim uyumu); oda_personelleri +
  * oda_sunulan_hizmetler sil-ve-yaz. Secilen kimlikler bu salona ait olanlarla suzulur
- * (eskide baska salonun personeli/hizmeti yazilabiliyordu).
+ * (eskide baska salonun personeli/hizmeti yazilabiliyordu); odanin mevcut baglari da gecerlidir.
  */
 class OdaServisi implements TakvimKaynakYonetimi
 {
@@ -66,8 +66,8 @@ class OdaServisi implements TakvimKaynakYonetimi
             $this->kaynak->bul(self::TUR, $salonId, $id);
         }
         $secenek = $this->formVerisi($salonId);
-        $personeller = $this->suz($g['personel_ids'] ?? null, array_column($secenek['personeller'], 'id'));
-        $hizmetler = $this->suz($g['hizmet_ids'] ?? null, array_column($secenek['hizmetler'], 'id'));
+        $personeller = $this->suz($g['personel_ids'] ?? null, [...array_column($secenek['personeller'], 'id'), ...$this->bagliPersoneller($salonId, $id)]);
+        $hizmetler = $this->suz($g['hizmet_ids'] ?? null, [...array_column($secenek['hizmetler'], 'id'), ...$this->bagliHizmetler($salonId, $id)]);
 
         $id = DB::transaction(function () use ($salonId, $id, $g, $personeller, $hizmetler) {
             if ($id === null) {
@@ -123,6 +123,20 @@ class OdaServisi implements TakvimKaynakYonetimi
         }
 
         return $satirlar;
+    }
+
+    /** Odanin bu salona ait mevcut personelleri: pasiflesen secenekte yoktur ama gonderilirse korunur. */
+    private function bagliPersoneller(int $salonId, ?int $odaId): array
+    {
+        return $odaId === null ? [] : DB::table('oda_personelleri as b')->join('salon_personelleri as p', 'p.id', '=', 'b.personel_id')
+            ->where('b.oda_id', $odaId)->where('p.salon_id', $salonId)->pluck('p.id')->map(fn ($i) => (int) $i)->all();
+    }
+
+    /** Odanin bu salonda sunulan mevcut hizmetleri: pasiflesen secenekte yoktur ama gonderilirse korunur. */
+    private function bagliHizmetler(int $salonId, ?int $odaId): array
+    {
+        return $odaId === null ? [] : DB::table('oda_sunulan_hizmetler as b')->join('salon_sunulan_hizmetler as s', 's.hizmet_id', '=', 'b.hizmet_id')
+            ->where('b.oda_id', $odaId)->where('s.salon_id', $salonId)->pluck('b.hizmet_id')->map(fn ($i) => (int) $i)->unique()->values()->all();
     }
 
     /** null = alan gonderilmedi (dokunma); dizi = gecerli + tekil kimlikler (sira korunur). */

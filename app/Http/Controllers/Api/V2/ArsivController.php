@@ -143,10 +143,14 @@ class ArsivController extends V2Controller
         ], $request->file('dosya')), 'Form başarıyla eklendi');
     }
 
-    /** POST /api/v2/form/sozlesme — hizmet sözleşmesi oluştur + imza linki gönder (form.gonder) */
+    /**
+     * POST /api/v2/form/sozlesme — hizmet sözleşmesi oluştur + imza linki gönder (form.gonder).
+     * sadece_kaydet=1: mesaj gitmez, form.olustur da yeter (form gönderimindeki kuralla aynı).
+     */
     public function sozlesme(Request $request)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, ['form.gonder']);
+        $sadeceKaydet = $request->boolean('sadece_kaydet');
+        [$uid, $salonId] = $this->salonDenetle($request, $sadeceKaydet ? self::SAYFA : ['form.gonder']);
         $this->yazmaAcikMi();
         $g = $request->only([
             'user_id', 'cep_telefon', 'hizmet_id', 'paket_id', 'seans_sayisi', 'sozlesme_notu', 'sozlesme_metni',
@@ -156,10 +160,11 @@ class ArsivController extends V2Controller
         $g['toplam_ucret'] = $this->tutar($request->input('toplam_ucret')) ?? 0;
         $g['kapora'] = $this->tutar($request->input('kapora')) ?? 0;
         $g['taksit_tutari'] = $this->tutar($request->input('taksit_tutari'));
+        $g['sadece_kaydet'] = $sadeceKaydet;
 
         return ApiCevap::basarili(
             $this->islem->sozlesmeOlustur($salonId, $uid, $g, (string) $request->ip()),
-            'Sözleşme oluşturuldu ve müşteriye gönderildi.'
+            $sadeceKaydet ? 'Sözleşme arşive kaydedildi.' : 'Sözleşme oluşturuldu ve müşteriye gönderildi.'
         );
     }
 

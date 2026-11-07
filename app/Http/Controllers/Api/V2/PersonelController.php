@@ -175,6 +175,8 @@ class PersonelController extends V2Controller
             'sistem_yetki'      => $request->input('sistem_yetki'),
             'calisma_saatleri'  => (array) $request->input('calisma_saatleri', []),
             'mola_saatleri'     => (array) $request->input('mola_saatleri', []),
+            // Maas gormeyen duzenleyiciye alanlar bos gelir; bos gonderim mevcut degeri silmesin.
+            'maas_koru'         => $id !== null && ! $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'personel.maas_tutar_gor'),
         ];
 
         return ApiCevap::basarili(

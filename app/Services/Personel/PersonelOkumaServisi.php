@@ -75,6 +75,7 @@ class PersonelOkumaServisi
                 'sp.takvim_sirasi as takvim_sirasi',
                 'sp.aktif as aktif',
                 'r.id as hesap_turu',
+                'iy.id as hesap_id',
             ]);
     }
 
@@ -126,6 +127,8 @@ class PersonelOkumaServisi
             'takvim_sirasi'      => $row->takvim_sirasi !== null ? (int) $row->takvim_sirasi : null,
             'takvimde_gorunsun'  => (int) ($row->takvimde_gorunsun ?? 0),
             'aktif'              => (int) ($row->aktif ?? 0),
+            // Giris hesabi var mi; eski mobil listesi hesapsiz personeli gostermez.
+            'hesabi_var'         => ! empty($row->hesap_id),
             // Hassas alanlar: personel.maas_tutar_gor yoksa null (maskelenir).
             'maas'               => $maasGor ? $row->maas : null,
             'hizmet_prim_yuzde'  => $maasGor ? $row->hizmet_prim_yuzde : null,

@@ -22,7 +22,7 @@ use Illuminate\Validation\Rule;
  *                                                      numarayı görebilen kullanıcı → {softphone:true, numara_ara}
  *   POST /cagri-merkezi/ara            {user_id?|numara?, softphone?}  müşteri kartı / çağrı kaydı "Ara"
  *   POST /cagri-merkezi/kayit/{id}/sonuc               {sonuc?, not?, tarih?, saat?, satis_tutari?, kategori_id?, alt_kategori_id?, arama_personel_id?}
- *   POST /cagri-merkezi/kayit/{id}/randevu-verildi     normal randevu oluşturuldu → 8 + rozet
+ *   POST /cagri-merkezi/kayit/{id}/randevu-verildi     {yalniz_bekleyen?} normal randevu oluşturuldu → 8 + rozet
  *   POST /cagri-merkezi/kayit/{id}/iptal               arama randevusu iptal (9)
  *   POST /cagri-merkezi/kayit/{id}/ertele              {tarih, saat}
  *   POST /cagri-merkezi/kayit/{id}/satis               {tur, katalog_id, fiyat?, seans?, adet?, personel_id?, not?, idempotency_key} → {adisyon_id}
@@ -66,7 +66,7 @@ class CagriIslemController extends CagriMerkeziTabanController
 
     public function randevuVerildi(Request $request, int $id, GorusmeSonucServisi $s)
     {
-        return ApiCevap::basarili($s->randevuVerildi($this->yazmaErisimi($request, CagriMerkeziEylemi::Calisma), $id), 'Randevu oluşturuldu (müşteri listede kaldı).');
+        return ApiCevap::basarili($s->randevuVerildi($this->yazmaErisimi($request, CagriMerkeziEylemi::Calisma), $id, $request->boolean('yalniz_bekleyen')), 'Randevu oluşturuldu (müşteri listede kaldı).');
     }
 
     public function iptal(Request $request, int $id, GorusmeSonucServisi $s)

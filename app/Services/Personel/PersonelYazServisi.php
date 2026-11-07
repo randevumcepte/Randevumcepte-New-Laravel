@@ -180,14 +180,16 @@ class PersonelYazServisi
             }
             $personel->salon_id = $salonId;
             $personel->cinsiyet = $g['cinsiyet'] ?? null;
-            $personel->maas = $g['maas'] ?? null;
-            $personel->hizmet_prim_yuzde = $g['hizmet_prim_yuzde'] ?? null;
-            $personel->urun_prim_yuzde = $g['urun_prim_yuzde'] ?? null;
-            $personel->paket_prim_yuzde = $g['paket_prim_yuzde'] ?? null;
-            // Kaleme göre (detayli) prim mod bayraklari.
-            $personel->hizmet_prim_detayli = empty($g['hizmet_prim_detayli']) ? 0 : 1;
-            $personel->urun_prim_detayli   = empty($g['urun_prim_detayli']) ? 0 : 1;
-            $personel->paket_prim_detayli  = empty($g['paket_prim_detayli']) ? 0 : 1;
+            if (empty($g['maas_koru'])) {
+                $personel->maas = $g['maas'] ?? null;
+                $personel->hizmet_prim_yuzde = $g['hizmet_prim_yuzde'] ?? null;
+                $personel->urun_prim_yuzde = $g['urun_prim_yuzde'] ?? null;
+                $personel->paket_prim_yuzde = $g['paket_prim_yuzde'] ?? null;
+                // Kaleme göre (detayli) prim mod bayraklari.
+                $personel->hizmet_prim_detayli = empty($g['hizmet_prim_detayli']) ? 0 : 1;
+                $personel->urun_prim_detayli   = empty($g['urun_prim_detayli']) ? 0 : 1;
+                $personel->paket_prim_detayli  = empty($g['paket_prim_detayli']) ? 0 : 1;
+            }
             $personel->yetkili_id = $yetkili->id;
             $rol = $g['sistem_yetki'] ?? null;
             if ($rol !== null && $rol !== '') {

@@ -25,6 +25,7 @@ Route::prefix('cagri-merkezi')->group(function () {
     Route::get('/kayit/{id}/ses-kayitlari', [CagriMerkeziController::class, 'sesKayitlari'])->whereNumber('id');
     Route::get('/kayit/{id}/musteri', [CagriMerkeziController::class, 'musteri'])->whereNumber('id');
     Route::get('/musteri-ara', [CagriMerkeziController::class, 'musteriAra']);
+    Route::get('/musteri/{userId}/randevu-gecmisi', [CagriMerkeziController::class, 'randevuGecmisi'])->whereNumber('userId');
 
     // Aranacak müşteri işlemleri
     Route::post('/kayit/{id}/ara', [CagriIslemController::class, 'ara'])->whereNumber('id');

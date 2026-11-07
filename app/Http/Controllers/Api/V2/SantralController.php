@@ -45,6 +45,7 @@ class SantralController extends V2Controller
     /**
      * GET /api/v2/santral/cagrilar?salon_id=&tarih1=&tarih2=&kategori=&ara=&page=&per_page=
      * kategori: gelen | giden | cevapsiz | ulasilamadi (bos → tumu). Tarih varsayilani bugun.
+     * derin=1: tek pencere tavani yerine istenen sayfa dolana kadar sonraki pencereler okunur (sonsuz kaydirma).
      */
     public function cagrilar(Request $request)
     {
@@ -60,6 +61,7 @@ class SantralController extends V2Controller
             'ara'      => $liste->ara,
             'page'     => $liste->sayfa,
             'per_page' => $liste->sayfaBoyu,
+            'derin'    => $request->boolean('derin'),
         ]));
     }
 

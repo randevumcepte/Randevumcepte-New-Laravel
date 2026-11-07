@@ -190,6 +190,12 @@ Route::prefix('v2')->group(function () {
         // ORTAK SECIM LISTELERI (hizmet, cihaz, oda, sehir, salon ayari) — routes/v2/secici.php
         require __DIR__.'/v2/secici.php';
 
+        // AJANDA NOTLARI (kullanicinin kendi notlari) — routes/v2/ajanda.php
+        require __DIR__.'/v2/ajanda.php';
+
+        // RANDEVU YARDIMCI UCLARI (islem sonrasi not, sesli randevu musaitlik) — routes/v2/randevu-yardimci.php
+        require __DIR__.'/v2/randevu-yardimci.php';
+
         require __DIR__.'/v2/stok.php';
 
         // OZET (dashboard: kartlar, liste sekmeleri, hizli eylemler) — routes/v2/ozet.php
@@ -248,6 +254,9 @@ Route::prefix('v2')->group(function () {
 
         // CAGRI MERKEZI (calisma ekrani, arama randevulari, cagri kayitlari, performans, liste yonetimi) — routes/v2/cagri-merkezi.php
         require __DIR__.'/v2/cagri-merkezi.php';
+
+        // SALON HATIRLATMA KARTLARI (genel kartlar rol 1/2/3, arama randevusu atanan personele) — routes/v2/hatirlatma.php
+        require __DIR__.'/v2/hatirlatma.php';
 
         // CARKIFELEK + SADAKAT (cark ayari, kupon/kazananlar, hatirlatma, puan odulleri, kazanim kurali) — routes/v2/cark.php
         require __DIR__.'/v2/cark.php';

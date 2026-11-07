@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V2\KampanyaController;
 use App\Http\Controllers\Api\V2\KampanyaKatilimciController;
+use App\Http\Controllers\Api\V2\KampanyaSaatBosluguController;
 use App\Http\Controllers\Api\V2\KampanyaSenaryoController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,8 @@ Route::prefix('kampanya')->group(function () {
     Route::get('/musteri-ara', [KampanyaController::class, 'musteriAra']);
     Route::post('/kitle-sayisi', [KampanyaController::class, 'kitleSayisi']);
     Route::post('/mesaj-onizle', [KampanyaController::class, 'mesajOnizle']);
+
+    Route::get('/saat-boslugu', [KampanyaSaatBosluguController::class, 'aktifler']);
 
     Route::get('/senaryo', [KampanyaSenaryoController::class, 'liste']);
     Route::post('/senaryo', [KampanyaSenaryoController::class, 'ekle']);

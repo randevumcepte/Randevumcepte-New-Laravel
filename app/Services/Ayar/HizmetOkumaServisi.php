@@ -74,7 +74,7 @@ class HizmetOkumaServisi
     /**
      * Salonun aktif sunmadigi, eklenebilir hizmetler (kategoriye gruplu): sistem havuzu
      * (salon_id NULL, ozel degil) + bu salonun pasif ozel hizmetleri. Baska salonlarin ozel
-     * hizmetleri LISTELENMEZ (eskiyle ayni).
+     * hizmetleri LISTELENMEZ (eskiyle ayni). fiyat = katalog fiyati (mobil form on doldurur).
      */
     public function havuz(int $salonId): array
     {
@@ -87,12 +87,13 @@ class HizmetOkumaServisi
                 ->where(fn ($o) => $o->where('h.ozel_hizmet', 1)->where('h.salon_id', $salonId))
                 ->orWhere(fn ($s) => $s->whereNull('h.salon_id')->whereRaw('COALESCE(h.ozel_hizmet, 0) = 0')))
             ->orderBy('k.hizmet_kategorisi_adi')->orderBy('h.hizmet_adi')
-            ->get(['h.id', 'h.hizmet_adi', 'h.sure_dk', 'h.hizmet_kategori_id', 'k.hizmet_kategorisi_adi']);
+            ->select('h.*', 'k.hizmet_kategorisi_adi')->get();
 
         return $hizmetler->groupBy('hizmet_kategori_id')->map(fn ($g) => [
             'kategori_id'  => $g->first()->hizmet_kategori_id !== null ? (int) $g->first()->hizmet_kategori_id : null,
             'kategori_adi' => trim((string) ($g->first()->hizmet_kategorisi_adi ?? 'Kategorisiz')),
-            'hizmetler'    => $g->map(fn ($h) => ['id' => (int) $h->id, 'hizmet_adi' => trim((string) $h->hizmet_adi), 'sure_dk' => $h->sure_dk !== null ? (int) $h->sure_dk : null])->values()->all(),
+            'hizmetler'    => $g->map(fn ($h) => ['id' => (int) $h->id, 'hizmet_adi' => trim((string) $h->hizmet_adi), 'sure_dk' => $h->sure_dk !== null ? (int) $h->sure_dk : null,
+                'fiyat' => $h->fiyat ?? null, 'ozel_hizmet' => (int) ($h->ozel_hizmet ?? 0) === 1])->values()->all(),
         ])->values()->all();
     }
 

@@ -16,6 +16,6 @@ return [
      | ve PDF uçları dosyayı bulmaya devam etsin.
      */
     'harici_dizin' => env('FORM_HARICI_DIZIN', '/var/www/www-root/data/www/randevumcepte/public/formlar'),
-    'harici_uzantilar' => ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
+    'harici_uzantilar' => ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'doc', 'docx'],
     'harici_maks_kb' => 10240,
 ];

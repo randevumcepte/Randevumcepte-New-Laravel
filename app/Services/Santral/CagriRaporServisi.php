@@ -22,10 +22,13 @@ use Illuminate\Support\Facades\DB;
  */
 class CagriRaporServisi
 {
+    /** derin okumada en fazla kac pencere cekilir (pencere = config santral.cdr_tavan). */
+    private const DERIN_PENCERE = 20;
+
     public function __construct(private SantralIstemcisi $istemci) {}
 
     /**
-     * @param array{tarih1:string, tarih2:string, kategori:?string, ara:?string, page:int, per_page:int} $o
+     * @param array{tarih1:string, tarih2:string, kategori:?string, ara:?string, page:int, per_page:int, derin?:bool} $o
      */
     public function listele(int $salonId, SantralErisim $erisim, array $o): array
     {
@@ -39,17 +42,10 @@ class CagriRaporServisi
         $trunk = (string) DB::table('sabit_numaralar')->where('salon_id', $salonId)->value('numara');
         // Ne dahili ne trunk varsa santrale GIDILMEZ: filtresiz istek baska salonlarin
         // CDR'larini dondurebilir (kapsam sizintisi).
-        $cdr = $salonDahilileri || $trunk
-            ? $this->istemci->cdrListesi($salonDahilileri, $trunk ?: null, $o['tarih1'], $o['tarih2'], $tavan)
-            : ['satirlar' => [], 'toplam' => 0, 'hata' => false];
-
-        $siniflar = [];
-        foreach ($cdr['satirlar'] as $satir) {
-            $sinif = CdrSiniflandirici::siniflandir($satir, $salonDahilileri);
-            if ($sinif !== null && $erisim->gorebilirMi($sinif)) {
-                $siniflar[] = $sinif;
-            }
-        }
+        $gereken = ! empty($o['derin']) ? $o['page'] * $o['per_page'] : 0;
+        ['siniflar' => $siniflar, 'kesildi' => $kesildi, 'hata' => $hata] = $salonDahilileri || $trunk
+            ? $this->gorunenCagrilar($salonDahilileri, $trunk ?: null, $erisim, $o['tarih1'], $o['tarih2'], $tavan, $gereken)
+            : ['siniflar' => [], 'kesildi' => false, 'hata' => false];
 
         $musteriler = $this->musteriler($salonId, $siniflar);
         $satirlar = array_map(fn ($s) => $this->satir($s, $musteriler, $personelAdlari, $erisim->telefonGor), $siniflar);
@@ -64,9 +60,34 @@ class CagriRaporServisi
             'ozet'    => $ozet,
             'tarih1'  => $o['tarih1'],
             'tarih2'  => $o['tarih2'],
-            'kesildi' => count($cdr['satirlar']) >= $tavan,
-            'hata'    => $cdr['hata'],
+            'kesildi' => $kesildi,
+            'hata'    => $hata,
         ] + ListeIstegi::meta($o['page'], $o['per_page'], $toplam);
+    }
+
+    /**
+     * Santralden pencere pencere okur, siniflandirir, erisim kapsamini uygular.
+     * $gereken = 0 → tek pencere (web). Aksi halde gorunen satir $gereken olana veya kayit bitene kadar devam eder.
+     *
+     * @return array{siniflar: array<int,array>, kesildi: bool, hata: bool}
+     */
+    private function gorunenCagrilar(array $dahililer, ?string $trunk, SantralErisim $erisim, string $tarih1, string $tarih2, int $tavan, int $gereken): array
+    {
+        $siniflar = [];
+        $pencere = 0;
+        do {
+            $cdr = $this->istemci->cdrListesi($dahililer, $trunk, $tarih1, $tarih2, $tavan, $pencere * $tavan);
+            foreach ($cdr['satirlar'] as $satir) {
+                $sinif = CdrSiniflandirici::siniflandir($satir, $dahililer);
+                if ($sinif !== null && $erisim->gorebilirMi($sinif)) {
+                    $siniflar[] = $sinif;
+                }
+            }
+            $dolu = count($cdr['satirlar']) >= $tavan;
+            $pencere++;
+        } while ($dolu && count($siniflar) < $gereken && $pencere < self::DERIN_PENCERE);
+
+        return ['siniflar' => $siniflar, 'kesildi' => $dolu && ($gereken === 0 || $pencere >= self::DERIN_PENCERE), 'hata' => $cdr['hata']];
     }
 
     /** dahili → personel adi (normal + WebRTC dahilisi ayni kisiye isaret eder). */

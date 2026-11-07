@@ -114,7 +114,7 @@ class SeansController extends V2Controller
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
         $this->kayitDenetle((int) $kalem->salon_id);
 
-        $adet = $this->cihaz->kaydet($seans, $tur, $kalem, $g['bolgeler']);
+        $adet = $this->cihaz->kaydet($seans, $tur, $kalem, $g['bolgeler'], (int) $this->kullanici()->id);
 
         return ApiCevap::basarili(['kayit_sayisi' => $adet], 'Cihaz bilgileri kaydedildi');
     }

@@ -6,6 +6,7 @@ use App\Domain\Seans\LazerTespiti;
 use App\Domain\Seans\SeansKalemTuru;
 use App\Exceptions\GecersizIslemException;
 use App\Models\SeansCihazVerileri;
+use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -53,7 +54,7 @@ class SeansCihazServisi
     /**
      * @param  array<int,array<string,mixed>>  $bolgeler  [{uygulama_bolgesi?, enerji, hiz, ms, atis_sayisi, personel_id, notlar}]
      */
-    public function kaydet(object $seans, SeansKalemTuru $tur, object $kalem, array $bolgeler): int
+    public function kaydet(object $seans, SeansKalemTuru $tur, object $kalem, array $bolgeler, ?int $yapanId = null): int
     {
         $this->lazerZorunlu($seans, $tur, $kalem);
         $salonId = (int) $kalem->salon_id;
@@ -87,6 +88,8 @@ class SeansCihazServisi
                 SeansCihazVerileri::create($s);
             }
         });
+
+        AktiviteLog::yaz($salonId, $yapanId, 'seans_cihaz_kaydet', 'seans', (int) $seans->id, null, 'Cihaz bilgileri kaydedildi');
 
         return count($satirlar);
     }

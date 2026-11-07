@@ -86,13 +86,16 @@ final class SonucKaydiPlani
     /**
      * Aramayı tamamlayan sonuç işareti (randevu verildi / oluşturuldu 8, iptal 9) — bekleyen
      * hatırlatmayı susturur. `ar_tamamlandi_at` yalnız henüz tamamlanmamışsa basılır (ilk zaman korunur).
+     * $damgala = false → takvim damgasına dokunulmaz (bekleyen arama randevusu olmayan kayıt).
      *
      * @return array<string,mixed>
      */
-    public static function tamamla(AramaSonucu $sonuc, ?string $tamamlandiAt, string $simdi): array
+    public static function tamamla(AramaSonucu $sonuc, ?string $tamamlandiAt, string $simdi, bool $damgala = true): array
     {
-        $k = ['durum' => $sonuc->value, 'ar_gecikti' => 0];
-        $k['ar_tamamlandi_at'] = $tamamlandiAt ?: $simdi;
+        $k = ['durum' => $sonuc->value];
+        if ($damgala) {
+            $k += ['ar_gecikti' => 0, 'ar_tamamlandi_at' => $tamamlandiAt ?: $simdi];
+        }
         if ($sonuc !== AramaSonucu::IPTAL) {
             $k['son_arama_zamani'] = $simdi;
         }

@@ -7,6 +7,7 @@ use App\Services\CagriMerkezi\AramaListesiServisi;
 use App\Services\CagriMerkezi\CagriReferansServisi;
 use App\Services\CagriMerkezi\GorusmeGecmisiServisi;
 use App\Services\CagriMerkezi\KuyrukServisi;
+use App\Services\CagriMerkezi\MusteriRandevuGecmisiServisi;
 use App\Services\Randevu\RandevuFormServisi;
 use App\Support\ApiCevap;
 use App\Support\ListeIstegi;
@@ -24,6 +25,7 @@ use Illuminate\Http\Request;
  *   GET /cagri-merkezi/kayit/{id}/ses-kayitlari?salon_id= müşteriyle TÜM ses kayıtları (son 120 gün)
  *   GET /cagri-merkezi/kayit/{id}/musteri?salon_id=       dönüşüm formu müşteri kimliği (ad tam, telefon yetkiye göre)
  *   GET /cagri-merkezi/musteri-ara?salon_id=&q=           manuel arama randevusu için müşteri arama
+ *   GET /cagri-merkezi/musteri/{userId}/randevu-gecmisi?salon_id=  randevu geçmişi + özet
  */
 class CagriMerkeziController extends CagriMerkeziTabanController
 {
@@ -49,6 +51,11 @@ class CagriMerkeziController extends CagriMerkeziTabanController
     public function kayit(Request $request, int $id, KuyrukServisi $s)
     {
         return ApiCevap::basarili($s->tekil($this->erisim($request, CagriMerkeziEylemi::Calisma), $id));
+    }
+
+    public function randevuGecmisi(Request $request, int $userId, MusteriRandevuGecmisiServisi $s)
+    {
+        return ApiCevap::basarili($s->getir($this->erisim($request, CagriMerkeziEylemi::Calisma), $userId));
     }
 
     public function musteri(Request $request, int $id, KuyrukServisi $s)

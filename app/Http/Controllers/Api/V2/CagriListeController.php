@@ -17,7 +17,8 @@ use Illuminate\Validation\Rule;
  * cagri_liste_personel_degistir, cagri_segment_ata + cagri_toplu_aktar (tek uç), cagri_liste_sil,
  * cagri_segment_indir karşılığı.
  *
- *   POST   /cagri-merkezi/listeler/onizleme     {filtre{}, page, per_page}  canlı sayaç + sayfalı müşteri listesi
+ *   POST   /cagri-merkezi/listeler/onizleme     {filtre{}, page, per_page, offset?, limit?, idler?}  canlı sayaç + müşteri listesi
+ *                                                 (offset+limit: isim sırasında dilim; idler=1: musteri_idler eklenir)
  *   POST   /cagri-merkezi/listeler              {baslik, personel_id, aranacak_tarih?, filtre{}, mod: tumu|aralik|secili, ids[]?, bas?, bit?}
  *   GET    /cagri-merkezi/listeler/{id}/segmentler
  *   PATCH  /cagri-merkezi/listeler/{id}/durum      {durum: 1|2|3}
@@ -32,8 +33,13 @@ class CagriListeController extends CagriMerkeziTabanController
     {
         $e = $this->erisim($request, CagriMerkeziEylemi::ListeYonet);
         $l = ListeIstegi::istekten($request, 50);
+        $v = $request->validate([
+            'offset' => ['nullable', 'integer', 'min:0', 'required_with:limit'],
+            'limit'  => ['nullable', 'integer', 'min:1', 'max:20000', 'required_with:offset'],
+        ]);
 
-        return ApiCevap::basarili($s->onizleme($e, AramaFiltresi::diziden((array) $request->input('filtre', [])), $l->sayfa, $l->sayfaBoyu));
+        return ApiCevap::basarili($s->onizleme($e, AramaFiltresi::diziden((array) $request->input('filtre', [])), $l->sayfa, $l->sayfaBoyu,
+            $v['offset'] ?? null, $v['limit'] ?? null, $request->boolean('idler')));
     }
 
     public function olustur(Request $request, ListeOlusturmaServisi $s)

@@ -57,6 +57,16 @@ class SonucKaydiPlaniTest extends TestCase
         $this->assertArrayNotHasKey('musteri_not', $p->kolonlar);
     }
 
+    public function test_tamamla_damgasiz_takvim_kolonlarina_dokunmaz(): void
+    {
+        $k = SonucKaydiPlani::tamamla(AramaSonucu::RANDEVU_OLUSTURULDU, null, self::SIMDI, false);
+
+        $this->assertSame(8, $k['durum']);
+        $this->assertSame(self::SIMDI, $k['son_arama_zamani']);
+        $this->assertArrayNotHasKey('ar_tamamlandi_at', $k);
+        $this->assertArrayNotHasKey('ar_gecikti', $k);
+    }
+
     public function test_takvimdeki_kayit_sonucla_tamamlanir_zaman_korunur(): void
     {
         // Bekleyen arama randevusu (3 + zaman) "Görüşüldü" ile işaretlenince takvimden düşmez.
