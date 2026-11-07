@@ -102,8 +102,7 @@ class YetkiliHesabi implements OturumHesabi
                 ] + ($bundle ? [
                     // Kendi dahili hatti: mobil softphone kaydi bu alanlarla kurulur; web softphone kendi ucunu kullanir.
                     'dahili_no' => $p->dahili_no ?? null, 'dahili_no_webrtc' => $p->dahili_no_webrtc ?? null, 'dahili_sifre_webrtc' => $p->dahili_sifre_webrtc ?? null,
-                ] : []),
-                ], $personeller),
+                ] : []), $personeller),
             ],
             'musteri'   => '',
             'ilk_sayfa' => $bundle ? null : $this->ilkSayfa->coz($id, (int) $personeller[0]->salon_id),
