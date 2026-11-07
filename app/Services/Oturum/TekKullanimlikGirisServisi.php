@@ -28,7 +28,7 @@ class TekKullanimlikGirisServisi
         private PlatformMesaj $mesaj,
     ) {}
 
-    public function kodIste(string $telefonHam, ?string $tur, string $ip): void
+    public function kodIste(string $telefonHam, ?string $tur, string $ip, ?string $bundle = null): void
     {
         $tel = $this->telefon($telefonHam);
         $ayar = (array) config('oturum.tek_kullanimlik');
@@ -44,7 +44,8 @@ class TekKullanimlikGirisServisi
         }
 
         $kod = $this->kodUret($tel);
-        $this->mesaj->kod($tel, 'Randevumcepte giriş kodunuz: '.$kod.'. Kod '.intdiv((int) $ayar['sure_sn'], 60).' dakika geçerlidir. Kimseyle paylaşmayın.', 'Giris Kodu');
+        [$hesap, $id] = reset($hesaplar);
+        $this->mesaj->kod($tel, 'Giriş kodunuz: '.$kod.'. Kod '.intdiv((int) $ayar['sure_sn'], 60).' dakika geçerlidir. Kimseyle paylaşmayın.', 'Giris Kodu', $hesap->mesajSalonu($id, $bundle));
     }
 
     /** @param array{cep_telefon:string,kod:string,hesap_turu?:?string,app_bundle?:?string,cihaz_bilgi?:?string,bildirim_id?:?string} $g */

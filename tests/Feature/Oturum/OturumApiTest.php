@@ -7,6 +7,7 @@ use App\Services\Deneme\DemoHesapKurServisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\IlkSayfa;
 use App\Services\Oturum\PlatformSms;
+use App\Services\Oturum\SalonMesaj;
 use App\Services\Whatsapp\Kopru\KopruCevabi;
 use App\Services\Whatsapp\Kopru\WhatsappKoprusu;
 use Illuminate\Database\Schema\Blueprint;
@@ -414,5 +415,59 @@ class OturumApiTest extends TestCase
     public function test_web_giris_ekrani_kod_ve_sifre_formlarini_icerir(): void
     {
         $this->get('/v2/giris')->assertOk()->assertSee('id="kodIsteFormu"', false)->assertSee('id="kodGirisFormu"', false)->assertSee('id="girisFormu"', false);
+    }
+
+    /** @param  array<int,string>  $kanallar  cagrilan kanallar buraya yazilir */
+    private function salonHattiKur(bool $whatsapp, bool $sms, array &$kanallar): void
+    {
+        $salon = Mockery::mock(SalonMesaj::class);
+        $salon->shouldReceive('whatsapp')->andReturnUsing(function ($id, $tel, $mesaj) use ($whatsapp, &$kanallar) {
+            $kanallar[] = 'whatsapp:'.$id;
+
+            return $whatsapp;
+        });
+        $salon->shouldReceive('sms')->andReturnUsing(function ($id, $tel, $mesaj) use ($sms, &$kanallar) {
+            $kanallar[] = 'sms:'.$id;
+
+            return $sms;
+        });
+        $this->app->instance(SalonMesaj::class, $salon);
+    }
+
+    public function test_whatsapp_bagli_degilse_kod_isletmenin_sms_inden_gider_platforma_dusmez(): void
+    {
+        $kanallar = [];
+        $this->salonHattiKur(false, true, $kanallar);
+        $this->yetkili([['uyelik_turu' => 1]]);
+        $salonId = (int) DB::table('salon_personelleri')->value('salon_id');
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+
+        $this->assertSame(['whatsapp:'.$salonId, 'sms:'.$salonId], $kanallar);
+        $this->assertSame([], $this->smsler);
+        $this->assertSame([], $this->whatsapplar);
+    }
+
+    public function test_isletme_whatsapp_i_bagliysa_sms_gitmez(): void
+    {
+        $kanallar = [];
+        $this->salonHattiKur(true, true, $kanallar);
+        $this->yetkili([['uyelik_turu' => 1]]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+
+        $this->assertCount(1, $kanallar);
+        $this->assertStringStartsWith('whatsapp:', $kanallar[0]);
+    }
+
+    public function test_isletme_hatti_yoksa_kod_platformdan_gider(): void
+    {
+        $kanallar = [];
+        $this->salonHattiKur(false, false, $kanallar);
+        $this->yetkili([['uyelik_turu' => 1]]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+
+        $this->assertCount(1, $this->smsler);
     }
 }

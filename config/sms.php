@@ -15,6 +15,7 @@ return [
     ],
     'efetech' => [
         'bakiye_url' => env('SMS_EFETECH_BAKIYE_URL', 'https://api.efetech.net.tr/v2/get/balance'),
+        'gonderim_url' => env('SMS_EFETECH_GONDERIM_URL', 'https://api.efetech.net.tr/v2/sms/multi'),
         'rapor_url' => env('SMS_EFETECH_RAPOR_URL', 'https://api.efetech.net.tr/v2/get/report'),
     ],
 

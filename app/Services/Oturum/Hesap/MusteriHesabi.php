@@ -45,6 +45,16 @@ class MusteriHesabi implements OturumHesabi
         return Hash::check($sifre, (string) DB::table('users')->where('id', $id)->value('password')) ? $id : null;
     }
 
+    public function mesajSalonu(int $id, ?string $bundle): ?int
+    {
+        if ($this->kapsam->markaMi($bundle)) {
+            return $this->kapsam->markaSalonlari($bundle)[0] ?? null;
+        }
+        $salon = DB::table('musteri_portfoy')->where('user_id', $id)->where('aktif', 1)->orderByDesc('id')->value('salon_id');
+
+        return $salon !== null ? (int) $salon : null;
+    }
+
     public function telefonlaBul(string $telefon): ?int
     {
         $varyantlar = TelefonNumarasi::aramaVaryantlari($telefon);

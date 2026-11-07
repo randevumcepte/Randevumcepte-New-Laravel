@@ -25,6 +25,9 @@ interface OturumHesabi
      */
     public function acilisVerisi(int $id, ?string $bundle): array;
 
+    /** Dogrulama kodunun gidecegi hattin salonu; bilinmiyorsa null (platform hatti). */
+    public function mesajSalonu(int $id, ?string $bundle): ?int;
+
     public function cihazKaydet(int $id, ?string $bildirimId, ?string $cihaz, ?string $bundle): void;
 
     /** Sifreyi yazar, hesabin acik oturumlarini kapatir. */

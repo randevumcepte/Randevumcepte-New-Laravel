@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
  *
  *   POST /oturum/giris {kimlik, password, hesap_turu?, app_bundle?, cihaz_bilgi?, bildirim_id?}
  *        → {token, token_type, expires_at, user_type, user, musteri, ilk_sayfa}
- *   POST /oturum/kod-iste {cep_telefon, hesap_turu?} → {yeniden_sn}
+ *   POST /oturum/kod-iste {cep_telefon, hesap_turu?, app_bundle?} → {yeniden_sn}
  *   POST /oturum/kod-dogrula {cep_telefon, kod, hesap_turu?, app_bundle?, cihaz_bilgi?, bildirim_id?}
  *        → giris cevabi ya da birden cok hesapta {hesap_secimi, secim_kodu}
  *   POST /oturum/yenile (Bearer) → {token|null, expires_at}
@@ -41,8 +41,12 @@ class OturumController extends V2Controller
 
     public function kodIste(Request $request, TekKullanimlikGirisServisi $servis)
     {
-        $g = $this->alanlariDogrula($request, ['cep_telefon' => ['required', 'string', 'max:30'], 'hesap_turu' => self::HESAP_TURU]);
-        $servis->kodIste($g['cep_telefon'], $g['hesap_turu'] ?? null, (string) $request->ip());
+        $g = $this->alanlariDogrula($request, [
+            'cep_telefon' => ['required', 'string', 'max:30'],
+            'hesap_turu'  => self::HESAP_TURU,
+            'app_bundle'  => ['nullable', 'string', 'max:190'],
+        ]);
+        $servis->kodIste($g['cep_telefon'], $g['hesap_turu'] ?? null, (string) $request->ip(), ($g['app_bundle'] ?? null) ?: null);
 
         return ApiCevap::basarili(['yeniden_sn' => (int) config('oturum.tek_kullanimlik.yeniden_sn')], 'Numaranız kayıtlıysa giriş kodu gönderildi.');
     }

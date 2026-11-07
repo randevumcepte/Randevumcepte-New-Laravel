@@ -72,6 +72,13 @@ class YetkiliHesabi implements OturumHesabi
         return null;
     }
 
+    public function mesajSalonu(int $id, ?string $bundle): ?int
+    {
+        $ilk = $this->kapsam->yetkiliPersonelSatirlari($id, $bundle)[0] ?? null;
+
+        return $ilk ? (int) $ilk->salon_id : null;
+    }
+
     public function telefonlaBul(string $telefon): ?int
     {
         $id = DB::table('isletmeyetkilileri')->whereIn('gsm1', TelefonNumarasi::aramaVaryantlari($telefon))->orderBy('id')->value('id');
