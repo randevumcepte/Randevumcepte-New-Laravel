@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\Seans\MobilSeansKurali;
 use App\Domain\Seans\SeansDurumu;
 use App\Domain\Seans\SeansKalemTuru;
 use App\Services\Seans\SeansCihazServisi;
+use App\Services\Seans\SeansDokumServisi;
 use App\Services\Seans\SeansKapsam;
+use App\Services\Seans\SeansMobilServisi;
 use App\Services\Seans\SeansTakipServisi;
 use App\Services\Seans\SeansYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
 use App\Support\DogrulamaMetinleri;
+use App\Support\Idempotency;
 use App\Support\ListeIstegi;
 use Illuminate\Http\Request;
 
@@ -24,6 +28,10 @@ use Illuminate\Http\Request;
  *   PATCH /seans/{id} {geldi: 0|1|2|null}                 durum (null = beklemede)
  *   GET   /seans/{id}/cihaz                               lazer cihaz bilgisi + personeller
  *   PUT   /seans/{id}/cihaz {bolgeler: [...]}              lazer cihaz bilgisi kaydet
+ *   GET   /seans/dokum?tur=&kalem_id=                      seans dokumu PDF (mobil)
+ *
+ * mobil=1 (yalniz imzali mobil token, MobilBayraklar): eski mobil sayac, satir ve yazma kurali
+ * (SeansMobilServisi), yetki anahtari aranmaz, kimlik ve salon kapsami zorunlu.
  *
  * Yetki her uçta 'paket.seans_takip' (eski sayfa kapisi). Kayit uclarinda salon
  * istekten degil kaydin adisyonundan cozulur (baska salonun kaydi 404/403).
@@ -47,10 +55,17 @@ class SeansController extends V2Controller
         private SeansTakipServisi $takip,
         private SeansYazServisi $yaz,
         private SeansCihazServisi $cihaz,
+        private SeansMobilServisi $mobil,
     ) {}
 
     public function liste(Request $request)
     {
+        if ($request->boolean('mobil')) {
+            [, $salonId] = $this->salonDenetle($request, []);
+
+            return ApiCevap::basarili($this->mobil->liste($salonId, (string) $request->input('arama', ''), (string) $request->input('musteri_id', ''), max(1, $request->integer('page', 1))));
+        }
+
         [, $salonId] = $this->salonDenetle($request, self::YETKI);
         $l = ListeIstegi::istekten($request, 10, array_keys(SeansTakipServisi::SIRALANABILIR), 'tarih', 'desc');
 
@@ -59,6 +74,10 @@ class SeansController extends V2Controller
 
     public function ekle(Request $request)
     {
+        if ($request->boolean('mobil')) {
+            return $this->mobilEkle($request);
+        }
+
         $g = $this->dogrula($request, [
             'tur'       => ['required', 'in:'.implode(',', array_column(SeansKalemTuru::cases(), 'value'))],
             'kalem_id'  => ['required', 'integer', 'min:1'],
@@ -79,6 +98,11 @@ class SeansController extends V2Controller
     {
         $g = $this->dogrula($request, ['geldi' => ['present', 'nullable', 'integer', 'in:0,1,2']]);
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
+        if ($request->boolean('mobil')) {
+            $this->kayitDenetle((int) $kalem->salon_id, true, true);
+
+            return ApiCevap::basarili($this->mobil->durum($seans, isset($g['geldi']) ? (int) $g['geldi'] : null, (int) $kalem->salon_id, (int) $this->kullanici()->id));
+        }
         $this->kayitDenetle((int) $kalem->salon_id);
 
         $durum = SeansDurumu::geldidenCoz($g['geldi']);
@@ -119,10 +143,50 @@ class SeansController extends V2Controller
         return ApiCevap::basarili(['kayit_sayisi' => $adet], 'Cihaz bilgileri kaydedildi');
     }
 
-    /** Kaydin salonunda kapsam + yetki; yazma ise ardindan kill-switch. */
-    private function kayitDenetle(int $salonId, bool $yazma = true): void
+    public function dokum(Request $request, SeansDokumServisi $dokum)
     {
-        app(GuvenlikKapisi::class)->denetle($this->kullanici()->id, $salonId, self::YETKI);
+        $g = $this->dogrula($request, [
+            'tur'      => ['required', 'in:'.implode(',', array_column(SeansKalemTuru::cases(), 'value'))],
+            'kalem_id' => ['required', 'integer', 'min:1'],
+        ]);
+        $tur = SeansKalemTuru::from($g['tur']);
+        $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
+        $this->kayitDenetle((int) $kalem->salon_id, false, $request->boolean('mobil'));
+        $belge = $dokum->pdf($tur, $kalem);
+
+        return $belge['pdf']->stream($belge['ad']);
+    }
+
+    private function mobilEkle(Request $request)
+    {
+        $g = $this->dogrula($request, [
+            'tur'             => ['required', 'in:'.implode(',', array_column(SeansKalemTuru::cases(), 'value'))],
+            'kalem_id'        => ['required', 'integer', 'min:1'],
+            'hizmet_id'       => ['required', 'integer', 'min:1'],
+            'geldi'           => ['required', 'integer', 'in:0,1,2'],
+            'tarih'           => ['nullable', 'string'],
+            'idempotency_key' => ['required', 'string', 'max:100'],
+        ]);
+        $tur = SeansKalemTuru::from($g['tur']);
+        $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
+        $salonId = (int) $kalem->salon_id;
+        $this->kayitDenetle($salonId, true, true);
+        $uid = (int) $this->kullanici()->id;
+        $tarih = MobilSeansKurali::seansTarihi($g['tarih'] ?? null, now()->toDateString());
+
+        return ApiCevap::basarili(
+            Idempotency::calistir('seans_mobil_ekle', $g['idempotency_key'], $uid, $salonId, fn () => $this->mobil->ekle($tur, $kalem, (int) $g['hizmet_id'], (int) $g['geldi'], $tarih, $uid)),
+            'Seans eklendi',
+            201,
+        );
+    }
+
+    /** Kaydin salonunda kapsam + yetki (mobilde yalniz kapsam); yazma ise ardindan kill-switch. */
+    private function kayitDenetle(int $salonId, bool $yazma = true, bool $mobil = false): void
+    {
+        $mobil
+            ? app(GuvenlikKapisi::class)->kapsamDenetle($this->kullanici()->id, $salonId)
+            : app(GuvenlikKapisi::class)->denetle($this->kullanici()->id, $salonId, self::YETKI);
         if ($yazma) {
             $this->yazmaAcikMi();
         }

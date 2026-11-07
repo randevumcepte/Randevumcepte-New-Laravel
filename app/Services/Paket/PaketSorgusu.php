@@ -68,6 +68,32 @@ class PaketSorgusu
         return ['fiyat' => $s['fiyat'], 'seans' => $s['miktar'], 'paket_adi' => $s['paket_adi']];
     }
 
+    /**
+     * Mobil paket tablosu — eski ApiController::paketler. Ham fiyat ve miktar doner (etkin deger
+     * degil), hizmeti olmayan paket listelenmez, sira id, sayfa 10.
+     */
+    public function mobilSayfa(int $salonId, string $arama, int $sayfa): array
+    {
+        $like = '%'.$arama.'%';
+
+        return Paketler::with('hizmetler.hizmet')
+            ->whereHas('hizmetler.hizmet', function ($q) use ($like) {
+                $q->where('hizmet_adi', 'like', $like);
+                $q->orWhere('paket_adi', 'like', $like); // dis sorgudaki paketler kolonu
+            })
+            ->where('salon_id', $salonId)
+            ->where('aktif', 1)
+            ->paginate(10, ['*'], 'page', $sayfa)
+            ->toArray();
+    }
+
+    /** Mobil paket secicileri — eski paketget (id artan) ve paketler_liste (id azalan); ham deger. */
+    public function mobilKatalog(int $salonId, string $yon): array
+    {
+        return Paketler::with('hizmetler.hizmet')->where('salon_id', $salonId)->where('aktif', 1)
+            ->orderBy('id', $yon === 'desc' ? 'desc' : 'asc')->get()->toArray();
+    }
+
     private function aktifler(int $salonId): Builder
     {
         return Paketler::query()->with('hizmetler.hizmet')->where('salon_id', $salonId)->where('aktif', 1);

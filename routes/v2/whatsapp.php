@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V2\WhatsappController;
 use App\Http\Controllers\Api\V2\WhatsappGonderimController;
 use App\Http\Controllers\Api\V2\WhatsappKontorController;
 use App\Http\Controllers\Api\V2\WhatsappMusteriController;
+use App\Http\Controllers\Api\V2\WhatsappPaketController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,4 +35,8 @@ Route::prefix('whatsapp')->group(function () {
 
     Route::get('/kontor', [WhatsappKontorController::class, 'durum']);
     Route::post('/kontor/talep', [WhatsappKontorController::class, 'talep']);
+    Route::get('/kontor/sayfa-baglantisi', [WhatsappPaketController::class, 'kontorSayfasi']);
+
+    Route::get('/paket', [WhatsappPaketController::class, 'durum']);
+    Route::post('/paket/talep', [WhatsappPaketController::class, 'talep']);
 });

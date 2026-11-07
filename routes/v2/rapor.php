@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V2\IsletmeRaporController;
 use App\Http\Controllers\Api\V2\KasaController;
 use App\Http\Controllers\Api\V2\MasrafController;
+use App\Http\Controllers\Api\V2\PrimController;
 use App\Http\Controllers\Api\V2\RaporController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,8 +46,21 @@ Route::prefix('kasa')->group(function () {
 
 Route::prefix('masraf')->group(function () {
     Route::get('/form-verisi', [MasrafController::class, 'formVerisi']);
+    Route::get('/kategoriler', [MasrafController::class, 'kategoriler']);
     Route::get('/{id}', [MasrafController::class, 'goster'])->whereNumber('id');
     Route::post('/', [MasrafController::class, 'ekle']);
     Route::patch('/{id}', [MasrafController::class, 'guncelle'])->whereNumber('id');
     Route::delete('/{id}', [MasrafController::class, 'sil'])->whereNumber('id');
+});
+
+Route::prefix('prim')->group(function () {
+    Route::get('/hakedis', [PrimController::class, 'hakedis']);
+    Route::get('/personel/{id}', [PrimController::class, 'personel'])->whereNumber('id');
+    Route::get('/odemeler', [PrimController::class, 'odemeler']);
+
+    // YAZMA — KASA_V2_YAZMA_AKTIF kapaliyken 409.
+    Route::post('/odeme', [PrimController::class, 'ode']);
+    Route::delete('/odeme/{id}', [PrimController::class, 'odemeSil'])->whereNumber('id');
+    Route::post('/hareket', [PrimController::class, 'hareketEkle']);
+    Route::delete('/hareket/{id}', [PrimController::class, 'hareketSil'])->whereNumber('id');
 });

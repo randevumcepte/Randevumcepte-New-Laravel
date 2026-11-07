@@ -9,5 +9,6 @@ use Illuminate\Support\Facades\Route;
  | Islem sonrasi not (musteri.not_yaz) ve sesli randevunun musaitlik sorgulari (salon uyesi).
  */
 Route::patch('/randevu/{id}/sonrasi-not', [RandevuNotController::class, 'kaydet'])->whereNumber('id');
+Route::get('/randevu/sesli/coz', [SesliRandevuController::class, 'coz']);
 Route::get('/randevu/sesli/musaitlik', [SesliRandevuController::class, 'musaitlik']);
 Route::get('/randevu/sesli/takvim-durumu', [SesliRandevuController::class, 'takvimDurumu']);

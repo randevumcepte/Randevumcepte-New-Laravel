@@ -7,6 +7,7 @@ use App\Exceptions\YetkisizErisimException;
 use App\Models\Adisyonlar;
 use App\Models\Salonlar;
 use App\Services\Satis\KalemServisi;
+use App\Services\Satis\MobilKalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\SalonSahipligi;
@@ -36,6 +37,7 @@ class SatisKalemController extends V2Controller
         private GuvenlikKapisi $kapi,
         private SalonSahipligi $sahiplik,
         private YetkiServisi $yetki,
+        private MobilKalemServisi $mobilKalem,
     ) {}
 
     /**
@@ -165,7 +167,7 @@ class SatisKalemController extends V2Controller
     }
 
     /** DELETE /api/v2/kalem/{tip}/{id} */
-    public function sil(int|string $tip, int $id)
+    public function sil(Request $request, int|string $tip, int $id)
     {
         $user = $this->kullanici();
         $this->yazmaAcikMi();
@@ -174,6 +176,12 @@ class SatisKalemController extends V2Controller
         $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        // Mobil: eski tahsilat_*_sil sonucu; yetki istegi eski mobilde etkisizdi, kapsam zorunlu.
+        if ($request->boolean('mobil')) {
+            $this->kapi->kapsamDenetle($user->id, $salonId);
+
+            return ApiCevap::basarili($this->mobilKalem->sil($tip, $id, $salonId, (int) $user->id));
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
 

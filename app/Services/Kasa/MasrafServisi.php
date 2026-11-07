@@ -30,6 +30,12 @@ class MasrafServisi
         ];
     }
 
+    /** Global kategori listesi, tablo sirasiyla. */
+    public function kategoriler(): array
+    {
+        return DB::table('masraf_kategorileri')->orderBy('id')->get(['id', 'kategori'])->all();
+    }
+
     public function getir(int $salonId, int $id): array
     {
         $m = $this->bul($salonId, $id);
@@ -55,12 +61,13 @@ class MasrafServisi
      * alani INNER JOIN eder, bos kalirsa satir gorunmez).
      *
      * @param  array{tarih:string, tutar:float, personel_gideri?:bool, masraf_kategori_id?:?int, odeme_yontemi_id?:?int, harcayan_id?:?int, aciklama?:?string, notlar?:?string}  $v
+     * @param  bool  $mobil  eski mobil bu kisiti uygulamiyordu: personel odemesine bagli masraf da duzenlenir
      */
-    public function kaydet(int $salonId, int $yetkiliId, array $v, ?int $id = null): array
+    public function kaydet(int $salonId, int $yetkiliId, array $v, ?int $id = null, bool $mobil = false): array
     {
-        return DB::transaction(function () use ($salonId, $yetkiliId, $v, $id) {
+        return DB::transaction(function () use ($salonId, $yetkiliId, $v, $id, $mobil) {
             $m = $id ? $this->bul($salonId, $id) : new Masraf(['salon_id' => $salonId]);
-            if ($m->personel_maas_odemesi_id) {
+            if ($m->personel_maas_odemesi_id && ! $mobil) {
                 // Tutar personel_maas_odemeleri ile senkron kalmali → odeme ekranindan duzenlenir.
                 throw new GecersizIslemException('Personel ödemesi kaydı Prim & Hak Ediş ekranından düzenlenir.');
             }

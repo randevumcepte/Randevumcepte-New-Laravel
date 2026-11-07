@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Paket;
 
+use App\Domain\Paket\MobilPaketKaydi;
 use App\Http\Requests\V2Istegi;
 
 /**
@@ -17,8 +18,28 @@ class PaketKaydetIstegi extends V2Istegi
 
     protected bool $guncellemedeKismi = true;
 
+    /** Mobil form v1 ile ayni: yalniz ad ve en az bir hizmet zorunlu, deger sinirlari ve tur kurali yok. */
+    private const MOBIL_KURALLAR = [
+        'paket_adi'             => ['required', 'string'],
+        'hizmetler'             => ['required', 'array', 'min:1'],
+        'hizmetler.*.hizmet_id' => ['required', 'integer', 'min:1'],
+        'hizmetler.*.seans'     => ['required', 'integer'],
+        'hizmetler.*.fiyat'     => ['required', 'numeric'],
+        'miktar'                => ['nullable'],
+        'fiyat'                 => ['nullable'],
+        'sure'                  => ['nullable'],
+        'sinirsiz'              => ['nullable'],
+        'gecerlilik_sayi'       => ['nullable'],
+        'gecerlilik_birim'      => ['nullable'],
+        'gunluk_limit'          => ['nullable'],
+    ];
+
     protected function alanKurallari(): array
     {
+        if ($this->boolean('mobil')) {
+            return self::MOBIL_KURALLAR;
+        }
+
         return [
             'paket_adi'             => ['required', 'string', 'max:255'],
             'hizmetler'             => ['required', 'array', 'min:1', 'max:50'],
@@ -49,7 +70,10 @@ class PaketKaydetIstegi extends V2Istegi
     {
         parent::prepareForValidation();
         $h = $this->input('hizmetler');
-        if (is_array($h)) {
+        if ($this->boolean('mobil')) {
+            $this->guncellemedeKismi = false;
+            $this->merge(['hizmetler' => MobilPaketKaydi::hizmetler($h)]);
+        } elseif (is_array($h)) {
             $this->merge(['hizmetler' => array_values(array_map(fn ($x) => is_array($x) ? $x : ['hizmet_id' => $x], $h))]);
         }
         // Bos metin alanlari null (form bos gonderince 0 sanilmasin).

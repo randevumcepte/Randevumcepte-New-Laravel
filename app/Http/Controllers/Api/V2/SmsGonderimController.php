@@ -58,9 +58,10 @@ class SmsGonderimController extends SmsTabanController
         return ApiCevap::basarili($this->gonderim->onizle($salonId, $this->kisit($uid, $salonId), $v['musteri_idler'], trim($v['mesaj'])));
     }
 
+    /** Mobil menu gonderimi `pazarlama.sms_gonder` ile de acar; `mobil` yalniz imzali mobil token'la etkilidir. */
     public function gonder(Request $request)
     {
-        [$uid, $salonId] = $this->salonDenetle($request, self::GONDERIM);
+        [$uid, $salonId] = $this->salonDenetle($request, $request->boolean('mobil') ? self::ERISIM : self::GONDERIM);
         $v = $this->dogrula($request);
         $tur = SmsTuru::gonderilebilir((string) $request->input('tur', SmsTuru::Toplu->kod()));
         $this->yazmaAcikMi();

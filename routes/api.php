@@ -78,6 +78,9 @@ Route::prefix('v2')->group(function () {
     // SES DOSYASI (token yerine sureli imza; ses calar baslik gonderemez) — routes/v2/ses-dosyasi.php
     require __DIR__.'/v2/ses-dosyasi.php';
 
+    // MOBIL KONTOR WEBVIEW (token yerine sureli imza) — routes/v2/whatsapp-kontor-sayfa.php
+    require __DIR__.'/v2/whatsapp-kontor-sayfa.php';
+
     // GIRIS + SIFRE SIFIRLAMA + UCRETSIZ DENEME (web + Flutter tek uc) — routes/v2/oturum.php
     require __DIR__.'/v2/oturum.php';
 
@@ -234,6 +237,12 @@ Route::prefix('v2')->group(function () {
         // ON GORUSME (liste + ekle/duzenle + satis yapildi / yapilmadi) — routes/v2/ongorusme.php
         require __DIR__.'/v2/ongorusme.php';
 
+        // ESKI MOBIL PARA UCLARI (mobil=1, yalniz imzali mobil token) — routes/v2/mobil-para.php
+        require __DIR__.'/v2/mobil-para.php';
+
+        // MOBIL SATIS (eski mobil yazim ve cevap kurali; yazmalar `mobil` bayragi ister) — routes/v2/satis.php
+        require __DIR__.'/v2/satis.php';
+
         // MUSTERI YONETIMI (liste, detay, ekle/duzenle, kara liste, saglik, olcum) — routes/v2/musteri.php
         require __DIR__.'/v2/musteri.php';
 
@@ -266,6 +275,12 @@ Route::prefix('v2')->group(function () {
 
         // PATRON ASISTANI + METIN SESLENDIRME — routes/v2/yardimci.php
         require __DIR__.'/v2/yardimci.php';
+
+        // MUSTERI YORUMU MODERASYONU — routes/v2/musteri-yorum.php
+        require __DIR__.'/v2/musteri-yorum.php';
+
+        // BUGUNUN DOGUM GUNLERI (mobil popup) — routes/v2/dogum-gunu.php
+        require __DIR__.'/v2/dogum-gunu.php';
 
         // CARKIFELEK + SADAKAT (cark ayari, kupon/kazananlar, hatirlatma, puan odulleri, kazanim kurali) — routes/v2/cark.php
         require __DIR__.'/v2/cark.php';
@@ -326,6 +341,7 @@ Route::prefix('v2')->group(function () {
     Route::middleware('auth:api')->group(function () {
         require __DIR__.'/v2/form-musteri.php';
         require __DIR__.'/v2/musteri-uygulama.php';
+        require __DIR__.'/v2/satis-musteri.php';
         require __DIR__.'/v2/kampanya-musteri.php';
     });
 

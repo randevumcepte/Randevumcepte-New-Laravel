@@ -117,6 +117,14 @@ abstract class V2Controller extends Controller
         return Validator::make($request->all(), $kurallar, DogrulamaMetinleri::mesajlar(), DogrulamaMetinleri::alanlar())->validate();
     }
 
+    /** Eski mobil kuraliyla calisan uc: `mobil` bayragi yalniz imzali mobil token'la istege ulasir (MobilBayraklar). */
+    protected function mobilOlmali(Request $request): void
+    {
+        if (! $request->boolean('mobil')) {
+            throw new YetkisizErisimException('Bu uç yalnız mobil uygulama içindir');
+        }
+    }
+
     /** Yazma kill-switch'i kapaliysa 409. */
     protected function yazmaAcikMi(?string $mesaj = null): void
     {

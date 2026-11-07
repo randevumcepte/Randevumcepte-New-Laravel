@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('seans')->group(function () {
     Route::get('/', [SeansController::class, 'liste']);
     Route::post('/', [SeansController::class, 'ekle']);
+    Route::get('/dokum', [SeansController::class, 'dokum']);
     Route::patch('/{id}', [SeansController::class, 'durum'])->whereNumber('id');
     Route::get('/{id}/cihaz', [SeansController::class, 'cihaz'])->whereNumber('id');
     Route::put('/{id}/cihaz', [SeansController::class, 'cihazKaydet'])->whereNumber('id');

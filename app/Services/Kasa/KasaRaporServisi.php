@@ -27,7 +27,7 @@ class KasaRaporServisi
 
     public const GIDER_SIRALANABILIR = ['tarih', 'harcayan', 'odeme_yontemi', 'tutar'];
 
-    private const AYLAR = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK'];
+    public const AYLAR = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK'];
 
     public function __construct(private KasaTutar $tutar) {}
 

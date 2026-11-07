@@ -3,6 +3,7 @@
 namespace App\Services\Satis;
 
 use App\Domain\Satis\AdisyonSatir;
+use App\Domain\Satis\MobilSatisSatiri;
 use App\Domain\Satis\SatirAksiyon;
 use App\Models\Adisyonlar;
 use App\Models\Alacaklar;
@@ -23,6 +24,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Donen cevap, eski `satislar` ucuyle ayni ust-duzey anahtarlar + ayni `data[]`
  * satir sozlesmesini (drop-in) tasir — bkz. §data satiri.
+ *
+ * `mobil` secenegi (yalniz mobil token + SatisController / MusteriSatisController): eski mobil listesi
+ * birebir — kalan ROUND(,2) ile acik/kapali, sayfa toplami, MobilSatisSatiri satiri. Web yolu degismez.
  */
 class SatisListeServisi
 {
@@ -32,6 +36,14 @@ class SatisListeServisi
         return '(COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_hizmetler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
             .'+COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_urunler WHERE adisyon_id=adisyonlar.id'.$pf.'),0)'
             .'+COALESCE((SELECT SUM(COALESCE(fiyat,0)-COALESCE(indirim_tutari,0)) FROM adisyon_paketler WHERE adisyon_id=adisyonlar.id'.$pf.'),0))';
+    }
+
+    /** Bakiye ifadesi; mobilde eski acik/kapali kurali: ROUND(net - odenen, 2) (kurus alti artik yok sayilir). */
+    private static function bakiyeSql(string $pf, bool $yuvarla): string
+    {
+        $bakiye = self::netSql($pf).' - '.self::odenenSql($pf);
+
+        return $yuvarla ? 'ROUND('.$bakiye.', 2)' : $bakiye;
     }
 
     /** İNDİRİM toplamı (per adisyonlar.id) — opsiyonel personel filtreli ($pf). */
@@ -63,6 +75,7 @@ class SatisListeServisi
         $fatura = isset($o['fatura']) && $o['fatura'] !== '' && $o['fatura'] !== null ? (string) $o['fatura'] : null; // '1' faturali / '0' faturasiz / null
         $page = max(1, (int) ($o['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($o['per_page'] ?? 20)));
+        $mobil = ! empty($o['mobil']);
 
         // Kapsam kisiti (controller): tum_satis_gor yoksa KENDI personel id'si.
         // Varsa UI'dan gelen personel_id yerine gecer (kullanici baskasini goremez).
@@ -70,7 +83,7 @@ class SatisListeServisi
         $pid = $pid ? (int) $pid : null;
 
         // Tarih varsayilani: musteri karti -> tum gecmis, aksi halde icinde bulunulan ay.
-        if (! $tarih1 || ! $tarih2) {
+        if (! $mobil && (! $tarih1 || ! $tarih2)) {
             if ($musteriId) {
                 $tarih1 = '1970-01-01';
                 $tarih2 = date('Y-m-t');
@@ -84,7 +97,7 @@ class SatisListeServisi
         $salonIdler = $musteriMi && $appBundle
             ? Salonlar::where('app_bundle', $appBundle)->pluck('id')->map(fn ($v) => (int) $v)->all()
             : [$salonId];
-        if (empty($salonIdler)) {
+        if (empty($salonIdler) && ! $mobil) {
             $salonIdler = [$salonId];
         }
 
@@ -193,7 +206,9 @@ class SatisListeServisi
             default:
                 $base->orderBy('adisyonlar.tarih', $yon);
         }
-        $base->orderBy('adisyonlar.id', $yon);
+        if (! $mobil) {
+            $base->orderBy('adisyonlar.id', $yon);
+        }
 
         // ───────── Acik/Kapali sayim (acik_kapali filtresi UYGULANMADAN) ─────────
         if ($studyoModu) {
@@ -203,7 +218,7 @@ class SatisListeServisi
                 ->reorder()
                 ->first();
         } else {
-            $bakiye = self::netSql($pf).' - '.self::odenenSql($pf);
+            $bakiye = self::bakiyeSql($pf, $mobil);
             $primBind = $pid ? array_fill(0, 6, $pid) : [];
             $sayac = DB::query()
                 ->fromSub(
@@ -222,7 +237,7 @@ class SatisListeServisi
                 $base->whereRaw('COALESCE(adisyonlar.odendi,0) '.($acikKapali === 1 ? '<> 1' : '= 1'));
             } else {
                 $op = $acikKapali === 1 ? '>' : '<=';
-                $base->whereRaw(self::netSql($pf).' '.$op.' '.self::odenenSql($pf), $pid ? array_fill(0, 6, $pid) : []);
+                $base->whereRaw($mobil ? self::bakiyeSql($pf, true).' '.$op.' 0' : self::netSql($pf).' '.$op.' '.self::odenenSql($pf), $pid ? array_fill(0, 6, $pid) : []);
             }
         }
 
@@ -231,7 +246,7 @@ class SatisListeServisi
 
         // ───────── Filtre GENELİ para toplamı (sadece sayfa değil → üst özet kartları) ─────────
         $paraBind = $pid ? array_fill(0, 6, $pid) : [];
-        $para = (clone $base)->toBase()->reorder()
+        $para = $mobil ? null : (clone $base)->toBase()->reorder()
             ->selectRaw('COALESCE(SUM('.self::netSql($pf).'),0) as toplam, COALESCE(SUM('.self::odenenSql($pf).'),0) as odenen', $paraBind)
             ->first();
         $toplamTl = (float) ($para->toplam ?? 0);
@@ -256,36 +271,18 @@ class SatisListeServisi
         // Kalem bazli prim haritasi: [personel_id][tur][kalem_id] => yuzde.
         $primHarita = PersonelPrimOrani::harita($salonId);
 
+        if ($mobil) {
+            return $this->mobilCevap($sayfa, $salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, $acikSayisi, $kapaliSayisi, $page, $perPage, ! empty($o['musteri_gorunumu']));
+        }
+
         // Satir aksiyonlari icin cagiranin (controller) yetki ozeti; verilmezse hic yazma butonu yok.
         $yetkiler = (array) ($o['yetkiler'] ?? []);
 
         $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, $yetkiler, $studyoModu) {
             $s = AdisyonSatir::hesapla($this->kalemleri($a, $primHarita));
 
-            $alacak = $alacaklar[$a->user_id] ?? null;
-            $planlanan = $alacak && $alacak->planlanan_odeme_tarihi
-                ? date('d.m.Y', strtotime($alacak->planlanan_odeme_tarihi)) : '';
-            $son = $sonTahsilat[$a->id] ?? null;
-
-            // islemler: eski panel ile ayni (Flutter kendi butonunu cizer, bu HTML'i yok sayar).
-            if ((float) $s['kalan_tutar_numeric'] == 0) {
-                $islemler = '<a style="line-height:5px;padding:5px" title="Ödeme Bilgileri" href="#" name="adisyon_odeme_detaylari" type="button" data-value="'.$a->id.'" class="btn btn-primary"><i class="dw dw-eye"></i></a>';
-            } else {
-                $islemler = '<a style="line-height:5px;padding:5px" title="Tahsil Et" href="/isletmeyonetim/tahsilat/'.$a->user_id.'/'.$a->id.'?sube='.$salonId.'" type="button" class="btn btn-success"><i class="fa fa-money"></i></a>';
-            }
-            $islemler .= '&nbsp;<button style="line-height:5px;padding:5px" class="btn btn-danger" href="#" title="Adisyonu Sil" name="adisyon_sil" data-value="'.$a->id.'"><i class="fa fa-times"></i></button>';
-
             // §data satiri — eski formatAdisyonFast anahtarlariyla BIREBIR (drop-in).
-            return [
-                'id'                    => $a->id,
-                'acilis_tarihi'         => date('d.m.Y', strtotime($a->tarih)),
-                'acilis_saati'          => $a->created_at ? date('H:i', strtotime($a->created_at)) : '',
-                'son_tahsilat_tarihi'   => $son ? date('d.m.Y', strtotime($son)) : '',
-                'musteri'               => $a->musteri->name ?? '-',
-                'salon_adi'             => $a->salon->salon_adi ?? '',
-                'planlanan_alacak_tarihi' => $planlanan,
-                'satis_turu'            => '',
-                'satisSayisi'           => $toplamSayisi,
+            return $this->satirBasi($a, $salonId, $sonTahsilat, $alacaklar, $toplamSayisi, (float) $s['kalan_tutar_numeric']) + [
                 'icerik'                => $s['icerik'],
                 'icerikKisaltilmis'     => $s['icerik_kisaltilmis'],
                 'hizmet_veren'          => $s['hizmet_veren'],
@@ -304,12 +301,7 @@ class SatisListeServisi
                 'hizmetToplam'          => $s['hizmet_toplam'],
                 'urunToplam'            => $s['urun_toplam'],
                 'paketToplam'           => $s['paket_toplam'],
-                'islemler'              => $islemler,
-                'user_id'               => $a->user_id,
                 'durum'                 => $s['durum'],
-                'fatura_kesildi'        => (int) ($a->fatura_kesildi ?? 0),
-                'odendi'                => (int) ($a->odendi ?? 0),
-                'odendi_tarihi'         => $a->odendi_tarihi ? date('d.m.Y H:i', strtotime($a->odendi_tarihi)) : '',
             ] + SatirAksiyon::hesapla(   // + kapali (gosterim durumu) + aksiyonlar (izinli butonlar)
                 ['kalan_tutar_numeric' => $s['kalan_tutar_numeric'], 'odendi' => $a->odendi ?? 0],
                 $yetkiler,
@@ -329,6 +321,67 @@ class SatisListeServisi
             'odenen_numeric' => round($odenenTl, 2),
             'kalan'         => AdisyonSatir::trFormat($kalanTl),
             'kalan_numeric' => round($kalanTl, 2),
+        ] + ListeIstegi::meta($page, $perPage, $toplamSayisi);
+    }
+
+    /** Web ve mobil satirin ortak alanlari (eski formatAdisyonFast anahtarlari). */
+    private function satirBasi($a, int $salonId, $sonTahsilat, $alacaklar, int $toplamSayisi, float $kalan): array
+    {
+        $alacak = $alacaklar[$a->user_id] ?? null;
+        $son = $sonTahsilat[$a->id] ?? null;
+
+        // islemler: eski panel ile ayni (Flutter kendi butonunu cizer, bu HTML'i yok sayar).
+        if ($kalan == 0) {
+            $islemler = '<a style="line-height:5px;padding:5px" title="Ödeme Bilgileri" href="#" name="adisyon_odeme_detaylari" type="button" data-value="'.$a->id.'" class="btn btn-primary"><i class="dw dw-eye"></i></a>';
+        } else {
+            $islemler = '<a style="line-height:5px;padding:5px" title="Tahsil Et" href="/isletmeyonetim/tahsilat/'.$a->user_id.'/'.$a->id.'?sube='.$salonId.'" type="button" class="btn btn-success"><i class="fa fa-money"></i></a>';
+        }
+        $islemler .= '&nbsp;<button style="line-height:5px;padding:5px" class="btn btn-danger" href="#" title="Adisyonu Sil" name="adisyon_sil" data-value="'.$a->id.'"><i class="fa fa-times"></i></button>';
+
+        return [
+            'id'                      => $a->id,
+            'acilis_tarihi'           => date('d.m.Y', strtotime($a->tarih)),
+            'acilis_saati'            => $a->created_at ? date('H:i', strtotime($a->created_at)) : '',
+            'son_tahsilat_tarihi'     => $son ? date('d.m.Y', strtotime($son)) : '',
+            'musteri'                 => $a->musteri->name ?? '-',
+            'salon_adi'               => $a->salon->salon_adi ?? '',
+            'planlanan_alacak_tarihi' => $alacak && $alacak->planlanan_odeme_tarihi ? date('d.m.Y', strtotime($alacak->planlanan_odeme_tarihi)) : '',
+            'satis_turu'              => '',
+            'satisSayisi'             => $toplamSayisi,
+            'islemler'                => $islemler,
+            'user_id'                 => $a->user_id,
+            'fatura_kesildi'          => (int) ($a->fatura_kesildi ?? 0),
+            'odendi'                  => (int) ($a->odendi ?? 0),
+            'odendi_tarihi'           => $a->odendi_tarihi ? date('d.m.Y H:i', strtotime($a->odendi_tarihi)) : '',
+        ];
+    }
+
+    /**
+     * Eski mobil satis cevabi: yalniz eski anahtarlar, `odenen` ve `kalan` BU SAYFANIN toplamidir.
+     * Musteri gorunumunde prim tutarlari sifir gider.
+     */
+    private function mobilCevap($sayfa, int $salonId, array $primHarita, $sonTahsilat, $alacaklar, int $toplamSayisi, int $acikSayisi, int $kapaliSayisi, int $page, int $perPage, bool $musteriGorunumu): array
+    {
+        $odenenToplam = 0;
+        $kalanToplam = 0;
+        $data = [];
+        foreach ($sayfa as $a) {
+            $s = MobilSatisSatiri::hesapla($this->kalemleri($a, $primHarita));
+            $odenenToplam += $s['odenen_numeric'];
+            $kalanToplam += $s['kalan_tutar_numeric'];
+            if ($musteriGorunumu) {
+                $s = array_merge($s, ['hakedisTutar' => 0, 'hizmetHakedisTutar' => 0, 'urunHakedisTutar' => 0, 'paketHakedisTutar' => 0]);
+            }
+            $data[] = $this->satirBasi($a, $salonId, $sonTahsilat, $alacaklar, $toplamSayisi, (float) $s['kalan_tutar_numeric']) + $s;
+        }
+
+        return [
+            'data'          => $data,
+            'satisSayisi'   => $toplamSayisi,
+            'acik_sayisi'   => $acikSayisi,
+            'kapali_sayisi' => $kapaliSayisi,
+            'odenen'        => AdisyonSatir::trFormat($odenenToplam),
+            'kalan'         => AdisyonSatir::trFormat($kalanToplam),
         ] + ListeIstegi::meta($page, $perPage, $toplamSayisi);
     }
 

@@ -8,6 +8,8 @@ use App\Models\Personeller;
 use App\Services\Kasa\GunSonuServisi;
 use App\Services\Kasa\KasaRaporServisi;
 use App\Services\Kasa\KasaYazServisi;
+use App\Services\Kasa\MobilKasaServisi;
+use App\Services\Rapor\RaporSecenekServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -29,6 +31,10 @@ use Illuminate\Http\Request;
  *
  * KVKK: kimlik + KAPSAM her ucta (eskiden ?sube ile baska salonun kasasi okunabiliyordu).
  * Yazmalar KASA_V2_YAZMA_AKTIF kapaliyken 409 (kapsam/yetki SONRASI — flag durumu sizmaz).
+ *
+ * Mobil yolu (mobil=1, yalniz imzali mobil token): ozet, gelirler, giderler, gun-sonu, aylik eski mobil v1 hesabini ve
+ * cevabini verir (Services/Kasa/MobilKasaServisi), filtre baslangic/bitis/odeme_yontemi_id, giderlerde harcayan.
+ * Yetki eski mobil ekraninin giris kuraliyladir: kasa ekraninin menu yetkilerinden biri (gun sonu: rapor.kasa), kayitsiz Sekreter dahil.
  */
 class KasaController extends RaporTabanController
 {
@@ -36,10 +42,15 @@ class KasaController extends RaporTabanController
 
     protected string $yazmaKapaliMesaj = 'Kasa v2 yazma şu an kapalı';
 
-    public function __construct(private KasaRaporServisi $rapor, private KasaYazServisi $yaz) {}
+    public function __construct(private KasaRaporServisi $rapor, private KasaYazServisi $yaz, private MobilKasaServisi $mobil) {}
 
     public function ozet(Request $r)
     {
+        if ($r->boolean('mobil')) {
+            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
+
+            return ApiCevap::basarili($this->mobil->ozet($salonId, $this->mobilFiltre($r)));
+        }
         [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($this->rapor->ozet($salonId, $this->donem($r), $this->odemeYontemi($r)));
@@ -47,6 +58,11 @@ class KasaController extends RaporTabanController
 
     public function gelirler(Request $r)
     {
+        if ($r->boolean('mobil')) {
+            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
+
+            return ApiCevap::basarili($this->mobil->tahsilatSayfasi($salonId, $this->mobilFiltre($r), max(1, $r->integer('page'))));
+        }
         [$uid, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($this->rapor->gelirler(
@@ -58,6 +74,11 @@ class KasaController extends RaporTabanController
 
     public function giderler(Request $r)
     {
+        if ($r->boolean('mobil')) {
+            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
+
+            return ApiCevap::basarili($this->mobil->masrafSayfasi($salonId, $this->mobilFiltre($r), $r->input('harcayan'), max(1, $r->integer('page'))));
+        }
         [$uid, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         $this->salonYetki($r, 'finans.masraf_gor');
 
@@ -77,6 +98,13 @@ class KasaController extends RaporTabanController
 
     public function gunSonu(Request $r, GunSonuServisi $gunSonu)
     {
+        if ($r->boolean('mobil')) {
+            [, $salonId] = $this->mobilYetki($r, 'rapor.kasa');
+            $f = $this->mobilFiltre($r);
+            $t1 = $f['tarih1'] ?? date('Y-m-d');
+
+            return ApiCevap::basarili($this->mobil->gunSonu($salonId, $t1, $f['tarih2'] ?? $t1));
+        }
         [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($gunSonu->rapor($salonId, $this->donem($r, 'bugun')));
@@ -84,13 +112,13 @@ class KasaController extends RaporTabanController
 
     public function aylik(Request $r)
     {
-        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
+        [, $salonId] = $r->boolean('mobil') ? $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS) : $this->salonYetki($r, 'rapor.kasa');
         $yil = $r->integer('yil') ?: (int) date('Y');
         if ($yil < 2000 || $yil > (int) date('Y') + 1) {
             throw new GecersizIslemException('yil geçersiz');
         }
 
-        return ApiCevap::basarili($this->rapor->aylik($salonId, $yil));
+        return ApiCevap::basarili($r->boolean('mobil') ? $this->mobil->aylik($salonId, $yil) : $this->rapor->aylik($salonId, $yil));
     }
 
     public function paraGiris(ParaHareketIstegi $r)
@@ -128,6 +156,18 @@ class KasaController extends RaporTabanController
         $sonuc = $this->yaz->gelirSil($salonId, $uid, $id, $r->input('onay_kodu'));
 
         return ApiCevap::basarili($sonuc, $sonuc['silindi'] ? 'Kayıt silindi.' : 'Onay kodu hesap sahibine gönderildi.');
+    }
+
+    /** @return array{tarih1:?string, tarih2:?string, odeme:?int} */
+    private function mobilFiltre(Request $r): array
+    {
+        $g = $this->alanlariDogrula($r, [
+            'baslangic'        => ['nullable', 'date_format:Y-m-d'],
+            'bitis'            => ['nullable', 'date_format:Y-m-d'],
+            'odeme_yontemi_id' => ['nullable', 'integer'],
+        ]);
+
+        return ['tarih1' => $g['baslangic'] ?? null, 'tarih2' => $g['bitis'] ?? null, 'odeme' => $g['odeme_yontemi_id'] ?? null];
     }
 
     private function odemeYontemi(Request $r): ?int

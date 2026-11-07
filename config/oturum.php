@@ -20,7 +20,7 @@ return [
     // (Services/Oturum/MobilBayraklar). Web bu alanlari gondermez. Yeni mobil bayrak BURAYA eklenir.
     'mobil_bayraklari' => [
         'mobil', 'mobil_gorunum', 'mobil_sablon', 'mobil_sozlesme', 'musteri_karti', 'sekme_yetkisi', 'personel_rolu',
-        'gece_devri', 'yalniz', 'liste_yetkisi', 'liste_menusu', 'yalniz_salon', 'kara_liste_atla', 'genel_link',
+        'gece_devri', 'yalniz', 'liste_yetkisi', 'liste_menusu', 'yalniz_salon', 'kara_liste_atla', 'genel_link', 'sesli_musteri',
     ],
 
     // Kod ve deneme mesajlari once sistem WhatsApp hattindan gider (false: yalniz SMS).

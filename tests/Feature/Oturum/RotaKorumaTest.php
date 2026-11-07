@@ -27,6 +27,9 @@ class RotaKorumaTest extends TestCase
         'api/v2/ses/*',
         // Harici tarayicida acilir, token tasiyamaz: imzali ve kisa omurlu link (asagidaki test imzayi dogrular).
         'api/v2/form/sablon/{id}/bos-pdf',
+        // WebView token basligi gonderemez: imzali ve kisa omurlu adres (asagidaki test imzayi dogrular).
+        'api/v2/whatsapp-kontor-sayfa',
+        'api/v2/whatsapp-kontor-sayfa/talep',
     ];
 
     public function test_kimliksiz_uc_yalniz_izinli_listede_olur(): void
@@ -53,5 +56,15 @@ class RotaKorumaTest extends TestCase
         $this->assertNotNull($rota);
         $this->assertSame('api/v2/form/sablon/{id}/bos-pdf', $rota->uri());
         $this->assertContains('signed:relative', $rota->gatherMiddleware());
+    }
+
+    public function test_kontor_sayfasi_rotalari_imza_ister(): void
+    {
+        foreach (['v2.whatsapp-kontor.sayfa', 'v2.whatsapp-kontor.talep'] as $ad) {
+            $rota = Route::getRoutes()->getByName($ad);
+
+            $this->assertNotNull($rota, $ad);
+            $this->assertContains('signed:relative', $rota->gatherMiddleware(), $ad);
+        }
     }
 }

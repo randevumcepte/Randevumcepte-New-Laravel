@@ -2,6 +2,7 @@
 
 namespace App\Services\Paket;
 
+use App\Domain\Paket\MobilPaketKaydi;
 use App\Domain\Paket\PaketGecerlilik;
 use App\Domain\Paket\PaketTutari;
 use App\Exceptions\BulunamadiException;
@@ -110,6 +111,42 @@ class PaketYazServisi
             ['fiyat' => $sonuc['fiyat'], 'seans' => $sonuc['miktar'], 'sure' => $sonuc['sure']]);
 
         return $sonuc;
+    }
+
+    /**
+     * Mobil kayit — eski ApiController::paket_ekle_guncelle ile ayni satirlar: girilen fiyat ve
+     * seans korunur (MobilPaketKaydi), silinmis paket yeniden aktif olur, hizmet satirlari
+     * girildigi gibi yazilir. Paketin salonu degismez; kapsam controller'da denetlenir.
+     *
+     * @param  array  $v  PaketKaydetIstegi::validated() (mobil kurallar)
+     */
+    public function mobilKaydet(int $salonId, ?int $id, array $v, int $yetkiliId): int
+    {
+        $yeni = $id === null;
+        $paket = DB::transaction(function () use ($salonId, $id, $yeni, $v) {
+            $p = $yeni ? new Paketler(['salon_id' => $salonId]) : (Paketler::whereKey($id)->lockForUpdate()->first() ?? throw new BulunamadiException('Paket bulunamadı'));
+            if (! $yeni) {
+                $this->surum->satilmislariDondur((int) $id, array_column($v['hizmetler'], 'hizmet_id')); // satilmis paketler eski hizmetleriyle kalir
+            }
+            $p->paket_adi = $v['paket_adi'];
+            $p->aktif = 1;
+            foreach (MobilPaketKaydi::alanlar($v, PaketKullanimi::kolonVar()) as $alan => $deger) {
+                $p->{$alan} = $deger;
+            }
+            $p->save();
+
+            PaketHizmetler::where('paket_id', $p->id)->delete();
+            foreach ($v['hizmetler'] as $h) {
+                PaketHizmetler::create(['paket_id' => $p->id] + $h);
+            }
+
+            return $p;
+        });
+
+        AktiviteLog::yaz($salonId, $yetkiliId, $yeni ? 'paket_ekle' : 'paket_guncelle', 'paket', (int) $paket->id, $v['paket_adi'],
+            $yeni ? 'Yeni paket tanımlandı' : 'Paket güncellendi');
+
+        return (int) $paket->id;
     }
 
     /** Pasif yap (idempotent: zaten pasifse yeniden log yazilmaz). */

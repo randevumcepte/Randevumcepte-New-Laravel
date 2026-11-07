@@ -26,7 +26,7 @@ final class Idempotency
             throw new CakismaException('idempotency_key zorunlu (çift-kayıt koruması)');
         }
 
-        if ($onceki = self::kayitliYanit($uc, $anahtar)) {
+        if ($onceki = self::kayitliYanit($uc, $anahtar, $yetkiliId, $salonId)) {
             return $onceki;
         }
 
@@ -49,18 +49,27 @@ final class Idempotency
                 throw $e;
             }
 
-            return self::kayitliYanit($uc, $anahtar)
+            return self::kayitliYanit($uc, $anahtar, $yetkiliId, $salonId)
                 ?? throw new CakismaException('Bu istek zaten işleniyor, lütfen tekrar deneyin');
         }
     }
 
-    private static function kayitliYanit(string $uc, string $anahtar): ?array
+    /** Baskasinin anahtari replay dondurmez: anahtar yetkili ve salona baglidir. */
+    private static function kayitliYanit(string $uc, string $anahtar, ?int $yetkiliId, ?int $salonId): ?array
     {
-        $json = DB::table('api_idempotency_anahtarlari')->where('anahtar', $anahtar)->where('uc', $uc)->value('yanit_json');
-        if (! $json) {
+        $satir = DB::table('api_idempotency_anahtarlari')->where('anahtar', $anahtar)->where('uc', $uc)->first(['yanit_json', 'yetkili_id', 'salon_id']);
+        if (! $satir) {
             return null;
         }
+        if (self::farkli($satir->yetkili_id, $yetkiliId) || self::farkli($satir->salon_id, $salonId)) {
+            throw new CakismaException('Bu istek anahtarı başka bir kayda ait');
+        }
 
-        return ['replay' => true] + json_decode($json, true);
+        return $satir->yanit_json ? ['replay' => true] + json_decode($satir->yanit_json, true) : null;
+    }
+
+    private static function farkli(mixed $kayitli, ?int $gelen): bool
+    {
+        return $kayitli !== null && $gelen !== null && (int) $kayitli !== $gelen;
     }
 }

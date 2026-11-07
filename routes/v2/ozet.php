@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V2\MobilOzetController;
 use App\Http\Controllers\Api\V2\OzetController;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Route;
  | App\Domain\Ozet\OzetKarti / OzetSekmesi'nde. v1 → v2 esleme docs/strangler-ozet.md.
  */
 Route::prefix('ozet')->group(function () {
+    Route::get('/mobil', [MobilOzetController::class, 'ozet']);
+    Route::get('/mobil-karsilastirma', [MobilOzetController::class, 'karsilastirma']);
     Route::get('/acilis', [OzetController::class, 'acilis']);
     Route::get('/kart/{kod}', [OzetController::class, 'kart'])->where('kod', '[a-z_]+');
     Route::get('/sekme/{kod}', [OzetController::class, 'sekme'])->where('kod', '[a-z_]+');

@@ -8,6 +8,7 @@ use App\Models\Personeller;
 use App\Services\Kasa\MasrafServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\Idempotency;
 use Illuminate\Http\Request;
 
 /**
@@ -22,6 +23,11 @@ use Illuminate\Http\Request;
  *
  * {id}'li uclarda salon KAYITTAN cozulur (eskiden salon kapsami yoktu). Yazmalar kasa ile
  * ayni kill-switch'te (KASA_V2_YAZMA_AKTIF).
+ *
+ *   GET    /masraf/kategoriler   kimlik yeterli; global kategori listesi, id sirasiyla (eski mobil masrafkategorileri)
+ *
+ * POST'ta idempotency_key verilirse ayni anahtar ikinci masraf yazmaz (mobil gonderir; web gondermez, aynen kalir).
+ * mobil=1 (yalniz imzali mobil token): sifir tutar ve personel odemesine bagli masrafin duzenlenmesi eski mobildeki gibi gecer.
  */
 class MasrafController extends RaporTabanController
 {
@@ -40,6 +46,13 @@ class MasrafController extends RaporTabanController
         return ApiCevap::basarili($this->servis->formVerisi());
     }
 
+    public function kategoriler()
+    {
+        $this->kullanici();
+
+        return ApiCevap::basarili($this->servis->kategoriler());
+    }
+
     public function goster(int $id)
     {
         $salonId = $this->kayitYetki($id, self::GOR);
@@ -51,7 +64,10 @@ class MasrafController extends RaporTabanController
     {
         [$uid, $salonId] = $this->salonYetki($r, 'finans.masraf_ekle');
         $this->yazmaAcikMi();
-        $sonuc = $this->servis->kaydet($salonId, $uid, $this->dogrula($r, $salonId));
+        $v = $this->dogrula($r, $salonId);
+        $is = fn () => $this->servis->kaydet($salonId, $uid, $v);
+        $anahtar = (string) ($v['idempotency_key'] ?? '');
+        $sonuc = $anahtar === '' ? $is() : Idempotency::calistir('masraf_ekle:'.$salonId, $anahtar, $uid, $salonId, $is);
 
         return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
     }
@@ -60,7 +76,7 @@ class MasrafController extends RaporTabanController
     {
         $salonId = $this->kayitYetki($id, 'finans.masraf_ekle');
         $this->yazmaAcikMi();
-        $sonuc = $this->servis->kaydet($salonId, (int) $this->kullanici()->id, $this->dogrula($r, $salonId), $id);
+        $sonuc = $this->servis->kaydet($salonId, (int) $this->kullanici()->id, $this->dogrula($r, $salonId), $id, $r->boolean('mobil'));
 
         return ApiCevap::basarili($sonuc, $sonuc['mesaj']);
     }

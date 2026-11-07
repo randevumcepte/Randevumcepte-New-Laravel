@@ -62,7 +62,7 @@ class StokHareketServisi
     /**
      * Tek hareket yaz.
      *
-     * @param  array{salon_id:int, urun_id:int, depo_id:int, miktar:float|int|string, tip:HareketTipi,
+     * @param  array{salon_id:int, urun_id:int, depo_id:?int, miktar:float|int|string, tip:HareketTipi,
      *               referans_tip?:?string, referans_id?:?int, batch_uuid?:?string,
      *               birim_alis_fiyati?:mixed, birim_satis_fiyati?:mixed, aciklama?:?string,
      *               kullanici_id?:?int, tarih?:mixed}  $h
@@ -87,17 +87,20 @@ class StokHareketServisi
                 'birim_satis_fiyati' => self::fiyat($h['birim_satis_fiyati'] ?? null),
                 'aciklama'           => $h['aciklama'] ?? null,
                 'kullanici_id'       => $h['kullanici_id'] ?? null,
-                'kullanici_tipi'     => self::KULLANICI_TIPI,
+                'kullanici_tipi'     => $h['kullanici_tipi'] ?? self::KULLANICI_TIPI,
                 'tarih'              => $h['tarih'] ?? now(),
             ]);
 
-            $simdi = now();
-            DB::table('urun_depo_stoklari')->insertOrIgnore([
-                'salon_id' => $h['salon_id'], 'urun_id' => $h['urun_id'], 'depo_id' => $h['depo_id'],
-                'stok' => 0, 'created_at' => $simdi, 'updated_at' => $simdi,
-            ]);
-            DB::table('urun_depo_stoklari')->where('urun_id', $h['urun_id'])->where('depo_id', $h['depo_id'])
-                ->increment('stok', $miktar, ['updated_at' => $simdi]);
+            // Depo yalniz eski mobil satisinda bos gelir (urunun varsayilan deposu yok): eskiyle ayni, onbellek degismez.
+            if (! empty($h['depo_id'])) {
+                $simdi = now();
+                DB::table('urun_depo_stoklari')->insertOrIgnore([
+                    'salon_id' => $h['salon_id'], 'urun_id' => $h['urun_id'], 'depo_id' => $h['depo_id'],
+                    'stok' => 0, 'created_at' => $simdi, 'updated_at' => $simdi,
+                ]);
+                DB::table('urun_depo_stoklari')->where('urun_id', $h['urun_id'])->where('depo_id', $h['depo_id'])
+                    ->increment('stok', $miktar, ['updated_at' => $simdi]);
+            }
 
             $this->toplamSenkron((int) $h['urun_id']);
 

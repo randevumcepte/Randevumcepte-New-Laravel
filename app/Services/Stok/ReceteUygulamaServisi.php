@@ -16,7 +16,7 @@ class ReceteUygulamaServisi
     public function __construct(private StokHareketServisi $stok) {}
 
     /** @return int Yazılan sarf hareketi sayısı */
-    public function uygula(int $salonId, int $hizmetId, string $refTip, ?int $refId, ?int $kullaniciId = null): int
+    public function uygula(int $salonId, int $hizmetId, string $refTip, ?int $refId, ?int $kullaniciId = null, ?string $kullaniciTipi = null): int
     {
         $receteler = HizmetSarfRecetesi::where('salon_id', $salonId)
             ->where('hizmet_id', $hizmetId)->where('hizmet_tipi', 'islem')->where('aktif', true)->get();
@@ -42,6 +42,7 @@ class ReceteUygulamaServisi
                 'batch_uuid'   => $batch,
                 'aciklama'     => "Hizmet ID:{$hizmetId} için otomatik sarf",
                 'kullanici_id' => $kullaniciId,
+                'kullanici_tipi' => $kullaniciTipi,
             ]);
             $sayi++;
         }

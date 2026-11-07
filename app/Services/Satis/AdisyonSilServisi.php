@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
  *   7) Adisyon
  * Sonra ortak AktiviteLog ile salon_aktivite_log'a audit yazılır.
  * Not: eski kod adisyon_paket_seanslar'a dokunmaz; parite için burada da dokunulmaz.
+ * Mobil (`$yalnizKalemBagli`): eski ApiController@adisyonSil yalnız kaleme bağlı taksit ve senedi siler.
  */
 class AdisyonSilServisi
 {
@@ -28,14 +29,14 @@ class AdisyonSilServisi
      * @param int|null $yetkiliId  İşlemi yapan yetkili (audit için)
      * @throws BulunamadiException
      */
-    public function sil(int $adisyonId, ?int $yetkiliId): array
+    public function sil(int $adisyonId, ?int $yetkiliId, bool $yalnizKalemBagli = false): array
     {
         $adisyon = DB::table('adisyonlar')->where('id', $adisyonId)->first(['id', 'salon_id', 'user_id']);
         if (! $adisyon) {
             throw new BulunamadiException('Adisyon bulunamadı');
         }
 
-        DB::transaction(function () use ($adisyonId) {
+        DB::transaction(function () use ($adisyonId, $yalnizKalemBagli) {
             DB::table('adisyonlar')->where('id', $adisyonId)->lockForUpdate()->first(['id']);
 
             $senetIdler = [];
@@ -64,7 +65,7 @@ class AdisyonSilServisi
             // Taksitli tahsilatlar: kalem bağı VEYA adisyon_id (bazı akışlar kaleme yansıtmıyor).
             $silinenTaksit = DB::table('taksitli_tahsilatlar')
                 ->whereIn('id', self::temiz($taksitIdler))
-                ->orWhere('adisyon_id', $adisyonId)
+                ->when(! $yalnizKalemBagli, fn ($q) => $q->orWhere('adisyon_id', $adisyonId))
                 ->pluck('id')->all();
             if ($silinenTaksit) {
                 DB::table('taksit_vadeleri')->whereIn('taksitli_tahsilat_id', $silinenTaksit)->delete();
@@ -73,7 +74,7 @@ class AdisyonSilServisi
 
             $silinenSenet = DB::table('senetler')
                 ->whereIn('id', self::temiz($senetIdler))
-                ->orWhere('adisyon_id', $adisyonId)
+                ->when(! $yalnizKalemBagli, fn ($q) => $q->orWhere('adisyon_id', $adisyonId))
                 ->pluck('id')->all();
             if ($silinenSenet) {
                 DB::table('senet_vadeleri')->whereIn('senet_id', $silinenSenet)->delete();

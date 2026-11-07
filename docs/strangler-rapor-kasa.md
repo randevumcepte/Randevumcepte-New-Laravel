@@ -89,3 +89,22 @@ php artisan rapor:tutarlilik 20 432 --donem=bugun,dun,hafta,ay,gecen_ay,yil,gece
 php artisan rapor:tutarlilik 20 --donem=ozel --baslangic=2026-01-01 --bitis=2026-06-30
 # yazmayı açmak (kontrollü test sonrası): .env KASA_V2_YAZMA_AKTIF=true → php artisan config:clear
 ```
+
+## Mobil yolu (eski mobil hesabı)
+
+Kullanıcı kararı: mobilde görünen tutar ve liste bugünkü ile birebir aynıdır, web hesabı değişmez. Yukarıdaki kanonik
+formül kararları web içindir; mobil `mobil=1` ile eski `ApiController` kuralını seçer. Bayrak yalnız imzalı mobil token'la etkilidir.
+
+| Eski uç | Yeni uç | Hesap |
+|---|---|---|
+| `kasaraporu`, `tahsilatraporu`, `masrafraporu`, `gunsonuraporu`, `devredenAylar` | `/kasa/ozet`, `/gelirler`, `/giderler`, `/gun-sonu`, `/aylik` + `mobil=1`, `baslangic`, `bitis` | `Domain/Rapor/MobilKasaHesabi`, `Services/Kasa/MobilKasaServisi` |
+| `hizmet/urun/paket/personelRaporlari`, `*-musteri-listesi` | `/rapor/satis`, `/rapor/satis/personel`, `/rapor/satis/{tur}/{kalem}/musteriler` + `mobil=1` | `Domain/Rapor/MobilSatisRaporu`, `Services/Rapor/MobilSatisRaporServisi` |
+| `personelPrimHesaplaAyYil`, `primHakedisToplu`, `primOdemeListesi` | `/prim/personel/{id}`, `/prim/hakedis`, `/prim/odemeler` | `Domain/Rapor/MobilPrimHesap`, `Services/Prim/MobilPrimServisi` |
+| `primOde`, `primOdemeSil`, `primHareketEkle`, `primHareketSil` | `/prim/odeme`, `/prim/hareket` (POST `idempotency_key` zorunlu) | `Domain/Rapor/PrimOdemeKurali`, `Services/Prim/PrimOdemeServisi` |
+| `masrafkategorileri`, `masrafekleduzenle` | `/masraf/kategoriler`, `POST/PATCH /masraf` + `mobil=1` | `MasrafServisi` |
+
+Yetki: kimlik ve salon kapsamı her zaman zorunlu. Kasa okumaları kasa menüsünün anahtarlarından biriyle, raporlar `rapor.satis`
+ile açılır; kayıtsız Sekreter (rol 4) mobilde geçer. Rol 5 yalnız kendi satışını görür. Prim listesi `personel.prim_hakedis_gor`
+yoksa yalnız kendi satırını verir; `personel.maas_tutar_gor` yoksa başkasının maaş, oran, hak ediş ve ödeme tutarları `null` gider.
+
+Test: `php artisan test --filter='MobilKasaHesabiTest|MobilSatisRaporuTest|MobilPrimHesapTest|PrimOdemeKuraliTest'`

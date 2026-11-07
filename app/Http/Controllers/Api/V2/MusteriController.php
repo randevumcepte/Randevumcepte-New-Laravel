@@ -153,7 +153,8 @@ class MusteriController extends MusteriTabanController
         if ($id !== null) {
             [$uid, $salonId] = $this->musteriDenetle($request, $id, 'musteri.ekle_duzenle');
         } else {
-            [$uid, $salonId] = $this->salonDenetle($request, 'musteri.ekle_duzenle');
+            // Sesli randevu her salon uyesine acik: mobilde personel de musteri kaydeder. Bayrak yalniz imzali mobil token'la etkilidir.
+            [$uid, $salonId] = $this->salonDenetle($request, $request->boolean('sesli_musteri') ? [] : 'musteri.ekle_duzenle');
         }
         $this->yazmaAcikMi();
 

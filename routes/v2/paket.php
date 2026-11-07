@@ -13,6 +13,7 @@ Route::prefix('paket')->group(function () {
     Route::get('/', [PaketController::class, 'liste']);
     Route::get('/form-verisi', [PaketController::class, 'formVerisi']);
     Route::get('/musteri-ara', [PaketController::class, 'musteriAra']);
+    Route::get('/musteri-kontrol', [PaketController::class, 'musteriKontrol']);
     Route::post('/', [PaketController::class, 'ekle']);
     Route::post('/satis', [PaketController::class, 'sat']);
 
