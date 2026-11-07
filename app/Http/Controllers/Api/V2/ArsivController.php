@@ -95,6 +95,7 @@ class ArsivController extends V2Controller
             'toplam_ucret'  => $this->tutar($request->input('toplam_ucret')),
             'kapora'        => $this->tutar($request->input('kapora')),
             'sadece_kaydet' => ! $gonder || $request->boolean('sadece_kaydet'),
+            'kara_liste_atla' => $request->boolean('kara_liste_atla'),
         ]);
 
         return ApiCevap::basarili($sonuc, $sonuc['gonderildi'] ? 'Form başarıyla gönderildi' : 'Form başarıyla kaydedildi');
