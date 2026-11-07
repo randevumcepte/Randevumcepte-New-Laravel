@@ -410,4 +410,9 @@ class OturumApiTest extends TestCase
         $this->assertArrayHasKey('dahili_no_webrtc', $satir);
         $this->assertArrayHasKey('personeller', $satir['salonlar']);
     }
+
+    public function test_web_giris_ekrani_kod_ve_sifre_formlarini_icerir(): void
+    {
+        $this->get('/v2/giris')->assertOk()->assertSee('id="kodIsteFormu"', false)->assertSee('id="kodGirisFormu"', false)->assertSee('id="girisFormu"', false);
+    }
 }
