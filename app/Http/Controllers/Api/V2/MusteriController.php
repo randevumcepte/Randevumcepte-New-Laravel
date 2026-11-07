@@ -56,6 +56,14 @@ class MusteriController extends MusteriTabanController
             $this->yetkiVar($uid, $salonId, 'musteri.telefon_gor'),
         );
 
+        if ($request->boolean('ayrinti')) {
+            $veri['data'] = $this->okuma->ayrintiEkle(
+                $veri['data'],
+                $this->yetkiVar($uid, $salonId, 'musteri.detay_gor'),
+                $this->yetkiVar($uid, $salonId, 'musteri.not_yaz'),
+            );
+        }
+
         return ApiCevap::basarili($veri + [
             'ayarlar'  => $this->okuma->salonAyarlari($salonId),
             'yetkiler' => $this->yetkiler($uid, $salonId),
@@ -73,7 +81,8 @@ class MusteriController extends MusteriTabanController
     {
         [$uid, $salonId] = $this->salonDenetle($request, self::SECICI);
         $q = trim((string) ($request->input('q') ?? $request->input('ara') ?? ''));
-        if (mb_strlen($q) < 2) {
+        // tumu=1: secicinin bos acilisi ve sayfalamasi (limit + offset).
+        if (mb_strlen($q) < 2 && ! ($q === '' && $request->boolean('tumu'))) {
             throw new GecersizIslemException('Aramak için en az 2 karakter girin.');
         }
 
@@ -82,6 +91,7 @@ class MusteriController extends MusteriTabanController
             $this->portfoy()->kisitliPersonel($uid, $salonId),
             $this->yetkiVar($uid, $salonId, 'musteri.telefon_gor'),
             (int) $request->input('limit', 20),
+            (int) $request->input('offset', 0),
         ));
     }
 

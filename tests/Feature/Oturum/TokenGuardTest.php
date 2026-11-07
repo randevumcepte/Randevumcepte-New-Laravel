@@ -40,6 +40,13 @@ class TokenGuardTest extends TestCase
         $this->getJson('/api/v2/randevu/liste?salon_id=20&ayrinti=1')->assertUnauthorized();
     }
 
+    public function test_musteri_uclari_tokensiz_401_doner(): void
+    {
+        $this->getJson('/api/v2/musteri?salon_id=20&ayrinti=1')->assertUnauthorized();
+        $this->getJson('/api/v2/musteri/ara?salon_id=20&tumu=1')->assertUnauthorized();
+        $this->getJson('/api/v2/musteri/sayilar?salon_id=20')->assertUnauthorized();
+    }
+
     public function test_takvim_ayrintisi_tokensiz_401_doner(): void
     {
         $this->getJson('/api/v2/randevu/takvim?salon_id=20&ayrinti=1')->assertUnauthorized();

@@ -2,6 +2,7 @@
 
 namespace App\Services\Musteri;
 
+use App\Domain\Musteri\MusteriProfilAlanlari;
 use App\Domain\Musteri\DogumTarihi;
 use App\Domain\Musteri\MusteriSozluk;
 use App\Domain\Musteri\Segment;
@@ -43,6 +44,12 @@ class MusteriOkumaServisi
     /** Salondaki musteri basina tahsilat sayisi + toplami (segment + "toplam alinan ucret"). */
     public function tahsilatOzetiSorgusu(int $salonId): Builder
     {
+        // Studyoda tahsilat tutari 0 tutulur; odeme sinyali "Odeme Alindi" isaretli adisyondur.
+        if (DB::table('salonlar')->where('id', $salonId)->value('studyo_modu')) {
+            return DB::table('adisyonlar')->where('salon_id', $salonId)->where('odendi', 1)->groupBy('user_id')
+                ->selectRaw('user_id, COUNT(*) as odeme_sayisi, 0 as toplam_odenen');
+        }
+
         return DB::table('tahsilatlar')->where('salon_id', $salonId)->groupBy('user_id')
             ->selectRaw('user_id, COUNT(*) as odeme_sayisi, COALESCE(SUM(tutar),0) as toplam_odenen');
     }
@@ -133,6 +140,26 @@ class MusteriOkumaServisi
             ->groupBy('user_id')
             ->selectRaw('user_id, COUNT(*) as randevu_sayisi, MAX(tarih) as son_randevu_tarihi')
             ->get()->keyBy('user_id')->all();
+    }
+
+    /**
+     * Liste satirlarina `ayrinti=1` eki: detay yetkisiyle profil ve saglik alanlari; ozel not yalniz not yetkisiyle.
+     *
+     * @param  array<int,array<string,mixed>>  $satirlar  donustur() ciktisi
+     */
+    public function ayrintiEkle(array $satirlar, bool $detayGor, bool $notGor): array
+    {
+        $profil = $detayGor
+            ? DB::table('users')->whereIn('id', array_column($satirlar, 'id'))->get()->keyBy('id')
+            : collect();
+
+        return array_map(function (array $s) use ($profil, $notGor) {
+            if (! $notGor) {
+                unset($s['ozel_notlar']);
+            }
+
+            return $s + array_intersect_key((array) ($profil[$s['id']] ?? []), array_flip(MusteriProfilAlanlari::LISTE));
+        }, $satirlar);
     }
 
     /** Ham satir → kararli DTO (liste ve detay ayni alanlari tasir). */

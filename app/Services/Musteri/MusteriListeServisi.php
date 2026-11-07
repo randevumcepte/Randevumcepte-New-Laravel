@@ -81,10 +81,10 @@ class MusteriListeServisi
      * Hafif SECICI (randevu / satis / form ekranlarindaki musteri arama kutusu):
      * [{id, ad, telefon}] — v2-secici.js sozlesmesi. Kapsam kisiti listeyle ayni.
      */
-    public function ara(int $salonId, string $q, ?int $kisitPersonel, bool $telGor, int $limit = 20): array
+    public function ara(int $salonId, string $q, ?int $kisitPersonel, bool $telGor, int $limit = 20, int $atla = 0): array
     {
         return $this->filtreli($this->okuma->satirSorgusu($salonId, $kisitPersonel), Segment::TUMU, $q)
-            ->orderBy('u.name')->limit(max(1, min(50, $limit)))->get()
+            ->orderBy('u.name')->offset(max(0, $atla))->limit(max(1, min(50, $limit)))->get()
             ->map(function ($r) use ($telGor) {
                 $d = $this->okuma->donustur($r, null, $telGor);
 
