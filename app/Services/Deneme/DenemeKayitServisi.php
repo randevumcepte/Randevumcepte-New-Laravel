@@ -7,7 +7,7 @@ use App\Exceptions\CakismaException;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Services\Oturum\Hesap\YetkiliHesabi;
-use App\Services\Oturum\PlatformSms;
+use App\Services\Oturum\PlatformMesaj;
 use App\Support\OnayKodu;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
@@ -26,7 +26,7 @@ class DenemeKayitServisi
     public function __construct(
         private YetkiliHesabi $yetkili,
         private DemoHesapKurServisi $kurulum,
-        private PlatformSms $sms,
+        private PlatformMesaj $sms,
     ) {}
 
     /** @param array<string,mixed> $form doğrulanmış alanlar */

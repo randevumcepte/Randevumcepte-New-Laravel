@@ -20,13 +20,14 @@ final class OnayKodu
     private const MAKS_DENEME = 5;
 
     /** Yeni kod uretir (oncekini gecersiz kilar) ve SMS'e konacak duz kodu dondurur. */
-    public static function uret(string $amac, int $salonId, int $yetkiliId, array $baglam = []): string
+    public static function uret(string $amac, int $salonId, int $yetkiliId, array $baglam = [], int $hane = 4, int $sureSn = self::SURE_SN): string
     {
-        $kod = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        $kod = str_pad((string) random_int(0, 10 ** $hane - 1), $hane, '0', STR_PAD_LEFT);
         Cache::put(self::anahtar($amac, $salonId, $yetkiliId), [
             'hash'   => hash('sha256', $kod.'|'.self::baglamIzi($baglam)),
             'deneme' => 0,
-        ], self::SURE_SN);
+            'bitis'  => time() + $sureSn,
+        ], $sureSn);
 
         return $kod;
     }
@@ -46,7 +47,9 @@ final class OnayKodu
             return true;
         }
         $kayit['deneme']++;
-        $kayit['deneme'] >= self::MAKS_DENEME ? Cache::forget($anahtar) : Cache::put($anahtar, $kayit, self::SURE_SN);
+        // Yanlis deneme kodun omrunu uzatmaz.
+        $kalan = (int) ($kayit['bitis'] ?? 0) - time();
+        $kayit['deneme'] >= self::MAKS_DENEME || $kalan <= 0 ? Cache::forget($anahtar) : Cache::put($anahtar, $kayit, $kalan);
 
         return false;
     }

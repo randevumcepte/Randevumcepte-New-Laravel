@@ -56,11 +56,13 @@ return [
         'api' => [
             'driver' => 'legacy-passport',
             'provider' => 'users',
+            'hesap_turu' => 'musteri',
         ],
 
         'isletmeyonetim-api' => [
             'driver' => 'legacy-passport',
             'provider' => 'isletmeyetkilileri',
+            'hesap_turu' => 'isletme',
         ],
 
         // Sistem yonetimi ekibi. Token subject'i "sy:<id>": ayni id isletme/musteri tablosunda baska

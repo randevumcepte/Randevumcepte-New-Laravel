@@ -223,7 +223,7 @@ class YetkiSabitleri
                 'ayarlar' => [
                     'randevu.takvim_gor' => true, 'randevu.tum_personel_gor' => false,
                     'randevu.olustur' => true, 'randevu.onayla' => false, 'randevu.duzenle_iptal' => true,
-                    'randevu.kapanis_blok_ekle' => false, 'randevu.online_ayar' => false,
+                    'randevu.kapanis_blok_ekle' => true, 'randevu.online_ayar' => false,
                     'musteri.liste_gor' => true, 'musteri.tum_portfoy_gor' => false,
                     'musteri.detay_gor' => true, 'musteri.ekle_duzenle' => true,
                     'musteri.sil' => false, 'musteri.telefon_gor' => false,

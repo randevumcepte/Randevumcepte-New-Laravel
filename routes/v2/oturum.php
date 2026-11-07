@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('oturum')->group(function () {
     Route::middleware('throttle:20,1')->group(function () {
         Route::post('/giris', [OturumController::class, 'giris']);
+        Route::post('/kod-iste', [OturumController::class, 'kodIste']);
+        Route::post('/kod-dogrula', [OturumController::class, 'kodDogrula']);
         Route::post('/sifre-kodu', [OturumController::class, 'sifreKodu']);
         Route::post('/sifre-sifirla', [OturumController::class, 'sifreSifirla']);
     });
     Route::post('/cikis', [OturumController::class, 'cikis'])->middleware('auth:isletmeyonetim-api,api');
+    Route::post('/yenile', [OturumController::class, 'yenile'])->middleware('auth:isletmeyonetim-api,api');
 });
 
 Route::prefix('deneme')->group(function () {

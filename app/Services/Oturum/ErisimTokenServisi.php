@@ -2,6 +2,7 @@
 
 namespace App\Services\Oturum;
 
+use App\Domain\Oturum\TokenTipi;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\DB;
 use Lcobucci\JWT\Configuration;
@@ -31,9 +32,21 @@ class ErisimTokenServisi
 
     private const IMPERSONATION_ADI_ONEKI = 'impersonation:';
 
-    public function uret(int $userId): string
+    /** @param  string  $tip  TokenTipi: token yalniz bu hesap turunun uclarinda gecer */
+    public function uret(int $userId, string $tip): string
     {
-        return $this->imzala($userId, (string) $userId, self::TOKEN_ADI, (new DateTimeImmutable())->modify('+'.(int) config('online.token_gun').' days'));
+        return $this->imzala($userId, (string) $userId, self::TOKEN_ADI, (new DateTimeImmutable())->modify('+'.(int) config('online.token_gun').' days'), '', [$tip]);
+    }
+
+    /** Bitimine az kalan token icin yeni token; erken cagrida null. Eski token suresince gecerli kalir (cevap kaybolursa oturum dusmesin). */
+    public function yenile(string $tokenId, int $userId, string $tip): ?string
+    {
+        $bitis = DB::table('oauth_access_tokens')->where('id', $tokenId)->value('expires_at');
+        if ($bitis !== null && strtotime((string) $bitis) > time() + (int) config('oturum.token_yenile_gun') * 86400) {
+            return null;
+        }
+
+        return $this->uret($userId, $tip);
     }
 
     public function sistemYoneticisiUret(int $id): string
@@ -46,7 +59,7 @@ class ErisimTokenServisi
     {
         $bitis = (new DateTimeImmutable())->modify('+'.(int) config('sistem.impersonation_saat').' hours');
 
-        return $this->imzala($yetkiliId, (string) $yetkiliId, self::IMPERSONATION_ADI_ONEKI.$logId, $bitis, self::IMPERSONATION_ID_ONEKI);
+        return $this->imzala($yetkiliId, (string) $yetkiliId, self::IMPERSONATION_ADI_ONEKI.$logId, $bitis, self::IMPERSONATION_ID_ONEKI, [TokenTipi::ISLETME]);
     }
 
     /** Bugun uretilecek token'in bitis zamani (istemciye bilgi amacli). */
@@ -100,7 +113,7 @@ class ErisimTokenServisi
         return $tokenId !== null && str_starts_with($tokenId, self::IMPERSONATION_ID_ONEKI);
     }
 
-    private function imzala(int $satirKullanici, string $subject, string $ad, DateTimeImmutable $bitis, string $idOneki = ''): string
+    private function imzala(int $satirKullanici, string $subject, string $ad, DateTimeImmutable $bitis, string $idOneki = '', array $kapsam = []): string
     {
         $simdi = new DateTimeImmutable();
         $id = $idOneki.bin2hex(random_bytes(40));
@@ -124,7 +137,7 @@ class ErisimTokenServisi
             ->canOnlyBeUsedAfter($simdi)
             ->expiresAt($bitis)
             ->relatedTo($subject)
-            ->withClaim('scopes', [])
+            ->withClaim('scopes', $kapsam)
             ->getToken($yapilandirma->signer(), $yapilandirma->signingKey())
             ->toString();
     }

@@ -21,7 +21,7 @@ class SifreSifirlamaServisi
 {
     private const SALON_YOK = 0;
 
-    public function __construct(private HesapListesi $hesaplar, private PlatformSms $sms) {}
+    public function __construct(private HesapListesi $hesaplar, private PlatformMesaj $sms) {}
 
     public function kodGonder(string $telefonHam, ?string $tur, string $ip): void
     {

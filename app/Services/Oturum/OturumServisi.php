@@ -5,6 +5,7 @@ namespace App\Services\Oturum;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GirisHatasiException;
 use App\Services\Oturum\Hesap\HesapListesi;
+use App\Services\Oturum\Hesap\OturumHesabi;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
@@ -31,19 +32,38 @@ class OturumServisi
                 continue;
             }
             RateLimiter::clear($anahtar);
-            $veri = $hesap->acilisVerisi($id, $bundle);
-            $hesap->cihazKaydet($id, $g['bildirim_id'] ?? null, $g['cihaz_bilgi'] ?? null, $bundle);
 
-            return [
-                'token'      => $this->token->uret($id),
-                'token_type' => 'Bearer',
-                'expires_at' => $this->token->bitisTarihi(),
-                'user_type'  => $hesap->kullaniciTipi(),
-            ] + $veri;
+            return $this->oturumAc($hesap, $id, $g);
         }
 
         RateLimiter::hit($anahtar, (int) config('oturum.giris_deneme_sn'));
         throw new GirisHatasiException('Yanlış kullanıcı adı veya şifre girdiniz.');
+    }
+
+    /** Dogrulanmis hesap icin oturum cevabi (sifre ve tek kullanimlik kod ortak). */
+    public function oturumAc(OturumHesabi $hesap, int $id, array $g): array
+    {
+        $bundle = ($g['app_bundle'] ?? null) ?: null;
+        $veri = $hesap->acilisVerisi($id, $bundle);
+        $hesap->cihazKaydet($id, $g['bildirim_id'] ?? null, $g['cihaz_bilgi'] ?? null, $bundle);
+
+        return [
+            'token'      => $this->token->uret($id, $hesap->tur()),
+            'token_type' => 'Bearer',
+            'expires_at' => $this->token->bitisTarihi(),
+            'user_type'  => $hesap->kullaniciTipi(),
+        ] + $veri;
+    }
+
+    /** @return array{token:?string,expires_at:?string} token null: yenilemeye henuz gerek yok */
+    public function yenile(?string $tokenId, int $userId, ?string $tip): array
+    {
+        if (! $tokenId || ! $tip) {
+            throw new GirisHatasiException('Oturumunuzu yeniden açmanız gerekiyor.');
+        }
+        $token = $this->token->yenile($tokenId, $userId, $tip);
+
+        return ['token' => $token, 'expires_at' => $token ? $this->token->bitisTarihi() : null];
     }
 
     public function cikis(?string $tokenId): void

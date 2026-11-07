@@ -2,13 +2,17 @@
 
 namespace Tests\Feature\Oturum;
 
+use App\Domain\Telefon\TelefonNumarasi;
 use App\Services\Deneme\DemoHesapKurServisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\IlkSayfa;
 use App\Services\Oturum\PlatformSms;
+use App\Services\Whatsapp\Kopru\KopruCevabi;
+use App\Services\Whatsapp\Kopru\WhatsappKoprusu;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use Tests\TestCase;
@@ -21,6 +25,9 @@ class OturumApiTest extends TestCase
     private const ANA_BUNDLE = 'com.randevumcepte.randevumcepte';
 
     private array $smsler = [];
+
+    /** @var array<int,array{tel:string,mesaj:string}> */
+    private array $whatsapplar = [];
 
     protected function setUp(): void
     {
@@ -48,6 +55,26 @@ class OturumApiTest extends TestCase
             return true;
         });
         $this->app->instance(PlatformSms::class, $sms);
+
+        $this->whatsappKur(false);
+    }
+
+    private function whatsappKur(bool $basarili): void
+    {
+        $kopru = Mockery::mock(WhatsappKoprusu::class);
+        $kopru->shouldReceive('gonder')->andReturnUsing(function ($oturum, $tel, $mesaj) use ($basarili) {
+            $this->whatsapplar[] = compact('tel', 'mesaj');
+
+            return new KopruCevabi($basarili ? 200 : 0);
+        });
+        $this->app->instance(WhatsappKoprusu::class, $kopru);
+    }
+
+    private function altiHane(array $mesajlar): string
+    {
+        preg_match('/\b(\d{6})\b/', (string) end($mesajlar)['mesaj'], $m);
+
+        return $m[1];
     }
 
     private function semaKur(): void
@@ -273,5 +300,84 @@ class OturumApiTest extends TestCase
         config(['oturum.deneme.yazma_aktif' => false]);
 
         $this->postJson('/api/v2/deneme/kod-gonder', [])->assertStatus(409);
+    }
+
+    public function test_kod_once_whatsapp_tan_gider_yeniden_isteyince_sms(): void
+    {
+        $this->whatsappKur(true);
+        $this->yetkili([['uyelik_turu' => 1]]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $this->assertCount(1, $this->whatsapplar);
+        $this->assertSame([], $this->smsler);
+
+        // Yeniden gonderme bekleme suresi icinde yeni mesaj gitmez.
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $this->assertCount(1, $this->whatsapplar);
+
+        RateLimiter::clear('oturum-kod-tel:'.TelefonNumarasi::kanonik(self::TEL));
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $this->assertCount(1, $this->whatsapplar);
+        $this->assertCount(1, $this->smsler);
+    }
+
+    public function test_whatsapp_basarisizsa_kod_sms_ile_gider_ve_giris_olur(): void
+    {
+        $this->yetkili([['uyelik_turu' => 1]]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $kod = $this->altiHane($this->smsler);
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $kod])
+            ->assertOk()->assertJsonPath('veri.token', 'test-token')->assertJsonPath('veri.user_type', '1');
+
+        // Kod tek kullanimlik.
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $kod])->assertStatus(422);
+    }
+
+    public function test_kayitsiz_numaraya_kod_gitmez_cevap_ayni(): void
+    {
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk()->assertJsonPath('veri.yeniden_sn', 60);
+
+        $this->assertSame([], $this->smsler);
+        $this->assertSame([], $this->whatsapplar);
+    }
+
+    public function test_bes_yanlis_denemede_kod_duser(): void
+    {
+        $this->yetkili([['uyelik_turu' => 1]]);
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $kod = $this->altiHane($this->smsler);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $kod === '000000' ? '000001' : '000000'])->assertStatus(422);
+        }
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $kod])->assertStatus(422);
+    }
+
+    public function test_iki_hesapli_numara_tur_secer(): void
+    {
+        $this->yetkili([['uyelik_turu' => 1]]);
+        DB::table('users')->insert(['name' => 'Musteri', 'cep_telefon' => self::TEL, 'password' => Hash::make('gizli123')]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $r = $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $this->altiHane($this->smsler)])
+            ->assertOk()->assertJsonPath('veri.hesap_secimi', ['isletme', 'musteri'])->assertJsonMissingPath('veri.token');
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => $r->json('veri.secim_kodu'), 'hesap_turu' => 'isletme'])
+            ->assertOk()->assertJsonPath('veri.user_type', '1');
+    }
+
+    public function test_inceleme_hesabina_mesaj_gitmez_sabit_kodla_girer(): void
+    {
+        $id = $this->yetkili([['uyelik_turu' => 1]]);
+        config(['oturum.korunan_hesaplar.isletme' => [$id], 'oturum.tek_kullanimlik.inceleme_kodu' => '123456']);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertOk();
+        $this->assertSame([], $this->smsler);
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '654321'])->assertStatus(422);
+        $this->postJson('/api/v2/oturum/kod-dogrula', ['cep_telefon' => self::TEL, 'kod' => '123456'])->assertOk();
     }
 }

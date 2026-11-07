@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Domain\Oturum\TokenTipi;
 use App\Services\Oturum\ErisimTokenServisi;
 use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use League\OAuth2\Server\ResourceServer;
 use Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory;
@@ -55,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
             $config,
             fn (string $sub) => ctype_digit($sub) ? (int) $sub : null,
             fn ($kullanici) => true,
+            $config['hesap_turu'] ?? null,
         ));
 
         // Yalniz "sy:<id>" subject + aktif hesap: pasif edilen yonetici token'i suresi dolmadan da duser.
@@ -69,12 +72,13 @@ class AppServiceProvider extends ServiceProvider
     /**
      * @param  callable(string):?int  $idCoz  token subject'i bu guard'a ait degilse null
      * @param  callable(object):bool  $kabul  cozulen kullanici icin son kontrol
+     * @param  ?string  $hesapTuru  doluysa token'in hesap tipi buna uymali (TokenTipi)
      */
-    private function tokenGuard($app, array $config, callable $idCoz, callable $kabul): RequestGuard
+    private function tokenGuard($app, array $config, callable $idCoz, callable $kabul, ?string $hesapTuru = null): RequestGuard
     {
         $provider = Auth::createUserProvider($config['provider'] ?? null);
 
-        return new RequestGuard(function ($request) use ($provider, $idCoz, $kabul) {
+        return new RequestGuard(function ($request) use ($provider, $idCoz, $kabul, $hesapTuru) {
             try {
                 // Illuminate isteğini PSR-7'ye çevir (ResourceServer PSR bekler)
                 $guzzle = new HttpFactory();
@@ -88,8 +92,14 @@ class AppServiceProvider extends ServiceProvider
                 if ($id === null) {
                     return null;
                 }
+                $tokenId = $validated->getAttribute('oauth_access_token_id');
+                $tip = TokenTipi::coz((array) $validated->getAttribute('oauth_scopes'));
+                if ($hesapTuru !== null && ! $this->tokenTipiUygun($tip, $hesapTuru, $tokenId)) {
+                    return null;
+                }
                 // Oturumu tanimak icin (sifre degisiminde bu oturum korunur).
-                $request->attributes->set('oauth_access_token_id', $validated->getAttribute('oauth_access_token_id'));
+                $request->attributes->set('oauth_access_token_id', $tokenId);
+                $request->attributes->set('hesap_tipi', $tip);
 
                 // Kullaniciyi guard'in KENDI tablosundan coz (yanlis tablo riskini keser)
                 $kullanici = $provider->retrieveById($id);
@@ -100,5 +110,14 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
         }, $app['request'], $provider);
+    }
+
+    private function tokenTipiUygun(?string $tip, string $beklenen, ?string $tokenId): bool
+    {
+        $tipsizKabul = (bool) config('oturum.tipsiz_token_kabul');
+        // Ad yalniz gerektiginde okunur: tipli token ve acik gecis ek sorgu yapmaz.
+        $ad = $tip === null && ! $tipsizKabul ? DB::table('oauth_access_tokens')->where('id', $tokenId)->value('name') : null;
+
+        return TokenTipi::kabul($tip, $beklenen, $tipsizKabul, $ad, (string) config('oturum.kopru_token_adi'));
     }
 }

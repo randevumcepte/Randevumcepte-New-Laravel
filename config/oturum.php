@@ -11,6 +11,26 @@ return [
     // Apple/Google inceleme hesaplari: sifreleri sifirlanamaz, SMS gitmez.
     'korunan_hesaplar' => ['isletme' => [3], 'musteri' => [46120]],
 
+    // Tipsiz token gecisi: yeni uygulama yeni girise gecene kadar acik; sonra OTURUM_TIPSIZ_TOKEN_KABUL=false.
+    'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', true),
+    'kopru_token_adi'    => 'v2-web',
+
+    // Kod ve deneme mesajlari once sistem WhatsApp hattindan gider (false: yalniz SMS).
+    'kod_whatsapp' => (bool) env('OTURUM_KOD_WHATSAPP', true),
+
+    // Tek kullanimlik kodla giris.
+    'tek_kullanimlik' => [
+        'hane'          => 6,
+        'sure_sn'       => 300,
+        'yeniden_sn'    => 60,
+        'tel_saatlik'   => 5,
+        'ip_saatlik'    => 30,
+        'inceleme_kodu' => env('OTURUM_INCELEME_KODU'),
+    ],
+
+    // Token bitimine bu kadar gun kala /oturum/yenile yeni token verir.
+    'token_yenile_gun' => 30,
+
     'giris_deneme'         => 10,
     'giris_deneme_sn'      => 600,
     'sifre_kodu_tel_sn'    => 300,

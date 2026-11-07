@@ -2,6 +2,7 @@
 
 namespace App\Services\MusteriHesap;
 
+use App\Domain\Oturum\TokenTipi;
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
@@ -124,7 +125,7 @@ class MusteriOturumServisi
             $this->portfoy->garantile($salonId, $userId);
         }
 
-        return ['token' => $this->token->uret($userId), 'user_type' => '0', 'musteri' => $this->profil->goster($userId)];
+        return ['token' => $this->token->uret($userId, TokenTipi::MUSTERI), 'user_type' => '0', 'musteri' => $this->profil->goster($userId)];
     }
 
     /** Honeypot + cok hizli gonderim + IP siniri (eski randevuonaylaDirekt ile ayni degerler). */
