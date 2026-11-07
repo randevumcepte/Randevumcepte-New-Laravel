@@ -310,7 +310,9 @@ class RandevuOkumaServisi
 
     /**
      * Pre-merge satirlari eski randevular() ile ayni anahtarla birlestir:
-     * _paketSource | resourceId | personelId  → start=min, end=max.
+     * randevu_id | _paketSource | resourceId | personelId  → start=min, end=max.
+     * Randevu kimligi sart: seansli satista ayni kaynak birden cok randevuya aittir;
+     * yoksa ayri seanslar tek bara birlesip sureyi sisirir.
      *
      * @param  array<int,array<string,mixed>>  $satirlar
      * @return array<int,array<string,mixed>>
@@ -319,7 +321,8 @@ class RandevuOkumaServisi
     {
         $gruplar = [];
         foreach ($satirlar as $s) {
-            $anahtar = ($s['_paketSource'] ?? ('single-'.$s['rh_id']))
+            $anahtar = $s['randevu_id']
+                .'|'.($s['_paketSource'] ?? ('single-'.$s['rh_id']))
                 .'|'.($s['resourceId'] ?? '')
                 .'|'.($s['personelId'] ?? '');
             $gruplar[$anahtar][] = $s;
