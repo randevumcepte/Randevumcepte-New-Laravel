@@ -82,7 +82,8 @@ class TekKullanimlikGirisServisi
     {
         $sonuc = [];
         foreach ($this->hesaplar->secili($tur) as $hesap) {
-            $id = $hesap->telefonlaBul($tel);
+            // Inceleme hesabi once: ayni telefondaki kucuk numarali kayit onu gizlemesin.
+            $id = $hesap->telefonlaListedenBul($tel, (array) config('oturum.korunan_hesaplar.'.$hesap->tur())) ?? $hesap->telefonlaBul($tel);
             if ($id !== null) {
                 $sonuc[] = [$hesap, $id];
             }

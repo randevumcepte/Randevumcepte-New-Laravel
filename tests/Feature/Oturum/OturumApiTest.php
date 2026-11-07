@@ -496,4 +496,18 @@ class OturumApiTest extends TestCase
             ->assertJsonPath('veri.musteri.salonlar.0.salon_id', $salonId)
             ->assertJsonPath('veri.musteri.salonlar.0.salonlar.uyelik_bitis_tarihi', '2030-01-01');
     }
+
+    public function test_ayni_telefonda_birden_cok_kayit_varsa_inceleme_hesabi_sabit_kodla_girer(): void
+    {
+        DB::table('users')->insert(['name' => 'Kucuk Kayit', 'cep_telefon' => self::TEL, 'password' => Hash::make('gizli123')]);
+        $inceleme = DB::table('users')->insertGetId(['name' => 'Inceleme', 'cep_telefon' => self::TEL, 'password' => Hash::make('gizli123')]);
+        config(['oturum.korunan_hesaplar.musteri' => [$inceleme], 'oturum.tek_kullanimlik.inceleme_kodu' => '123456']);
+        $istek = ['cep_telefon' => self::TEL, 'hesap_turu' => 'musteri'];
+
+        $this->postJson('/api/v2/oturum/kod-iste', $istek)->assertOk();
+        $this->assertSame([], $this->smsler);
+
+        $this->postJson('/api/v2/oturum/kod-dogrula', $istek + ['kod' => '123456'])
+            ->assertOk()->assertJsonPath('veri.musteri.id', $inceleme);
+    }
 }

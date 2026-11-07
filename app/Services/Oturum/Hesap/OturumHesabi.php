@@ -25,6 +25,14 @@ interface OturumHesabi
      */
     public function acilisVerisi(int $id, ?string $bundle): array;
 
+    /**
+     * Telefona bagli, verilen listedeki hesap (ayni telefonda birden cok kayit olabilir; telefonlaBul
+     * en kucuk numarayi dondurur, inceleme hesabini goremez).
+     *
+     * @param  int[]  $idler
+     */
+    public function telefonlaListedenBul(string $telefon, array $idler): ?int;
+
     /** Dogrulama kodunun gidecegi hattin salonu; bilinmiyorsa null (platform hatti). */
     public function mesajSalonu(int $id, ?string $bundle): ?int;
 

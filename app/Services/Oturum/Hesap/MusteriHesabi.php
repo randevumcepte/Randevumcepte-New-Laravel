@@ -66,6 +66,13 @@ class MusteriHesabi implements OturumHesabi
         return $id === null ? null : (int) $id;
     }
 
+    public function telefonlaListedenBul(string $telefon, array $idler): ?int
+    {
+        $id = DB::table('users')->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($telefon))->whereIn('id', $idler)->orderBy('id')->value('id');
+
+        return $id === null ? null : (int) $id;
+    }
+
     public function acilisVerisi(int $id, ?string $bundle): array
     {
         if ($this->kapsam->markaMi($bundle)) {
