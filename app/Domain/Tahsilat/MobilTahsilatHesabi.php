@@ -163,25 +163,30 @@ final class MobilTahsilatHesabi
     }
 
     /**
-     * Taksitli satista on odemenin kalem paylari. Fiyatlar istekteki ham metindir; cagiran tum kalem turlerini (hizmet,
-     * urun, paket) tek listede verir, paylar odemeyi bir kez boler.
+     * Taksitli satista on odemenin kalem paylari (TL). Web ile ayni kural, ayni kod (TahsilatDagitim::reconcile): tum kalemler
+     * (hizmet, urun, paket) tek havuz, net fiyat oraninda, kurus artigi en buyuk kaleme; paylarin toplami odemeye birebir esit.
+     * Eski mobil formulu her turu ayri oranliyor (odeme katlaniyordu), "100.00" fiyati 10000 okuyor ve kurus farki birakiyordu.
      *
-     * @param  list<mixed>  $fiyatlar
+     * @param  list<mixed>  $fiyatlar  istekteki fiyat ("100.00" ya da "1.234,56")
      * @return list<float>
      */
     public static function onOdemePaylari(array $fiyatlar, float $kalemBasinaIndirim, mixed $odeme): array
     {
-        $netler = array_map(fn ($f) => self::tlSayi($f) - $kalemBasinaIndirim, $fiyatlar);
-        $toplam = array_sum($netler);
-        $odemeSayi = self::tlSayi($odeme);
+        $indirim = (int) round($kalemBasinaIndirim * 100);
+        $netler = array_map(fn ($f) => max(0, self::paraKurus($f) - $indirim), array_values($fiyatlar));
 
-        return array_map(function ($net) use ($toplam, $odemeSayi) {
-            if ($toplam == 0) {
-                throw new \DivisionByZeroError('Division by zero');
-            }
+        return array_map(fn (int $k) => round($k / 100, 2), TahsilatDagitim::reconcile($netler, self::paraKurus($odeme)));
+    }
 
-            return round(($net / $toplam) * $odemeSayi, 2);
-        }, $netler);
+    /** Para metni → kurus. Virgul varsa Turkce bicim ("1.234,56"), yoksa ondalik nokta ("100.00"). */
+    public static function paraKurus(mixed $deger): int
+    {
+        $m = trim((string) ($deger ?? '0'));
+        if (str_contains($m, ',')) {
+            $m = str_replace(['.', ','], ['', '.'], $m);
+        }
+
+        return (int) round((float) $m * 100);
     }
 
     /** Taksitte komisyondan arinmis odemenin dagitima giren metni (`number_format` + yeniden cevrim 2 haneye indirir). */

@@ -82,13 +82,18 @@ class MobilTahsilatHesabiTest extends TestCase
         H::kalemBasinaIndirim('0', '0', 0);
     }
 
-    public function test_on_odeme_paylari_iki_haneye_yuvarlanir(): void
+    public function test_on_odeme_paylari_web_kurali_tek_havuz_kurus_kesin(): void
     {
-        // Fiyatlar istekteki ham metin: "100.00" → 10000; net = fiyat - kalem basina indirim.
         $this->assertSame([166.67, 333.33], H::onOdemePaylari(['100.00', '200.00'], 0.0, '500,00'));
-        $this->assertSame([166.39, 333.61], H::onOdemePaylari(['100.00', '200.00'], 50.0, '500,00'));
+        // "100.00" 100 TL okunur; net = fiyat - kalem basina indirim (eski formul 10000 okuyordu: 166.39 / 333.61).
+        $this->assertSame([125.0, 375.0], H::onOdemePaylari(['100.00', '200.00'], 50.0, '500,00'));
         // Hizmet 100 + urun 50 + paket 150 tek listede: paylar odemeyi bir kez boler.
         $this->assertSame([100.0, 50.0, 150.0], H::onOdemePaylari(['100,00', '50,00', '150,00'], 0.0, '300,00'));
+        // Kurus artigi en buyuk kaleme: toplam odemeye birebir esit (33.33 x 3 = 99.99 olmaz).
+        $paylar = H::onOdemePaylari(['100.00', '100.00', '100.00'], 0.0, '100,00');
+        $this->assertSame([33.34, 33.33, 33.33], $paylar);
+        $this->assertSame(10000, (int) round(array_sum($paylar) * 100));
+        $this->assertSame([1234.56], H::onOdemePaylari(['1.234,56'], 0.0, '1.234,56'));
     }
 
     public function test_tum_alacaklar_kalani_ve_gorunurluk(): void
