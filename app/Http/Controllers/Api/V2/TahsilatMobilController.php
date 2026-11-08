@@ -9,7 +9,6 @@ use App\Services\Tahsilat\Mobil\MobilHizliSatisServisi;
 use App\Services\Tahsilat\Mobil\MobilKampanyaKoduServisi;
 use App\Services\Tahsilat\Mobil\MobilOngorusmeSatisServisi;
 use App\Services\Tahsilat\Mobil\MobilRandevuTahsilatServisi;
-use App\Services\Tahsilat\Mobil\MobilSenetServisi;
 use App\Services\Tahsilat\Mobil\MobilTahsilatServisi;
 use App\Services\Tahsilat\Mobil\MobilTaksitServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -99,31 +98,6 @@ class TahsilatMobilController extends V2Controller
         [, $salonId] = $this->giris($request);
 
         return ApiCevap::basarili($s->senetler($salonId, $request->query('ara'), $request->query('durum'), max(1, $request->integer('page', 1))));
-    }
-
-    /** POST /mobil-para/senet (eski senetekleguncelle) */
-    public function senetEkle(Request $request, MobilSenetServisi $s)
-    {
-        [$uid, $salonId] = $this->giris($request, true);
-
-        return ApiCevap::basarili($s->ekle($salonId, $uid, $request->all()));
-    }
-
-    /** POST /mobil-para/senet-vade/{id}/ode (eski senetode) */
-    public function senetOde(Request $request, int $id, MobilSenetServisi $s)
-    {
-        $uid = $this->kayitGirisi($request, $s->vadeSalonu($id));
-
-        return ApiCevap::basarili($s->ode($id, $uid, $request->all()));
-    }
-
-    /** PATCH /mobil-para/senet-vade/{id} (eski senetvadeguncelle) */
-    public function senetVadeGuncelle(Request $request, int $id, MobilSenetServisi $s)
-    {
-        $uid = $this->kayitGirisi($request, $s->vadeSalonu($id));
-        $s->vadeGuncelle($id, $uid, $request->all());
-
-        return ApiCevap::basarili(['sonuc' => 'Başarılı']);
     }
 
     /** GET /mobil-para/harici-kalemler */

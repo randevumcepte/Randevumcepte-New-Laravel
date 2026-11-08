@@ -42,7 +42,7 @@ class BildirimKuyrugu
             'randevu_id' => $randevuId,
             'yetkili_id' => $yetkiliId,
             'payload'    => $payload ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null,
-            'durum'      => BildirimKuyrukDurumu::yeniSatir(),
+            'durum'      => BildirimKuyrukDurumu::yeniSatir($tur),
             'deneme'     => 0,
             'created_at' => now(),
             'updated_at' => now(),

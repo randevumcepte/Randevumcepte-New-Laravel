@@ -23,7 +23,8 @@ class KurulumDenetimi
         if (trim((string) config('bildirim_kuyrugu.sistem_sms.apikey')) === '') {
             $eksik[] = 'SMS_EFETECH_SISTEM_APIKEY tanimli degil';
         }
-        if (! config('bildirim_kuyrugu.google_takvim.client_id') || ! config('bildirim_kuyrugu.google_takvim.client_secret')) {
+        $googleYeni = ! in_array('google_takvim', (array) config('bildirim_kuyrugu.eski_isleyicide_kalan'), true);
+        if ($googleYeni && (! config('bildirim_kuyrugu.google_takvim.client_id') || ! config('bildirim_kuyrugu.google_takvim.client_secret'))) {
             $eksik[] = 'GOOGLE_CLIENT_ID veya GOOGLE_CLIENT_SECRET tanimli degil';
         }
         if (config('bildirim_kuyrugu.kuyruk_adi') === self::ESKI_KUYRUK) {

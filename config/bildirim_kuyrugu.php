@@ -27,6 +27,12 @@ return [
         'baslik' => env('SMS_EFETECH_SISTEM_BASLIK', 'RANDVMCEPTE'),
     ],
 
+    /*
+     | Bayrak acikken de eski monolitte kalan turler: satir durum 0 yazilir, eskisi gibi oradan gider. Google Takvim
+     | entegrasyonu en sona birakildi (kullanici 2026-11-08); tasininca buradan cikarilir ve GOOGLE_CLIENT_* tanimlanir.
+     */
+    'eski_isleyicide_kalan' => ['google_takvim'],
+
     /* Google Takvim belirteci tazeleme (eski GoogleCalendarService env'leri). Baglanti tablolari ortak; OAuth akisi eski panelde. */
     'google_takvim' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),

@@ -13,9 +13,7 @@ Route::prefix('mobil-para')->group(function () {
     Route::get('/alacaklar-v2', [C::class, 'alacaklarV2']);
     Route::get('/tum-alacaklar', [C::class, 'tumAlacaklar']);
     Route::get('/senetler', [C::class, 'senetler']);
-    Route::post('/senet', [C::class, 'senetEkle']);
-    Route::post('/senet-vade/{id}/ode', [C::class, 'senetOde'])->whereNumber('id');
-    Route::patch('/senet-vade/{id}', [C::class, 'senetVadeGuncelle'])->whereNumber('id');
+    // Senet yazma uclari (ekle, ode, vade guncelle) arsivde: arsiv/senet/README.md. Liste okumasi Alacaklar ekranindaki sekme icin kalir.
     Route::get('/harici-kalemler', [C::class, 'hariciKalemler']);
     Route::post('/harici', [C::class, 'hariciEkle']);
     Route::get('/kampanya-kodlari', [C::class, 'kampanyaKodlari']);

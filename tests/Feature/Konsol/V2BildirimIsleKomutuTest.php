@@ -212,6 +212,13 @@ class V2BildirimIsleKomutuTest extends TestCase
         $this->assertSame(0, (int) DB::table('v2_bildirim_kuyrugu')->latest('id')->value('durum'));
     }
 
+    public function test_google_takvim_bayrak_acikken_de_eski_isleyicide_kalir(): void
+    {
+        BildirimKuyrugu::yaz(20, 'google_takvim', null, null, ['sync' => [1]]);
+
+        $this->assertSame(0, (int) DB::table('v2_bildirim_kuyrugu')->latest('id')->value('durum'));
+    }
+
     public function test_sms_kuyrugunun_durumlarina_dokunmaz(): void
     {
         $bekleyen = $this->kayit(['durum' => 4, 'updated_at' => now()->subHour()]);

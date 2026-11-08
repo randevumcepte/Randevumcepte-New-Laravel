@@ -20,9 +20,13 @@ final class BildirimKuyrukDurumu
 
     public const ISLENIYOR = 7;
 
-    /** Yeni yazilan satirin durumu: hangi isleyici gonderecek. */
-    public static function yeniSatir(): int
+    /** Yeni yazilan satirin durumu: hangi isleyici gonderecek. 'eski_isleyicide_kalan' turler bayrak acikken de eskide kalir. */
+    public static function yeniSatir(?string $tur = null): int
     {
+        if ($tur !== null && in_array($tur, (array) config('bildirim_kuyrugu.eski_isleyicide_kalan'), true)) {
+            return self::ESKI_ISLEYICI;
+        }
+
         return config('bildirim_kuyrugu.isleyici_aktif') ? self::BEKLIYOR : self::ESKI_ISLEYICI;
     }
 }

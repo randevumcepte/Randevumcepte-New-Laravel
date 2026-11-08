@@ -1,5 +1,7 @@
 <?php
 
+// ARSIV — calismaz, autoload disinda (arsiv/senet/README.md). Geri acmak icin app/Services/Tahsilat/Mobil/ altina tasinir.
+
 namespace App\Services\Tahsilat\Mobil;
 
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
