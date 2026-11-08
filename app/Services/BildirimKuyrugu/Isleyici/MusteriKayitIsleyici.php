@@ -51,7 +51,7 @@ class MusteriKayitIsleyici extends MusteriTabanliIsleyici
 
         $mesaj = 'Sayın '.$musteri->name.'. '.$salon->salon_adi.' tarafından müşteri kaydınız oluşturulmuştur.';
         if ($sifre) {
-            $mesaj .= '. Sistem kullanıcı adınız:'.$musteri->cep_telefon.' Şifreniz:'.$sifre;
+            $mesaj .= ' Sistem kullanıcı adınız:'.$musteri->cep_telefon.' Şifreniz:'.$sifre;
         }
         if ($salon->uygulamalar_kisa_link) {
             $mesaj .= ' Uygulamamızı indirmek için linke tıklayın. '.$salon->uygulamalar_kisa_link;

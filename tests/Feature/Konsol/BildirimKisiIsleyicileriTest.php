@@ -377,7 +377,7 @@ class BildirimKisiIsleyicileriTest extends TestCase
         $this->assertMatchesRegularExpression('/ Şifreniz:([A-Za-z0-9]{5}) Uygulamamızı/u', $giden['message']);
         preg_match('/ Şifreniz:([A-Za-z0-9]{5}) /u', $giden['message'], $e);
         $this->assertTrue(Hash::check($e[1], DB::table('users')->where('id', $id)->value('password')));
-        $this->assertSame('Sayın Ayşe Kaya. Test Salon tarafından müşteri kaydınız oluşturulmuştur.. Sistem kullanıcı adınız:'.self::TEL.' Şifreniz:'.$e[1]
+        $this->assertSame('Sayın Ayşe Kaya. Test Salon tarafından müşteri kaydınız oluşturulmuştur. Sistem kullanıcı adınız:'.self::TEL.' Şifreniz:'.$e[1]
             .' Uygulamamızı indirmek için linke tıklayın. https://k.test/a', $giden['message']);
         $this->assertSame(self::TEL, $giden['to']);
         $this->assertArrayNotHasKey('user_id', $giden);

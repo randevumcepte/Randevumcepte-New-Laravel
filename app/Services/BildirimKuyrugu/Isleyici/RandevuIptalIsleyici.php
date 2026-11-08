@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * randevu_iptal: eski ApiController::randevuIptalBildirimleri ($hemen=true). payload.red. Musteri + personel mesaji WA-first,
  * SMS ayari ayar_id=3; uygulama ici bildirim ve personel push'u ayardan bagimsiz. Musteri kendi iptal ettiyse (durum=3) musteriye push gitmez.
+ * Personel metni islemi yapani yazar (outbox yetkili_id); eskiden randevuyu olusturani yaziyordu. Yapan bilinmiyorsa isim yazilmaz.
  */
 class RandevuIptalIsleyici extends RandevuTabanliIsleyici
 {
@@ -40,11 +41,12 @@ class RandevuIptalIsleyici extends RandevuTabanliIsleyici
         if ($this->veri->ayarAcikMi($salonId, self::AYAR_ID, 'musteri')) {
             $mesajlar[] = ['to' => $randevu->users->cep_telefon, 'message' => $musteriMesaji];
         }
-        $resim = $this->veri->yetkiliAlani($randevu->olusturan_personel_id, 'profil_resim');
+        $yapan = $kayit->yetkili_id ?: null;
+        $resim = $this->veri->yetkiliAlani($yapan ?? $randevu->olusturan_personel_id, 'profil_resim');
         $this->bildirim->ekle($salonId, $musteriMesaji, '#', null, $randevu->user_id, $resim, $randevu->id);
 
         foreach ($randevu->hizmetler as $hizmet) {
-            $mesaj = $red ? $this->redPersonelMesaji($randevu, $hizmet) : $this->iptalPersonelMesaji($randevu, $hizmet);
+            $mesaj = $red ? $this->redPersonelMesaji($randevu, $hizmet, $yapan) : $this->iptalPersonelMesaji($randevu, $hizmet, $yapan);
 
             if ($this->veri->ayarAcikMi($salonId, self::AYAR_ID, 'personel')) {
                 $mesajlar[] = ['to' => $this->veri->personelGsm($hizmet->personel_id), 'message' => $mesaj];
@@ -72,18 +74,26 @@ class RandevuIptalIsleyici extends RandevuTabanliIsleyici
         }
     }
 
-    private function redPersonelMesaji(Randevular $randevu, RandevuHizmetler $hizmet): string
+    private function redPersonelMesaji(Randevular $randevu, RandevuHizmetler $hizmet, mixed $yapan): string
     {
-        return $randevu->users->name.' için '.date('d.m.Y', strtotime($randevu->tarih)).' '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu '.$this->veri->yetkiliAlani($randevu->olusturan_personel_id, 'name').' tarafından reddedilmiştir.';
+        return $randevu->users->name.' için '.date('d.m.Y', strtotime($randevu->tarih)).' '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu'.$this->tarafindan($yapan).' reddedilmiştir.';
     }
 
-    private function iptalPersonelMesaji(Randevular $randevu, RandevuHizmetler $hizmet): string
+    private function iptalPersonelMesaji(Randevular $randevu, RandevuHizmetler $hizmet, mixed $yapan): string
     {
         if ($randevu->durum == 3) {
             return $randevu->users->name.' '.date('d.m.Y', strtotime($randevu->tarih)).' '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusunu iptal etmiştir.';
         }
 
-        return $randevu->users->name.' isimli müşterinin '.date('d.m.Y', strtotime($randevu->tarih)).' '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu '.$this->veri->yetkiliAlani($randevu->olusturan_personel_id, 'name').' tarafından iptal edilmiştir.';
+        return $randevu->users->name.' isimli müşterinin '.date('d.m.Y', strtotime($randevu->tarih)).' '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu'.$this->tarafindan($yapan).' iptal edilmiştir.';
+    }
+
+    /** " Ayşe tarafından" ya da yapan bilinmiyorsa bos. */
+    private function tarafindan(mixed $yetkiliId): string
+    {
+        $ad = $yetkiliId ? trim((string) $this->veri->yetkiliAlani($yetkiliId, 'name')) : '';
+
+        return $ad !== '' ? ' '.$ad.' tarafından' : '';
     }
 
     /** Eskideki gibi: WA-first istisna verirse listenin tamami SMS'e gider (WA'ya girmis mesajlar da); ikinci hata yutulur. */

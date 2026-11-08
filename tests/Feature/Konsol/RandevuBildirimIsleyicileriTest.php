@@ -167,6 +167,17 @@ class RandevuBildirimIsleyicileriTest extends TestCase
         $this->assertSame(1, DB::table('bildirimler')->whereNull('baslik')->where('personel_id', 30)->where('aciklama', $personel)->count());
     }
 
+    public function test_iptal_personel_metni_iptal_edeni_yazar_olusturani_degil(): void
+    {
+        $this->saglayicilar();
+        $this->ayar(3);
+        DB::table('isletmeyetkilileri')->insert(['id' => 41, 'name' => 'Ayse Mudur', 'gsm1' => '5551112233']);
+
+        $this->isle(RandevuIptalIsleyici::class, [], 41);
+
+        $this->assertSame('Ayse Kaya isimli müşterinin 19.05.2099 10:30 Cilt Bakimi randevusu Ayse Mudur tarafından iptal edilmiştir.', $this->smsler()[1]['message']);
+    }
+
     public function test_red_metni_ve_musteri_push_red_bayragi(): void
     {
         $this->saglayicilar();
