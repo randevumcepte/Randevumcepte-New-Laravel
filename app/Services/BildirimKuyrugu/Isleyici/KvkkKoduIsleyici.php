@@ -28,6 +28,7 @@ class KvkkKoduIsleyici extends RandevuTabanliIsleyici
         $salon = $this->veri->salon($randevu->salon_id);
         $onayMesaji = 'Sn. '.$randevu->users->name.', '.$onayKodu.' numarali onay kodunu ilgiliye soyleyerek, '.$salon->kvkk_link." kvkk linkinde yer alan KVKK Aydinlatma Metni'ne gore kisisel verilerinizin islenmesine ve sistemlerimizde kayitli iletisim adresleriniz uzerinden SMS, e-posta ve aramalar vasitasiyla ticari elektronik ileti gonderimine izin vermis olacaksiniz";
 
-        $this->kanal->sms([['to' => $randevu->users->cep_telefon, 'message' => $onayMesaji]], $randevu->salon_id, true);
+        // WhatsApp oncelikli, kod mesaji: acil (mesai beklemez), SMS'e duserse rapora yazilmaz. Eskiden yalniz SMS'ti.
+        $this->kanal->whatsappOncelikli($randevu->salon_id, [['to' => $randevu->users->cep_telefon, 'message' => $onayMesaji]], $randevu->id, 'kvkk_onay_kodu', true, true);
     }
 }

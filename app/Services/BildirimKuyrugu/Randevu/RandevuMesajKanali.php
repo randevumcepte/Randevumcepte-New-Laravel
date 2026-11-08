@@ -31,7 +31,11 @@ class RandevuMesajKanali
      * alicisi/metni bos mesaj SMS listesine duser. WhatsApp istisnasi yalniz o mesaji SMS'e dusurur (mukerrer olmaz). Yalniz SMS
      * adimi istisna firlatabilir.
      */
-    public function whatsappOncelikli(int|string $salonId, array $mesajlar, int|string|null $randevuId, string $gonderimTipi): void
+    /**
+     * @param  bool  $acil  kod mesajlari: mesai ve antiban beklemesi atlanir
+     * @param  bool  $dogrulama  SMS'e duserse iletim raporuna yazilmaz (kod mesaji)
+     */
+    public function whatsappOncelikli(int|string $salonId, array $mesajlar, int|string|null $randevuId, string $gonderimTipi, bool $acil = false, bool $dogrulama = false): void
     {
         try {
             $salon = $this->whatsapp->salon($salonId);
@@ -42,11 +46,11 @@ class RandevuMesajKanali
         }
 
         $smsKalan = ! $acik ? $mesajlar : $this->whatsapp->gonderilemeyenler($mesajlar,
-            fn (array $m) => $this->whatsapp->gonder($salon, $m['to'], $m['wa_message'] ?? $m['message'], $randevuId, null, null, false, $gonderimTipi),
+            fn (array $m) => $this->whatsapp->gonder($salon, $m['to'], $m['wa_message'] ?? $m['message'], $randevuId, null, null, $acil, $gonderimTipi),
             'Randevu WA');
 
         if (! empty($smsKalan)) {
-            $this->sms($smsKalan, $salonId);
+            $this->sms($smsKalan, $salonId, $dogrulama);
         }
     }
 }

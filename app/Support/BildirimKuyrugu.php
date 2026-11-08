@@ -79,11 +79,14 @@ class BildirimKuyrugu
      *
      * @param  array<int, array{to:?string, message:string}>  $mesajlar
      */
-    public static function sms(int $salonId, ?int $yetkiliId, array $mesajlar, bool $dogrulama = false): int
+    /**
+     * @param  bool  $toplu  cok aliciya ayni duyuru (kampanya): WhatsApp toplu gonderime uygun degil, yalniz SMS gider
+     */
+    public static function sms(int $salonId, ?int $yetkiliId, array $mesajlar, bool $dogrulama = false, bool $toplu = false): int
     {
         $mesajlar = array_values(array_filter($mesajlar, fn ($m) => trim((string) ($m['to'] ?? '')) !== '' && trim((string) ($m['message'] ?? '')) !== ''));
         if ($mesajlar) {
-            self::yaz($salonId, 'sms', null, $yetkiliId, ['mesajlar' => $mesajlar, 'dogrulama' => $dogrulama]);
+            self::yaz($salonId, 'sms', null, $yetkiliId, ['mesajlar' => $mesajlar, 'dogrulama' => $dogrulama] + ($toplu ? ['toplu' => true] : []));
         }
 
         return count($mesajlar);

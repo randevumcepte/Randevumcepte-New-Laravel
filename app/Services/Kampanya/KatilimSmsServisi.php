@@ -33,6 +33,7 @@ class KatilimSmsServisi
             }
         }
 
-        return BildirimKuyrugu::sms($salonId, $yetkiliId, $mesajlar);
+        // Kampanya katilimcilarina toplu duyuru: WhatsApp toplu gonderime uygun degil, yalniz SMS.
+        return BildirimKuyrugu::sms($salonId, $yetkiliId, $mesajlar, false, true);
     }
 }

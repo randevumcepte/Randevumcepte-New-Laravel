@@ -5,21 +5,18 @@ namespace App\Services\BildirimKuyrugu\Isleyici;
 use App\Models\Randevular;
 use App\Services\BildirimKuyrugu\Kanal\WhatsappKanali;
 use App\Services\BildirimKuyrugu\Randevu\RandevuMesajKanali;
-use App\Services\BildirimKuyrugu\Randevu\SmsKredisi;
 use Illuminate\Support\Facades\Log;
 
 /**
- * dogrulama_kodu: eski ApiController::dogrulama_kodu_gonder. Kodu uretir, randevuya yazar, gonderir. Bu turde sira SMS-first:
- *   1) SMS kredisi varsa SMS; 2) yoksa ve WA bagliysa WA; 3) WA olmadi ise son care SMS.
- * Eskiden gelen ve KORUNAN iki durum: WA bagli mi kontrolu salonun kendi kolonlarindadir (paylasilan oturumlu alt salon bagli
- * sayilmaz); yeniden denemede yeni kod uretilir, musteriye farkli iki kod gidebilir.
+ * dogrulama_kodu: eski ApiController::dogrulama_kodu_gonder. Kodu uretir, randevuya yazar, gonderir. WhatsApp oncelikli (sistem
+ * kurali): bagliysa acil WhatsApp, gidemezse SMS. Eskiden SMS kredisi varsa once SMS'ti ve paylasilan oturumlu alt salon bagli
+ * sayilmiyordu; ikisi duzeltildi. Yeniden deneme yalniz saglayiciya ulasilamazsa olur (SmsKanali).
  */
 class DogrulamaKoduIsleyici extends RandevuTabanliIsleyici
 {
     public function __construct(
         private WhatsappKanali $whatsapp,
         private RandevuMesajKanali $kanal,
-        private SmsKredisi $kredi,
     ) {}
 
     protected function randevuIsle(object $kayit, array $payload, Randevular $randevu): void
@@ -33,18 +30,11 @@ class DogrulamaKoduIsleyici extends RandevuTabanliIsleyici
         $mesajMetni = 'Doğrulama kodunuz : '.$kod;
         $mesaj = [['to' => $telefon, 'message' => $mesajMetni]];
 
-        if ($this->kredi->kalan($salonId) > 0) {
-            $this->kanal->sms($mesaj, $salonId, true);
-
-            return;
-        }
-
         $salon = $this->whatsapp->salon($salonId);
-        if ($salon && $this->whatsapp->bagliMi($salon) && $telefon && $this->whatsappIleGitti($salon, $telefon, $mesajMetni, $randevu)) {
+        if ($salon && $telefon && $this->kanal->whatsappAcikMi($salon) && $this->whatsappIleGitti($salon, $telefon, $mesajMetni, $randevu)) {
             return;
         }
 
-        // Son care: kredi sifir bile olsa saglayici bazi planlarda hala gonderebilir.
         $this->kanal->sms($mesaj, $salonId, true);
     }
 
@@ -54,7 +44,7 @@ class DogrulamaKoduIsleyici extends RandevuTabanliIsleyici
         try {
             $sonuc = $this->whatsapp->acilGonder($salon, $telefon, $mesajMetni, $randevu->user_id, 'geldi_dogrulama_kodu');
             if (! empty($sonuc['ok'])) {
-                Log::info('[GELDI-KOD] WA gonderildi (SMS kredisi yok)', $baglam + ['logId' => $sonuc['logId'] ?? null]);
+                Log::info('[GELDI-KOD] WA gonderildi', $baglam + ['logId' => $sonuc['logId'] ?? null]);
 
                 return true;
             }

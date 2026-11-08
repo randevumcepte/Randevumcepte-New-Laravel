@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * randevu_onay: eski ApiController::randevuOnayBildirimleri ($hemen=true). yetkili_id = onaylayan. SMS ayari ayar_id=2.
- * Eskiden gelen ve KORUNAN durum: onayda WA denenmez, yalniz SMS gider. Personel metni eskiden tarihten bagimsiz "yarın" derdi;
- * artik randevu gununu soyler (DogalTarih).
+ * WhatsApp oncelikli (sistem kurali): bagliysa once WhatsApp, gidemeyen SMS'e duser. Eskiden onay yalniz SMS'ti. Personel
+ * metni eskiden tarihten bagimsiz "yarın" derdi; artik randevu gununu soyler (DogalTarih).
  * Musteriye uygulama ici bildirim satiri ayrica yazilmaz, yalniz push'un satiri olusur.
  */
 class RandevuOnayIsleyici extends RandevuTabanliIsleyici
@@ -57,9 +57,9 @@ class RandevuOnayIsleyici extends RandevuTabanliIsleyici
 
         if (count($mesajlar) > 0) {
             try {
-                $this->kanal->sms($mesajlar, $salonId);
+                $this->kanal->whatsappOncelikli($salonId, $mesajlar, $randevu->id, 'onay_bildirim');
             } catch (\Throwable $e) {
-                Log::warning('randevuonayla SMS (shutdown) hata: '.$e->getMessage());
+                Log::warning('randevuonayla bildirim hata: '.$e->getMessage());
             }
         }
 

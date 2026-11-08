@@ -247,7 +247,7 @@ class RandevuBildirimIsleyicileriTest extends TestCase
         $this->isle(RandevuIptalIsleyici::class);
     }
 
-    public function test_onay_yalniz_sms_whatsapp_denemez_metinler_birebir(): void
+    public function test_onay_whatsapp_oncelikli_bagliysa_sms_gitmez_metinler(): void
     {
         $this->saglayicilar();
         $this->ayar(2);
@@ -257,13 +257,24 @@ class RandevuBildirimIsleyicileriTest extends TestCase
 
         $musteri = 'Salon A için oluşturduğunuz 19.05.2099 10:00 tarihli randevu talebiniz onaylanmıştır. Randevunuza 15 dk önce gelmenizi rica ederiz. Detaylı bilgi için bize ulaşın. 02321112233';
         $personel = 'Ayse Kaya isimli müşterinin 19 Mayıs Salı günü saat 10:30 Cilt Bakimi randevusu Veli Yetkili tarafından onaylanmıştır.';
-        $this->assertSame([], $this->whatsapplar());
-        $this->assertSame([['to' => self::MUSTERI_TEL, 'message' => $musteri], ['to' => self::PERSONEL_TEL, 'message' => $personel]], $this->smsler());
+        $this->assertSame([$musteri, $personel], $this->whatsapplar());
+        $this->assertSame([], $this->smsler());
         $this->assertSame(['Randevu Onaylandı', 'Randevunuz Onaylandı'], $this->pushBasliklari());
         $this->assertSame(0, DB::table('bildirimler')->whereNull('baslik')->where('user_id', 7)->count());
     }
 
-    public function test_dogrulama_kredi_varsa_sms_kod_kaydedilir_rapor_yok(): void
+    public function test_onay_whatsapp_kapaliysa_sms(): void
+    {
+        $this->saglayicilar();
+        $this->ayar(2);
+
+        $this->isle(RandevuOnayIsleyici::class);
+
+        $this->assertSame([], $this->whatsapplar());
+        $this->assertCount(2, $this->smsler());
+    }
+
+    public function test_dogrulama_whatsapp_bagliysa_acil_whatsapp_sms_gitmez(): void
     {
         $this->saglayicilar();
         $this->whatsappBagla();
@@ -272,27 +283,26 @@ class RandevuBildirimIsleyicileriTest extends TestCase
 
         $kod = DB::table('randevular')->where('id', $this->randevuId)->value('dogrulama');
         $this->assertMatchesRegularExpression('/^\d{4}$/', $kod);
-        $this->assertSame([['to' => self::MUSTERI_TEL, 'message' => 'Doğrulama kodunuz : '.$kod]], $this->smsler());
-        $this->assertSame([], $this->whatsapplar());
-        $this->assertSame(0, DB::table('sms_iletim_raporlari')->count());
-    }
-
-    public function test_dogrulama_kredi_yoksa_whatsapp_acil_ve_sms_gitmez(): void
-    {
-        $this->saglayicilar(202, ['response' => ['balance' => 0]]);
-        $this->whatsappBagla();
-
-        $this->isle(DogrulamaKoduIsleyici::class);
-
-        $this->assertCount(1, $this->whatsapplar());
+        $this->assertSame(['Doğrulama kodunuz : '.$kod], $this->whatsapplar());
         $this->assertSame([], $this->smsler());
         $this->assertSame('geldi_dogrulama_kodu', DB::table('whatsapp_gonderim_loglari')->value('gonderim_tipi'));
         Http::assertSent(fn (Request $r) => str_contains($r->url(), 'kopru.test') && $r['urgent'] === true);
     }
 
-    public function test_dogrulama_kredi_yok_whatsapp_olmadiysa_son_care_sms(): void
+    public function test_dogrulama_whatsapp_kapaliysa_sms_rapor_yok(): void
     {
-        $this->saglayicilar(500, ['response' => []]);
+        $this->saglayicilar();
+
+        $this->isle(DogrulamaKoduIsleyici::class);
+
+        $kod = DB::table('randevular')->where('id', $this->randevuId)->value('dogrulama');
+        $this->assertSame([['to' => self::MUSTERI_TEL, 'message' => 'Doğrulama kodunuz : '.$kod]], $this->smsler());
+        $this->assertSame(0, DB::table('sms_iletim_raporlari')->count());
+    }
+
+    public function test_dogrulama_whatsapp_gidemezse_sms(): void
+    {
+        $this->saglayicilar(500);
         $this->whatsappBagla();
 
         $this->isle(DogrulamaKoduIsleyici::class);
@@ -300,29 +310,15 @@ class RandevuBildirimIsleyicileriTest extends TestCase
         $this->assertCount(1, $this->smsler());
     }
 
-    public function test_dogrulama_paylasilan_oturumlu_alt_salon_bagli_sayilmaz_eski_davranis(): void
+    public function test_dogrulama_paylasilan_oturumlu_alt_salon_ust_salonun_whatsappindan_gider(): void
     {
-        $this->saglayicilar(202, ['response' => ['balance' => 0]]);
+        $this->saglayicilar();
         $ust = (int) DB::table('salonlar')->insertGetId(['whatsapp_aktif' => 1, 'whatsapp_durum' => 'connected', 'whatsapp_deneme_bitis' => '2099-01-01']);
         DB::table('salonlar')->where('id', $this->salonId)->update(['whatsapp_paylasilan_salon_id' => $ust]);
 
         $this->isle(DogrulamaKoduIsleyici::class);
 
-        $this->assertSame([], $this->whatsapplar());
-        $this->assertCount(1, $this->smsler());
-    }
-
-    public function test_dogrulama_bakiye_cevabi_gecersizse_hata_firlar_kod_yazilmis_kalir(): void
-    {
-        $this->saglayicilar(202, 'gecersiz');
-
-        try {
-            $this->isle(DogrulamaKoduIsleyici::class);
-            $this->fail('hata bekleniyordu');
-        } catch (RuntimeException $e) {
-            $this->assertStringContainsString('SMS bakiyesi okunamadi', $e->getMessage());
-        }
-        $this->assertNotNull(DB::table('randevular')->where('id', $this->randevuId)->value('dogrulama'));
+        $this->assertCount(1, $this->whatsapplar());
         $this->assertSame([], $this->smsler());
     }
 
@@ -330,6 +326,19 @@ class RandevuBildirimIsleyicileriTest extends TestCase
     {
         $this->expectExceptionMessage('Portfoy onay_kodu yok');
         $this->isle(KvkkKoduIsleyici::class);
+    }
+
+    public function test_kvkk_whatsapp_bagliysa_acil_whatsapp(): void
+    {
+        $this->saglayicilar();
+        $this->whatsappBagla();
+        DB::table('musteri_portfoy')->insert(['user_id' => 7, 'salon_id' => $this->salonId, 'onay_kodu' => '1234']);
+
+        $this->isle(KvkkKoduIsleyici::class);
+
+        $this->assertCount(1, $this->whatsapplar());
+        $this->assertSame([], $this->smsler());
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'kopru.test') && $r['urgent'] === true);
     }
 
     public function test_kvkk_metni_birebir_rapor_yazilmaz(): void

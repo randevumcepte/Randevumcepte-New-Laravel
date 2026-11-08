@@ -12,7 +12,7 @@ use RuntimeException;
 /**
  * Sistem sahibine bildirim; eski App\Services\SistemBildirim::gonder. Alici ve oturum SistemBildirimServisi'nden, ayni ayar
  * dosyasindan gelir. SistemBildirimServisi::gonder kullanilmaz: SMS'i PlatformSms ile yollar, eski yol ise Efetech sistem
- * SMS'idir (SmsKanali::gonder('', ...)). Her aliciya WA + SMS birlikte gider; WA gitse de SMS gider. Kanal hatalari yutulur.
+ * SMS'idir (SmsKanali::gonder('', ...)). WhatsApp oncelikli: aliciya WhatsApp gittiyse SMS gitmez, gitmezse SMS (eskiden ikisi birden gidiyordu). Kanal hatalari yutulur.
  * Kanal kapali ya da alici yoksa hata olarak kalir (talep sessizce kaybolmasin).
  */
 class SistemBildirimIsleyici implements BildirimIsleyici
@@ -38,7 +38,9 @@ class SistemBildirimIsleyici implements BildirimIsleyici
 
         foreach ($alicilar as $numara) {
             try {
-                $this->kopru->gonder($this->sistem->oturumId(), $numara, $mesaj);
+                if ($this->kopru->gonder($this->sistem->oturumId(), $numara, $mesaj)->basarili()) {
+                    continue;
+                }
             } catch (\Throwable $e) {
                 Log::warning('[SistemBildirim] WA hata', ['e' => $e->getMessage()]);
             }

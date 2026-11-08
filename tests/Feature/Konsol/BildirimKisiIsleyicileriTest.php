@@ -547,14 +547,14 @@ class BildirimKisiIsleyicileriTest extends TestCase
         $this->hataBekle('sistem_bildirim', ['mesaj' => 'x'], 'sistem_bildirim: kapali-veya-numara-yok');
     }
 
-    public function test_sistem_her_aliciya_wa_ve_efetech_sms_yerel_numarayla_platform_sms_kullanilmaz(): void
+    public function test_sistem_whatsapp_giden_aliciya_sms_gitmez_gidemeyene_efetech_sms(): void
     {
         $this->sistemAyari(['numara' => '05321234567,5339998877', 'aktif' => true, 'session_id' => 'sistem-1']);
         $kopru = $this->mock(WhatsappKoprusu::class);
         $kopru->shouldReceive('gonder')->once()->with('sistem-1', '905321234567', 'talep')->andReturn(new KopruCevabi(202));
         $kopru->shouldReceive('gonder')->once()->with('sistem-1', '905339998877', 'talep')->andThrow(new RuntimeException('kopru'));
         $sms = $this->sms();
-        $sms->shouldReceive('gonder')->once()->with('', [['to' => '5321234567', 'message' => 'talep']]);
+        $sms->shouldNotReceive('gonder')->with('', [['to' => '5321234567', 'message' => 'talep']]);
         $sms->shouldReceive('gonder')->once()->with('', [['to' => '5339998877', 'message' => 'talep']])->andThrow(new RuntimeException('sms'));
         $platform = $this->mock(PlatformSms::class);
         $platform->shouldNotReceive('gonder');
@@ -564,17 +564,27 @@ class BildirimKisiIsleyicileriTest extends TestCase
 
     // ---- sms
 
-    public function test_sms_bos_mesajda_hata_gecerliler_api_yoluna_gider(): void
+    public function test_sms_bos_mesajda_hata_gecerliler_whatsapp_oncelikli_yola_gider(): void
     {
         $this->hataBekle('sms', ['mesajlar' => [['to' => '', 'message' => 'x'], ['to' => self::TEL, 'message' => '']]], 'sms: mesaj yok');
 
         $gecerli = ['to' => self::TEL, 'message' => 'kasa'];
         $sms = $this->sms();
-        $sms->shouldReceive('apiBildirimli')->once()->with([$gecerli], false, 1, true, self::SALON);
-        $sms->shouldReceive('apiBildirimli')->once()->with([$gecerli], false, 1, false, self::SALON);
+        $sms->shouldReceive('panelBildirimli')->once()->with([$gecerli + ['urgent' => true]], false, 1, true, self::SALON, 'transaksiyonel');
+        $sms->shouldReceive('panelBildirimli')->once()->with([$gecerli], false, 1, false, self::SALON, 'transaksiyonel');
 
         $this->isle('sms', ['mesajlar' => [['to' => null, 'message' => 'x'], $gecerli], 'dogrulama' => true]);
         $this->isle('sms', ['mesajlar' => [$gecerli]]);
+    }
+
+    public function test_sms_toplu_kampanya_whatsapp_denemez_yalniz_sms(): void
+    {
+        $gecerli = ['to' => self::TEL, 'message' => 'kampanya'];
+        $sms = $this->sms();
+        $sms->shouldReceive('gonder2')->once()->with([$gecerli], false, 1, false, self::SALON);
+        $sms->shouldNotReceive('panelBildirimli');
+
+        $this->isle('sms', ['mesajlar' => [$gecerli], 'toplu' => true]);
     }
 
     // ---- form_link
