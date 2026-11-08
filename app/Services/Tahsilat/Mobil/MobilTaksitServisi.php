@@ -3,12 +3,12 @@
 namespace App\Services\Tahsilat\Mobil;
 
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
-use App\Exceptions\GecersizIslemException;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Models\Alacaklar;
 use App\Models\TahsilatHizmetler;
+use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
 use App\Models\TaksitVadeleri;
 use App\Support\AktiviteLog;
@@ -20,8 +20,9 @@ use Illuminate\Support\Facades\DB;
  * gondermez): bu yol tasinmistir. Tek transaction: eskiden 500 sonrasi yarim kalan taksit, vade ve alacak satirlari
  * burada olusmaz.
  *
- * Eski kodda paketli taksit hep 500'dur (`foreach adisyon_paket_id as $paket` metinde $paket['id'] okur). Paket dagitimi
- * da yanlis tabloya yazar ama oraya hic ulasilmaz. Burada satir yazilmadan reddedilir; karar GECIS listesinde.
+ * Hizmet, urun ve paket ayni kuralla taksitlendirilir (kullanici 2026-11-08): kalem basina indirim, taksite baglama ve on
+ * odeme payi uc kalem turunde aynidir. Eski kodda paketli taksit hep 500'du ($paket['id'] id listesinde okunuyordu) ve paket
+ * payi urun tablosuna yazilacakti; burada paket payi tahsilat_paketler'e yazilir.
  */
 class MobilTaksitServisi
 {
@@ -32,15 +33,13 @@ class MobilTaksitServisi
         $hizmetIdleri = (array) ($g['adisyon_hizmet_id'] ?? []);
         $urunIdleri = (array) ($g['adisyon_urun_id'] ?? []);
         $paketIdleri = (array) ($g['adisyon_paket_id'] ?? []);
-        if ($paketIdleri) {
-            throw new GecersizIslemException('Paket içeren satış taksitlendirilemedi.');
-        }
         $this->kapsam->kalemlerOlmali($salonId, 'hizmet', [...$hizmetIdleri, ...array_column((array) ($g['adisyon_hizmetleri'] ?? []), 'id')]);
         $this->kapsam->kalemlerOlmali($salonId, 'urun', [...$urunIdleri, ...array_column((array) ($g['adisyon_urunleri'] ?? []), 'id')]);
+        $this->kapsam->kalemlerOlmali($salonId, 'paket', [...$paketIdleri, ...array_column((array) ($g['adisyon_paketleri'] ?? []), 'id')]);
         $this->kapsam->musteriOlmali($salonId, $g['tahsilat_musteri_id'] ?? null);
 
         $sonuc = Idempotency::calistir('mobil_taksit', (string) ($g['idempotency_key'] ?? ''), $yetkiliId, $salonId,
-            fn () => $this->yaz($salonId, $yetkiliId, $g, $hizmetIdleri, $urunIdleri));
+            fn () => $this->yaz($salonId, $yetkiliId, $g, $hizmetIdleri, $urunIdleri, $paketIdleri));
 
         if (! $sonuc['replay']) {
             AktiviteLog::yaz($salonId, $yetkiliId, 'taksit_ekle', 'taksitli_tahsilat', $sonuc['taksitli_tahsilat_id'], 'Vade: '.($g['vade'] ?? '').' - Tutar: '.($g['taksit_tutar'] ?? ''), 'Taksitli tahsilat oluşturuldu');
@@ -49,9 +48,9 @@ class MobilTaksitServisi
         return $sonuc;
     }
 
-    private function yaz(int $salonId, int $yetkiliId, array $g, array $hizmetIdleri, array $urunIdleri): array
+    private function yaz(int $salonId, int $yetkiliId, array $g, array $hizmetIdleri, array $urunIdleri, array $paketIdleri): array
     {
-        MobilTahsilatServisi::satisTarihi($g, ['hizmet' => $hizmetIdleri, 'urun' => $urunIdleri, 'paket' => []]);
+        MobilTahsilatServisi::satisTarihi($g, ['hizmet' => $hizmetIdleri, 'urun' => $urunIdleri, 'paket' => $paketIdleri]);
 
         $musteriId = $g['tahsilat_musteri_id'];
         $vade = $g['vade'] ?? 0;
@@ -80,13 +79,16 @@ class MobilTaksitServisi
         }
 
         $kalemSayisi = AdisyonHizmetler::whereIn('id', $hizmetIdleri)->whereNull('indirim_tutari')->count()
-            + AdisyonUrunler::whereIn('id', $urunIdleri)->whereNull('indirim_tutari')->count();
+            + AdisyonUrunler::whereIn('id', $urunIdleri)->whereNull('indirim_tutari')->count()
+            + AdisyonPaketler::whereIn('id', $paketIdleri)->whereNull('indirim_tutari')->count();
         $indirim = Hesap::kalemBasinaIndirim($g['indirim_tutari'] ?? '0', $g['musteri_indirimi'] ?? '0', $kalemSayisi);
 
         $hizmetler = (array) ($g['adisyon_hizmetleri'] ?? []);
         $urunler = (array) ($g['adisyon_urunleri'] ?? []);
+        $paketler = (array) ($g['adisyon_paketleri'] ?? []);
         $this->kalemleriBagla(AdisyonHizmetler::class, $hizmetler, $taksitId, $indirim);
         $this->kalemleriBagla(AdisyonUrunler::class, $urunler, $taksitId, $indirim);
+        $this->kalemleriBagla(AdisyonPaketler::class, $paketler, $taksitId, $indirim);
 
         if (Hesap::sifirdanBuyukMu($g['indirimli_toplam_tahsilat_tutari'] ?? null)) {
             [$odeme, $komisyon] = Hesap::odemeAyir($g['indirimli_toplam_tahsilat_tutari'], $g['komisyon_tutari'] ?? '0');
@@ -99,8 +101,11 @@ class MobilTaksitServisi
             $this->yazici->komisyonYaz($tahsilat, $satir);
 
             $dagitim = Hesap::dagitimOdemesi($odeme);
-            $this->payYaz(TahsilatHizmetler::class, 'adisyon_hizmet_id', $hizmetler, $indirim, $dagitim, (int) $tahsilat->id);
-            $this->payYaz(TahsilatUrunler::class, 'adisyon_urun_id', $urunler, $indirim, $dagitim, (int) $tahsilat->id);
+            $this->paylariYaz([
+                [TahsilatHizmetler::class, 'adisyon_hizmet_id', $hizmetler],
+                [TahsilatUrunler::class, 'adisyon_urun_id', $urunler],
+                [TahsilatPaketler::class, 'adisyon_paket_id', $paketler],
+            ], $indirim, $dagitim, (int) $tahsilat->id);
         }
 
         return ['sonuc' => 'başarılı', 'taksitli_tahsilat_id' => $taksitId];
@@ -121,20 +126,34 @@ class MobilTaksitServisi
         }
     }
 
-    /** @param  class-string  $model */
-    private function payYaz(string $model, string $fk, array $kalemler, float $indirim, string $odeme, int $tahsilatId): void
+    /**
+     * On odeme tum kalemlere (hizmet, urun, paket) birlikte, net fiyat oraninda dagitilir; paylarin toplami odemedir.
+     * Eski kod her turu kendi icinde oranliyordu: karisik satista odeme her ture tamamen yazilir, toplam katlanirdi.
+     *
+     * @param  list<array{0: class-string, 1: string, 2: array}>  $gruplar  [odeme modeli, kalem kolonu, kalemler]
+     */
+    private function paylariYaz(array $gruplar, float $indirim, string $odeme, int $tahsilatId): void
     {
-        if (! $kalemler) {
+        $fiyatlar = [];
+        foreach ($gruplar as [, , $kalemler]) {
+            foreach ($kalemler as $k) {
+                $fiyatlar[] = $k['fiyat'] ?? 0;
+            }
+        }
+        if (! $fiyatlar) {
             return;
         }
-        $paylar = Hesap::onOdemePaylari(array_column($kalemler, 'fiyat'), $indirim, $odeme);
-        foreach (array_values($kalemler) as $i => $k) {
-            $o = new $model();
-            $o->{$fk} = $k['id'];
-            $o->tahsilat_id = $tahsilatId;
-            $o->tutar = $paylar[$i];
-            $o->aciklama = 'Kısmi tahsilat payı';
-            $o->save();
+        $paylar = Hesap::onOdemePaylari($fiyatlar, $indirim, $odeme);
+        $i = 0;
+        foreach ($gruplar as [$model, $fk, $kalemler]) {
+            foreach ($kalemler as $k) {
+                $o = new $model();
+                $o->{$fk} = $k['id'];
+                $o->tahsilat_id = $tahsilatId;
+                $o->tutar = $paylar[$i++];
+                $o->aciklama = 'Kısmi tahsilat payı';
+                $o->save();
+            }
         }
     }
 }

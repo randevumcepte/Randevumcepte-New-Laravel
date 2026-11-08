@@ -163,8 +163,8 @@ final class MobilTahsilatHesabi
     }
 
     /**
-     * Taksitli satista on odemenin kalem paylari. Fiyatlar istekteki ham metindir; her kalem turu kendi icinde
-     * oranlanir ve her biri odemenin tamamini boler. Eski kod boyledir, turler arasi toplam odemeyi asabilir.
+     * Taksitli satista on odemenin kalem paylari. Fiyatlar istekteki ham metindir; cagiran tum kalem turlerini (hizmet,
+     * urun, paket) tek listede verir, paylar odemeyi bir kez boler.
      *
      * @param  list<mixed>  $fiyatlar
      * @return list<float>
