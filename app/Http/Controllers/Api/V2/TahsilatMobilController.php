@@ -8,7 +8,6 @@ use App\Services\Tahsilat\Mobil\MobilHariciTahsilatServisi;
 use App\Services\Tahsilat\Mobil\MobilHizliSatisServisi;
 use App\Services\Tahsilat\Mobil\MobilKampanyaKoduServisi;
 use App\Services\Tahsilat\Mobil\MobilOngorusmeSatisServisi;
-use App\Services\Tahsilat\Mobil\MobilRandevuTahsilatServisi;
 use App\Services\Tahsilat\Mobil\MobilTahsilatServisi;
 use App\Services\Tahsilat\Mobil\MobilTaksitServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -138,14 +137,6 @@ class TahsilatMobilController extends V2Controller
         [, $salonId] = $this->giris($request);
 
         return ApiCevap::basarili($s->adisyonDurumu($salonId, $request->integer('adisyon_id')));
-    }
-
-    /** POST /mobil-para/randevu/{id}/tahsilat (eski randevutahsilet) */
-    public function randevuTahsilat(Request $request, int $id, MobilRandevuTahsilatServisi $s)
-    {
-        $uid = $this->kayitGirisi($request, $s->salonId($id));
-
-        return ApiCevap::basarili($s->tahsilataGec($id, $uid, (string) $request->input('idempotency_key')));
     }
 
     /** POST /mobil-para/ongorusme/{id}/satis (eski ongorusmesatisyapildi) */

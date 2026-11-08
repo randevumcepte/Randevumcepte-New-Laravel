@@ -94,11 +94,15 @@ class MobilOngorusmeSatisServisi
             if ($aralik <= 0 && ! empty($g['seans_araligi'])) {
                 $aralik = (int) $g['seans_araligi'];
             }
+            // Sinirsiz pakette seans satiri onceden acilmaz (0); seansli pakette varsayilan bolge basina hak. Hak satisa da yazilir
+            // (eski kod yazmiyordu: seans takibinde satis 0 hakla gorunuyordu).
+            $seansSayisi = Hesap::paketSeansSayisi($g['seans_sayisi'] ?? null, $hizmetler->map(fn ($h) => (array) $h)->all(),
+                $paket->miktar ?? null, (int) ($paket->sinirsiz ?? 0) === 1);
             $adisyonPaketId = $this->yazici->paketEkle($adisyonId, [
                 'paket_id' => $og->paket_id, 'fiyat' => Hesap::paketSatisFiyati($hizmetler->sum('fiyat'), $paket->fiyat ?? null, $girilenFiyat),
                 'baslangic_tarihi' => $g['baslangic_tarihi'] ?? null, 'seans_araligi' => $aralik, 'personel_id' => $satici,
+                'seans_sayisi' => $seansSayisi,
             ]);
-            $seansSayisi = Hesap::paketSeansSayisi($g['seans_sayisi'] ?? null, $hizmetler->sum('seans'), $paket->miktar ?? null);
             foreach (Hesap::seansTarihleri($g['baslangic_tarihi'] ?? null, $seansSayisi, $aralik) as $seansTarih) {
                 $s = new AdisyonPaketSeanslar();
                 $s->adisyon_paket_id = $adisyonPaketId;

@@ -98,9 +98,7 @@ class PaketYazServisi
                 }
             }
 
-            if ($p->sinirsiz) {
-                PaketHizmetler::where('paket_id', $p->id)->update(['seans' => 0]); // toplu randevu/etkin seans hesabina girmesin
-            }
+            $this->sinirsizSeanslariSifirla($p);
 
             return $p;
         });
@@ -139,6 +137,7 @@ class PaketYazServisi
             foreach ($v['hizmetler'] as $h) {
                 PaketHizmetler::create(['paket_id' => $p->id] + $h);
             }
+            $this->sinirsizSeanslariSifirla($p); // web ile ayni kural (eski mobil sifirlamiyordu)
 
             return $p;
         });
@@ -147,6 +146,14 @@ class PaketYazServisi
             $yeni ? 'Yeni paket tanımlandı' : 'Paket güncellendi');
 
         return (int) $paket->id;
+    }
+
+    /** Sinirsiz pakette hizmet seansi 0: toplu randevu ve etkin seans hesabina girmesin. Web ve mobil kaydin ortak kurali. */
+    private function sinirsizSeanslariSifirla(Paketler $p): void
+    {
+        if ($p->sinirsiz) {
+            PaketHizmetler::where('paket_id', $p->id)->update(['seans' => 0]);
+        }
     }
 
     /** Pasif yap (idempotent: zaten pasifse yeniden log yazilmaz). */

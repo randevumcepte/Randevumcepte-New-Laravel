@@ -157,6 +157,9 @@ Route::prefix('v2')->group(function () {
         Route::patch('/kalem/{tip}/{id}/fiyat', [SatisKalemController::class, 'fiyat'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
         Route::patch('/kalem/{tip}/{id}/personel', [SatisKalemController::class, 'personel'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
         Route::delete('/kalem/{tip}/{id}', [SatisKalemController::class, 'sil'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
+        // Paketi Yükselt (yerinde dönüştürme) — web ve mobil aynı uçlar; yazma tahsilat bayrağı arkasında.
+        Route::get('/kalem/paket/{id}/yukseltme-adaylari', [SatisKalemController::class, 'yukseltmeAdaylari'])->whereNumber('id');
+        Route::post('/kalem/paket/{id}/yukselt', [SatisKalemController::class, 'paketYukselt'])->whereNumber('id');
 
         // PLANLANAN ALACAK (receivable) — flag korumali (finans.alacak_yonet).
         Route::post('/alacak', [AlacakController::class, 'ekle']);

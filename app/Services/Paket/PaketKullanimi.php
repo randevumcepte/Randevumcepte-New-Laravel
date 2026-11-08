@@ -78,6 +78,23 @@ class PaketKullanimi
         return $sonuc;
     }
 
+    /**
+     * Satilmis paket (hizmet satiri) ders plani / seans kaynagi olabilir mi — TEK kural (SeansHavuzu web
+     * kaynaklari ve mobil kaynaklarOrtalama): suresi dolmus paket hicbir zaman; sinirsiz paket kalan
+     * adede bakmadan; seansli paket kalan > 0 ise. Eski mobil _dersTekrarliKaynakListesi suresi dolani
+     * da listeliyordu (c846384d'de web'de duzeltilmis, mobilde unutulmustu).
+     *
+     * @param  array{sinirsiz?:bool, suresi_doldu?:bool}|null  $durum  durumlar() satiri (kolon yoksa null)
+     */
+    public static function kaynakOlabilir(?array $durum, int $kalan): bool
+    {
+        if ($durum['suresi_doldu'] ?? false) {
+            return false;
+        }
+
+        return ($durum['sinirsiz'] ?? false) || $kalan > 0;
+    }
+
     public function durum(int $adisyonPaketId): ?array
     {
         return $this->durumlar([$adisyonPaketId])[$adisyonPaketId] ?? null;

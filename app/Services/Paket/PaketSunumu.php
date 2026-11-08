@@ -11,7 +11,7 @@ use App\Models\Paketler;
  * Paket JSON sozlesmesi — web (/v2/paketler) ve Flutter AYNI bicimi okur.
  *
  * Alan adlari Flutter'in mevcut Paket / PaketHizmetleri modelleriyle uyumlu:
- *   id, paket_adi, aktif, miktar, fiyat, sure, hizmetler[{hizmet_id, seans, fiyat, hizmet{id, hizmet_adi}}]
+ *   id, paket_adi, aktif, miktar, satis_seans, seans_metni, fiyat, sure, hizmetler[{hizmet_id, seans, fiyat, hizmet{id, hizmet_adi}}]
  * fiyat / miktar ETKIN degerdir (PaketTutari) — istemci yeniden hesaplamaz.
  */
 final class PaketSunumu
@@ -33,6 +33,9 @@ final class PaketSunumu
             'aktif'         => (int) $p->aktif,
             'fiyat'         => $etkin['fiyat'],
             'miktar'        => $etkin['seans'],
+            // Satista varsayilan hak (bolge basina, PaketTutari::satisSeansi) ve liste metni ("8" ya da "8 / 5 / 3").
+            'satis_seans'   => PaketTutari::satisSeansi($p->miktar, $hizmetler),
+            'seans_metni'   => PaketTutari::seansMetni($p->miktar, $hizmetler),
             'sure'          => $p->sure !== null && $p->sure !== '' ? (int) $p->sure : null,
             'sinirsiz'      => (int) $p->sinirsiz,
             'gecerlilik_sayi'  => $p->gecerlilik_sayi !== null ? (int) $p->gecerlilik_sayi : null,

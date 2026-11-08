@@ -106,4 +106,20 @@ class AdisyonSatirTest extends TestCase
         $this->assertSame('1.234,56', AdisyonSatir::trFormat(1234.56));
         $this->assertSame('0,00', AdisyonSatir::trFormat(0));
     }
+
+    public function test_yukseltilmis_paket_icerikte_rozet_metni(): void
+    {
+        $s = AdisyonSatir::hesapla([
+            'paketler' => [
+                ['ad' => 'Lazer 5 Bolge', 'fiyat' => 5000, 'indirim' => 0, 'tahsilat' => 0, 'personel_id' => null, 'personel_adi' => '',
+                    'seans_sayisi' => 8, 'yukseltme_kaynak_adi' => 'Lazer 3 Bolge', 'prim_yuzde' => 0],
+            ],
+        ]);
+        $this->assertStringContainsString('Lazer 5 Bolge (P) ⬆ Yükseltildi (Lazer 3 Bolge) (8 Seans)', $s['icerik']);
+        $this->assertStringContainsString('⬆ Yükseltildi (Lazer 3 Bolge)', $s['icerik_kisaltilmis']);
+
+        // Kaynak yoksa metin eskisiyle ayni.
+        $d = AdisyonSatir::hesapla(['paketler' => [['ad' => 'Lazer', 'fiyat' => 100, 'seans_sayisi' => 8, 'personel_adi' => '']]]);
+        $this->assertStringNotContainsString('Yükseltildi', $d['icerik']);
+    }
 }

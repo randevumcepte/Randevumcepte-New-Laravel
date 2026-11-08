@@ -4,7 +4,7 @@
 @section('aktif', 'paketsatislari')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/paketler-v2.css?v=4">
+    <link rel="stylesheet" href="/css/paketler-v2.css?v=5">
 @endpush
 
 @section('icerik')
@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/paketler-v2.js?v=8"></script>
+    <script type="module" src="/js/paketler-v2.js?v=9"></script>
 @endpush

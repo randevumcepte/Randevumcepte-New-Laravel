@@ -17,6 +17,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
 import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=2';
+import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi, sinirsizRozet } from '/js/lib/v2-paket-satis.js?v=1';
 
 const kok = document.getElementById('rc-paket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -36,12 +37,11 @@ const yaz = (method, yol, body = {}) => api(method, yol, { body: method === 'DEL
 const sayiVeyaNull = (v) => (String(v ?? '').trim() === '' ? null : Number(String(v).replace(',', '.')));
 const paketBul = (id) => sonListe.find((p) => String(p.id) === String(id));
 
-/** "8" ya da hizmet bazlı seans varsa "8 (5 + 3)". */
+/** Bölge başına seans: eşitse "8", farklıysa "8 / 5 / 3" (sunucu: PaketTutari::seansMetni). */
 function seansMetni(p) {
-  if (p.sinirsiz) return `<span class="rc-rozet rc-rozet-mor">Sınırsız</span> <small class="pk-soluk">${esc(p.gecerlilik_metni || '')}${p.gunluk_limit ? ` · günde ${p.gunluk_limit}` : ''}</small>`;
-  const hs = p.hizmetler.filter((h) => h.seans > 0);
+  if (p.sinirsiz) return sinirsizRozet(p);
   const sure = p.gecerlilik_metni ? ` <small class="pk-soluk">· ${esc(p.gecerlilik_metni)}</small>` : '';
-  return (hs.length > 1 ? `${p.miktar} <small class="pk-soluk">(${hs.map((h) => h.seans).join(' + ')})</small>` : String(p.miktar || '—')) + sure;
+  return (p.seans_metni && p.seans_metni !== '0' ? esc(p.seans_metni) : '—') + sure;
 }
 
 // ─────────────────────────── iskelet + tablo ───────────────────────────
@@ -216,91 +216,25 @@ function paketFormu(p) {
 
 // ─────────────────────────── satış yap ───────────────────────────
 
-const hizmetSatiri = (id, ad) => `<label class="pk-hizmet-satir"><input type="checkbox" value="${esc(id)}" checked> ${esc(ad)}</label>`;
-
 function satisYap() {
   const m = musteri.secili();
   if (!secili.size || !m) return mesaj('Satış yapmadan önce lütfen paket ve müşteri seçiniz.', 'hata');
   const paketler = [...secili.values()];
-  const fiyatAcik = yetki('fiyat_degistir');
+  const kalemOpt = { fiyat: !fiyatGizli(), fiyatAcik: yetki('fiyat_degistir') };
   const govde = `
     <div class="pk-satis-ozet"><i class="bi bi-person"></i> <b>${esc(m.ad)}</b></div>
-    ${paketler.map((p) => `<div class="pk-satis-kalem" data-id="${p.id}">
-      <div class="pk-ad">${esc(p.paket_adi)}</div>
-      <div class="rc-alan pk-satis-hizmet"><label>Hizmetler</label>
-        <div class="pk-hizmet-secim" data-secim>${p.hizmetler.map((h) => hizmetSatiri(h.hizmet_id, h.hizmet_adi)).join('')}</div>
-        <div class="pk-hizmet-ara"><i class="bi bi-search"></i><input type="text" data-hizmet-ara placeholder="Hizmet ekle: aramak için yazın" autocomplete="off"><div class="pk-hizmet-sonuc" data-sonuc hidden></div></div>
-      </div>
-      <div class="rc-form-izgara">
-        ${p.sinirsiz ? `<div class="rc-alan"><label>Paket</label><input readonly value="Sınırsız · ${esc(p.gecerlilik_metni || '')} (ilk gelişte başlar)"></div>` : `<div class="rc-alan"><label>Seans Sayısı</label><input type="number" min="0" step="1" data-seans value="${p.miktar ?? ''}"></div>`}
-        ${fiyatGizli() ? '' : `<div class="rc-alan"><label>Fiyat (₺)</label><input type="number" min="0" step="0.01" data-fiyat value="${p.fiyat}" ${fiyatAcik ? '' : 'readonly title="Fiyat değiştirme yetkiniz yok"'}></div>`}
-      </div></div>`).join('')}`;
+    ${paketler.map((p) => paketSatisKalemi(p, kalemOpt)).join('')}`;
   const ov = modalAc(fiyatGizli() ? 'Seans Sayısı' : 'Seans ve Fiyatı Belirleyin', govde, satisAltButonlari(fiyatGizli()), { ikon: 'cart-check', sabit: true });
   el('[data-kapat]', ov)?.addEventListener('click', modalKapat);
 
-  // Satışa özel hizmet seçimi: katalog değişmez. Pakette hizmet bazlı fiyat varsa fiyat seçime göre güncellenir.
-  const seciliHizmetler = (k) => [...k.querySelectorAll('[data-secim] input:checked')].map((c) => Number(c.value));
-  const fiyatGuncelle = (k) => {
-    const alan = el('[data-fiyat]', k);
-    const p = paketler.find((x) => String(x.id) === k.dataset.id);
-    if (!alan || !p.hizmetler.some((h) => h.fiyat > 0)) return;
-    alan.value = seciliHizmetler(k).reduce((t, id) => t + Number(p.hizmetler.find((h) => h.hizmet_id === id)?.fiyat ?? fv.hizmetler.find((s) => s.hizmet_id === id)?.fiyat ?? 0), 0);
-  };
-  ov.addEventListener('change', (e) => {
-    const k = e.target.closest('.pk-satis-kalem');
-    if (!k) return;
-    if (e.target.matches('[data-secim] input') && !seciliHizmetler(k).length) {
-      e.target.checked = true; // paket en az bir hizmet içermeli
-      return mesaj('Pakette en az bir hizmet kalmalıdır.', 'hata');
-    }
-    fiyatGuncelle(k);
-  });
-
-  // Hizmet ekleme: yüzlerce hizmette düz liste kullanılmaz, yazdıkça süzülür (en çok 50 satır).
-  const sonucCiz = (k) => {
-    const q = el('[data-hizmet-ara]', k).value.toLocaleLowerCase('tr').trim();
-    const ekli = [...k.querySelectorAll('[data-secim] input')].map((c) => Number(c.value));
-    const liste = fv.hizmetler.filter((s) => !ekli.includes(s.hizmet_id) && s.ad.toLocaleLowerCase('tr').includes(q));
-    const kutu = el('[data-sonuc]', k);
-    kutu.innerHTML = liste.slice(0, 50).map((s) => `<button type="button" data-hizmet-ekle="${s.hizmet_id}">${esc(s.ad)}</button>`).join('')
-      + (!liste.length ? '<div class="pk-hizmet-not">Sonuç bulunamadı</div>' : liste.length > 50 ? `<div class="pk-hizmet-not">${liste.length - 50} hizmet daha var, aramayı daraltın</div>` : '');
-    kutu.hidden = false;
-  };
-  const hizmetEkle = (k, b) => {
-    el('[data-secim]', k).insertAdjacentHTML('beforeend', hizmetSatiri(b.dataset.hizmetEkle, b.textContent));
-    const giris = el('[data-hizmet-ara]', k);
-    giris.value = '';
-    giris.focus();
-    sonucCiz(k);
-    fiyatGuncelle(k);
-  };
-  ov.addEventListener('input', (e) => { if (e.target.matches('[data-hizmet-ara]')) sonucCiz(e.target.closest('.pk-satis-kalem')); });
-  ov.addEventListener('focusin', (e) => { if (e.target.matches('[data-hizmet-ara]')) sonucCiz(e.target.closest('.pk-satis-kalem')); });
-  ov.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' || !e.target.matches('[data-hizmet-ara]')) return;
-    e.preventDefault();
-    const k = e.target.closest('.pk-satis-kalem');
-    const ilk = el('[data-hizmet-ekle]', k);
-    if (ilk) hizmetEkle(k, ilk);
-  });
-  ov.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('.pk-hizmet-ara')) ov.querySelectorAll('[data-sonuc]').forEach((s) => { s.hidden = true; });
-  });
-  ov.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-hizmet-ekle]');
-    if (b) hizmetEkle(b.closest('.pk-satis-kalem'), b);
-  });
+  // Satışa özel hizmet seçimi (ortak bileşen): katalog değişmez; hizmet bazlı fiyat varsa fiyat seçime göre.
+  paketSatisBagla(ov, { paketBul: (id) => paketler.find((x) => String(x.id) === String(id)), hizmetler: () => fv.hizmetler });
 
   // Çift tıklama / ağ tekrarı ikinci adisyon açmasın — modal başına tek anahtar.
   const anahtar = crypto.randomUUID();
 
   ov.querySelectorAll('[data-odeme]').forEach((btn) => btn.addEventListener('click', () => kilitle(btn, 'İşleniyor…', async () => {
-    const kalemler = [...ov.querySelectorAll('.pk-satis-kalem')].map((k) => {
-      const seansAlani = el('[data-seans]', k);
-      const kalem = { paket_id: Number(k.dataset.id), seans: seansAlani ? sayiVeyaNull(seansAlani.value) : null, hizmetler: seciliHizmetler(k) };
-      if (!fiyatGizli() && fiyatAcik) kalem.fiyat = sayiVeyaNull(el('[data-fiyat]', k).value);
-      return kalem;
-    });
+    const kalemler = [...ov.querySelectorAll('.pk-satis-kalem')].map((k) => paketSatisGirdisi(k, kalemOpt));
     const r = await yaz('POST', '/paket/satis', { musteri_id: m.id, personel_id: el('#pkPersonel')?.value || null, kalemler, idempotency_key: anahtar });
     if (!yazSonuc(r)) return;
     if (fiyatGizli()) await satisSonrasiDersPlani(salonId, r.govde.veri.adisyon_id);

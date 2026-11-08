@@ -29,6 +29,9 @@ use Illuminate\Support\Facades\DB;
  */
 class RandevuTahsilatServisi
 {
+    /** @var array<int, list<int>> */
+    private array $paketHizmetOnbellek = [];
+
     public function __construct(private KalemServisi $kalemler) {}
 
     public function tahsilataGec(int $randevuId, ?int $yetkiliId, bool $yaz): array
@@ -117,7 +120,13 @@ class RandevuTahsilatServisi
 
         $paket = $this->paketAdisyonu($randevu, $kalemler);
         if ($paket && $this->odemesiz(DB::table('adisyonlar')->where('adisyonlar.id', $paket))->exists()) {
-            return ['adisyon_id' => $paket, 'kaynak' => 'paket_adisyonu', 'kalemler' => $tumu];
+            // Eski tahsilataGitRandevudan: paket icerigi disindaki (ekstra) hizmet paket adisyonuna yazilmaz, yeni adisyona gider;
+            // ekstra yoksa paket adisyonunun kendisi acilir.
+            $ekstra = array_values(array_filter($tumu, fn (array $s) => ! in_array((int) $s['kalem']->hizmet_id, $this->paketHizmetleri($paket), true)));
+
+            return $ekstra
+                ? ['adisyon_id' => null, 'kaynak' => 'ekstra_yeni_adisyon', 'kalemler' => $ekstra]
+                : ['adisyon_id' => $paket, 'kaynak' => 'paket_adisyonu', 'kalemler' => []];
         }
         if (! $tumu) {
             throw new GecersizIslemException('Bu randevuda tahsil edilecek kalem yok.');
@@ -151,6 +160,13 @@ class RandevuTahsilatServisi
         }
 
         return $id ? (int) $id : null;
+    }
+
+    /** @return list<int> adisyondaki paketlerin icerdigi hizmetler */
+    private function paketHizmetleri(int $adisyonId): array
+    {
+        return $this->paketHizmetOnbellek[$adisyonId] ??= DB::table('adisyon_paketler as ap')->join('paket_hizmetler as ph', 'ph.paket_id', '=', 'ap.paket_id')
+            ->where('ap.adisyon_id', $adisyonId)->pluck('ph.hizmet_id')->map(fn ($h) => (int) $h)->unique()->values()->all();
     }
 
     /** Musterinin bu randevu hizmetlerini iceren, kullanilmamis seansi kalan paketinin adisyonu. */

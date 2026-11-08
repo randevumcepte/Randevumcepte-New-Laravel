@@ -2,6 +2,8 @@
 
 namespace App\Domain\Tahsilat;
 
+use App\Domain\Paket\PaketTutari;
+
 /**
  * Mobil uclarin para metni ve satir hesaplari — saf. Odemenin ve indirimin kalemlere DAGITIMI burada degil: web ile ayni
  * kural ve ayni kod (TahsilatDagitim, TahsilatYazServisi::kalemDagitimi / vadeDagitimi). Kullanici karari (2026-11-08):
@@ -267,14 +269,24 @@ final class MobilTahsilatHesabi
         return $girilen !== null && $girilen !== '' && is_numeric($girilen) ? (float) $girilen : ($katalogFiyat ?? 0);
     }
 
-    /** Seans sayisi: giris > 0 ise o, degilse paket hizmet seans toplami, o da 0 ise paket miktari. */
-    public static function paketSeansSayisi(mixed $girilen, mixed $hizmetSeansToplami, mixed $paketMiktari): int
+    /**
+     * On gorusmeden paket satisinda onceden acilacak seans sayisi: giris > 0 ise o, degilse satis varsayilani
+     * (PaketTutari::satisSeansi — bolge basina hak, web ile ayni). Sinirsiz pakette 0: seans adedi yoktur,
+     * tavan satisa kopyalanir (PaketKullanimi). Eski kod hizmet seans TOPLAMINA, sinirsizda paket miktarina
+     * (teknik tavan, ornek 366) dusup yuzlerce bos seans satiri aciyordu; duzeltildi.
+     *
+     * @param  array<int, array{seans?:mixed}>  $hizmetler
+     */
+    public static function paketSeansSayisi(mixed $girilen, array $hizmetler, mixed $paketMiktari, bool $sinirsiz = false): int
     {
+        if ($sinirsiz) {
+            return 0;
+        }
         if ($girilen !== null && $girilen !== '' && (int) $girilen > 0) {
             return (int) $girilen;
         }
 
-        return $hizmetSeansToplami == 0 ? (int) ($paketMiktari ?? 0) : (int) $hizmetSeansToplami;
+        return PaketTutari::satisSeansi($paketMiktari, $hizmetler);
     }
 
     /** Hizmet seans sayisi: bos veya 1 ve alti tekil (null), 2+ paket gibi. */
@@ -283,12 +295,6 @@ final class MobilTahsilatHesabi
         $s = trim((string) $girilen);
 
         return $s === '' || (int) $s <= 1 ? null : (int) $s;
-    }
-
-    /** Randevu tahsilatinda kapali adisyon kurali: toplam > 0 ve tahsilat toplamina esit veya fazla. */
-    public static function tamamenOdenmisMi(float $toplam, float $tahsilat): bool
-    {
-        return $toplam > 0 && round($tahsilat, 2) >= round($toplam, 2);
     }
 
     /** Senet ve taksit satirinin kalem ozeti: "Sac Bakimi (H), Manikur (Ü), Full Bakim (P)". */

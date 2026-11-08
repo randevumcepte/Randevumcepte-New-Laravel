@@ -14,7 +14,8 @@ use App\Support\Yetki\YetkiSabitleri;
  *   id, ad_soyad, cep_telefon, email, cinsiyet, adres, meslek, il_id, aciklama, musteri_tipi,
  *   hatirlatma_tarihi, on_gorusme_saati, durum (ham: null|0|1), satisyapilmadi_not,
  *   paket_id / urun_id / hizmet_id, oda_id, musteri{id,name}, personel{id,personel_adi},
- *   paket{id,paket_adi}, urun{id,urun_adi}, hizmet{id,hizmet_adi}
+ *   paket{id,paket_adi,fiyat,miktar,satis_seans,seans_araligi,sinirsiz,gecerlilik_*,hizmetler[]},
+ *   urun{id,urun_adi,fiyat}, hizmet{id,hizmet_adi}
  * v2 ekleri (istemci yeniden hesaplamaz): durum_kodu / durum_adi, musteri_tipi_adi,
  * neden{tur, id, anahtar, etiket, ad}, randevu_id, islemler{duzenle, sonuclandir}.
  * Telefon 'musteri.telefon_gor' yetkisi yoksa MASKELİ (KVKK veri minimizasyonu).
@@ -62,8 +63,11 @@ final class OnGorusmeSunumu
             'paket_id'           => self::sayiVeyaNull($r->paket_id),
             'urun_id'            => self::sayiVeyaNull($r->urun_id),
             'hizmet_id'          => self::sayiVeyaNull($r->hizmet_id),
-            'paket'              => $r->paket_id ? ['id' => (int) $r->paket_id, 'paket_adi' => $r->paket_adi] : null,
-            'urun'               => $r->urun_id ? ['id' => (int) $r->urun_id, 'urun_adi' => $r->urun_adi] : null,
+            // paket: {id, paket_adi} + satis varsayilanlari (OnGorusmeSorgusu::paketOzetleri — fiyat, miktar, satis_seans,
+            // seans_araligi, sinirsiz, gecerlilik_*, hizmetler[{hizmet_id, seans, fiyat}]); urun: birim fiyat.
+            'paket'              => $r->paket_id ? ['id' => (int) $r->paket_id, 'paket_adi' => $r->paket_adi] + ($r->paket_ozeti ?? []) : null,
+            'urun'               => $r->urun_id ? ['id' => (int) $r->urun_id, 'urun_adi' => $r->urun_adi]
+                + (isset($r->urun_fiyat) ? ['fiyat' => (float) $r->urun_fiyat] : []) : null,
             'hizmet'             => $r->hizmet_id ? ['id' => (int) $r->hizmet_id, 'hizmet_adi' => $r->hizmet_adi] : null,
             'user_id'            => self::sayiVeyaNull($r->user_id),
             'musteri'            => $r->user_id ? ['id' => (int) $r->user_id, 'name' => $r->musteri_adi ?: $r->ad_soyad] : null,

@@ -45,6 +45,9 @@
 /* Ekle paneli */
 .t-ekle-panel { margin: 12px; padding: 14px; border: 1px dashed #d9c9ec; border-radius: 14px; background: #faf7fe; }
 .t-ekle-panel[hidden] { display: none; }
+.t-ekle-paket { margin-top: 10px; }
+.t-ekle-paket[hidden] { display: none; }
+.t-ekle-panel .pk-hizmet-satir { display: inline-flex; margin: 0; font-size: 13px; color: inherit; }
 .t-ekle-satir { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .t-ekle-panel label { font-size: 12px; color: #6b7194; font-weight: 600; display: block; margin-bottom: 4px; }
 .t-ekle-panel select, .t-ekle-panel .rs-btn, .t-ekle-panel input { padding: 10px 12px; border: 1px solid var(--t-cizgi); border-radius: 10px; font-size: 14px; background: #fff; }
@@ -64,6 +67,20 @@
 .t-rozet.urun { background: #fdecec; color: #d33a4b; }
 .t-rozet.paket { background: #f0e8fb; color: #6b1f8f; }
 .t-rozet.yontem { background: #eef1fb; color: #3a4a7a; }
+.t-rozet.yukseltme { background: #e7f6ee; color: #16794a; margin-left: 6px; }
+/* Paketi Yükselt penceresi */
+.t-yk-ozet { margin-bottom: 12px; }
+.t-yk-bos { color: #6b7194; }
+.t-yk-liste { display: flex; flex-direction: column; gap: 8px; }
+.t-yk-aday { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #ececf2; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.t-yk-aday small { display: block; color: #6b7194; margin-top: 2px; }
+.t-yk-ek { margin-bottom: 12px; }
+.t-yk-ek ul { margin: 4px 0 6px 18px; padding: 0; }
+.t-yk-ek small { color: #6b7194; }
+@media (prefers-color-scheme: dark) {
+  .t-rozet.yukseltme { background: #183a2a; color: #7fd6a8; }
+  .t-yk-aday { border-color: #34344c; }
+}
 .t-adet-inp { width: 68px; padding: 6px 8px; border: 1px solid var(--t-cizgi); border-radius: 8px; font-size: 13px; }
 .t-sil { background: #fde8e8; color: var(--t-kirmizi); border: 0; border-radius: 9px; width: 30px; height: 30px; cursor: pointer; font-weight: 700; }
 .t-sil:hover { background: #fbd5d5; }

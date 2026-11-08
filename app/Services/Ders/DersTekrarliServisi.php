@@ -44,7 +44,8 @@ class DersTekrarliServisi
 
     /**
      * Mobilin bugunku kaynak listesi: paket kalani hizmet basina ORTALAMA (toplam hak − toplam kullanim) / hizmet
-     * sayisi, suresi dolan paket de listelenir. Tek hizmet satislari havuzla ayni.
+     * sayisi. Suresi dolan paket listelenmez (PaketKullanimi::kaynakOlabilir, web ile ayni kural; eski mobil
+     * listeliyordu). Tek hizmet satislari havuzla ayni.
      *
      * @return array<int,array<string,mixed>>
      */
@@ -69,7 +70,7 @@ class DersTekrarliServisi
             $adet = (int) $hizmetSayisi[$s->id];
             $sinirsiz = (bool) ($durumlar[$s->id]['sinirsiz'] ?? false);
             $kalan = max(0, (int) floor(((int) $s->seans_sayisi * $adet - (int) ($kullanim[$s->id] ?? 0)) / $adet));
-            if ($kalan > 0 || $sinirsiz) {
+            if (PaketKullanimi::kaynakOlabilir($durumlar[$s->id] ?? null, $kalan)) {
                 $paket[] = [
                     'etiket' => $s->hizmet_adi.' — '.$s->paket_adi.' (Paket)', 'hizmet_id' => (int) $s->hizmet_id, 'hizmet_adi' => $s->hizmet_adi,
                     'kalan_seans' => $kalan, 'sinirsiz' => $sinirsiz, 'adisyon_paket_id' => (int) $s->id, 'adisyon_hizmet_id' => null,

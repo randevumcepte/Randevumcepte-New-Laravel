@@ -133,17 +133,15 @@ class RandevuFormServisi
         $durumlar = app(PaketKullanimi::class)->durumlar($aplar->pluck('id')->map(fn ($i) => (int) $i)->all());
         foreach ($aplar as $ap) {
             $durum = $durumlar[$ap->id] ?? null;
-            if ($durum['suresi_doldu'] ?? false) {
-                continue; // gecerlilik bitti
-            }
             $bolgeler = DB::table('paket_hizmetler as ph')->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')->where('ph.paket_id', $ap->paket_id)
                 ->get(array_merge(['ph.hizmet_id', 'h.hizmet_adi'], $phSure ? ['ph.sure'] : []));
             $kullanilan = DB::table('adisyon_paket_seanslar')->where('adisyon_paket_id', $ap->id)
                 ->groupBy('hizmet_id')->selectRaw('hizmet_id, COUNT(*) as n')->pluck('n', 'hizmet_id');
             $hizmetler = [];
             foreach ($bolgeler as $b) {
-                $kalan = ($durum['sinirsiz'] ?? false) ? 1 : max(0, (int) $ap->seans_sayisi - (int) ($kullanilan[$b->hizmet_id] ?? 0));
-                if ($kalan > 0) {
+                $kalan = max(0, (int) $ap->seans_sayisi - (int) ($kullanilan[$b->hizmet_id] ?? 0));
+                if (PaketKullanimi::kaynakOlabilir($durum, $kalan)) {
+                    $kalan = ($durum['sinirsiz'] ?? false) ? 1 : $kalan;
                     $hizmetler[] = ['hizmet_id' => (int) $b->hizmet_id, 'ad' => $b->hizmet_adi, 'kalan' => $kalan, 'toplam' => (int) $ap->seans_sayisi,
                         'sure' => (int) ($b->sure ?? 0) ?: ($salonSure[$b->hizmet_id] ?? 30)];
                 }

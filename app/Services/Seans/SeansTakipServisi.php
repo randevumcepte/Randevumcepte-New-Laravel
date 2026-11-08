@@ -87,10 +87,26 @@ class SeansTakipServisi
             ->select([
                 DB::raw("'{$tur->value}' as tur"), 'k.id', 'k.adisyon_id', 'k.seans_sayisi',
                 DB::raw(($paket ? 'k.paket_id' : 'k.hizmet_id').' as katalog_id'),
-                DB::raw(($paket ? 'k.baslangic_tarihi' : 'k.islem_tarihi').' as baslangic'),
+                DB::raw($this->baslangicIfadesi($paket).' as baslangic'),
                 'a.created_at as olusturma', 'a.user_id as musteri_id', 'u.name as musteri_adi',
                 DB::raw($adKolonu.' as ad'),
             ]);
+    }
+
+    /**
+     * Siralanan 'baslangic' gosterilen degerle ayni (seansBaslangici): sureli pakette ilk gelis, digerlerinde satis baslangici.
+     */
+    private function baslangicIfadesi(bool $paket): string
+    {
+        if (! $paket) {
+            return 'k.islem_tarihi';
+        }
+        if (! PaketKullanimi::kolonVar()) {
+            return 'k.baslangic_tarihi';
+        }
+
+        return "CASE WHEN COALESCE(k.gecerlilik_sayi, 0) > 0 THEN (SELECT MIN(s2.seans_tarih) FROM adisyon_paket_seanslar s2"
+            ." WHERE s2.adisyon_paket_id = k.id AND s2.geldi = 1 AND s2.seans_tarih > '2000-01-01') ELSE k.baslangic_tarihi END";
     }
 
     /** Sayfadaki satirlara hizmet kartlari + seanslar + sayaclar (TOPLU sorgularla). */
@@ -136,7 +152,7 @@ class SeansTakipServisi
                 'adisyon_id'       => (int) $s->adisyon_id,
                 'musteri'          => ['id' => (int) $s->musteri_id, 'ad' => (string) $s->musteri_adi],
                 'ad'               => (string) $s->ad,
-                'baslangic_tarihi' => self::gecerliTarih($s->baslangic),
+                'baslangic_tarihi' => self::seansBaslangici($gecerli, $s->baslangic),
                 'sinirsiz'         => $gecerli['sinirsiz'] ?? false,
                 'gecerlilik'       => $gecerli && $gecerli['sure'] !== '' ? ['sure' => $gecerli['sure'], 'baslangic' => $gecerli['baslangic'], 'bitis' => $gecerli['bitis'], 'suresi_doldu' => $gecerli['suresi_doldu']] : null,
                 'olusturma'        => $s->olusturma,
@@ -192,6 +208,17 @@ class SeansTakipServisi
             'geldi'    => $durum->geldi(),
             'durum'    => $durum->value,
         ];
+    }
+
+    /**
+     * "Seans Baslangici" kolonu: sureli pakette satisin baslangic kolonu bos (00.00.0000 gorunuyordu), ilk gelis
+     * tarihi gosterilir; hic gelinmediyse null ('—'). Diger kalemlerde satis baslangici. Eski edd3dfff.
+     *
+     * @param  array{sure?:string, baslangic?:?string}|null  $gecerlilik  PaketKullanimi::durumlar() satiri
+     */
+    public static function seansBaslangici(?array $gecerlilik, ?string $satisBaslangic): ?string
+    {
+        return $gecerlilik && ($gecerlilik['sure'] ?? '') !== '' ? ($gecerlilik['baslangic'] ?? null) : self::gecerliTarih($satisBaslangic);
     }
 
     /** '0000-00-00' / bos / bozuk tarih → null; aksi halde Y-m-d. */

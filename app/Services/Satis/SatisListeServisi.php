@@ -10,6 +10,7 @@ use App\Models\Alacaklar;
 use App\Models\PersonelPrimOrani;
 use App\Models\Salonlar;
 use App\Models\User;
+use App\Services\Paket\PaketYukseltServisi;
 use App\Support\ListeIstegi;
 use Illuminate\Support\Facades\DB;
 
@@ -278,8 +279,11 @@ class SatisListeServisi
         // Satir aksiyonlari icin cagiranin (controller) yetki ozeti; verilmezse hic yazma butonu yok.
         $yetkiler = (array) ($o['yetkiler'] ?? []);
 
-        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, $yetkiler, $studyoModu) {
-            $s = AdisyonSatir::hesapla($this->kalemleri($a, $primHarita));
+        // "Yükseltildi (eski paket)" rozeti: sayfadaki paket kalemlerinin kaynak adlari tek sorguda (yalniz web metni).
+        $yukseltme = PaketYukseltServisi::kaynaklar($sayfa->flatMap(fn ($a) => $a->paketler->pluck('id'))->map(fn ($i) => (int) $i)->all());
+
+        $data = $sayfa->map(function ($a) use ($salonId, $primHarita, $sonTahsilat, $alacaklar, $toplamSayisi, $yetkiler, $studyoModu, $yukseltme) {
+            $s = AdisyonSatir::hesapla($this->kalemleri($a, $primHarita, $yukseltme));
 
             // §data satiri — eski formatAdisyonFast anahtarlariyla BIREBIR (drop-in).
             return $this->satirBasi($a, $salonId, $sonTahsilat, $alacaklar, $toplamSayisi, (float) $s['kalan_tutar_numeric']) + [
@@ -385,8 +389,12 @@ class SatisListeServisi
         ] + ListeIstegi::meta($page, $perPage, $toplamSayisi);
     }
 
-    /** Eager-load edilmis adisyondan AdisyonSatir girdisini (TL kalem dizileri) kurar. */
-    private function kalemleri($a, array $primHarita): array
+    /**
+     * Eager-load edilmis adisyondan AdisyonSatir girdisini (TL kalem dizileri) kurar.
+     *
+     * @param  array<int,array{paket_id:int,paket_adi:string}>  $yukseltme  adisyon_paket_id → yukseltme kaynagi (yalniz web)
+     */
+    private function kalemleri($a, array $primHarita, array $yukseltme = []): array
     {
         $hizmetler = [];
         foreach ($a->hizmetler as $h) {
@@ -429,6 +437,7 @@ class SatisListeServisi
                 'personel_adi' => $p->personel->personel_adi ?? '',
                 'seans_sayisi' => (int) ($p->seans_sayisi ?? 0),
                 'sinirsiz'     => (int) ($p->sinirsiz ?? 0) === 1,
+                'yukseltme_kaynak_adi' => $yukseltme[(int) $p->id]['paket_adi'] ?? null,
                 'prim_yuzde'   => $this->primOrani($p->personel, 'paket', $p->paket_id, $primHarita),
             ];
         }

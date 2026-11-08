@@ -61,11 +61,8 @@ class PaketMusteriKontrolu
         foreach ($paketKalemleri as $k) {
             $durum = $durumlar[(int) $k->id] ?? ['sinirsiz' => false, 'sure' => '', 'suresi_doldu' => false];
             $hizmetSayisi = $k->paket ? count($k->paket->hizmetler) : 0;
-            if ($hizmetSayisi <= 0 || $durum['suresi_doldu']) {
-                continue;
-            }
             $kalan = MobilSeansKurali::paketKalani($k->seans_sayisi, $k->bekleyen_seans, $hizmetSayisi, $paketKayit[$k->id] ?? 0);
-            if ($kalan <= 0 && ! $durum['sinirsiz']) {
+            if ($hizmetSayisi <= 0 || ! PaketKullanimi::kaynakOlabilir($durum, $kalan)) {
                 continue;
             }
             if ($durum['sinirsiz']) {

@@ -1,0 +1,25 @@
+/* Paket satış kalemi — ortak (public/js/lib/v2-paket-satis.js): Paket Yönetimi, Yeni Satış, Satış & Tahsilat. */
+.pk-soluk { color: #9191a3; font-size: 12px; }
+.pk-satis-kalem { border: 1px solid #ececf2; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.pk-satis-kalem .pk-ad { margin-bottom: 8px; }
+.pk-satis-kalem input[readonly] { background: #f5f5f7; cursor: not-allowed; }
+.pk-satis-kalem .pk-ad { font-weight: 700; }
+.pk-sinirsiz { padding: 8px 0; }
+.pk-satis-hizmet { margin-bottom: 10px; }
+.pk-hizmet-secim { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
+.pk-hizmet-satir { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; cursor: pointer; }
+.pk-hizmet-ara { position: relative; }
+.pk-hizmet-ara > i { position: absolute; left: 12px; top: 10px; color: #9D5DC8; font-size: 13px; pointer-events: none; }
+.pk-hizmet-ara input { width: 100%; padding-left: 32px; }
+.pk-hizmet-sonuc { max-height: 190px; overflow-y: auto; margin-top: 4px; border: 1px solid #ececf2; border-radius: 8px; background: #fff; }
+.pk-hizmet-sonuc[hidden] { display: none; }
+.pk-hizmet-sonuc button { display: block; width: 100%; padding: 8px 12px; border: 0; background: none; font-size: 13px; text-align: left; cursor: pointer; }
+.pk-hizmet-sonuc button:hover { background: #f9f5fe; }
+.pk-hizmet-not { padding: 8px 12px; color: #9191a3; font-size: 12px; }
+
+@media (prefers-color-scheme: dark) {
+  .pk-satis-kalem { background: #22222e; border-color: #34344c; }
+  .pk-hizmet-sonuc { background: #1b1b26; border-color: #34344c; }
+  .pk-hizmet-sonuc button { color: inherit; }
+  .pk-hizmet-sonuc button:hover { background: #2d2340; }
+}

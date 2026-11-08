@@ -58,14 +58,16 @@ class PaketSorgusu
      * Satista kullanilacak etkin fiyat/seans — paket bu salonun AKTIF paketi olmali
      * (baska isletmenin / silinmis paketin satilmasi engellenir).
      *
-     * @return array{fiyat: float, seans: int, paket_adi: string}
+     * seans: satista varsayilan hak, BOLGE BASINA (PaketTutari::satisSeansi) — toplam degil.
+     *
+     * @return array{fiyat: float, seans: int, paket_adi: string, sinirsiz: bool}
      */
     public function satisTutari(int $paketId, int $salonId): array
     {
         $p = $this->aktifler($salonId)->whereKey($paketId)->first() ?? throw new BulunamadiException('Paket bulunamadı veya bu işletmeye ait değil');
         $s = PaketSunumu::paket($p);
 
-        return ['fiyat' => $s['fiyat'], 'seans' => $s['miktar'], 'paket_adi' => $s['paket_adi']];
+        return ['fiyat' => $s['fiyat'], 'seans' => $s['satis_seans'], 'paket_adi' => $s['paket_adi'], 'sinirsiz' => $s['sinirsiz'] === 1];
     }
 
     /**

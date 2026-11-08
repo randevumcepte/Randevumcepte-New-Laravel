@@ -19,7 +19,7 @@ Route::prefix('mobil-para')->group(function () {
     Route::get('/kampanya-kodlari', [C::class, 'kampanyaKodlari']);
     Route::post('/kampanya-kod-kullan', [C::class, 'kampanyaKodKullan']);
     Route::get('/kampanya-kod-durum', [C::class, 'kampanyaKodDurum']);
-    Route::post('/randevu/{id}/tahsilat', [C::class, 'randevuTahsilat'])->whereNumber('id');
+    // Randevu tahsilati mobil-para'da degil: web ile ayni kanonik uc POST /api/v2/randevu/{id}/tahsilat (RandevuTahsilatServisi).
     Route::post('/ongorusme/{id}/satis', [C::class, 'ongorusmeSatis'])->whereNumber('id');
     Route::post('/hizli-satis', [C::class, 'hizliSatis']);
     Route::get('/cagri-kalemler', [C::class, 'cagriKalemler']);

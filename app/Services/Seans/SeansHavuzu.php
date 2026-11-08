@@ -169,7 +169,7 @@ class SeansHavuzu
         $durumlar = $this->kullanim->durumlar($paketler->pluck('id')->unique()->map(fn ($i) => (int) $i)->all());
         foreach ($paketler as $p) {
             $kalan = ($durumlar[$p->id]['sinirsiz'] ?? false) ? 1 : (int) $p->seans_sayisi - (int) ($kullanim[$p->id.':'.$p->hizmet_id] ?? 0);
-            if ($kalan > 0 && ! ($durumlar[$p->id]['suresi_doldu'] ?? false)) {
+            if (PaketKullanimi::kaynakOlabilir($durumlar[$p->id] ?? null, $kalan)) {
                 $kaynaklar[] = [
                     'etiket' => $p->hizmet_adi.' — '.$p->paket_adi.' (Paket)', 'hizmet_id' => (int) $p->hizmet_id, 'hizmet_adi' => $p->hizmet_adi,
                     'kalan_seans' => $kalan, 'sinirsiz' => $durumlar[$p->id]['sinirsiz'] ?? false, 'adisyon_paket_id' => (int) $p->id, 'adisyon_hizmet_id' => null,

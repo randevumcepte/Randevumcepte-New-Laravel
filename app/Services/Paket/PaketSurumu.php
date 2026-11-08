@@ -58,6 +58,18 @@ class PaketSurumu
      *
      * @param  array<int,int|string>|null  $secilenHizmetler  bos/null ise katalog listesi
      */
+    /**
+     * Satista seans girilmezse varsayilan: bolge basina hak (PaketTutari::satisSeansi), satilan paketin (katalog ya da satisa ozel
+     * kopya) hizmetlerinden. Web ve mobil ayni yeri cagirir.
+     */
+    public function varsayilanSeans(int $satisPaketId): int
+    {
+        return \App\Domain\Paket\PaketTutari::satisSeansi(
+            DB::table('paketler')->where('id', $satisPaketId)->value('miktar'),
+            DB::table('paket_hizmetler')->where('paket_id', $satisPaketId)->get(['seans'])->map(fn ($h) => (array) $h)->all(),
+        );
+    }
+
     public function satisPaketi(int $paketId, ?array $secilenHizmetler): int
     {
         $secilen = array_values(array_unique(array_filter(array_map('intval', $secilenHizmetler ?? []))));
@@ -66,6 +78,19 @@ class PaketSurumu
         }
 
         return DB::transaction(fn (): int => $this->kopyaAc($paketId, $secilen));
+    }
+
+    /**
+     * Secimde olup katalogda olmayan (yeni eklenen) hizmetler — sahiplik denetimi yalniz bunlar icin
+     * (eski PaketSurumu kurali; katalog hizmeti salondan sonradan kaldirilmis olsa da satis engellenmez).
+     *
+     * @return int[]
+     */
+    public function eklenenHizmetler(int $paketId, ?array $secilenHizmetler): array
+    {
+        $katalog = DB::table('paket_hizmetler')->where('paket_id', $paketId)->pluck('hizmet_id')->map(fn ($v) => (int) $v)->all();
+
+        return array_values(array_diff(array_unique(array_filter(array_map('intval', $secilenHizmetler ?? []))), $katalog));
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Adisyonlar;
 use App\Models\Salonlar;
+use App\Services\Paket\PaketYukseltServisi;
 use App\Services\Satis\KalemServisi;
 use App\Services\Satis\MobilKalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
@@ -38,6 +39,7 @@ class SatisKalemController extends V2Controller
         private SalonSahipligi $sahiplik,
         private YetkiServisi $yetki,
         private MobilKalemServisi $mobilKalem,
+        private PaketYukseltServisi $yukselt,
     ) {}
 
     /**
@@ -72,7 +74,7 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Satış açıldı.');
     }
 
-    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, fiyat?, seans?, personel_id?} */
+    /** POST /api/v2/adisyon/{adisyon}/kalem  body: {tip, katalog_id, adet?, fiyat?, seans?, personel_id?, hizmetler? (paket)} */
     public function ekle(Request $request, int $adisyon)
     {
         $user = $this->kullanici();
@@ -141,6 +143,50 @@ class SatisKalemController extends V2Controller
             $this->servis->personelGuncelle($tip, $id, $this->personelGirdisi($request, $tip, $salonId)),
             'Personel güncellendi.'
         );
+    }
+
+    /**
+     * GET /api/v2/kalem/paket/{id}/yukseltme-adaylari — satılmış paketi kapsayan (üst küme, en az 1 ek hizmet)
+     * aktif katalog paketleri + mevcut paket ödenen. Web ve mobil aynı uç. Yetki: satis.adisyon_olustur.
+     */
+    public function yukseltmeAdaylari(int $id)
+    {
+        $user = $this->kullanici();
+        $salonId = $this->servis->kalemSalonId('paket', $id);
+        if (! $salonId) {
+            return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+
+        return ApiCevap::basarili($this->yukselt->adaylar($id, $salonId));
+    }
+
+    /**
+     * POST /api/v2/kalem/paket/{id}/yukselt  body: {hedef_paket_id, fiyat?, idempotency_key}
+     * Yerinde dönüştürme (seans ve tahsilat kayıtları korunur). Katalogdan farklı fiyat satis.indirim_uygula ister.
+     */
+    public function paketYukselt(Request $request, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+
+        $salonId = $this->servis->kalemSalonId('paket', $id);
+        if (! $salonId) {
+            return ApiCevap::hata('Kalem bulunamadı', 404);
+        }
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $hedef = $request->input('hedef_paket_id');
+        if (! is_numeric($hedef) || (int) $hedef < 1) {
+            throw new GecersizIslemException('hedef_paket_id zorunlu');
+        }
+
+        $sonuc = $this->yukselt->yukselt($id, $salonId, (int) $hedef, $this->fiyatGirdisi($request), [
+            'yetkili_id'           => (int) $user->id,
+            'fiyat_degistirebilir' => $this->yetki->yetkiliYetkiVar((int) $user->id, $salonId, self::FIYAT_YETKI),
+        ], (string) $request->input('idempotency_key'));
+        $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
+
+        return ApiCevap::basarili($sonuc, 'Paket yükseltildi. Kalan ödemeyi tahsil edebilirsiniz.');
     }
 
     /** PATCH /api/v2/kalem/urun/{id}  body: {adet} */
@@ -215,9 +261,14 @@ class SatisKalemController extends V2Controller
         if ($tip === 'hizmet') {
             $opt['seans'] = $request->input('seans'); // opsiyonel; 2+ → paket satışı
         }
+        if ($tip === 'paket') {
+            // Paket: seçilen hizmetler (katalogdan farklıysa satışa özel kopya) + bölge başına seans (boş = katalog varsayılanı).
+            $opt['hizmetler'] = $this->hizmetlerGirdisi($request);
+            $opt['seans'] = $this->seansGirdisi($request);
+        }
         $fiyat = $this->fiyatGirdisi($request);
         if ($fiyat !== null) {
-            if ($fiyat !== $this->servis->katalogFiyati($tip, $katalogId, $salonId, (int) $request->input('adet', 1))
+            if ($fiyat !== $this->servis->katalogFiyati($tip, $katalogId, $salonId, (int) $request->input('adet', 1), $opt['hizmetler'] ?? null)
                 && ! $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, self::FIYAT_YETKI)) {
                 throw new YetkisizErisimException('Fiyatı değiştirme yetkiniz yok');
             }
@@ -225,6 +276,42 @@ class SatisKalemController extends V2Controller
         }
 
         return [$tip, $katalogId, $opt];
+    }
+
+    /** Paket hizmet seçimi: tam sayı dizisi (en çok 50); yoksa null (katalog listesi). */
+    private function hizmetlerGirdisi(Request $request): ?array
+    {
+        $h = $request->input('hizmetler');
+        if ($h === null || $h === '' || $h === []) {
+            return null;
+        }
+        if (is_string($h)) {
+            $h = json_decode($h, true);
+        }
+        if (! is_array($h) || count($h) > 50) {
+            throw new GecersizIslemException('Geçersiz hizmet listesi');
+        }
+        foreach ($h as $id) {
+            if (! is_numeric($id) || (int) $id < 1) {
+                throw new GecersizIslemException('Geçersiz hizmet listesi');
+            }
+        }
+
+        return array_values(array_unique(array_map('intval', $h)));
+    }
+
+    /** Paket seansı (opsiyonel): 0–1000 tam sayı; boşsa null. */
+    private function seansGirdisi(Request $request): ?int
+    {
+        $s = $request->input('seans');
+        if ($s === null || $s === '') {
+            return null;
+        }
+        if (! is_numeric($s) || (int) $s != $s || (int) $s < 0 || (int) $s > 1000) {
+            throw new GecersizIslemException('Geçersiz seans sayısı');
+        }
+
+        return (int) $s;
     }
 
     /** İstekteki fiyat (yoksa null); sayı ve negatif olmayan olmalı. */

@@ -143,8 +143,7 @@ class MobilKalemServisi
                 $k->senet_id = null;
                 $k->taksitli_tahsilat_id = null;
                 if (! MobilPaketSeansi::sinirsizDuzenleme($k->exists, $k->sinirsiz, $k->getOriginal('paket_id'), $satisPaketId)) {
-                    $katalog = (int) DB::table('paket_hizmetler')->where('paket_id', $satisPaketId)->sum('seans');
-                    $seans = MobilPaketSeansi::etkin($g['seans_sayisi'] ?? null, $katalog);
+                    $seans = MobilPaketSeansi::etkin($g['seans_sayisi'] ?? null, $this->surum->varsayilanSeans($satisPaketId));
                     $k->seans_sayisi = $seans;
                     $k->kullanilan_seans = 0;
                     $k->bekleyen_seans = $seans;
@@ -312,11 +311,7 @@ class MobilKalemServisi
     /** Eski PaketSurumu kurali: yalniz katalogda olmayip yeni eklenen hizmet salona ait olmali. */
     private function eklenenHizmetlerOlmali(int $paketId, mixed $secilen, int $salonId): void
     {
-        $katalog = DB::table('paket_hizmetler')->where('paket_id', $paketId)->pluck('hizmet_id')->map(fn ($v) => (int) $v)->all();
-        $ekler = array_diff(array_filter(array_map('intval', (array) $secilen)), $katalog);
-        if ($ekler) {
-            $this->sahiplik->hizmetOlmali(array_values($ekler), $salonId);
-        }
+        $this->sahiplik->hizmetOlmali($this->surum->eklenenHizmetler($paketId, (array) $secilen), $salonId);
     }
 
     private function receteUygula(int $salonId, int $hizmetId, int $kalemId, ?int $personelId): void

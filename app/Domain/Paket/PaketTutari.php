@@ -30,4 +30,35 @@ final class PaketTutari
             'seans' => $hizmetSeans > 0 ? $hizmetSeans : (int) $paketSeans,
         ];
     }
+
+    /**
+     * Satista varsayilan seans hakki — BOLGE (hizmet) BASINA. adisyon_paketler.seans_sayisi hizmet basina
+     * kapasitedir (SeansHavuzu); 8+8+8 seanslik 3 bolgeli paket satista 8 hak verir, 24 degil.
+     * Eski web paketfiyatgetir / pkSeansSayisi ve canli Flutter Paket.varsayilanSeans ile ayni:
+     * hizmet seanslarinin en buyugu > 0 ise o, degilse paket duzeyi (paketler.miktar).
+     *
+     * @param  array<int, array{seans?:mixed}>  $hizmetler
+     */
+    public static function satisSeansi(mixed $paketMiktar, array $hizmetler): int
+    {
+        $enBuyuk = $hizmetler ? max(array_map(fn ($h) => (int) ($h['seans'] ?? 0), $hizmetler)) : 0;
+
+        return $enBuyuk > 0 ? $enBuyuk : max(0, (int) $paketMiktar);
+    }
+
+    /**
+     * Liste/secici seans metni: bolgeler esitse tek sayi ("8"), farkliysa "8 / 5 / 3";
+     * hizmet seansi yoksa paket duzeyi.
+     *
+     * @param  array<int, array{seans?:mixed}>  $hizmetler
+     */
+    public static function seansMetni(mixed $paketMiktar, array $hizmetler): string
+    {
+        $seanslar = array_values(array_filter(array_map(fn ($h) => (int) ($h['seans'] ?? 0), $hizmetler), fn ($s) => $s > 0));
+        if (! $seanslar) {
+            return (string) max(0, (int) $paketMiktar);
+        }
+
+        return count(array_unique($seanslar)) === 1 ? (string) $seanslar[0] : implode(' / ', $seanslar);
+    }
 }

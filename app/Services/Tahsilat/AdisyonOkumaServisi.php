@@ -9,6 +9,7 @@ use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Models\Tahsilat;
+use App\Services\Paket\PaketYukseltServisi;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -91,6 +92,8 @@ class AdisyonOkumaServisi
         // KVKK veri minimizasyonu: ham model dokumu YOK. Yalnizca gereken alanlar.
         // Serbest-metin PII (tahsilat.notlar) ve gereksiz kimlik alanlari DONDURULMEZ.
         // Snake_case (Flutter model uyumu) → ileride ekran gecisi drop-in olur.
+        $yukseltmeKaynaklari = PaketYukseltServisi::kaynaklar($paketler->pluck('id')->map(fn ($i) => (int) $i)->all());
+
         return [
             'adisyon' => [
                 'id'       => (int) $adisyon->id,
@@ -136,6 +139,8 @@ class AdisyonOkumaServisi
                 'fiyat'          => $p->fiyat,
                 'indirim_tutari' => $p->indirim_tutari,
                 'hediye'         => (int) ($p->hediye ?? 0),
+                // "Yükseltildi (eski paket)" rozeti; ek alan (Flutter yok sayar). Toplu okuma, satır başı sorgu yok.
+                'yukseltme_kaynak' => $yukseltmeKaynaklari[(int) $p->id] ?? null,
             ])->values(),
             // Odeme listesi: minimal (tutar/yontem/tarih). user_id/olusturan/notlar YOK.
             'tahsilatlar' => $tahsilatlar->map(fn ($t) => [

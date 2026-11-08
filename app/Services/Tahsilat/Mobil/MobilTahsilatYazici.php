@@ -2,24 +2,20 @@
 
 namespace App\Services\Tahsilat\Mobil;
 
-use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\Masraf;
 use App\Models\MasrafKategorisi;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
-use App\Services\Stok\ReceteUygulamaServisi;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Mobil para yazicilarinin ortak satirlari: tahsilat, komisyon cifti, adisyon hizmeti ve paketi. Eski ApiController'da
+ * Mobil para yazicilarinin ortak satirlari: tahsilat, komisyon cifti ve adisyon paketi. Eski ApiController'da
  * her ucta kopyaydi; sonuc satirlari ayni, kod tek.
  */
 class MobilTahsilatYazici
 {
-    public function __construct(private ReceteUygulamaServisi $recete) {}
-
     public function personelId(int $salonId, int $yetkiliId): ?int
     {
         $id = Personeller::where('salon_id', $salonId)->where('yetkili_id', $yetkiliId)->value('id');
@@ -88,34 +84,6 @@ class MobilTahsilatYazici
         }
     }
 
-    /** Eski adisyon_hizmet_ekle: cihaz metni "cihaz-5" ayiklanir, recete varsa sarf dusulur. */
-    public function hizmetEkle(int $salonId, int $adisyonId, array $k): int
-    {
-        $cihaz = $k['cihaz_id'] ?? null;
-        if ($cihaz !== null && str_contains((string) $cihaz, 'cihaz')) {
-            $cihaz = explode('-', (string) $cihaz)[1] ?? null;
-        }
-
-        $h = new AdisyonHizmetler();
-        $h->adisyon_id = $adisyonId;
-        $h->personel_id = $k['personel_id'] ?? null;
-        $h->cihaz_id = $cihaz;
-        $h->geldi = $k['geldi'] ?? false;
-        $h->hizmet_id = $k['hizmet_id'];
-        $h->islem_tarihi = $k['islem_tarihi'] ?? null;
-        $h->islem_saati = $k['islem_saati'] ?? null;
-        $h->sure = $k['sure'] ?? null;
-        $h->randevu_id = $k['randevu_id'] ?? null;
-        $h->fiyat = $k['fiyat'] ?? null;
-        $h->senet_id = $k['senet_id'] ?? null;
-        $h->taksitli_tahsilat_id = $k['taksitli_tahsilat_id'] ?? null;
-        $h->save();
-
-        $this->recete->uygula($salonId, (int) $k['hizmet_id'], 'islem_recete', ($k['randevu_id'] ?? null) ? (int) $k['randevu_id'] : null, ($k['personel_id'] ?? null) ? (int) $k['personel_id'] : null, 'personel');
-
-        return (int) $h->id;
-    }
-
     /** Eski adisyona_paket_ekle. */
     public function paketEkle(int $adisyonId, array $k): int
     {
@@ -128,6 +96,12 @@ class MobilTahsilatYazici
         $p->personel_id = $k['personel_id'] ?? null;
         $p->senet_id = $k['senet_id'] ?? null;
         $p->taksitli_tahsilat_id = null;
+        if (! empty($k['seans_sayisi'])) {
+            $p->seans_sayisi = (int) $k['seans_sayisi'];
+            $p->bekleyen_seans = (int) $k['seans_sayisi'];
+            $p->kullanilan_seans = 0;
+            $p->kullanilmayan_seans = 0;
+        }
         $p->save();
 
         return (int) $p->id;

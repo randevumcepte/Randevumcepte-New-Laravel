@@ -10,6 +10,8 @@
  *   - Elle FİYAT (ekleme + satırda; katalog.fiyat_degistir yetkisine göre açık).
  *   - Hizmette opsiyonel SEANS (2+ → API paket satışı sayar, seansli alanı); üründe ADET
  *     (fiyat birim üzerinden adede yansır, sunucuda).
+ *   - Pakette hizmet çıkar / aramalı ekle, bölge başına seans, sınırsız rozeti ve süre
+ *     (ortak bileşen lib/v2-paket-satis.js; satışa özel kopya sunucuda).
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
  *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
  *   - Tarihler flatpickr (TR) ile seçilir.
@@ -25,6 +27,8 @@ import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=2';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
 import { dersPlani } from '/js/lib/v2-ders.js?v=2';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
+import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi } from '/js/lib/v2-paket-satis.js?v=1';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
 const tablolar = {};
@@ -157,7 +161,7 @@ function kalemlerGoster() {
   const ortak = (x) => ({ id: x.id, fiyat: x.fiyat, indirim: x.indirim_tutari, personel_id: x.personel_id, personel_adi: x.personel_adi });
   const k = [
     ...(v.hizmetler || []).map((h) => ({ ...ortak(h), tip: 'hizmet', ad: h.ad || 'Hizmet #' + h.hizmet_id, seans: h.seans_sayisi, seansli: h.seansli, randevudan: h.randevudan })),
-    ...(v.paketler || []).map((p) => ({ ...ortak(p), tip: 'paket', ad: p.ad || 'Paket #' + p.paket_id })),
+    ...(v.paketler || []).map((p) => ({ ...ortak(p), tip: 'paket', ad: p.ad || 'Paket #' + p.paket_id, yukseltme: p.yukseltme_kaynak })),
     ...(v.urunler || []).map((u) => ({ ...ortak(u), tip: 'urun', ad: u.ad || 'Ürün #' + u.urun_id, adet: u.adet })),
   ];
   yerelTablo('t-kalemler', {
@@ -209,19 +213,25 @@ function miktarHucre(x) {
   return '—';
 }
 
+// Yükseltilmiş paket rozeti (eski 765f3853 / 3ad88e65): "Yükseltildi (Eski Paket)".
+const yukseltmeRozeti = (x) => (x.yukseltme
+  ? ` <span class="t-rozet yukseltme" title="${esc(x.yukseltme.paket_adi)} paketinden yükseltildi"><i class="bi bi-arrow-up"></i> Yükseltildi (${esc(x.yukseltme.paket_adi)})</span>`
+  : '');
+
 function satir(x) {
   return `<tr>
-    <td><span class="t-kalem-ad">${esc(x.ad)}</span></td>
+    <td><span class="t-kalem-ad">${esc(x.ad)}</span>${yukseltmeRozeti(x)}</td>
     <td><span class="t-rozet ${x.seansli ? 'paket' : x.tip}">${turAd(x)}</span></td>
     <td class="rc-orta">${miktarHucre(x)}</td>
     <td>${personelSecim(x)}</td>
     <td class="rc-sag">${fiyatHucre(x.tip, x.id, x.fiyat)}</td>
     <td class="rc-sag">${TL(x.indirim || 0)}</td>
-    <td class="rc-sag"><button class="t-sil" data-tip="${x.tip}" data-id="${x.id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
+    <td class="rc-sag t-islem">${x.tip === 'paket' ? `<button class="t-duzen t-yukselt" data-id="${x.id}" title="Paketi Yükselt"><i class="bi bi-arrow-up"></i></button>` : ''}<button class="t-sil" data-tip="${x.tip}" data-id="${x.id}" title="Kalemi sil"><i class="bi bi-trash"></i></button></td></tr>`;
 }
 
 function kalemOlaylariBagla() {
   document.querySelectorAll('#t-kalemler .t-sil').forEach((b) => (b.onclick = () => kalemSil(b.dataset.tip, b.dataset.id)));
+  document.querySelectorAll('#t-kalemler .t-yukselt').forEach((b) => (b.onclick = () => paketYukselt(parseInt(b.dataset.id, 10))));
   document.querySelectorAll('#t-kalemler .t-kalem-fiyat').forEach((i) => (i.onchange = () => kalemFiyatDegistir(i)));
   document.querySelectorAll('#t-kalemler .t-kalem-personel').forEach((sel) => (sel.onchange = () => kalemPersonelDegistir(sel)));
   document.querySelectorAll('#t-kalemler .t-seans-inp').forEach((i) => (i.onchange = () => seansDegistir(i)));
@@ -234,6 +244,69 @@ function kalemOlaylariBagla() {
       zaman = setTimeout(() => adetDegistir(inp.dataset.id, deger), 600);
     };
   });
+}
+
+/* ───────────── Paketi Yükselt (iki adım: aday seç → fiyat onayla) ───────────── */
+// Satılmış paket yerinde kapsayan pakete dönüşür; seans ve tahsilat kayıtları korunur (sunucu: PaketYukseltServisi).
+// Kalan yalnız gösterimdir; asıl kalan tahsilat özetinden gelir.
+async function paketYukselt(kalemId) {
+  const { ok, govde } = await api('GET', `/kalem/paket/${kalemId}/yukseltme-adaylari`);
+  if (!ok) { mesaj(govde?.mesaj || 'Yükseltme adayları alınamadı', 'hata'); return; }
+  const v = govde.veri;
+  const ozet = `<div class="t-yk-ozet"><b>${esc(v.mevcut_paket_adi)}</b>${studyo() ? '' : ` · ${TL(v.mevcut_fiyat)} · ödenen ${TL(v.mevcut_odenen)}`}</div>`;
+  if (!v.adaylar.length) {
+    modalAc('Paketi Yükselt', `${ozet}<p class="t-yk-bos">Bu paketin tüm hizmetlerini kapsayan ve ek hizmeti olan aktif paket yok.</p>`, '<button type="button" class="rc-btn" data-kapat>Kapat</button>', { ikon: 'arrow-up-circle' });
+    el('#rcModal [data-kapat]').onclick = modalKapat;
+    return;
+  }
+  const seansMetni = (a) => (a.sinirsiz ? `Sınırsız${a.gecerlilik_metni ? ' · ' + esc(a.gecerlilik_metni) : ''}` : `${a.seans_per} seans / bölge`);
+  const ov = modalAc('Paketi Yükselt', `${ozet}
+    <div class="t-yk-liste">${v.adaylar.map((a) => `
+      <label class="t-yk-aday"><input type="radio" name="tYkAday" value="${a.paket_id}">
+        <span><b>${esc(a.paket_adi)}</b>${studyo() ? '' : ` · ${TL(a.fiyat)}`} · ${seansMetni(a)}
+        <small>+ ${a.ek_hizmetler.map((h) => esc(h.hizmet_adi)).join(', ')}</small></span></label>`).join('')}</div>`,
+  '<button type="button" class="rc-btn" data-kapat>Vazgeç</button><button type="button" class="rc-btn rc-btn-birincil" data-ileri disabled>İleri</button>',
+  { ikon: 'arrow-up-circle', sabit: true });
+  el('[data-kapat]', ov).onclick = modalKapat;
+  ov.addEventListener('change', () => { el('[data-ileri]', ov).disabled = !el('input[name="tYkAday"]:checked', ov); });
+  el('[data-ileri]', ov).onclick = () => {
+    const a = v.adaylar.find((x) => String(x.paket_id) === el('input[name="tYkAday"]:checked', ov).value);
+    if (a) paketYukseltOnay(kalemId, v, a);
+  };
+}
+
+function paketYukseltOnay(kalemId, v, a) {
+  const fiyatAcik = !!katalog?.fiyat_degistir && !studyo();
+  const kalanMetni = (f) => TL(Math.max(0, Math.round((Number(f) - v.mevcut_odenen) * 100) / 100));
+  const ov = modalAc('Paketi Yükselt', `
+    <div class="t-yk-ozet"><b>${esc(v.mevcut_paket_adi)}</b> <i class="bi bi-arrow-right"></i> <b>${esc(a.paket_adi)}</b></div>
+    <div class="t-yk-ek"><label>Eklenecek hizmetler</label>
+      <ul>${a.ek_hizmetler.map((h) => `<li>${esc(h.hizmet_adi)}${!a.sinirsiz && h.seans ? ` <small>(${h.seans} seans)</small>` : ''}</li>`).join('')}</ul>
+      <small>${a.sinirsiz ? 'Sınırsız paket' : `Bölge başına ${a.seans_per} seans`} · mevcut seans kayıtları korunur</small></div>
+    ${studyo() ? '' : `<div class="rc-form-izgara">
+      <div class="rc-alan"><label>Yeni Fiyat (₺)</label><input type="number" min="0" step="0.01" id="tYkFiyat" value="${esc(a.fiyat)}" ${fiyatAcik ? '' : 'readonly title="Fiyat değiştirme yetkiniz yok"'}></div>
+      <div class="rc-alan"><label>Önceden Ödenen</label><input readonly value="${esc(TL(v.mevcut_odenen))}"></div>
+      <div class="rc-alan"><label>Kalan</label><input readonly id="tYkKalan" value="${esc(kalanMetni(a.fiyat))}"></div>
+    </div>`}`,
+  '<button type="button" class="rc-btn" data-geri>Geri</button><button type="button" class="rc-btn rc-btn-birincil" data-yukselt><i class="bi bi-arrow-up"></i> Yükselt</button>',
+  { ikon: 'arrow-up-circle', sabit: true });
+  const fiyat = el('#tYkFiyat', ov);
+  if (fiyat) fiyat.oninput = () => { el('#tYkKalan', ov).value = kalanMetni(fiyat.value); };
+  el('[data-geri]', ov).onclick = () => paketYukselt(kalemId);
+  const anahtar = uuid(); // çift tıklama ikinci kez dönüştürmesin
+  const btn = el('[data-yukselt]', ov);
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      const body = { hedef_paket_id: a.paket_id, idempotency_key: anahtar };
+      if (fiyat && fiyatAcik && fiyat.value !== '') body.fiyat = Number(fiyat.value);
+      const r = await api('POST', `/kalem/paket/${kalemId}/yukselt`, { body });
+      if (!r.ok) { mesaj(r.govde?.mesaj || 'Paket yükseltilemedi', 'hata'); return; }
+      modalKapat();
+      mesaj(r.govde?.mesaj || 'Paket yükseltildi.', 'ok');
+      await adisyonYukle();
+    } finally { btn.disabled = false; }
+  };
 }
 
 /* ───────────── Yapılan tahsilatlar (tür + düzenle/sil) ───────────── */
@@ -294,6 +367,7 @@ function ekleAc(tip) {
   el('#t-ekle-tip').value = tip;
   el('#t-ekle-adet').value = 1;
   katalogDoldur(tip);
+  el('#t-ekle-paket').hidden = tip !== 'paket';
   el('#t-ekle-adet-kutu').style.display = tip === 'urun' ? '' : 'none';
   el('#t-ekle-seans').style.display = tip === 'hizmet' ? '' : 'none';
   el('#t-ekle-seans').value = '';
@@ -317,6 +391,17 @@ function ekleFiyatOner() {
   const adet = el('#t-ekle-tip').value === 'urun' ? (parseInt(el('#t-ekle-adet').value, 10) || 1) : 1;
   el('#t-ekle-fiyat').value = op ? Math.round((Number(op.dataset.fiyat) || 0) * adet * 100) / 100 : '';
   ekleSonAdet = adet;
+  paketKalemiCiz();
+}
+
+// Paket: seçilen paketin hizmetleri (çıkar / aramalı ekle), bölge başına seans ya da sınırsız rozeti, süre.
+// Ortak bileşen (Paket Yönetimi ile aynı); fiyat bu paneldeki #t-ekle-fiyat alanında.
+const katalogPaketi = (id) => (katalog?.paketler || []).find((p) => String(p.paket_id) === String(id));
+function paketKalemiCiz() {
+  const kap = el('#t-ekle-paket');
+  if (!kap) return;
+  const p = el('#t-ekle-tip').value === 'paket' ? katalogPaketi(el('#t-ekle-katalog').value) : null;
+  kap.innerHTML = p ? paketSatisKalemi(p, { fiyat: false }) : '';
 }
 
 // Adet değişince fiyat, alandaki (elle girilmiş olabilir) birim üzerinden yansır.
@@ -336,6 +421,12 @@ async function kalemEkle() {
   const body = { tip, katalog_id: katalogId };
   if (tip === 'urun') body.adet = parseInt(el('#t-ekle-adet').value || '1', 10);
   if (tip === 'hizmet' && el('#t-ekle-seans').value !== '') body.seans = parseInt(el('#t-ekle-seans').value, 10);
+  const paketKalemi = tip === 'paket' ? el('#t-ekle-paket .pk-satis-kalem') : null;
+  if (paketKalemi) {
+    const g = paketSatisGirdisi(paketKalemi, { fiyat: false });
+    body.hizmetler = g.hizmetler;
+    if (g.seans !== null) body.seans = g.seans;
+  }
   if (katalog.fiyat_degistir && el('#t-ekle-fiyat').value !== '') body.fiyat = Number(el('#t-ekle-fiyat').value);
   const personelId = parseInt(el('#t-ekle-personel').value, 10);
   if (personelId) body.personel_id = personelId;
@@ -611,6 +702,7 @@ function iskelet() {
               <button id="t-ekle-btn" class="t-mini mor">Ekle</button>
               <button id="t-ekle-iptal" class="t-mini" style="background:#8a90ad">Vazgeç</button>
             </div>
+            <div id="t-ekle-paket" class="t-ekle-paket" hidden></div>
           </div>
           <div class="t-kart-govde" id="t-kalemler"></div>
         </section>
@@ -682,6 +774,7 @@ function iskelet() {
   el('#t-ekle-katalog').onchange = ekleFiyatOner;
   el('#t-ekle-adet').oninput = ekleAdetDegisti;
   el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };
+  paketSatisBagla(el('#t-ekle-paket'), { paketBul: katalogPaketi, hizmetler: () => katalog?.hizmetler, fiyatAlani: () => el('#t-ekle-fiyat') });
   document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
   el('#t-alacak-ac').onclick = alacakFormAc;
   el('#t-alacak-kaydet').onclick = alacakKaydet;

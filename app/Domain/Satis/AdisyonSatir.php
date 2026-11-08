@@ -112,8 +112,10 @@ class AdisyonSatir
             $adPer = (string) ($p['personel_adi'] ?? '');
             $seansAdet = (int) ($p['seans_sayisi'] ?? 0);
             $seansEt = ! empty($p['sinirsiz']) ? '(Sınırsız) ' : ($seansAdet > 0 ? '('.$seansAdet.' Seans) ' : '');
-            $icerik .= (string) ($p['ad'] ?? '').' (P) '.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
-            $icerikKisa .= (string) ($p['ad'] ?? '').(! empty($p['personel_id']) ? ' ('.trim($adPer).')' : '').' (P) '.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
+            // Yukseltilmis paket: "⬆ Yükseltildi (Eski Paket) " — duz metin (istemci esc yapar); mobil girdide alan yok.
+            $yukseltme = ! empty($p['yukseltme_kaynak_adi']) ? '⬆ Yükseltildi ('.$p['yukseltme_kaynak_adi'].') ' : '';
+            $icerik .= (string) ($p['ad'] ?? '').' (P) '.$yukseltme.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
+            $icerikKisa .= (string) ($p['ad'] ?? '').(! empty($p['personel_id']) ? ' ('.trim($adPer).')' : '').' (P) '.$yukseltme.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $personelStr .= $adPer.' ';
         }
 

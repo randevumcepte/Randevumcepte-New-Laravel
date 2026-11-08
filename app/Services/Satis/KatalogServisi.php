@@ -34,12 +34,20 @@ class KatalogServisi
                 'stok'    => $r->stok,
             ])->all();
 
-        // Etkin fiyat/seans tek kuraldan (PaketTutari) — SQL'de tekrar yazilmaz.
+        // Etkin fiyat ve bolge basina satis seansi tek kuraldan (PaketTutari) — SQL'de tekrar yazilmaz.
+        // Paket satis bileseni (v2-paket-satis.js) icin sinirsiz/gecerlilik, sure (dk) ve hizmetler de gider.
+        $sureler = array_column($hizmetler, 'sure', 'hizmet_id');
         $paketler = array_map(fn (array $p) => [
-            'paket_id' => $p['id'],
-            'ad'       => trim($p['paket_adi']),
-            'fiyat'    => $p['fiyat'],
-            'seans'    => $p['miktar'],
+            'paket_id'         => $p['id'],
+            'ad'               => trim($p['paket_adi']),
+            'fiyat'            => $p['fiyat'],
+            'seans'            => $p['satis_seans'],
+            'satis_seans'      => $p['satis_seans'],
+            'sinirsiz'         => $p['sinirsiz'],
+            'gecerlilik_metni' => $p['gecerlilik_metni'],
+            'gunluk_limit'     => $p['gunluk_limit'],
+            'sure'             => $p['sure'] ?? (array_sum(array_map(fn ($h) => (int) ($sureler[$h['hizmet_id']] ?? 0), $p['hizmetler'])) ?: null), // paket suresi, yoksa hizmet sureleri
+            'hizmetler'        => array_map(fn ($h) => ['hizmet_id' => $h['hizmet_id'], 'hizmet_adi' => $h['hizmet_adi'], 'seans' => $h['seans'], 'fiyat' => $h['fiyat']], $p['hizmetler']),
         ], $this->paketler->listele($salonId, ['sirala' => 'paket_adi', 'yon' => 'asc'], true)['data']);
 
         return [

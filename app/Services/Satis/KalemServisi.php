@@ -12,8 +12,10 @@ use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
 use App\Services\Paket\PaketSorgusu;
+use App\Services\Paket\PaketSurumu;
 use App\Services\Stok\ReceteUygulamaServisi;
 use App\Services\Stok\StokHareketServisi;
+use App\Services\Yetki\SalonSahipligi;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -44,6 +46,8 @@ class KalemServisi
         private PaketSorgusu $paketler,
         private StokHareketServisi $stok,
         private ReceteUygulamaServisi $recete,
+        private PaketSurumu $surum,
+        private SalonSahipligi $sahiplik,
     ) {}
 
     /**
@@ -143,14 +147,19 @@ class KalemServisi
                 $this->stokHareketi($salonId, $u, $adet, HareketTipi::Satis, 'adisyon_urun', (int) $k->id,
                     $opt + ['birim_satis_fiyati' => round((float) $k->fiyat / $adet, 2)]);
             } elseif ($tip === 'paket') {
-                // Etkin katalog fiyat/seansi (PaketTutari); paket bu salonun aktif paketi olmali.
-                // fiyat/seans opt'ta verilirse (Paket Yonetimi satisi) o kullanilir — yetki cagri yerinde.
+                // Etkin katalog fiyati + bolge basina varsayilan seans (PaketTutari); paket bu salonun aktif paketi olmali.
+                // fiyat/seans opt'ta verilirse o kullanilir — fiyat yetkisi cagri yerinde (katalogFiyati ile).
+                // opt['hizmetler']: satista secilen hizmetler; katalogdan farkliysa kalem o satisa ozel pasif kopyaya
+                // baglanir (PaketSurumu) — Paket Yonetimi, Yeni Satis ve Adisyon Detayi AYNI yol.
                 $katalog = $this->paketler->satisTutari($katalogId, $salonId);
-                $fiyat = $opt['fiyat'] ?? $katalog['fiyat'];
-                $seans = $opt['seans'] ?? $katalog['seans'];
+                $hizmetler = self::hizmetSecimi($opt['hizmetler'] ?? null);
+                $this->sahiplik->hizmetOlmali($this->surum->eklenenHizmetler($katalogId, $hizmetler), $salonId);
+                $fiyat = $opt['fiyat'] ?? $this->paketFiyati($katalogId, $salonId, $hizmetler, $katalog['fiyat']);
+                $satisPaketId = $this->surum->satisPaketi($katalogId, $hizmetler);
+                $seans = isset($opt['seans']) && $opt['seans'] !== '' ? max(0, (int) $opt['seans']) : $this->surum->varsayilanSeans($satisPaketId);
                 $k = new AdisyonPaketler();
                 $k->adisyon_id = $adisyonId;
-                $k->paket_id = $katalogId;
+                $k->paket_id = $satisPaketId; // saving kancasi sinirsiz/sure alanlarini kopyalar
                 $k->personel_id = $personelId;
                 $k->fiyat = $fiyat;
                 $k->seans_sayisi = $seans;
@@ -227,15 +236,34 @@ class KalemServisi
         });
     }
 
-    /** Katalog fiyatı (ürün: birim × adet) — "katalogdan farklı fiyat" yetki kararı için tek kaynak. */
-    public function katalogFiyati(string $tip, int $katalogId, int $salonId, int $adet = 1): float
+    /**
+     * Katalog fiyatı (ürün: birim × adet; paket: seçilen hizmetlere göre) — "katalogdan farklı fiyat"
+     * yetki kararı için tek kaynak.
+     *
+     * @param  array<int,int|string>|null  $hizmetler  paket satışında seçilen hizmetler (boş = katalog listesi)
+     */
+    public function katalogFiyati(string $tip, int $katalogId, int $salonId, int $adet = 1, ?array $hizmetler = null): float
     {
         return round(match ($tip) {
             'hizmet' => (float) DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $katalogId)->max('baslangic_fiyat'),
             'urun'   => (float) DB::table('urunler')->where('id', $katalogId)->where('salon_id', $salonId)->value('fiyat') * max(1, $adet),
-            'paket'  => (float) $this->paketler->satisTutari($katalogId, $salonId)['fiyat'],
+            'paket'  => $this->paketFiyati($katalogId, $salonId, self::hizmetSecimi($hizmetler), $this->paketler->satisTutari($katalogId, $salonId)['fiyat']),
             default  => 0.0,
         }, 2);
+    }
+
+    /** Paket satış fiyatı: hizmet seçimi varsa seçime göre (hizmet bazlı fiyat yoksa null → katalog), yoksa katalog. */
+    private function paketFiyati(int $paketId, int $salonId, ?array $hizmetler, float $katalogFiyat): float
+    {
+        return ($hizmetler ? $this->surum->secimFiyati($paketId, $salonId, $hizmetler) : null) ?? $katalogFiyat;
+    }
+
+    /** @return int[]|null  boş seçim null (katalog listesi) */
+    private static function hizmetSecimi(mixed $hizmetler): ?array
+    {
+        $idler = array_values(array_unique(array_filter(array_map('intval', is_array($hizmetler) ? $hizmetler : []))));
+
+        return $idler ?: null;
     }
 
     /**
@@ -318,8 +346,8 @@ class KalemServisi
         return ['tip' => $tip, 'kalem_id' => $kalemId, 'personel_id' => $personelId, 'adisyon_id' => (int) $k->adisyon_id];
     }
 
-    /** İndirim düşülmüş yeni net, kaleme tahsil edilenin altına inemez (fiyat + adet ortak kuralı). */
-    private function tahsilAltSiniri($k, string $tahTablo, string $tahFk, float $yeniFiyat): void
+    /** İndirim düşülmüş yeni net, kaleme tahsil edilenin altına inemez (fiyat + adet + paket yükseltme ortak kuralı). */
+    public function tahsilAltSiniri($k, string $tahTablo, string $tahFk, float $yeniFiyat): void
     {
         $tahsil = (float) DB::table($tahTablo)->where($tahFk, $k->id)->sum('tutar');
         if (round($yeniFiyat - (float) ($k->indirim_tutari ?? 0), 2) < round($tahsil, 2)) {

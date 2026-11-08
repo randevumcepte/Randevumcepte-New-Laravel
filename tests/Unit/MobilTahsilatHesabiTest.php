@@ -143,18 +143,17 @@ class MobilTahsilatHesabiTest extends TestCase
         $this->assertSame(200.0, H::paketSatisFiyati(0, 200, ''));
         $this->assertSame(250.0, H::urunSatisFiyati(100, 3, '250'));
         $this->assertSame(300.0, H::urunSatisFiyati(100, 3, null));
-        $this->assertSame(8, H::paketSeansSayisi('', 8, 3));
-        $this->assertSame(3, H::paketSeansSayisi('', 0, 3));
-        $this->assertSame(5, H::paketSeansSayisi('5', 8, 3));
+        // Bos giriste bolge basina hak (8+8+8 → 8, toplam 24 degil); hizmet seansi yoksa paket miktari.
+        $this->assertSame(8, H::paketSeansSayisi('', [['seans' => 8], ['seans' => 8], ['seans' => 8]], 24));
+        $this->assertSame(8, H::paketSeansSayisi('', [['seans' => 8], ['seans' => 5]], 13));
+        $this->assertSame(3, H::paketSeansSayisi('', [['seans' => 0]], 3));
+        $this->assertSame(5, H::paketSeansSayisi('5', [['seans' => 8]], 3));
+        // Sinirsiz pakette seans satiri onceden acilmaz (eskide miktar = tavan, ornek 366 satir).
+        $this->assertSame(0, H::paketSeansSayisi('', [['seans' => 0]], 366, true));
+        $this->assertSame(0, H::paketSeansSayisi('10', [['seans' => 0]], 366, true));
+        $this->assertSame([], H::seansTarihleri('2026-01-01', H::paketSeansSayisi('', [], 366, true), 7));
         $this->assertNull(H::hizmetSeansSayisi('1'));
         $this->assertSame(4, H::hizmetSeansSayisi('4'));
-    }
-
-    public function test_kapali_adisyon(): void
-    {
-        $this->assertFalse(H::tamamenOdenmisMi(0.0, 0.0));
-        $this->assertTrue(H::tamamenOdenmisMi(100.0, 99.999));
-        $this->assertFalse(H::tamamenOdenmisMi(100.0, 99.99));
     }
 
     public function test_kalem_ozeti_ve_alacak_basligi(): void

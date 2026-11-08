@@ -4,6 +4,8 @@ namespace App\Services\OnGorusme;
 
 use App\Domain\OnGorusme\GorusmeDurumu;
 use App\Exceptions\BulunamadiException;
+use App\Models\Paketler;
+use App\Services\Paket\PaketSunumu;
 use App\Services\Musteri\PortfoyKapsami;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ListeIstegi;
@@ -31,7 +33,7 @@ class OnGorusmeSorgusu
         'og.id', 'og.user_id', 'og.ad_soyad', 'og.cep_telefon', 'og.email', 'og.cinsiyet', 'og.adres', 'og.meslek',
         'og.il_id', 'og.aciklama', 'og.musteri_tipi', 'og.hatirlatma_tarihi', 'og.on_gorusme_saati', 'og.durum',
         'og.satisyapilmadi_not', 'og.paket_id', 'og.urun_id', 'og.hizmet_id', 'og.personel_id', 'og.created_at',
-        'sp.personel_adi', 'p.paket_adi', 'ur.urun_adi', 'h.hizmet_adi', 'mu.name as musteri_adi',
+        'sp.personel_adi', 'p.paket_adi', 'ur.urun_adi', 'ur.fiyat as urun_fiyat', 'h.hizmet_adi', 'mu.name as musteri_adi',
     ];
 
     public function __construct(
@@ -147,7 +149,10 @@ class OnGorusmeSorgusu
             ->get(['r.on_gorusme_id', 'r.id', 'r.tarih', 'r.saat', 'rh.oda_id'])
             ->keyBy('on_gorusme_id'); // birden çok (eski veri) → son randevu
 
-        return $satirlar->map(function ($r) use ($randevular, $ctx) {
+        $paketler = $this->paketOzetleri($satirlar->pluck('paket_id')->filter()->unique()->all());
+
+        return $satirlar->map(function ($r) use ($randevular, $ctx, $paketler) {
+            $r->paket_ozeti = $r->paket_id ? ($paketler[(int) $r->paket_id] ?? null) : null;
             $rv = $randevular[$r->id] ?? null;
             $r->randevu_id = $rv?->id;
             $r->randevu_tarih = $rv?->tarih;
@@ -156,5 +161,33 @@ class OnGorusmeSorgusu
 
             return OnGorusmeSunumu::satir($r, $ctx);
         })->values()->all();
+    }
+
+    /**
+     * Sayfadaki paketlerin satis varsayilanlari (tek sorgu, satir basina yok). Mobil on gorusme satis penceresi
+     * fiyat / seans (bolge basina) / sinirsiz / seans araligini buradan okur (eski ongorusmegetir $with['paket']).
+     * Web bu alanlari yok sayar.
+     *
+     * @param  int[]  $paketIdler
+     * @return array<int,array<string,mixed>>
+     */
+    private function paketOzetleri(array $paketIdler): array
+    {
+        if (! $paketIdler) {
+            return [];
+        }
+
+        return Paketler::with('hizmetler.hizmet')->whereIn('id', $paketIdler)->get()
+            ->mapWithKeys(function (Paketler $p) {
+                $s = PaketSunumu::paket($p);
+
+                return [(int) $p->id => [
+                    'fiyat' => $s['fiyat'], 'miktar' => $s['miktar'], 'satis_seans' => $s['satis_seans'],
+                    'seans_araligi' => $p->seans_araligi !== null && $p->seans_araligi !== '' ? (int) $p->seans_araligi : null,
+                    'sinirsiz' => $s['sinirsiz'], 'gecerlilik_sayi' => $s['gecerlilik_sayi'], 'gecerlilik_birim' => $s['gecerlilik_birim'],
+                    'gecerlilik_metni' => $s['gecerlilik_metni'], 'gunluk_limit' => $s['gunluk_limit'],
+                    'hizmetler' => array_map(fn ($h) => ['hizmet_id' => $h['hizmet_id'], 'hizmet_adi' => $h['hizmet_adi'], 'seans' => $h['seans'], 'fiyat' => $h['fiyat']], $s['hizmetler']),
+                ]];
+            })->all();
     }
 }
