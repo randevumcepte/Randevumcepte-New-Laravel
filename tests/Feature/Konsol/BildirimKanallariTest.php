@@ -232,4 +232,75 @@ class BildirimKanallariTest extends TestCase
 
         Http::assertSentCount(2);
     }
+
+    public function test_rapor_alinamazsa_yeniden_denenmez_sms_bir_kez_gider(): void
+    {
+        Http::fake([
+            'efetech.test/gonder' => Http::response(['response' => ['message' => ['id' => 77, 'count' => 1, 'total_price' => 1.5]]]),
+            'efetech.test/rapor'  => Http::response(['response' => []]),
+        ]);
+
+        $this->sms()->apiBildirimli($this->mesajlar(), false, 1, false, $this->salon());
+
+        Http::assertSentCount(2);
+        $this->assertSame(0, DB::table('sms_iletim_raporlari')->count());
+    }
+
+    public function test_efetech_zaman_asimi_gitmis_olabilir_yeniden_denenmez(): void
+    {
+        Http::fake(['efetech.test/gonder' => Http::failedConnection('cURL error 28: Operation timed out')]);
+
+        $this->assertSame('', $this->sms()->apiBildirimli($this->mesajlar(), false, 1, false, $this->salon()));
+    }
+
+    public function test_kara_liste_5_ile_baslayan_kayitli_numarayi_da_bulur(): void
+    {
+        Http::fake();
+        $salonId = $this->salon();
+        $userId = (int) DB::table('users')->insertGetId(['cep_telefon' => '5321234567']);
+        DB::table('musteri_portfoy')->insert(['user_id' => $userId, 'salon_id' => $salonId, 'kara_liste' => 1]);
+
+        $this->assertNull($this->sms()->gonder2([['to' => '905321234567', 'message' => 'randevu']], false, 1, false, $salonId));
+
+        Http::assertNothingSent();
+    }
+
+    public function test_iletim_raporunda_sifre_maskelenir_giden_mesaj_degismez(): void
+    {
+        $this->efetechBasarili();
+
+        $this->sms()->apiBildirimli([['to' => self::TEL, 'message' => 'Şifreniz:aB3xY']], false, 1, false, $this->salon());
+
+        Http::assertSent(fn (Request $r) => str_contains($r->url(), 'efetech.test/gonder') && $r['messages'][0]['message'] === 'Şifreniz:aB3xY');
+        $this->assertSame('Şifreniz:*****\n', DB::table('sms_iletim_raporlari')->value('aciklama'));
+    }
+
+    public function test_whatsapp_istisnasi_yalniz_o_mesaji_smse_dusurur(): void
+    {
+        $m = fn (string $to) => ['to' => $to, 'message' => 'x'];
+
+        $kalan = app(\App\Services\BildirimKuyrugu\Kanal\WhatsappKanali::class)->gonderilemeyenler([$m('1'), $m('2'), $m('3'), ['to' => '', 'message' => 'x']],
+            fn (array $mesaj) => match ($mesaj['to']) {
+                '1'     => ['ok' => true],
+                '2'     => throw new RuntimeException('kopru'),
+                default => ['ok' => false],
+            }, 'test');
+
+        $this->assertSame(['2', '3', ''], array_column($kalan, 'to'));
+    }
+
+    public function test_sonuclanmis_whatsapp_kaydinda_ve_raporda_sifre_maskelenir(): void
+    {
+        $eski = now()->subMinutes(20);
+        $bekleyen = DB::table('whatsapp_gonderim_loglari')->insertGetId(['mesaj' => 'şifreniz : AB12CD', 'durum' => 0, 'created_at' => $eski, 'updated_at' => $eski]);
+        $sonuclanan = DB::table('whatsapp_gonderim_loglari')->insertGetId(['mesaj' => 'şifreniz : AB12CD', 'durum' => 1, 'created_at' => $eski, 'updated_at' => $eski]);
+        $yeni = DB::table('whatsapp_gonderim_loglari')->insertGetId(['mesaj' => 'şifreniz : AB12CD', 'durum' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $rapor = DB::table('sms_iletim_raporlari')->insertGetId(['aciklama' => 'Şifreniz:aB3xY', 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->artisan('v2:sifre-maskele')->assertSuccessful();
+
+        $wa = fn ($id) => DB::table('whatsapp_gonderim_loglari')->where('id', $id)->value('mesaj');
+        $this->assertSame(['şifreniz : AB12CD', 'şifreniz : *****', 'şifreniz : AB12CD'], [$wa($bekleyen), $wa($sonuclanan), $wa($yeni)]);
+        $this->assertSame('Şifreniz:*****', DB::table('sms_iletim_raporlari')->where('id', $rapor)->value('aciklama'));
+    }
 }

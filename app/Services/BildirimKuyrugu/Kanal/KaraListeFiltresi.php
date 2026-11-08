@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Schema;
  * Merkezi kara liste suzgeci; eski KaraListeServisi ile birebir. musteri_portfoy.kara_liste=1 olan musteriye SMS, WhatsApp
  * ve push gitmez; musterinin kendi aksiyonu olan guvenlik mesajlari muaftir. Hata olursa engellemez (fail-open).
  *
- * Eskiden gelen ve KORUNAN hata: telefondan aramada ltrim($norm, '9') '905...' icin '05...' uretir; kanonik '5XXXXXXXXX'
- * kayitlari eslesmez. user_id verilmeyen mesajlarda kanonik numarali kara liste musterisi suzulmez.
+ * Telefondan aramada kayitta gecen uc bicim de aranir: 905..., 05..., 5... Eski kod (ltrim '9') yalniz '05...' bicimini
+ * buluyordu; '5XXXXXXXXX' kayitli kara liste musterisine user_id'siz giden mesaj (randevu, ders, form) suzulmuyordu.
  */
 class KaraListeFiltresi
 {
@@ -65,8 +65,7 @@ class KaraListeFiltresi
             if ($norm === null) {
                 return false;
             }
-            $userIds = DB::table('users')->where(fn ($q) => $q->where('cep_telefon', $norm)->orWhere('cep_telefon', ltrim($norm, '9')))
-                ->pluck('id')->all();
+            $userIds = DB::table('users')->whereIn('cep_telefon', self::bicimler($norm))->pluck('id')->all();
 
             return $userIds ? self::portfoyKara($salonId, $userIds) : false;
         } catch (\Throwable $e) {
@@ -149,8 +148,8 @@ class KaraListeFiltresi
         if (! $telefonlar) {
             return [];
         }
-        $onekisiz = array_values(array_filter(array_map(fn ($t) => ltrim($t, '9'), $telefonlar)));
-        $satirlar = DB::table('users')->whereIn('cep_telefon', array_merge($telefonlar, $onekisiz))->get(['id', 'cep_telefon']);
+        $bicimler = array_values(array_unique(array_merge(...array_map(fn ($t) => self::bicimler($t), $telefonlar))));
+        $satirlar = DB::table('users')->whereIn('cep_telefon', $bicimler)->get(['id', 'cep_telefon']);
 
         $harita = [];
         foreach ($satirlar as $u) {
@@ -161,6 +160,14 @@ class KaraListeFiltresi
         }
 
         return $harita;
+    }
+
+    /** @return list<string> normalize numaranin kayitta gecebilecek bicimleri: 905..., 05..., 5... */
+    private static function bicimler(string $norm): array
+    {
+        $yerel = str_starts_with($norm, '90') ? substr($norm, 2) : $norm;
+
+        return array_values(array_unique([$norm, '0'.$yerel, $yerel]));
     }
 
     private static function mesajEngelli(array $m, array $karaKume, array $telUserIdleri): bool

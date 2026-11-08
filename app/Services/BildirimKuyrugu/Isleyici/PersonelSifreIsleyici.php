@@ -15,7 +15,8 @@ use RuntimeException;
  * Korunan hesapta (config oturum.korunan_hesaplar.isletme) sifre sabit kalir, mesaj gitmez. Yetkili satiri yoksa eskide 422
  * donulurdu: outbox'ta normal donus, kayit durum=1 olur.
  *
- * Eskiden gelen ve KORUNAN hata: acik sifre salon_personelleri.sifre kolonuna yazilir. Yeniden denemede sifre yeniden uretilir.
+ * Eskiden farkli: acik sifre salon_personelleri.sifre kolonuna yazilmaz, kolon bosaltilir (okuyan kod yok; giris
+ * isletmeyetkilileri.password ile). WhatsApp'tan giden mesaj SMS olarak tekrar gitmez.
  */
 class PersonelSifreIsleyici extends PersonelTabanliIsleyici
 {
@@ -51,18 +52,19 @@ class PersonelSifreIsleyici extends PersonelTabanliIsleyici
                 : 'Sayın '.$yetkili->name.'. Randevumcepte yeni şifreniz : '.$kod.' olarak güncellenmiştir.',
         ]];
 
-        if (! $this->sifreWhatsapp->gonder($personel->salon_id, $mesajlar, $yetkili->id)) {
-            $this->sms->gonder2($mesajlar, false, 1, false, $personel->salon_id, true);
+        $kalan = $this->sifreWhatsapp->gonder($personel->salon_id, $mesajlar, $yetkili->id);
+        if ($kalan) {
+            $this->sms->gonder2($kalan, false, 1, false, $personel->salon_id, true);
         }
 
         $this->aktiviteYaz($personel);
     }
 
-    /** Sifre once kaydedilir, sonra gonderilir (eski sira). Eski model kaydi updated_at'i da gunceller. */
+    /** Sifre once kaydedilir, sonra gonderilir (eski sira). Eski model kaydi updated_at'i da gunceller; acik sifre saklanmaz. */
     private function sifreYaz(Personeller $personel, int $yetkiliId, string $sifre): void
     {
         DB::table('isletmeyetkilileri')->where('id', $yetkiliId)->update(['password' => Hash::make($sifre), 'updated_at' => now()]);
-        $personel->sifre = $sifre;
+        $personel->sifre = null;
         $personel->save();
     }
 

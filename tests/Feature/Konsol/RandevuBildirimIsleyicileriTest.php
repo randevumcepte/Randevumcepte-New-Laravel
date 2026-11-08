@@ -245,7 +245,7 @@ class RandevuBildirimIsleyicileriTest extends TestCase
         $this->isle(RandevuOnayIsleyici::class);
 
         $musteri = 'Salon A için oluşturduğunuz 19.05.2099 10:00 tarihli randevu talebiniz onaylanmıştır. Randevunuza 15 dk önce gelmenizi rica ederiz. Detaylı bilgi için bize ulaşın. 02321112233';
-        $personel = 'Ayse Kaya isimli müşterinin yarın 10:30 saatli Cilt Bakimi randevusu Veli Yetkili tarafından onaylanmıştır.';
+        $personel = 'Ayse Kaya isimli müşterinin 19 Mayıs Salı günü saat 10:30 Cilt Bakimi randevusu Veli Yetkili tarafından onaylanmıştır.';
         $this->assertSame([], $this->whatsapplar());
         $this->assertSame([['to' => self::MUSTERI_TEL, 'message' => $musteri], ['to' => self::PERSONEL_TEL, 'message' => $personel]], $this->smsler());
         $this->assertSame(['Randevu Onaylandı', 'Randevunuz Onaylandı'], $this->pushBasliklari());
@@ -343,7 +343,7 @@ class RandevuBildirimIsleyicileriTest extends TestCase
         ];
     }
 
-    public function test_kayit_salon_olusturdu_sms_metni_cift_nokta_korunur_push(): void
+    public function test_kayit_salon_olusturdu_personel_metni_personele_hitap_eder_push(): void
     {
         $this->saglayicilar();
         $this->ayar(12);
@@ -352,7 +352,7 @@ class RandevuBildirimIsleyicileriTest extends TestCase
 
         $sms = $this->smsler();
         $this->assertSame('Salon A tarafından 19.05.2099 10:00 olarak randevunuz oluşturulmuştur. Randevunuza 15 dk önce gelmenizi rica ederiz. Detaylı bilgi için bize ulaşın. 02321112233', $sms[0]['message']);
-        $this->assertSame('Ayse Kaya isimli müşterinin 19.05.2099 - 10:30 Cilt Bakimi randevusu Veli Yetkili tarafından randevunuz oluşturulmuştur..', $sms[1]['message']);
+        $this->assertSame('Ayse Kaya isimli müşterinin 19.05.2099 - 10:30 Cilt Bakimi randevusu Veli Yetkili tarafından oluşturulmuştur.', $sms[1]['message']);
         $this->assertSame(self::PERSONEL_TEL, $sms[1]['to']);
         $this->assertSame(['Sizin için randevu oluşturuldu'], $this->pushBasliklari());
         $this->assertSame(2, DB::table('bildirimler')->whereNull('baslik')->count());

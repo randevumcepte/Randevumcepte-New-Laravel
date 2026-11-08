@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // v2 bildirim kuyrugu: varsayilan KAPALI (config/bildirim_kuyrugu.php). Zamanlama eskiyle ayni.
 Schedule::command('v2:bildirim-isle')->withoutOverlapping()->everyMinute()
     ->when(fn () => (bool) config('bildirim_kuyrugu.isleyici_aktif'));
+
+// Mesaj kayitlarindaki acik sifreler (KVKK); bayraktan bagimsiz.
+Schedule::command('v2:sifre-maskele')->withoutOverlapping()->hourly();

@@ -2,6 +2,7 @@
 
 namespace App\Services\BildirimKuyrugu\Kanal;
 
+use App\Domain\Bildirim\SifreMaskesi;
 use App\Domain\Sms\SmsSaglayici;
 use App\Domain\Sms\SmsTuru;
 use App\Services\Sms\SmsHesapServisi;
@@ -20,8 +21,9 @@ use RuntimeException;
  *
  * $mesajlar: [['to'=>..., 'message'=>..., 'user_id'?, 'randevu_id'?, 'wa_message'?, 'urgent'?, 'gonderim_tipi'?], ...]
  *
- * Istisna kurali eskiyle ayni: Efetech bos/gecersiz cevap verirse ya da rapor alinamazsa hata firlar (eskide null dizi erisimi);
- * outbox yeniden dener. Bu yuzden gitmis SMS rapor adiminda dusup yeniden gidebilir. Eski hata olarak KORUNUR.
+ * Mukerrer korumasi: saglayici mesaji kabul etmediyse (ulasilamadi, gecersiz cevap) hata firlar, outbox yeniden dener. Kabul
+ * ettiyse ya da zaman asimiyla gitmis olabilirse sonraki adimlarin (rapor, kayit) hatasi yutulur: eskide burada da firlardi ve
+ * ayni SMS en cok 3 kez gidiyordu. Iletim raporuna yazilan metinde sifre maskelenir (SifreMaskesi).
  */
 class SmsKanali
 {
@@ -61,16 +63,21 @@ class SmsKanali
 
         $sistemAyari = (array) config('bildirim_kuyrugu.sistem_sms');
         $cevap = $sistem
-            ? $this->efetech->gonder((string) ($sistemAyari['apikey'] ?? ''), $sistemAyari['baslik'] ?? null, $mesajlar)
-            : $this->efetech->gonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar);
+            ? $this->efetechGonder((string) ($sistemAyari['apikey'] ?? ''), $sistemAyari['baslik'] ?? null, $mesajlar, $salonId)
+            : $this->efetechGonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar, $salonId);
+        if ($cevap === null) {
+            return null;
+        }
         Log::info('[SMS-API] efetech yanit', ['salon_id' => $salonId, 'response_id' => $cevap['response']['message']['id'] ?? null]);
 
         if (! $sistem) {
-            if (isset($cevap['response']) && $this->efetechCevabiDolu($cevap)) {
-                $mesaj = $this->efetechMesaji($cevap);
-                sleep(1);
-                $this->efetech->rapor($salon, $mesaj['id']); // Eskide de sonucu kullanilmaz, durum 0 yazilir.
-                $this->raporYaz($salonId, 1, (string) $mesajlar[0]['message'], $mesaj, 0);
+            if ($this->efetechCevabiDolu($cevap)) {
+                $this->kabulSonrasi($salonId, function () use ($cevap, $salon, $salonId, $mesajlar) {
+                    $mesaj = $this->efetechMesaji($cevap);
+                    sleep(1);
+                    $this->efetech->rapor($salon, $mesaj['id']); // Eskide de sonucu kullanilmaz, durum 0 yazilir.
+                    $this->raporYaz($salonId, 1, (string) $mesajlar[0]['message'], $mesaj, 0);
+                });
             } else {
                 Log::warning('[SMS-API] efetech response bos veya hatali — rapor yazilmadi', ['salon_id' => $salonId]);
             }
@@ -137,32 +144,26 @@ class SmsKanali
 
         $salon = $this->whatsapp->salon($salonId) ?? throw new RuntimeException('Salon bulunamadi: '.$salonId);
 
+        try {
+            $bagli = $this->whatsapp->bagliMi($this->whatsapp->oturumSalonu($salon));
+        } catch (\Throwable $e) {
+            Log::warning('[Transactional WA] istisna, SMS\'e düşülüyor', ['err' => $e->getMessage(), 'salon_id' => $salon->id]);
+            $bagli = false;
+        }
+
         // Hemen basarisiz olan mesaj SMS'e duser; 202 alan listeden cikar, gec hatada eski monolitin webhook'u SMS'e dusurur.
-        if ($this->whatsapp->bagliMi($this->whatsapp->oturumSalonu($salon))) {
-            try {
-                $kalan = [];
-                foreach ($mesajlar as $mesaj) {
-                    if (empty($mesaj['to']) || empty($mesaj['message'])) {
-                        $kalan[] = $mesaj;
+        if ($bagli) {
+            $mesajlar = $this->whatsapp->gonderilemeyenler($mesajlar, function (array $mesaj) use ($salon, $tur, $gonderimTipi) {
+                $sonuc = $this->whatsapp->gonder($salon, $mesaj['to'], $mesaj['wa_message'] ?? $mesaj['message'], $mesaj['randevu_id'] ?? null,
+                    $mesaj['user_id'] ?? null, null, ! empty($mesaj['urgent']), $mesaj['gonderim_tipi'] ?? $gonderimTipi);
+                ($sonuc['ok'] ?? false)
+                    ? Log::info('[Transactional WA] kuyruğa eklendi', ['salon_id' => $salon->id, 'logId' => $sonuc['logId'] ?? null, 'tur' => $tur])
+                    : Log::warning('[Transactional WA] başarısız → SMS\'e düşüyor', ['salon_id' => $salon->id, 'err' => $sonuc['error'] ?? 'unknown']);
 
-                        continue;
-                    }
-                    $sonuc = $this->whatsapp->gonder($salon, $mesaj['to'], $mesaj['wa_message'] ?? $mesaj['message'], $mesaj['randevu_id'] ?? null,
-                        $mesaj['user_id'] ?? null, null, ! empty($mesaj['urgent']), $mesaj['gonderim_tipi'] ?? $gonderimTipi);
-                    if ($sonuc['ok'] ?? false) {
-                        Log::info('[Transactional WA] kuyruğa eklendi', ['salon_id' => $salon->id, 'logId' => $sonuc['logId'] ?? null, 'tur' => $tur]);
-
-                        continue;
-                    }
-                    Log::warning('[Transactional WA] başarısız → SMS\'e düşüyor', ['salon_id' => $salon->id, 'err' => $sonuc['error'] ?? 'unknown']);
-                    $kalan[] = $mesaj;
-                }
-                $mesajlar = $kalan;
-                if (! $mesajlar) {
-                    return $geriBildirim ? ['title' => 'Başarılı', 'status' => 'success', 'text' => 'Mesajınız alıcılarınıza başarıyla iletildi.'] : null;
-                }
-            } catch (\Throwable $e) {
-                Log::warning('[Transactional WA] istisna, SMS\'e düşülüyor', ['err' => $e->getMessage(), 'salon_id' => $salon->id]);
+                return $sonuc;
+            }, 'Transactional WA');
+            if (! $mesajlar) {
+                return $geriBildirim ? ['title' => 'Başarılı', 'status' => 'success', 'text' => 'Mesajınız alıcılarınıza başarıyla iletildi.'] : null;
             }
         }
 
@@ -232,11 +233,14 @@ class SmsKanali
             return $geriBildirim ? ['title' => 'Hata', 'status' => 'error', 'text' => 'Mesaj gönderilemedi. İşletmenize ait SMS veya WhatsApp bağlantısı bulunmuyor.'] : '';
         }
 
-        $cevap = $this->efetech->gonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar);
+        $cevap = $this->efetechGonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar, $salon->id);
         $durum = '';
-        if ($this->efetechCevabiDolu($cevap) && ! $dogrulama) {
-            $this->raporYaz($salon->id, $tur, $this->satirSatirAciklama($mesajlar), $this->efetechMesaji($cevap), 0);
-            $durum = 0;
+        if ($cevap !== null && $this->efetechCevabiDolu($cevap) && ! $dogrulama) {
+            $durum = $this->kabulSonrasi($salon->id, function () use ($salon, $tur, $mesajlar, $cevap) {
+                $this->raporYaz($salon->id, $tur, $this->satirSatirAciklama($mesajlar), $this->efetechMesaji($cevap), 0);
+
+                return 0;
+            }, '');
         }
 
         return $geriBildirim ? $this->geriBildirimMetni($durum) : '';
@@ -245,19 +249,51 @@ class SmsKanali
     /** Efetech gonderimi + iletim raporu (durum saglayicidan). @return int|string iletim durumu; rapor yazilmadiysa '' */
     private function efetechRaporlu(object $salon, array $mesajlar, int|string $tur, bool $dogrulama, string $aciklama, bool $raporOncesiBekle): int|string
     {
-        $cevap = $this->efetech->gonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar);
-        if (! $this->efetechCevabiDolu($cevap) || $dogrulama) {
+        $cevap = $this->efetechGonder((string) $salon->sms_apikey, $salon->sms_baslik, $mesajlar, $salon->id);
+        if ($cevap === null || ! $this->efetechCevabiDolu($cevap) || $dogrulama) {
             return '';
         }
-        $mesaj = $this->efetechMesaji($cevap);
-        if ($raporOncesiBekle) {
-            sleep(1);
-        }
-        $rapor = $this->efetech->rapor($salon, $mesaj['id']);
-        $durum = $rapor['response']['message']['status'] ?? throw new RuntimeException('SMS iletim durumu alinamadi: '.$mesaj['id']);
-        $this->raporYaz($salon->id, $tur, $aciklama, $mesaj, $durum);
 
-        return $durum;
+        return $this->kabulSonrasi($salon->id, function () use ($cevap, $salon, $tur, $aciklama, $raporOncesiBekle) {
+            $mesaj = $this->efetechMesaji($cevap);
+            if ($raporOncesiBekle) {
+                sleep(1);
+            }
+            $rapor = $this->efetech->rapor($salon, $mesaj['id']);
+            $durum = $rapor['response']['message']['status'] ?? throw new RuntimeException('SMS iletim durumu alinamadi: '.$mesaj['id']);
+            $this->raporYaz($salon->id, $tur, $aciklama, $mesaj, $durum);
+
+            return $durum;
+        }, '');
+    }
+
+    /**
+     * Efetech gonderimi. Saglayici mesaji almadiysa (ulasilamadi, gecersiz cevap) firlar: outbox yeniden dener, mukerrer olmaz.
+     * Zaman asimi belirsizdir, mesaj gitmis olabilir: yeniden denenmez, null doner.
+     */
+    private function efetechGonder(string $apiKey, ?string $baslik, array $mesajlar, int|string|null $salonId): ?array
+    {
+        $cevap = $this->efetech->gonder($apiKey, $baslik, $mesajlar);
+        if ($cevap === null && $this->efetech->sonIstekZamanAsimi) {
+            Log::warning('[SMS] Efetech zaman asimi: mesaj gitmis olabilir, yeniden denenmez', ['salon_id' => $salonId, 'alici' => count($mesajlar)]);
+
+            return null;
+        }
+        $this->efetechCevabiDolu($cevap);
+
+        return $cevap;
+    }
+
+    /** Saglayici mesaji kabul ettikten sonraki adim (rapor, kayit) hata verirse yeniden denenmez: SMS gitmistir. */
+    private function kabulSonrasi(int|string|null $salonId, callable $adim, mixed $varsayilan = null): mixed
+    {
+        try {
+            return $adim();
+        } catch (\Throwable $e) {
+            Log::warning('[SMS] gonderim sonrasi adim basarisiz, yeniden denenmez', ['salon_id' => $salonId, 'hata' => $e->getMessage()]);
+
+            return $varsayilan;
+        }
     }
 
     /** Eski count($decoded["response"]) != 0 kosulu: gecersiz cevapta eskide de hata firlardi. */
@@ -286,7 +322,7 @@ class SmsKanali
         DB::table(self::ILETIM_RAPORU)->insert([
             'salon_id'   => $salonId,
             'tur'        => $tur,
-            'aciklama'   => $aciklama,
+            'aciklama'   => SifreMaskesi::uygula($aciklama),
             'rapor_id'   => $efetechMesaji['id'],
             'adet'       => $efetechMesaji['count'],
             'kredi'      => $efetechMesaji['total_price'],

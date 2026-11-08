@@ -21,5 +21,12 @@ Bayrak kapalıyken davranış bugünle aynıdır. Geçiş bayrağı açmaktır; 
 ## Açma
 `.env`: `BILDIRIM_ISLEYICI_AKTIF=true`, ardından `php artisan config:clear` ve `php artisan queue:restart`.
 
-## Eski koddan korunan bilinçli hatalar
-Metin ve yol birebir taşındı. Ayrıntı: kara liste telefon araması, rapor adımında mükerrer SMS, açık şifre kayıtları. Düzeltme kararı kullanıcıdadır.
+## Eskiden bilerek farklı olanlar
+- Kara liste telefondan aranırken `905…`, `05…` ve `5…` biçimlerinin üçü de aranır (eskisi `5…` kayıtlıyı kaçırıyordu).
+- Mükerrer SMS yok: sağlayıcı mesajı kabul ettiyse ya da zaman aşımı olduysa rapor hatası yeniden denetmez. WhatsApp'tan giden mesaj ayrıca SMS olarak gitmez.
+- Şifre: `salon_personelleri.sifre` yazılmaz. SMS raporunda şifre yazılırken, WhatsApp kaydında sonuçlandıktan sonra maskelenir (`v2:sifre-maskele`, saatlik).
+- Personel metinleri: onayda "yarın" yerine randevu günü; kayıtta "... tarafından oluşturulmuştur." (müşteri cümlesi yerine).
+- Müşteri fotoğrafı: bayrak açıkken personele push gider (v1 gibi).
+
+## Geçmiş kayıtlar (bir kez, elle, geri alınamaz)
+`php artisan v2:sifre-maskele --gecmis`: tüm WhatsApp ve SMS kayıtlarındaki eski şifreleri maskeler, `salon_personelleri.sifre` kolonunu boşaltır.

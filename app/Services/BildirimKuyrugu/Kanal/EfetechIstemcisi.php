@@ -12,6 +12,9 @@ class EfetechIstemcisi
 {
     private const ZAMAN_ASIMI_SN = 5;
 
+    /** Son istek zaman asimina mi dustu: saglayici mesaji almis olabilir, yeniden gonderim mukerrer olur. */
+    public bool $sonIstekZamanAsimi = false;
+
     public function gonder(string $apiKey, ?string $gonderen, array $mesajlar): ?array
     {
         return $this->istek((string) config('sms.efetech.gonderim_url'), $apiKey, ['originator' => $gonderen, 'messages' => $mesajlar, 'encoding' => 'auto']);
@@ -24,12 +27,16 @@ class EfetechIstemcisi
 
     private function istek(string $url, string $apiKey, array $govde): ?array
     {
+        $this->sonIstekZamanAsimi = false;
         try {
             $cevap = Http::timeout(self::ZAMAN_ASIMI_SN)->acceptJson()
                 ->withHeaders(['Authorization' => 'Key '.$apiKey])
                 ->post($url, $govde)
                 ->json();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $metin = strtolower($e->getMessage());
+            $this->sonIstekZamanAsimi = str_contains($metin, 'curl error 28') || str_contains($metin, 'timed out');
+
             return null;
         }
 

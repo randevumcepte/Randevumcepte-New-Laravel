@@ -77,6 +77,6 @@ return [
         'anket_gonder'          => Isleyici\AnketGonderIsleyici::class,
         'google_takvim'         => Isleyici\GoogleTakvimIsleyici::class,
         'saat_boslugu_kampanya' => Isleyici\SaatBosluguKampanyaIsleyici::class,
-        'musteri_resim_push'    => Isleyici\MusteriResimPushIsleyici::class, // yazan henuz yok, kullanici karari
+        'musteri_resim_push'    => Isleyici\MusteriResimPushIsleyici::class, // MusteriResimServisi, yalniz bayrak acikken yazar
     ],
 ];

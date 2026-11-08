@@ -4,6 +4,7 @@ namespace App\Services\MusteriHesap;
 
 use App\Exceptions\BulunamadiException;
 use App\Support\AktiviteLog;
+use App\Support\BildirimKuyrugu;
 use App\Support\DosyaYukleme;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,7 @@ class MusteriResimServisi
         ]);
         if ($salonId) {
             AktiviteLog::yaz($salonId, null, 'musteri_resim_ekle', 'musteri_resim', $id, null, 'Müşteri işlem resmi eklendi');
-            $this->isletmeyeBildir($salonId, $userId);
+            $this->isletmeyeBildir($salonId, $userId, $yol);
         }
 
         return ['id' => $id, 'tarih' => $tarih, 'path' => $yol];
@@ -104,11 +105,17 @@ class MusteriResimServisi
     }
 
     /**
-     * Salonun her aktif personelinin kutusuna ayri satir (v1 musteriResimEkle ile ayni metin); kutu personel_id ile
-     * okur. v1 ayni olayda push da gonderir: v2_bildirim_kuyrugu'nda bu olayin turu yok, push gitmez.
+     * v1 musteriResimEkle: personele push + bildirim satiri. Yeni bildirim isleyicisi aciksa 'musteri_resim_push' outbox'a yazilir
+     * (MusteriResimPushIsleyici, v1 gibi tum personel). Kapaliyken eski isleyici bu turu bilmez: yalniz aktif personelin
+     * kutusuna satir yazilir, push gitmez.
      */
-    private function isletmeyeBildir(int $salonId, int $userId): void
+    private function isletmeyeBildir(int $salonId, int $userId, string $yol): void
     {
+        if (config('bildirim_kuyrugu.isleyici_aktif')) {
+            BildirimKuyrugu::yaz($salonId, 'musteri_resim_push', null, null, ['user_id' => $userId, 'yol' => $yol]);
+
+            return;
+        }
         $ad = DB::table('users')->where('id', $userId)->value('name') ?: 'Müşteri';
         $simdi = now();
         DB::table('bildirimler')->insert(DB::table('salon_personelleri')->where('salon_id', $salonId)->where('aktif', 1)->pluck('id')

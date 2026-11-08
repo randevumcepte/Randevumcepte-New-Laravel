@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Musteri fotograf yukledi: personele push; v1 musteriResimEkle ('musteri' dali) ile ayni. Eski outbox isleyicisinde yoktur
- * ve bu turu henuz YAZAN yoktur (MusteriResimServisi): yazan baglanmadikca calismaz. Baglanirken MusteriResimServisi'nin kendi
- * bildirimler satiri kaldirilmali, PushBildirimi de satir yazar. Hata log'lanir, kalan personel atlanir (v1 gibi).
+ * Musteri fotograf yukledi: personele push; v1 musteriResimEkle ('musteri' dali) ile ayni. Eski outbox isleyicisinde yoktur;
+ * MusteriResimServisi bu turu yalniz bayrak acikken yazar. Bildirim satirini PushBildirimi yazar. Hata log'lanir, kalan personel
+ * atlanir (v1 gibi).
  */
 class MusteriResimPushIsleyici implements BildirimIsleyici
 {

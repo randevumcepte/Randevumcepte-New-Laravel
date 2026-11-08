@@ -92,12 +92,8 @@ class RandevuIptalIsleyici extends RandevuTabanliIsleyici
         try {
             $this->kanal->whatsappOncelikli($salonId, $mesajlar, $randevuId, 'iptal_bildirim');
         } catch (\Throwable $e) {
-            Log::warning('randevuiptalet WA-first (shutdown) hata, SMS fallback denenecek: '.$e->getMessage());
-            try {
-                $this->kanal->sms($mesajlar, $salonId);
-            } catch (\Throwable $e2) {
-                Log::warning('randevuiptalet SMS fallback (shutdown) de hata: '.$e2->getMessage());
-            }
+            // Liste yeniden SMS'e verilmez: WhatsApp'tan ya da SMS'ten gitmis mesaj ikinci kez gider (eskideki mukerrer).
+            Log::warning('randevuiptalet bildirim hatasi: '.$e->getMessage());
         }
     }
 }

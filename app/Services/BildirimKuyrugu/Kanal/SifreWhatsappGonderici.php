@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Sifre mesajini once WhatsApp'tan anlik gonderir; eski ApiController::sifreWhatsappGonder. Tipi 'sifre_sifirlama': kara liste
- * ve gunluk tavandan muaf, kontor dusmez. Basarisizsa false doner, cagiran SMS'e duser.
+ * ve gunluk tavandan muaf, kontor dusmez. Gidemeyen mesajlari doner, cagiran yalniz onlari SMS'e verir.
  *
  * Outbox isteginde appBundle yoktur; eski kodun appBundle dallari (salon 20, marka salonu) calismaz, salon parametreden gelir.
  *
@@ -16,8 +16,11 @@ class SifreWhatsappGonderici
 {
     public function __construct(private WhatsappKanali $whatsapp) {}
 
-    /** @param  array<int, array{to?:mixed, message?:string, wa_message?:string}>  $mesajlar */
-    public function gonder(int|string|null $salonId, array $mesajlar, int|string|null $userId = null): bool
+    /**
+     * @param  array<int, array{to?:mixed, message?:string, wa_message?:string}>  $mesajlar
+     * @return array SMS'e dusecek mesajlar: WhatsApp kapaliysa hepsi, aciksa yalniz gidemeyenler (WhatsApp'tan giden SMS almaz)
+     */
+    public function gonder(int|string|null $salonId, array $mesajlar, int|string|null $userId = null): array
     {
         try {
             $salon = $salonId ? $this->whatsapp->salon($salonId) : null;
@@ -31,32 +34,21 @@ class SifreWhatsappGonderici
             ]);
 
             if (! $oturumSalonu || ! $this->whatsapp->bagliMi($oturumSalonu)) {
-                return false;
+                return $mesajlar;
             }
-
-            $hepsiBasarili = true;
-            foreach ($mesajlar as $m) {
-                $telefon = $m['to'] ?? null;
-                $metin = $m['wa_message'] ?? $m['message'] ?? null;
-                if (! $telefon || ! $metin) {
-                    $hepsiBasarili = false;
-
-                    continue;
-                }
-                $sonuc = $this->whatsapp->acilGonder($salon, $telefon, $metin, $userId, 'sifre_sifirlama');
-                if ($sonuc['ok'] ?? false) {
-                    Log::info('[Sifre WA] anlik kuyruga eklendi', ['salon_id' => $salon->id, 'logId' => $sonuc['logId'] ?? null]);
-                } else {
-                    $hepsiBasarili = false;
-                    Log::warning('[Sifre WA] gonderim basarisiz -> SMS fallback', ['salon_id' => $salon->id, 'err' => $sonuc['error'] ?? 'unknown']);
-                }
-            }
-
-            return $hepsiBasarili;
         } catch (\Throwable $e) {
             Log::warning('[Sifre WA] istisna, SMS fallback', ['err' => $e->getMessage()]);
 
-            return false;
+            return $mesajlar;
         }
+
+        return $this->whatsapp->gonderilemeyenler($mesajlar, function (array $m) use ($salon, $userId) {
+            $sonuc = $this->whatsapp->acilGonder($salon, $m['to'], $m['wa_message'] ?? $m['message'], $userId, 'sifre_sifirlama');
+            ($sonuc['ok'] ?? false)
+                ? Log::info('[Sifre WA] anlik kuyruga eklendi', ['salon_id' => $salon->id, 'logId' => $sonuc['logId'] ?? null])
+                : Log::warning('[Sifre WA] gonderim basarisiz -> SMS fallback', ['salon_id' => $salon->id, 'err' => $sonuc['error'] ?? 'unknown']);
+
+            return $sonuc;
+        }, 'Sifre WA');
     }
 }

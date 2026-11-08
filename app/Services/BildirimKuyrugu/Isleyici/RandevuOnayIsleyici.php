@@ -2,6 +2,7 @@
 
 namespace App\Services\BildirimKuyrugu\Isleyici;
 
+use App\Domain\Bildirim\DogalTarih;
 use App\Models\Randevular;
 use App\Services\BildirimKuyrugu\Kanal\BildirimTipleri;
 use App\Services\BildirimKuyrugu\Kanal\PushBildirimi;
@@ -13,7 +14,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * randevu_onay: eski ApiController::randevuOnayBildirimleri ($hemen=true). yetkili_id = onaylayan. SMS ayari ayar_id=2.
- * Eskiden gelen ve KORUNAN iki durum: onayda WA denenmez, yalniz SMS gider; personel metni tarihten bagimsiz "yarın" der.
+ * Eskiden gelen ve KORUNAN durum: onayda WA denenmez, yalniz SMS gider. Personel metni eskiden tarihten bagimsiz "yarın" derdi;
+ * artik randevu gununu soyler (DogalTarih).
  * Musteriye uygulama ici bildirim satiri ayrica yazilmaz, yalniz push'un satiri olusur.
  */
 class RandevuOnayIsleyici extends RandevuTabanliIsleyici
@@ -39,7 +41,7 @@ class RandevuOnayIsleyici extends RandevuTabanliIsleyici
         }
 
         foreach ($randevu->hizmetler as $hizmet) {
-            $mesaj = $randevu->users->name.' isimli müşterinin yarın '.date('H:i', strtotime($hizmet->saat)).' saatli '.$this->veri->hizmetAdi($hizmet).' randevusu '.$this->veri->yetkiliAlani($kayit->yetkili_id, 'name').' tarafından onaylanmıştır.';
+            $mesaj = $randevu->users->name.' isimli müşterinin '.DogalTarih::ifade(date('Y-m-d', strtotime($randevu->tarih)).' '.$hizmet->saat).' '.$this->veri->hizmetAdi($hizmet).' randevusu '.$this->veri->yetkiliAlani($kayit->yetkili_id, 'name').' tarafından onaylanmıştır.';
 
             if ($this->veri->ayarAcikMi($salonId, self::AYAR_ID, 'personel')) {
                 $mesajlar[] = ['to' => $this->veri->personelGsm($hizmet->personel_id), 'message' => $mesaj];

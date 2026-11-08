@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Log;
  * Eski ApiController::randevuKayitBildirimHazirla: bir randevunun musteri + personel mesajlarini hazirlar, uygulama ici
  * bildirimleri yazar. $istek eskideki gibi payload.istek'ten kurulan Request'tir; durum yoksa (int)null === 0 sayilir.
  *
- * Eskiden gelen ve KORUNAN hatalar: personel metni '... oluşturulmuştur..' cift nokta ile biter; uygulama kaynaginda
- * 'randevusu  kendisi  tarafından' cift bosluklu cikar; bypass 18:00'den sonra acilir, log metni 19 der.
+ * Personel metni personele hitap eder ("... randevusu Ayşe tarafından oluşturulmuştur."); eskiden musteri cumlesi kullanilir,
+ * cift nokta ve cift bosluk cikardi. Eskiden gelen ve KORUNAN: bypass 18:00'den sonra acilir, log metni 19 der.
  */
 class RandevuKayitMesajlari
 {
@@ -53,7 +53,7 @@ class RandevuKayitMesajlari
             'durum' => $istek->durum, 'guncelleme' => $guncelleme, 'musteri_kaynakli' => $musteriKaynakli,
         ]);
 
-        [$cumleyeEk, $ekCumle] = $this->cumleler($isletme, $musteriKaynakli, $guncelleme);
+        [$cumleyeEk, $ekCumle, $personelFiili] = $this->cumleler($isletme, $musteriKaynakli, $guncelleme);
         $tarihMetni = date('d.m.Y', strtotime($istek->randevu_tarihi));
         $musteriMesaji = $musteriKaynakli
             ? $isletme->salon_adi.' için '.$tarihMetni.' '.$istek->randevu_saati.' tarihli '.$cumleyeEk.$ekCumle
@@ -79,23 +79,25 @@ class RandevuKayitMesajlari
         }
 
         if ($degisti) {
-            array_push($mesajlar, ...$this->personelMesajlari($randevu, $olusturan, $olusturanResmi, $cumleyeEk));
+            array_push($mesajlar, ...$this->personelMesajlari($randevu, $olusturan, $olusturanResmi, $personelFiili));
         }
 
         return $mesajlar;
     }
 
-    /** @return array{0:string, 1:string} [cumleye eklenen, ek cumle] */
+    /** @return array{0:string, 1:string, 2:string} [musteri cumlesine eklenen, ek cumle, personel metnindeki fiil] */
     private function cumleler(object $isletme, bool $musteriKaynakli, bool $guncelleme): array
     {
         if ($musteriKaynakli) {
             $isyeriKucuk = WhatsappMesajFormat::klinikMi($isletme) ? 'klinik' : 'salon';
 
-            return ['randevu talebiniz alınmıştır.', ' Talebiniz '.$isyeriKucuk.' tarafından onaylandığında ayrıca bilgilendirileceksiniz. Detaylı bilgi için bize ulaşın. 0'.$isletme->telefon_1];
+            return ['randevu talebiniz alınmıştır.', ' Talebiniz '.$isyeriKucuk.' tarafından onaylandığında ayrıca bilgilendirileceksiniz. Detaylı bilgi için bize ulaşın. 0'.$isletme->telefon_1, 'talep edilmiştir'];
         }
         $ekCumle = ' Randevunuza 15 dk önce gelmenizi rica ederiz. Detaylı bilgi için bize ulaşın. 0'.$isletme->telefon_1;
 
-        return [$guncelleme ? 'randevunuz güncellenmiştir.' : 'randevunuz oluşturulmuştur.', $ekCumle];
+        return $guncelleme
+            ? ['randevunuz güncellenmiştir.', $ekCumle, 'güncellenmiştir']
+            : ['randevunuz oluşturulmuştur.', $ekCumle, 'oluşturulmuştur'];
     }
 
     /** Ertesi gune 18:00'den sonra olusan, 24 saatten az kalan randevuda ayar kapali olsa da musteriye gider. */
@@ -134,18 +136,13 @@ class RandevuKayitMesajlari
         return WhatsappMesajFormat::uygulamaDavetiEk($metin, $isletme, $musteri->id ?? null);
     }
 
-    private function personelMesajlari(Randevular $randevu, ?IsletmeYetkilileri $olusturan, ?string $olusturanResmi, string $cumleyeEk): array
+    private function personelMesajlari(Randevular $randevu, ?IsletmeYetkilileri $olusturan, ?string $olusturanResmi, string $fiil): array
     {
         $mesajlar = [];
         foreach ($randevu->hizmetler as $hizmet) {
-            $tarafindan = '';
-            if ($randevu->uygulama == true) {
-                $tarafindan = ' kendisi ';
-            }
-            if ($olusturan) {
-                $tarafindan = $olusturan->name;
-            }
-            $mesaj = $randevu->users->name.' isimli müşterinin '.date('d.m.Y', strtotime($randevu->tarih)).' - '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu '.$tarafindan.' tarafından '.$cumleyeEk.'.';
+            $kim = $olusturan ? (string) $olusturan->name : ($randevu->uygulama == true ? 'kendisi' : '');
+            $tarafindan = trim($kim) !== '' ? ' '.trim($kim).' tarafından' : '';
+            $mesaj = $randevu->users->name.' isimli müşterinin '.date('d.m.Y', strtotime($randevu->tarih)).' - '.date('H:i', strtotime($hizmet->saat)).' '.$this->veri->hizmetAdi($hizmet).' randevusu'.$tarafindan.' '.$fiil.'.';
 
             if ($this->veri->ayarAcikMi($randevu->salon_id, self::AYAR_ID, 'personel')) {
                 $yetkiliIdler = Personeller::where('id', $hizmet->personel_id)->orWhere(function ($q) use ($randevu) {

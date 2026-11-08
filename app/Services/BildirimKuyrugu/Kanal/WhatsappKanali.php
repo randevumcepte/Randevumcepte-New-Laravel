@@ -117,6 +117,37 @@ class WhatsappKanali
             : $this->kopruIle($salon, $normal, $mesaj, $randevuId, $userId, $acil, $gonderimTipi, $kaynakSalonId);
     }
 
+    /**
+     * Mesajlari tek tek WhatsApp'la dener, gidemeyenleri doner (SMS'e duserler). Bir mesajin istisnasi yalniz o mesaji SMS'e
+     * dusurur: WhatsApp'a girmis mesaj ikinci kez SMS olarak gitmez. Alicisi ya da metni bos mesaj aynen doner.
+     *
+     * @param  callable(array):array  $gonder  tek mesaj; sonuc ['ok' => bool, ...]
+     */
+    public function gonderilemeyenler(array $mesajlar, callable $gonder, string $etiket): array
+    {
+        $kalan = [];
+        foreach ($mesajlar as $m) {
+            if (empty($m['to']) || empty($m['message'])) {
+                $kalan[] = $m;
+
+                continue;
+            }
+            try {
+                $sonuc = $gonder($m);
+            } catch (\Throwable $e) {
+                Log::warning('['.$etiket.'] istisna, mesaj SMS\'e dusuyor', ['err' => $e->getMessage()]);
+                $kalan[] = $m;
+
+                continue;
+            }
+            if (! ($sonuc['ok'] ?? false)) {
+                $kalan[] = $m;
+            }
+        }
+
+        return $kalan;
+    }
+
     /** Eski sendUrgent: sifre/OTP; antiban gecikmesi ve mesai atlanir. */
     public function acilGonder(object $salon, mixed $telefon, string $mesaj, int|string|null $userId = null, string $gonderimTipi = 'sifre_kodu'): array
     {

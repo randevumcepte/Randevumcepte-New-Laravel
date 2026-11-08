@@ -187,7 +187,7 @@ class BildirimKisiIsleyicileriTest extends TestCase
         $this->isle('personel_sifre', ['personel_id' => $id]);
 
         $this->assertTrue(Hash::check('1234', DB::table('isletmeyetkilileri')->where('id', 3)->value('password')));
-        $this->assertSame('1234', DB::table('salon_personelleri')->where('id', $id)->value('sifre'));
+        $this->assertNull(DB::table('salon_personelleri')->where('id', $id)->value('sifre'));
         $this->assertSame(0, DB::table('salon_aktivite_log')->count());
     }
 
@@ -209,9 +209,10 @@ class BildirimKisiIsleyicileriTest extends TestCase
 
         $this->isle('personel_sifre', ['personel_id' => $id]);
 
-        $sifre = DB::table('salon_personelleri')->where('id', $id)->value('sifre');
-        $this->assertMatchesRegularExpression('/^[A-HJ-Z0-9]{6}$/', $sifre);
-        $this->assertSame('Sayın Ali. Randevumcepte yeni şifreniz : '.$sifre.' olarak güncellenmiştir.', $giden);
+        $this->assertMatchesRegularExpression('/^Sayın Ali\. Randevumcepte yeni şifreniz : ([A-HJ-Z0-9]{6}) olarak güncellenmiştir\.$/u', $giden);
+        preg_match('/: ([A-HJ-Z0-9]{6}) /u', $giden, $e);
+        $sifre = $e[1];
+        $this->assertNull(DB::table('salon_personelleri')->where('id', $id)->value('sifre'), 'acik sifre saklanmaz');
         $this->assertTrue(Hash::check($sifre, DB::table('isletmeyetkilileri')->where('id', 7)->value('password')));
     }
 
@@ -230,8 +231,10 @@ class BildirimKisiIsleyicileriTest extends TestCase
 
         $this->isle('personel_sifre', ['personel_id' => $id, 'yeni_hesap' => true]);
 
-        $sifre = DB::table('salon_personelleri')->where('id', $id)->value('sifre');
+        preg_match('/şifreniz : ([A-HJ-Z0-9]{6})$/u', $giden[0]['message'], $e);
+        $sifre = $e[1] ?? '';
         $this->assertSame([['to' => self::TEL, 'message' => 'Sayın Ali. Randevu sistemi şifreniz : '.$sifre]], $giden);
+        $this->assertTrue(Hash::check($sifre, DB::table('isletmeyetkilileri')->where('id', 7)->value('password')));
 
         $log = DB::table('salon_aktivite_log')->first();
         $this->assertSame(['sistem', 'Mobil', 'Mobil', 'personel_sifre_gonder', 'personel', 'Personele yeni sifre SMS gonderildi', '{"kaynak":"mobil"}'],

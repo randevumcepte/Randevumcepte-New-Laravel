@@ -44,19 +44,12 @@ class FormLinkIsleyici implements BildirimIsleyici
             if (! $salon || ! $this->whatsapp->bagliMi($salon)) {
                 return $mesajlar;
             }
-            $kalan = [];
-            foreach ($mesajlar as $m) {
-                $sonuc = $this->whatsapp->acilGonder($salon, $m['to'], $m['message'], $userId);
-                if (empty($sonuc['ok'])) {
-                    $kalan[] = $m;
-                }
-            }
-
-            return $kalan;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('_formLinkGonder WA hatasi: '.$e->getMessage());
 
             return $mesajlar;
         }
+
+        return $this->whatsapp->gonderilemeyenler($mesajlar, fn (array $m) => $this->whatsapp->acilGonder($salon, $m['to'], $m['message'], $userId), 'Form WA');
     }
 }

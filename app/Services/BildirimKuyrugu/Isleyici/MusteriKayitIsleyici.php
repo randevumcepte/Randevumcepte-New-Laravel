@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
  * mesajiyla gonderilir; eski V2BildirimIsle::musteriBildirimi + MusteriBildirimServisi::kayitBildirimi. Mesaj SMS ayari
  * ayar_id=4 (musteri) aciksa gider; sifre ayar kapaliyken de yazilir. Portfoye yeniden eklemede mesaj gitmez.
  *
- * Eskiden gelen ve KORUNAN hata: yeniden denemede sifre yeniden uretilir.
+ * Yeniden deneme yalniz SMS saglayiciya ulasmadan dusen gonderimde olur (SmsKanali); musteriye iki farkli sifre gitmez.
  */
 class MusteriKayitIsleyici extends MusteriTabanliIsleyici
 {

@@ -4,6 +4,7 @@ namespace App\Services\BildirimKuyrugu\Randevu;
 
 use App\Services\BildirimKuyrugu\Kanal\SmsKanali;
 use App\Services\BildirimKuyrugu\Kanal\WhatsappKanali;
+use Illuminate\Support\Facades\Log;
 
 /** Randevu mesajlarinin ortak gonderimi: ApiController::sms_gonder_2 cagri bicimi ve iki metotta ayni olan WA-first dongusu. */
 class RandevuMesajKanali
@@ -27,29 +28,22 @@ class RandevuMesajKanali
 
     /**
      * Eski randevuIptalBildirimleri ve randevuKayitBildirimGonder ortak akisi: kanal aciksa once WA, hemen basarisiz olan ya da
-     * alicisi/metni bos mesaj SMS listesine duser. Istisna firlatabilir; yakalama ve yedek davranisi cagiranda (ikisi farkli).
+     * alicisi/metni bos mesaj SMS listesine duser. WhatsApp istisnasi yalniz o mesaji SMS'e dusurur (mukerrer olmaz). Yalniz SMS
+     * adimi istisna firlatabilir.
      */
     public function whatsappOncelikli(int|string $salonId, array $mesajlar, int|string|null $randevuId, string $gonderimTipi): void
     {
-        $salon = $this->whatsapp->salon($salonId);
-
-        $smsKalan = $mesajlar;
-        if ($this->whatsappAcikMi($salon)) {
-            $smsKalan = [];
-            foreach ($mesajlar as $m) {
-                $to = $m['to'] ?? null;
-                $msg = $m['message'] ?? null;
-                if (! $to || ! $msg) {
-                    $smsKalan[] = $m;
-
-                    continue;
-                }
-                $sonuc = $this->whatsapp->gonder($salon, $to, $m['wa_message'] ?? $msg, $randevuId, null, null, false, $gonderimTipi);
-                if (! ($sonuc['ok'] ?? false)) {
-                    $smsKalan[] = $m;
-                }
-            }
+        try {
+            $salon = $this->whatsapp->salon($salonId);
+            $acik = $this->whatsappAcikMi($salon);
+        } catch (\Throwable $e) {
+            Log::warning('[Randevu WA] kanal okunamadi, SMS\'e dusuyor', ['salon_id' => $salonId, 'err' => $e->getMessage()]);
+            $acik = false;
         }
+
+        $smsKalan = ! $acik ? $mesajlar : $this->whatsapp->gonderilemeyenler($mesajlar,
+            fn (array $m) => $this->whatsapp->gonder($salon, $m['to'], $m['wa_message'] ?? $m['message'], $randevuId, null, null, false, $gonderimTipi),
+            'Randevu WA');
 
         if (! empty($smsKalan)) {
             $this->sms($smsKalan, $salonId);
