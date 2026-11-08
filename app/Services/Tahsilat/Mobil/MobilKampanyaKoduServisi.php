@@ -2,7 +2,9 @@
 
 namespace App\Services\Tahsilat\Mobil;
 
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
+use App\Domain\Tahsilat\TahsilatDagitim;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
@@ -143,29 +145,34 @@ class MobilKampanyaKoduServisi
             $q = $model::where('adisyon_id', $adisyonId)->whereNull('senet_id')->whereNull('taksitli_tahsilat_id');
             $liste[] = [$hedef ? $q->where($fk, $hedef[1])->get() : $q->get(), $odemeModeli, $odemeFk];
         }
-        $toplam = (float) array_sum(array_map(fn ($l) => $l[0]->sum('fiyat'), $liste));
+        // Web ile ayni dagitim (TahsilatDagitim::oransal): fiyata oranli, her kalem kendi kalaniyla sinirli, artik kapasitesi
+        // olana, kurus-kesin. Eskiden kalem basina sinir ve kurus artigi yoktu (3 x 100 TL'ye 100 TL indirim 99,99 yaziliyordu).
+        $sira = [];
+        $agirlik = [];
+        $kapasite = [];
+        foreach ($liste as [$kalemler, $odemeModeli, $odemeFk]) {
+            $idler = $kalemler->pluck('id')->all();
+            $onceki = $idler
+                ? $odemeModeli::whereIn($odemeFk, $idler)->groupBy($odemeFk)->selectRaw($odemeFk.' as kalem, SUM(tutar) as toplam')->pluck('toplam', 'kalem')
+                : collect();
+            foreach ($kalemler as $k) {
+                $fiyat = AdisyonHesap::tlToKurus($k->fiyat ?? 0);
+                $sira[] = $k;
+                $agirlik[] = $fiyat;
+                $kapasite[] = max(0, $fiyat - AdisyonHesap::tlToKurus($k->indirim_tutari ?? 0) - AdisyonHesap::tlToKurus($onceki[$k->id] ?? 0));
+            }
+        }
+        $toplam = array_sum($agirlik);
         if ($toplam <= 0) {
             return 0.0;
         }
-        $mevcut = (float) array_sum(array_map(fn ($l) => $l[0]->sum('indirim_tutari'), $liste));
-        $onceki = 0.0;
-        foreach ($liste as [$kalemler, $odemeModeli, $odemeFk]) {
-            $idler = $kalemler->pluck('id')->all();
-            if ($idler) {
-                $onceki += (float) $odemeModeli::whereIn($odemeFk, $idler)->sum('tutar');
-            }
-        }
-        $uygulanacak = Hesap::uygulanacakIndirim(Hesap::yuzdeIndirim($toplam, $yuzde), $toplam, $mevcut, $onceki);
-        if ($uygulanacak <= 0) {
-            return 0.0;
-        }
-        foreach ($liste as [$kalemler]) {
-            foreach ($kalemler as $k) {
-                $k->indirim_tutari = (float) ($k->indirim_tutari ?? 0) + Hesap::indirimPayi((float) $k->fiyat, $toplam, $uygulanacak);
-                $k->save();
-            }
+        $paylar = TahsilatDagitim::oransal($agirlik, $kapasite, AdisyonHesap::tlToKurus(Hesap::yuzdeIndirim(AdisyonHesap::kurusToTl($toplam), $yuzde)));
+        foreach ($paylar as $i => $payKurus) {
+            $k = $sira[$i];
+            $k->indirim_tutari = AdisyonHesap::kurusToTl(AdisyonHesap::tlToKurus($k->indirim_tutari ?? 0) + $payKurus);
+            $k->save();
         }
 
-        return (float) $uygulanacak;
+        return AdisyonHesap::kurusToTl(array_sum($paylar));
     }
 }

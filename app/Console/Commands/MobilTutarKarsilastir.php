@@ -86,6 +86,9 @@ class MobilTutarKarsilastir extends Command
         foreach (MobilTutarKontrolleri::KAPSAM_DISI as $ad => $neden) {
             $this->line("Kapsam disi: $ad ($neden)");
         }
+        foreach (MobilTutarKontrolleri::BILINCLI_FARK as $ad => $neden) {
+            $this->line("Bilincli fark: $ad ($neden)");
+        }
 
         return $sayac[KontrolKosucusu::FARK] > 0 ? self::FAILURE : self::SUCCESS;
     }

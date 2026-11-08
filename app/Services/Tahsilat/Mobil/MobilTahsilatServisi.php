@@ -2,26 +2,25 @@
 
 namespace App\Services\Tahsilat\Mobil;
 
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
 use App\Models\AdisyonHizmetler;
 use App\Models\Adisyonlar;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
-use App\Models\SenetVadeleri;
 use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
-use App\Models\TaksitVadeleri;
+use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
- * Eski mobil tahsilatekle — ayni satirlar ve tutarlar. Hesap MobilTahsilatHesabi'nda. Eskiden farkli olarak tek
- * transaction ve idempotency: yarida kalan kayit ve cift tiklamada ikinci tahsilat olusmaz. Web TahsilatYazServisi'ne
- * dokunulmaz, ikisi bilincli olarak farkli dagitir.
+ * Eski mobil tahsilatekle — ayni istek ve cevap. Odeme, harici indirim ve vade dagitimi web ile AYNI KOD
+ * (TahsilatYazServisi::vadeDagitimi, kalemDagitimi, planiYaz; kullanici karari 2026-11-08): kalem paylari kalan borca oranli,
+ * kalanla sinirli ve kurus-kesin; vade odemesinde komisyon dusulur, her vadeye en cok kendi tutari duser, kismi odemede vade
+ * bolunur. Eskiden farkli olarak tek transaction ve idempotency: yarida kalan kayit ve cift tiklamada ikinci tahsilat olusmaz.
  */
 class MobilTahsilatServisi
 {
@@ -32,7 +31,7 @@ class MobilTahsilatServisi
         'paket'  => [AdisyonPaketler::class, TahsilatPaketler::class, 'adisyon_paket_id'],
     ];
 
-    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici) {}
+    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici, private TahsilatYazServisi $tahsilat) {}
 
     public function ekle(int $salonId, int $yetkiliId, array $g): array
     {
@@ -80,127 +79,90 @@ class MobilTahsilatServisi
         $tahsilat = $this->yazici->tahsilatYaz($satir);
         $this->yazici->komisyonYaz($tahsilat, $satir);
 
-        $this->musteriIndirimiYaz($g, $idler, (int) $tahsilat->id);
-        $this->hariciIndirimYaz($g, $idler, $adisyonId, (int) $tahsilat->id);
+        $kalemler = $this->plansiz($idler);
+        $this->musteriIndirimiYaz($g, $kalemler, (int) $tahsilat->id);
         self::satisTarihi($g, $idler);
 
-        $toplamAdisyon = 0;
-        foreach (self::TURLER as $tur => [$model]) {
-            $toplamAdisyon += $model::whereIn('id', $idler[$tur])->sum('fiyat');
-        }
-        foreach (self::TURLER as $tur => [$model, $odemeModeli, $fk]) {
-            foreach ($idler[$tur] as $kalemId) {
-                $kalem = $model::find($kalemId);
-                $o = new $odemeModeli();
-                $o->{$fk} = $kalemId;
-                $o->tahsilat_id = $tahsilat->id;
-                $o->tutar = Hesap::kalemPayi($kalem->fiyat, $toplamAdisyon, $odeme);
-                $o->save();
-            }
-        }
-
-        $this->vadeleriOde(TaksitVadeleri::class, 'taksit_vadeleri', 'taksitli_tahsilat_id', $taksitVadeleri, $g, (int) $tahsilat->id);
-        $this->vadeleriOde(SenetVadeleri::class, 'senet_vadeleri', 'senet_id', $senetVadeleri, $g, (int) $tahsilat->id);
+        $this->tahsilat->planiYaz($this->plan($g, $kalemler, $taksitVadeleri, $senetVadeleri, AdisyonHesap::tlToKurus($odeme), (int) $adisyonId), (int) $tahsilat->id);
 
         return ['sonuc' => 'Başarılı', 'tahsilat_id' => (int) $tahsilat->id, 'adisyon_id' => $adisyonId ? (int) $adisyonId : null];
     }
 
-    /** Kalemin planli (taksit/senet) olmayan hali: musteri ve harici indirim yalniz bunlara yazilir. */
+    /**
+     * Web ile ayni kural ve ayni kod: once secili taksit/senet vadeleri (TahsilatYazServisi::vadeDagitimi), vadelere dusmeyen
+     * kalan secili plansiz kalemlere, harici indirimle birlikte (TahsilatYazServisi::kalemDagitimi). Web formu ikisini ayni
+     * istekte gondermez; mobil ekran ikisini birlikte secebildigi icin sira vade once.
+     *
+     * @param  array{hizmet:\Illuminate\Support\Collection, urun:\Illuminate\Support\Collection, paket:\Illuminate\Support\Collection}  $kalemler
+     */
+    private function plan(array $g, array $kalemler, array $taksitVadeleri, array $senetVadeleri, int $odemeKurus, int $adisyonId): array
+    {
+        $plan = ['kalem_tahsilatlari' => [], 'vade_guncellemeleri' => [], 'indirim_uygulamalari' => [], 'kupon_dusulecek_ids' => []];
+        $kalan = $odemeKurus;
+
+        if ($taksitVadeleri || $senetVadeleri) {
+            $v = $this->tahsilat->vadeDagitimi(array_map('intval', $taksitVadeleri), array_map('intval', $senetVadeleri), $odemeKurus,
+                ($g['odeme_yontemi'] ?? null) !== null && $g['odeme_yontemi'] !== '' ? (int) $g['odeme_yontemi'] : null);
+            $plan['kalem_tahsilatlari'] = $v['kalem_tahsilatlari'];
+            $plan['vade_guncellemeleri'] = $v['vade_guncellemeleri'];
+            // Plan kalemlerine gercekten yazilan dusulur: plan kalani vade tutarindan azsa artan tutar plansiz kalemlere kalir
+            // (paid_tutar dusulseydi aradaki fark hicbir kaleme yazilmazdi).
+            $kalan -= (int) $v['ozet']['dagitilan_kurus'];
+        }
+
+        if ($kalemler['hizmet']->isNotEmpty() || $kalemler['urun']->isNotEmpty() || $kalemler['paket']->isNotEmpty()) {
+            $k = $this->tahsilat->kalemDagitimi($kalemler['hizmet'], $kalemler['urun'], $kalemler['paket'], max(0, $kalan),
+                Hesap::paraKurus($g['indirim_tutari'] ?? '0'), $adisyonId);
+            $plan['kalem_tahsilatlari'] = [...$plan['kalem_tahsilatlari'], ...$k['kalem_tahsilatlari']];
+            $plan['indirim_uygulamalari'] = $k['indirim_uygulamalari'];
+            $plan['kupon_dusulecek_ids'] = $k['kupon_dusulecek_ids'];
+        }
+
+        return $plan;
+    }
+
+    /**
+     * Secili kalemlerin planli (taksit/senet) olmayanlari: odeme, musteri ve harici indirim yalniz bunlara yazilir.
+     *
+     * @return array{hizmet:\Illuminate\Support\Collection, urun:\Illuminate\Support\Collection, paket:\Illuminate\Support\Collection}
+     */
     private function plansiz(array $idler): array
     {
         $liste = [];
-        foreach (self::TURLER as $tur => [$model, $odemeModeli, $fk]) {
-            $liste[] = [$model::whereIn('id', $idler[$tur])->whereNull('senet_id')->whereNull('taksitli_tahsilat_id')->get(), $odemeModeli, $fk];
+        foreach (self::TURLER as $tur => [$model]) {
+            $liste[$tur] = $idler[$tur] ? $model::whereIn('id', $idler[$tur])->whereNull('senet_id')->whereNull('taksitli_tahsilat_id')->get() : collect();
         }
 
         return $liste;
     }
 
-    private function musteriIndirimiYaz(array $g, array $idler, int $tahsilatId): void
+    /** Musteri indirimi (harici disi) indirimi bos plansiz kalemlere yazilir; kalemler kalan hesabi icin ayni nesnelerde guncellenir. */
+    private function musteriIndirimiYaz(array $g, array $kalemler, int $tahsilatId): void
     {
-        $indirim = Hesap::musteriIndirimi($g['musteri_indirimi'] ?? '0', $g['indirim_tutari'] ?? '0');
+        $indirim = Hesap::musteriIndirimKurus($g['musteri_indirimi'] ?? '0', $g['indirim_tutari'] ?? '0');
         if ($indirim <= 0) {
             return;
         }
         try {
-            $liste = $this->plansiz($idler);
-            $toplam = (float) array_sum(array_map(fn ($l) => $l[0]->sum('fiyat'), $liste));
-            if ($toplam <= 0) {
-                return;
-            }
-            foreach ($liste as [$kalemler, $odemeModeli, $fk]) {
-                foreach ($kalemler as $k) {
-                    if ((float) ($k->indirim_tutari ?? 0) > 0) {
-                        continue; // cift uygulama olmasin
-                    }
-                    $onceki = (float) $odemeModeli::where($fk, $k->id)->sum('tutar');
-                    $pay = Hesap::musteriIndirimPayi((float) $k->fiyat, $toplam, $indirim, $onceki);
-                    if ($pay <= 0) {
-                        continue;
-                    }
-                    $k->indirim_tutari = $pay;
-                    $k->save();
+            $sira = [];
+            $fiyat = [];
+            $uygun = [];
+            $kapasite = [];
+            foreach (self::TURLER as $tur => [, $odemeModeli, $fk]) {
+                foreach ($kalemler[$tur] as $k) {
+                    $sira[] = $k;
+                    $fiyat[] = AdisyonHesap::tlToKurus($k->fiyat ?? 0);
+                    $uygun[] = (float) ($k->indirim_tutari ?? 0) <= 0; // cift uygulama olmasin
+                    $kapasite[] = AdisyonHesap::tlToKurus($k->fiyat ?? 0) - AdisyonHesap::tlToKurus($odemeModeli::where($fk, $k->id)->sum('tutar'));
                 }
+            }
+            foreach (Hesap::musteriIndirimPaylari($fiyat, $uygun, $kapasite, $indirim) as $i => $payKurus) {
+                $sira[$i]->indirim_tutari = AdisyonHesap::kurusToTl($payKurus);
+                $sira[$i]->save();
             }
         } catch (\Throwable $e) {
             Log::error('musteri indirimi kaleme yazilamadi (mobil)', ['err' => $e->getMessage(), 'tahsilat_id' => $tahsilatId]);
         }
-    }
-
-    private function hariciIndirimYaz(array $g, array $idler, mixed $adisyonId, int $tahsilatId): void
-    {
-        $harici = $this->kuponDus(Hesap::tlSayi($g['indirim_tutari'] ?? '0'), (int) $adisyonId);
-        if ($harici <= 0) {
-            return;
-        }
-        try {
-            $liste = $this->plansiz($idler);
-            $toplam = (float) array_sum(array_map(fn ($l) => $l[0]->sum('fiyat'), $liste));
-            if ($toplam <= 0) {
-                return;
-            }
-            $mevcut = (float) array_sum(array_map(fn ($l) => $l[0]->sum('indirim_tutari'), $liste));
-            $onceki = 0.0;
-            foreach ($liste as [$kalemler, $odemeModeli, $fk]) {
-                $kalemIdleri = $kalemler->pluck('id')->all();
-                if ($kalemIdleri) {
-                    $onceki += (float) $odemeModeli::whereIn($fk, $kalemIdleri)->sum('tutar');
-                }
-            }
-            $uygulanacak = Hesap::uygulanacakIndirim($harici, $toplam, $mevcut, $onceki);
-            if ($uygulanacak <= 0) {
-                return;
-            }
-            foreach ($liste as [$kalemler]) {
-                foreach ($kalemler as $k) {
-                    $k->indirim_tutari = (float) ($k->indirim_tutari ?? 0) + Hesap::indirimPayi((float) $k->fiyat, $toplam, $uygulanacak);
-                    $k->save();
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::error('harici indirim kaleme yazilamadi (mobil)', ['err' => $e->getMessage(), 'tahsilat_id' => $tahsilatId]);
-        }
-    }
-
-    /** Kupon indirimi adisyona zaten yazildiysa (kod-kullan) harici indirimden bir kez dusulur ve isaretlenir. */
-    private function kuponDus(float $harici, int $adisyonId): float
-    {
-        try {
-            if ($adisyonId && $harici > 0 && Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tutar') && Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu')) {
-                $kuponlar = DB::table('kampanya_katilimcilari')->where('indirim_kodu_adisyon_id', $adisyonId)
-                    ->where('indirim_kodu_tahsilata_dusuldu', 0)->where('indirim_kodu_tutar', '>', 0)->get(['id', 'indirim_kodu_tutar']);
-                $kupon = (float) $kuponlar->sum('indirim_kodu_tutar');
-                if ($kupon > 0) {
-                    DB::table('kampanya_katilimcilari')->whereIn('id', $kuponlar->pluck('id')->all())->update(['indirim_kodu_tahsilata_dusuldu' => 1]);
-
-                    return Hesap::kuponDusulmus($harici, $kupon);
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::warning('kupon indirim guard hata (mobil): '.$e->getMessage());
-        }
-
-        return $harici;
     }
 
     /** Yeni satis ekranindan gelen satis_tarihi ilk kalemin adisyonuna yazilir (hizmet, urun, paket sirasiyla). Taksit de kullanir. */
@@ -217,40 +179,6 @@ class MobilTahsilatServisi
                 }
 
                 return;
-            }
-        }
-    }
-
-    /**
-     * Vade odemesi: vade odendi isaretlenir, plana bagli her kaleme vadeKalemPayi yazilir. Kalem sirasi hizmet, urun,
-     * paket. Eski kod urunde `aciklama` metni de yazar, korunur.
-     *
-     * @param  class-string  $vadeModeli
-     */
-    private function vadeleriOde(string $vadeModeli, string $tablo, string $planKolonu, array $vadeIdleri, array $g, int $tahsilatId): void
-    {
-        $odemeHam = $g['indirimli_toplam_tahsilat_tutari'] ?? null;
-        foreach ($vadeIdleri as $vadeId) {
-            $vade = $vadeModeli::where('id', $vadeId)->first();
-            $vade->odendi = true;
-            $vade->odeme_yontemi_id = $g['odeme_yontemi'] ?? null;
-            $vade->save();
-
-            // sum ham kolon degerini doner ("3000.00"); vadeKalemPayi bu metni eski kod gibi cevirir.
-            $planToplami = DB::table($tablo)->where($planKolonu, $vade->{$planKolonu})->sum('tutar');
-
-            foreach (self::TURLER as $tur => [$model, $odemeModeli, $fk]) {
-                foreach ($model::where($planKolonu, $vade->{$planKolonu})->get() as $k) {
-                    $onceki = $odemeModeli::where($fk, $k->id)->sum('tutar');
-                    $o = new $odemeModeli();
-                    $o->{$fk} = $k->id;
-                    $o->tahsilat_id = $tahsilatId;
-                    $o->tutar = Hesap::vadeKalemPayi($k->fiyat, $k->indirim_tutari, $onceki, $planToplami, $odemeHam);
-                    if ($tur === 'urun') {
-                        $o->aciklama = '(('.Hesap::tlMetin($k->fiyat).'-'.$k->indirim_tutari.'/'.Hesap::tlMetin($planToplami).')*'.Hesap::tlMetin($odemeHam);
-                    }
-                    $o->save();
-                }
             }
         }
     }

@@ -47,4 +47,12 @@ class MobilTutarKontrolleriTest extends TestCase
         }
         $this->assertArrayHasKey('Paket yazma satirlari', Liste::KAPSAM_DISI);
     }
+
+    public function test_dagitim_yollari_bilincli_fark_olarak_isaretli(): void
+    {
+        foreach (['/tahsilatekle kalem paylari', '/tahsilatekle taksit ve senet vadesi', '/harici-tahsilat-ekle kalem paylari'] as $yol) {
+            $this->assertArrayHasKey($yol, Liste::BILINCLI_FARK);
+            $this->assertStringStartsWith('bilincli fark: web kurali', Liste::BILINCLI_FARK[$yol]);
+        }
+    }
 }

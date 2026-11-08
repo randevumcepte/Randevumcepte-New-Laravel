@@ -2,26 +2,25 @@
 
 namespace App\Services\Tahsilat\Mobil;
 
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
 use App\Exceptions\GecersizIslemException;
 use App\Models\AdisyonHizmetler;
 use App\Models\Adisyonlar;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
-use App\Models\TahsilatHizmetler;
-use App\Models\TahsilatPaketler;
-use App\Models\TahsilatUrunler;
+use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Eski mobil harici tahsilat (gecmise donuk satis + tahsilat) ve salonun satis kalem katalogu. Yan etkisiz: recete, stok,
- * seans olusmaz. Katalog sorgusu telefonda satisla ortak (MobilHizliSatisServisi cagirir).
+ * seans olusmaz. Tahsilatin kalem paylari web ile ayni kodla (TahsilatYazServisi::kalemDagitimi) kurus-kesin dagitilir. Katalog sorgusu telefonda satisla ortak (MobilHizliSatisServisi cagirir).
  */
 class MobilHariciTahsilatServisi
 {
-    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici) {}
+    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici, private TahsilatYazServisi $tahsilat) {}
 
     /** @return array{hizmetler:mixed, urunler:mixed, paketler:mixed} */
     public function katalog(int $salonId): array
@@ -72,8 +71,8 @@ class MobilHariciTahsilatServisi
         $adisyon->harici = 1;
         $adisyon->save();
 
-        $olusan = [];
-        $toplam = 0.0;
+        $olusan = ['hizmet' => [], 'urun' => [], 'paket' => []];
+        $toplamKurus = 0;
         foreach ($kalemler as $k) {
             $tip = $k['tip'] ?? null;
             $itemId = $k['id'] ?? null;
@@ -81,12 +80,13 @@ class MobilHariciTahsilatServisi
                 continue;
             }
             $fiyat = Hesap::hariciFiyat($k['fiyat'] ?? 0);
-            $olusan[] = ['tip' => $tip, 'id' => $this->kalemYaz($tip, (int) $adisyon->id, $itemId, $fiyat, $tarih, Hesap::hariciAdet($k['adet'] ?? 1)), 'fiyat' => $fiyat];
-            $toplam += $fiyat;
+            $olusan[$tip][] = $this->kalemYaz($tip, (int) $adisyon->id, $itemId, $fiyat, $tarih, Hesap::hariciAdet($k['adet'] ?? 1));
+            $toplamKurus += AdisyonHesap::tlToKurus($fiyat);
         }
-        if (! $olusan) {
+        if (! array_merge(...array_values($olusan))) {
             throw new GecersizIslemException('Gecerli satis kalemi bulunamadi.');
         }
+        $toplam = AdisyonHesap::kurusToTl($toplamKurus);
 
         $tutar = Hesap::hariciTahsilatTutari($g['tahsilat_tutari'] ?? 0, $toplam);
         if ($tutar > 0) {
@@ -94,28 +94,15 @@ class MobilHariciTahsilatServisi
                 'salon_id' => $salonId, 'yetkili_id' => $yetkiliId, 'adisyon_id' => $adisyon->id, 'musteri_id' => $musteriId, 'tutar' => $tutar,
                 'komisyon' => null, 'odeme_tarihi' => $tarih, 'odeme_yontemi' => $g['odeme_yontemi'] ?? null, 'notlar' => $g['not'] ?? null,
             ]);
-            foreach ($olusan as $k) {
-                $pay = Hesap::hariciPay($k['fiyat'], $toplam, $tutar);
-                if ($pay <= 0) {
-                    continue;
-                }
-                [$model, $fk] = match ($k['tip']) {
-                    'hizmet' => [TahsilatHizmetler::class, 'adisyon_hizmet_id'],
-                    'urun'   => [TahsilatUrunler::class, 'adisyon_urun_id'],
-                    default  => [TahsilatPaketler::class, 'adisyon_paket_id'],
-                };
-                $o = new $model();
-                $o->{$fk} = $k['id'];
-                $o->tahsilat_id = $t->id;
-                $o->tutar = $pay;
-                $o->save();
-            }
+            // Web ile ayni dagitim: kalan borca oranli, kalanla sinirli, kurus-kesin.
+            $this->tahsilat->planiYaz($this->tahsilat->kalemDagitimi($olusan['hizmet'], $olusan['urun'], $olusan['paket'],
+                AdisyonHesap::tlToKurus($tutar), 0, (int) $adisyon->id), (int) $t->id);
         }
 
         return ['durum' => 'basarili', 'mesaj' => 'Harici tahsilat kaydedildi.', 'adisyon_id' => (int) $adisyon->id, 'toplam' => $toplam];
     }
 
-    private function kalemYaz(string $tip, int $adisyonId, mixed $itemId, float $fiyat, string $tarih, float $adet): int
+    private function kalemYaz(string $tip, int $adisyonId, mixed $itemId, float $fiyat, string $tarih, float $adet): AdisyonHizmetler|AdisyonUrunler|AdisyonPaketler
     {
         if ($tip === 'hizmet') {
             $k = new AdisyonHizmetler();
@@ -139,6 +126,6 @@ class MobilHariciTahsilatServisi
         $k->indirim_tutari = 0;
         $k->save();
 
-        return (int) $k->id;
+        return $k;
     }
 }

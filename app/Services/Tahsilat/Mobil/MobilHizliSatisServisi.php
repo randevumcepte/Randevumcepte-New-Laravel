@@ -3,18 +3,17 @@
 namespace App\Services\Tahsilat\Mobil;
 
 use App\Domain\Stok\HareketTipi;
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
 use App\Exceptions\GecersizIslemException;
 use App\Models\AdisyonHizmetler;
 use App\Models\Adisyonlar;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
-use App\Models\TahsilatHizmetler;
-use App\Models\TahsilatPaketler;
-use App\Models\TahsilatUrunler;
 use App\Models\Urunler;
 use App\Services\Stok\ReceteUygulamaServisi;
 use App\Services\Stok\StokHareketServisi;
+use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +21,8 @@ use Illuminate\Support\Str;
 
 /**
  * Eski mobil stok hizli satis (ekrandaki birim fiyat gecer) ve cagri merkezi telefonda satis. Web HizliSatisServisi ve
- * TelefondaSatisServisi'ne dokunulmaz: onlar katalog fiyati kullanir ve tahsilat aktarimi farklidir.
+ * TelefondaSatisServisi'ne dokunulmaz: onlar katalog fiyati kullanir. Kalem tahsilat satirlari web ile ayni kodla yazilir
+ * (TahsilatYazServisi::kalemDagitimi + planiYaz); satir tutari iki haneye yuvarlanir, toplam kurus-kesin.
  */
 class MobilHizliSatisServisi
 {
@@ -32,6 +32,7 @@ class MobilHizliSatisServisi
         private StokHareketServisi $stok,
         private ReceteUygulamaServisi $recete,
         private MobilHariciTahsilatServisi $katalog,
+        private TahsilatYazServisi $tahsilat,
     ) {}
 
     public function stokSatisi(int $salonId, int $yetkiliId, array $g): array
@@ -60,7 +61,7 @@ class MobilHizliSatisServisi
         $adisyon = Adisyonlar::ac($salonId, $musteriId, $yetkiliId, $tarih);
         $batch = (string) Str::uuid();
         $kalemler = [];
-        $toplam = 0;
+        $toplamKurus = 0;
 
         foreach ($sepet as $k) {
             $urun = ! empty($k['urun_id']) ? Urunler::where('id', $k['urun_id'])->where('salon_id', $salonId)->first() : null;
@@ -84,9 +85,10 @@ class MobilHizliSatisServisi
                 'birim_satis_fiyati' => $satir['birim'], 'birim_alis_fiyati' => $urun->alis_fiyati, 'aciklama' => 'Hızlı satış', 'kullanici_id' => $yetkiliId,
             ]);
 
-            $kalemler[$u->id] = $satir['tutar'];
-            $toplam += $satir['tutar'];
+            $kalemler[] = $u;
+            $toplamKurus += AdisyonHesap::tlToKurus($satir['tutar']);
         }
+        $toplam = AdisyonHesap::kurusToTl($toplamKurus);
 
         $tahsilatId = null;
         $tahsilatYap = filter_var($g['tahsilat_yap'] ?? true, FILTER_VALIDATE_BOOLEAN);
@@ -97,15 +99,9 @@ class MobilHizliSatisServisi
                 'komisyon' => null, 'odeme_tarihi' => $tarih, 'odeme_yontemi' => $odeme, 'notlar' => 'Hızlı satış',
             ]);
             $tahsilatId = (string) $t->id;
-            foreach ($kalemler as $kalemId => $tutar) {
-                $o = new TahsilatUrunler();
-                $o->adisyon_urun_id = $kalemId;
-                $o->tahsilat_id = $t->id;
-                $o->tutar = $tutar;
-                $o->salon_id = $salonId;
-                $o->user_id = $musteriId;
-                $o->save();
-            }
+            // Web ile ayni dagitim (pesin satista her satir kendi tutarini alir); satirlara eski kod gibi salon ve musteri yazilir.
+            $this->tahsilat->planiYaz($this->tahsilat->kalemDagitimi([], $kalemler, [], $toplamKurus, 0, (int) $adisyon->id),
+                (int) $t->id, ['salon_id' => $salonId, 'user_id' => $musteriId]);
         }
 
         return ['status' => 'ok', 'batch_uuid' => $batch, 'adisyon_id' => (string) $adisyon->id, 'tahsilat_id' => $tahsilatId, 'toplam_tutar' => (string) $toplam];
@@ -162,7 +158,7 @@ class MobilHizliSatisServisi
             } catch (\Throwable $e) {
                 report($e);
             }
-            [$model, $fk] = [TahsilatHizmetler::class, 'adisyon_hizmet_id'];
+            $kalem = ['hizmet' => [AdisyonHizmetler::find($kalemId)], 'urun' => [], 'paket' => []];
         } elseif ($tip === 'urun') {
             $u = new AdisyonUrunler();
             $u->adisyon_id = $adisyonId;
@@ -171,8 +167,7 @@ class MobilHizliSatisServisi
             $u->fiyat = $fiyat;
             $u->indirim_tutari = 0;
             $u->save();
-            $kalemId = (int) $u->id;
-            [$model, $fk] = [TahsilatUrunler::class, 'adisyon_urun_id'];
+            $kalem = ['hizmet' => [], 'urun' => [$u], 'paket' => []];
         } else {
             $hizmetler = DB::table('paket_hizmetler')->where('paket_id', $itemId)->get(['hizmet_id', 'seans']);
             $toplamSeans = (int) $hizmetler->sum(fn ($h) => (int) ($h->seans ?? 0));
@@ -192,19 +187,15 @@ class MobilHizliSatisServisi
             foreach ($hizmetler as $h) {
                 $this->cagriHizmeti($adisyonId, $h->hizmet_id, 0, $tarih, max(1, (int) ($h->seans ?? 1)));
             }
-            $kalemId = (int) $p->id;
-            [$model, $fk] = [TahsilatPaketler::class, 'adisyon_paket_id'];
+            $kalem = ['hizmet' => [], 'urun' => [], 'paket' => [$p]];
         }
 
         $t = $this->yazici->tahsilatYaz([
             'salon_id' => $salonId, 'yetkili_id' => $yetkiliId, 'adisyon_id' => $adisyonId, 'musteri_id' => $musteriId, 'tutar' => $fiyat,
             'komisyon' => null, 'odeme_tarihi' => $tarih, 'odeme_yontemi' => $odeme, 'notlar' => 'Telefonda satış (çağrı merkezi)',
         ]);
-        $o = new $model();
-        $o->{$fk} = $kalemId;
-        $o->tahsilat_id = $t->id;
-        $o->tutar = $fiyat;
-        $o->save();
+        $this->tahsilat->planiYaz($this->tahsilat->kalemDagitimi($kalem['hizmet'], $kalem['urun'], $kalem['paket'],
+            AdisyonHesap::tlToKurus($fiyat), 0, $adisyonId), (int) $t->id);
 
         return ['success' => true, 'message' => 'Satış oluşturuldu ve kasaya işlendi.', 'adisyon_id' => $adisyonId];
     }

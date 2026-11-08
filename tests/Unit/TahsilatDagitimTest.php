@@ -77,4 +77,50 @@ class TahsilatDagitimTest extends TestCase
     {
         $this->assertSame([], TahsilatDagitim::taksitHavuz([0, 0], 5000));
     }
+
+    // --- kurus artigi (taksitHavuz / oransal) ---
+
+    public function test_havuz_kurus_artigi_yerlesir(): void
+    {
+        // 3 x 100 TL kalan, 100 TL odeme: eskiden 33.33 x 3 = 99.99; artik en buyuk bos kapasiteye (esitlikte ilk).
+        $o = TahsilatDagitim::taksitHavuz([10000, 10000, 10000], 10000);
+        $this->assertSame([3334, 3333, 3333], $o);
+        $this->assertSame(10000, array_sum($o));
+    }
+
+    public function test_havuz_yukari_yuvarlama_geri_alinir(): void
+    {
+        // 3 x 100 TL kalan, 200 TL odeme: round(6666.67) x 3 = 20001 → bir kurus geri, toplam 20000.
+        $o = TahsilatDagitim::taksitHavuz([10000, 10000, 10000], 20000);
+        $this->assertSame(20000, array_sum($o));
+        $this->assertSame([6666, 6667, 6667], $o);
+    }
+
+    public function test_havuz_toplam_her_zaman_min_odeme_kalan(): void
+    {
+        foreach ([[[1, 1, 1, 1, 1, 1, 1], 3], [[333, 333, 334], 500], [[12345, 6789, 1], 9999], [[5000, 7000], 20000], [[1, 2, 3], 0]] as [$kalan, $odeme]) {
+            $o = TahsilatDagitim::taksitHavuz($kalan, $odeme);
+            $this->assertSame(min($odeme, array_sum($kalan)), array_sum($o));
+            foreach ($o as $i => $p) {
+                $this->assertLessThanOrEqual($kalan[$i], $p);
+                $this->assertGreaterThan(0, $p);
+            }
+        }
+    }
+
+    public function test_oransal_sinir_artigi_kapasitesi_olana_gider(): void
+    {
+        // Fiyat agirligi esit, ilk kalemin kalani 1 TL: payi 1 TL, kalan 99 TL digerlerine esit dilim.
+        $o = TahsilatDagitim::oransal([10000, 10000, 10000], [100, 100000, 100000], 30000);
+        $this->assertSame([100, 14950, 14950], $o);
+        // Kalani 0 olan kalem pay almaz; toplam yine hedef.
+        $o = TahsilatDagitim::oransal([10000, 10000, 10000], [0, 10000, 10000], 15000);
+        $this->assertSame([1 => 7500, 2 => 7500], $o);
+    }
+
+    public function test_oransal_hedef_kapasiteyle_sinirli(): void
+    {
+        $this->assertSame([2000, 3000], TahsilatDagitim::oransal([1, 1], [2000, 3000], 9000));
+        $this->assertSame([], TahsilatDagitim::oransal([1, 1], [0, 0], 9000));
+    }
 }

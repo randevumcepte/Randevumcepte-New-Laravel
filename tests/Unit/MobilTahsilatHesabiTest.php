@@ -6,8 +6,8 @@ use App\Domain\Tahsilat\MobilTahsilatHesabi as H;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Eski mobil para formullerini kilitler. Beklenen degerler ApiController kodundan elle hesaplandi; kusurlar
- * (vade dagitimindaki 100 kat, her turun odemenin tamamini bolmesi) bilerek test edilir.
+ * Mobil para metni ve satir hesaplarini kilitler. Odeme ve indirim dagitimi web ile ayni koddadir (TahsilatDagitim,
+ * TahsilatYazServisi); eski mobil dagitim formulleri (kalemPayi, vadeKalemPayi, hariciPay) kullanici karariyla kaldirildi.
  */
 class MobilTahsilatHesabiTest extends TestCase
 {
@@ -32,40 +32,44 @@ class MobilTahsilatHesabiTest extends TestCase
     public function test_odeme_komisyondan_ayrilir_negatife_dusmez(): void
     {
         $this->assertSame([900.0, 100.0], H::odemeAyir('1.000,00', '100,00'));
-        $this->assertSame([0, 200.0], H::odemeAyir('100,00', '200,00'));
+        $this->assertSame([0.0, 200.0], H::odemeAyir('100,00', '200,00'));
+        // Ondalik nokta ve binlik ayirici da kurus-kesin (eski tlSayi "1500.00"i 150000 okurdu).
+        $this->assertSame([1450.5, 50.0], H::odemeAyir('1500.50', '50'));
+        $this->assertSame([1500.0, 0.0], H::odemeAyir('1.500', null));
     }
 
-    public function test_musteri_indirimi_haricisiz_oransal_ve_kalanla_sinirli(): void
+    public function test_musteri_indirimi_haricisiz_oransal_kalanla_sinirli_kurus_kesin(): void
     {
-        $this->assertSame(50.0, H::musteriIndirimi('150,00', '100,00'));
-        $this->assertSame(0.0, H::musteriIndirimi('50,00', '100,00'));
-        $this->assertSame(25.0, H::musteriIndirimPayi(100.0, 200.0, 50.0, 0.0));
-        $this->assertSame(10.0, H::musteriIndirimPayi(100.0, 200.0, 50.0, 90.0));
-        $this->assertSame(0.0, H::musteriIndirimPayi(100.0, 200.0, 50.0, 100.0));
+        $this->assertSame(5000, H::musteriIndirimKurus('150,00', '100,00'));
+        $this->assertSame(0, H::musteriIndirimKurus('50,00', '100,00'));
+        // 2 x 100 TL, 50 TL indirim: 25 / 25.
+        $this->assertSame([2500, 2500], H::musteriIndirimPaylari([10000, 10000], [true, true], [10000, 10000], 5000));
+        // Ikinci kalemin 90 TL'si odenmis: payi 10 TL ile sinirli, sinir artigi (15 TL) birinciye (eski: 25 / 10, 15 TL kayip).
+        $this->assertSame([4000, 1000], H::musteriIndirimPaylari([10000, 10000], [true, true], [10000, 1000], 5000));
+        // 3 x 100 TL, 100 TL: 33.34 + 33.33 + 33.33 (eski 33.33 x 3 = 99.99).
+        $this->assertSame([3334, 3333, 3333], H::musteriIndirimPaylari([10000, 10000, 10000], [true, true, true], [10000, 10000, 10000], 10000));
+        // Indirimi olan kalem atlanir, payi baskasina aktarilmaz.
+        $this->assertSame([2500], H::musteriIndirimPaylari([10000, 10000], [true, false], [10000, 10000], 5000));
+        $this->assertSame([], H::musteriIndirimPaylari([10000], [false], [10000], 5000));
     }
 
-    public function test_harici_indirim_kupon_dusumu_ve_brut_kalan_siniri(): void
+    public function test_kampanya_indirimi_web_oransal_kurali(): void
     {
-        $this->assertSame(70.0, H::kuponDusulmus(100.0, 30.0));
-        $this->assertSame(0.0, H::kuponDusulmus(10.0, 30.0));
-        $this->assertSame(100.0, H::kuponDusulmus(100.0, 0.0));
-        $this->assertSame(100.0, H::uygulanacakIndirim(100.0, 300.0, 50.0, 100.0));
-        $this->assertSame(50.0, H::uygulanacakIndirim(100.0, 300.0, 100.0, 150.0));
-        $this->assertSame(33.33, H::indirimPayi(100.0, 300.0, 100.0));
+        // Kampanya kodu indirimi TahsilatDagitim::oransal ile: 3 x 100 TL'ye 100 TL -> 33,34 + 33,33 + 33,33.
+        $this->assertSame([3334, 3333, 3333], \App\Domain\Tahsilat\TahsilatDagitim::oransal([10000, 10000, 10000], [10000, 10000, 10000], 10000));
+        // Kalani 10 TL olan kalem 10 TL alir, artan diger kalemlere gider (eskiden kayboluyordu).
+        $this->assertSame([4500, 1000, 4500], \App\Domain\Tahsilat\TahsilatDagitim::oransal([10000, 10000, 10000], [10000, 1000, 10000], 10000));
     }
 
-    public function test_secili_kalem_payi_yuvarlanmaz_fiyat_sifirda_sifir(): void
+    public function test_para_kurus_bicimleri(): void
     {
-        $this->assertEqualsWithDelta(333.3333333, H::kalemPayi('100.00', 300.0, 1000.0), 0.000001);
-        $this->assertSame(0.0, (float) H::kalemPayi('0.00', 0, 500.0));
-    }
-
-    public function test_vade_payi_eski_kodla_ayni_100_kat_karisimi(): void
-    {
-        // fiyat "1500.00" → 150000, plan "3000.00" → 300000: onceki ve indirim ham (100 kat olmayan) cikar.
-        $this->assertSame(750.0, H::vadeKalemPayi('1500.00', null, 0, '3000.00', '1.500,00'));
-        $this->assertSame(747.5, H::vadeKalemPayi('1500.00', null, '500.00', '3000.00', '1.500,00'));
-        $this->assertSame(747.0, H::vadeKalemPayi('1500.00', '100.00', '500.00', '3000.00', '1.500,00'));
+        $this->assertSame(123456, H::paraKurus('1.234,56'));
+        $this->assertSame(10000, H::paraKurus('100.00'));
+        $this->assertSame(150000, H::paraKurus('1.500'));
+        $this->assertSame(123456700, H::paraKurus('1.234.567'));
+        $this->assertSame(150, H::paraKurus('1.5'));
+        $this->assertSame(0, H::paraKurus(null));
+        $this->assertSame(5000, H::paraKurus(50));
     }
 
     public function test_vade_tutari_ve_tarihleri(): void
@@ -110,11 +114,11 @@ class MobilTahsilatHesabiTest extends TestCase
     public function test_harici_tahsilat(): void
     {
         $this->assertSame(1000.5, H::hariciFiyat('1000,50'));
+        $this->assertSame(100.56, H::hariciFiyat('100.555'));
         $this->assertSame(0.0, H::hariciFiyat('-5'));
         $this->assertSame(1.0, H::hariciAdet('0'));
         $this->assertSame(300.0, H::hariciTahsilatTutari('500', 300.0));
         $this->assertSame(0.0, H::hariciTahsilatTutari('500', 0.0));
-        $this->assertSame(100.0, H::hariciPay(100.0, 300.0, 300.0));
     }
 
     public function test_kampanya_yuzdesi(): void
@@ -128,6 +132,7 @@ class MobilTahsilatHesabiTest extends TestCase
     {
         $this->assertSame(['birim' => 50.0, 'adet' => 2.0, 'tutar' => 100.0], H::hizliSatisSatiri('50', '80', -2));
         $this->assertSame(['birim' => 80.0, 'adet' => 1.0, 'tutar' => 80.0], H::hizliSatisSatiri(null, '80', null));
+        $this->assertSame(['birim' => 33.333, 'adet' => 3.0, 'tutar' => 100.0], H::hizliSatisSatiri('33.333', null, 3));
         $this->assertSame(1000.56, H::telefonFiyati('1000,555'));
     }
 

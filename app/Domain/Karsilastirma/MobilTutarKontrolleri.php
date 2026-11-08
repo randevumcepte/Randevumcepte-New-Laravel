@@ -28,6 +28,20 @@ final class MobilTutarKontrolleri
         'Kontor WebView sayfasi' => 'HTML sayfa ve eski uc oturum acar: gozle karsilastirilir',
     ];
 
+    /**
+     * Eski mobille esitligi artik BEKLENMEYEN yazma yollari (kullanici karari 2026-11-08): odeme ve indirim dagitimi web ile ayni
+     * kural ve kod (TahsilatDagitim, TahsilatYazServisi). Test salonundaki ikiz kayit karsilastirmasinda bu satirlarin kalem
+     * tutarlari eski mobilden farkli cikar; fark hata sayilmaz.
+     */
+    public const BILINCLI_FARK = [
+        '/tahsilatekle kalem paylari' => 'bilincli fark: web kurali (kalan borca oranli, kalanla sinirli, kurus-kesin; eski: fiyata oranli, yuvarlanmaz)',
+        '/tahsilatekle taksit ve senet vadesi' => 'bilincli fark: web kurali (komisyon dusulur, vadeye en cok kendi tutari, plan kalaniyla sinirli, kismi odemede vade bolunur; eski: her vadeye odemenin tamami, "100.00" fiyat 10000 okunur)',
+        '/tahsilatekle musteri ve harici indirim' => 'bilincli fark: web kurali (kalem kalaniyla sinirli, kurus-kesin, harici indirim delta kaydi)',
+        '/harici-tahsilat-ekle kalem paylari' => 'bilincli fark: web kurali (kurus-kesin)',
+        '/stok/hizli-satis ve /cagri-merkezi/hizli-satis kalem satirlari' => 'bilincli fark: web kurali (satir tutari iki hane, toplam kurus-kesin)',
+        '/taksitekleguncelle on odeme paylari' => 'bilincli fark: web kurali (tek havuz, kurus artigi en buyuk kaleme)',
+    ];
+
     public static function yazmaYoluMu(string $yol): bool
     {
         return preg_match('/ekle|sil\b|sil\/|guncelle|kaydet|gonder|isaretle|toggle|senetode\b|primode\b|kod-kullan|talep|tahsilet|hizli-satis/i', $yol) === 1;

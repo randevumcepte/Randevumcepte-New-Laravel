@@ -3,10 +3,10 @@
 namespace App\Domain\Tahsilat;
 
 /**
- * Eski mobilin (ApiController) para hesabi — satir satir, saf. Web hesabi TahsilatDagitim'dedir; bu sinifa
- * yalniz mobil uclar girer. Kusurlar BILEREK korunur (kullanici karari: mobil tutarlar bugunkuyle birebir),
- * duzeltilmez. En onemlisi: vade dagitimindaki tlSayi veritabani degeri "1500.00" icin de calisir ve 150000
- * uretir; eski kod da boyle hesaplar.
+ * Mobil uclarin para metni ve satir hesaplari — saf. Odemenin ve indirimin kalemlere DAGITIMI burada degil: web ile ayni
+ * kural ve ayni kod (TahsilatDagitim, TahsilatYazServisi::kalemDagitimi / vadeDagitimi). Kullanici karari (2026-11-08):
+ * eski mobilin dagitim hatalari (kurus farki, kalan borcu asan vade payi, "100.00" fiyatin 10000 okunmasi) duzeltilir;
+ * mobil artik eski mobil gibi degil, web gibi yazar. Para metni kurusa paraKurus ile cevrilir.
  *
  * Eski sunucu PHP 7.4'tur. Karsilastirmalar bu yuzden (float) ile yazilir: "0,50" > 0 orada false'tur.
  */
@@ -42,46 +42,46 @@ final class MobilTahsilatHesabi
     }
 
     /**
-     * tahsilat.tutar = indirimli toplam - komisyon (komisyon adisyona yansimaz).
+     * tahsilat.tutar = indirimli toplam - komisyon (komisyon adisyona yansimaz). Kurus aritmetigi.
      *
      * @return array{0:float,1:float} [adisyon odemesi, komisyon]
      */
     public static function odemeAyir(mixed $indirimliToplam, mixed $komisyon): array
     {
-        $k = self::tlSayi($komisyon);
+        $k = self::paraKurus($komisyon);
 
-        return [max(0, self::tlSayi($indirimliToplam) - $k), $k];
+        return [round(max(0, self::paraKurus($indirimliToplam) - $k) / 100, 2), round($k / 100, 2)];
     }
 
-    /** musteri_indirimi = musteri% + harici gelir; kaleme yazilacak musteri payi harici disidir. */
-    public static function musteriIndirimi(mixed $musteriIndirimi, mixed $hariciIndirim): float
+    /** musteri_indirimi = musteri% + harici; kaleme yazilacak musteri payi harici disidir (kurus). */
+    public static function musteriIndirimKurus(mixed $musteriIndirimi, mixed $hariciIndirim): int
     {
-        return max(0, self::tlSayi($musteriIndirimi) - self::tlSayi($hariciIndirim));
+        return max(0, self::paraKurus($musteriIndirimi) - self::paraKurus($hariciIndirim));
     }
 
-    /** Daha once indirim yazilmamis kalemin musteri indirimi payi (fiyata oranli, kalanla sinirli). */
-    public static function musteriIndirimPayi(float $fiyat, float $toplamFiyat, float $indirim, float $onceki): float
+    /**
+     * Musteri indirimi kalem paylari (kurus). Indirim secili tum plansiz kalemlerin fiyatina oranlidir; daha once indirim almis
+     * kalemin payi baskasina aktarilmaz (cift uygulama olmasin). Uygun kalemlerin payi kendi kalaniyla (fiyat - onceki tahsilat)
+     * sinirli; yuvarlama ve sinir artigi web dagitimiyla (TahsilatDagitim::oransal) kurus-kesin yerlesir.
+     *
+     * @param  array<int,int>  $fiyatlarKurus    tum secili plansiz kalemler
+     * @param  array<int,bool>  $uygunlar        indirimi bos olan kalemler
+     * @param  array<int,int>  $kapasitelerKurus fiyat - onceki tahsilat
+     * @return array<int,int> kalem indeksi => pay (yalniz pay > 0)
+     */
+    public static function musteriIndirimPaylari(array $fiyatlarKurus, array $uygunlar, array $kapasitelerKurus, int $indirimKurus): array
     {
-        return max(0, min(round(($fiyat / $toplamFiyat) * $indirim, 2), $fiyat - $onceki));
+        $toplam = array_sum($fiyatlarKurus);
+        $uygunFiyat = array_filter($fiyatlarKurus, fn ($i) => ! empty($uygunlar[$i]), ARRAY_FILTER_USE_KEY);
+        if ($toplam <= 0 || $indirimKurus <= 0 || ! $uygunFiyat) {
+            return [];
+        }
+        $hedef = (int) round(array_sum($uygunFiyat) / $toplam * $indirimKurus);
+
+        return TahsilatDagitim::oransal($uygunFiyat, array_intersect_key($kapasitelerKurus, $uygunFiyat), $hedef);
     }
 
-    /** Kupon indirimi adisyona zaten yazildiysa harici indirimden bir kez dusulur. */
-    public static function kuponDusulmus(float $hariciIndirim, float $kuponIndirim): float
-    {
-        return $kuponIndirim > 0 ? max(0, $hariciIndirim - $kuponIndirim) : $hariciIndirim;
-    }
 
-    /** Uygulanacak harici indirim: brut kalan borcla sinirli (bu odeme dusulmeden). */
-    public static function uygulanacakIndirim(float $indirim, float $toplamFiyat, float $mevcutIndirim, float $oncekiTahsilat): float
-    {
-        return max(0, min($indirim, $toplamFiyat - $mevcutIndirim - $oncekiTahsilat));
-    }
-
-    /** Harici indirim ve kampanya kodu kalem payi. */
-    public static function indirimPayi(float $fiyat, float $toplamFiyat, float $indirim): float
-    {
-        return round(($fiyat / $toplamFiyat) * $indirim, 2);
-    }
 
     /** Kampanya kodunun hedef indirimi: fiyat toplaminin yuzdesi. */
     public static function yuzdeIndirim(float $tutar, int $yuzde): float
@@ -93,23 +93,6 @@ final class MobilTahsilatHesabi
     public static function kampanyaIndirimi(string $metin): array
     {
         return preg_match('/%\s*(\d+)/u', $metin, $m) ? [(int) $m[1], 'yuzde'] : [0, 'xalyode'];
-    }
-
-    /** Secili kalem payi (tahsilatekle): fiyata oranli, YUVARLANMAZ; kolon yuvarlar. Fiyat 0 ise stüdyo korumasi. */
-    public static function kalemPayi(mixed $fiyat, mixed $toplamAdisyon, float $odeme): float
-    {
-        $oran = $toplamAdisyon > 0 ? $fiyat / $toplamAdisyon : 0;
-
-        return $oran * $odeme;
-    }
-
-    /**
-     * Taksit veya senet vadesi odemesinde plana bagli kalemin payi. fiyat ve plan toplami veritabani degeriyle,
-     * odeme istekteki ham metinle verilir. Komisyon DUSULMEZ: eski kod ham indirimli toplami kullanir.
-     */
-    public static function vadeKalemPayi(mixed $fiyat, mixed $indirim, mixed $onceki, mixed $planToplami, mixed $odeme): float
-    {
-        return ((self::tlSayi($fiyat) - (float) $indirim - (float) $onceki) / self::tlSayi($planToplami)) * self::tlSayi($odeme);
     }
 
     /** Taksit vade tutari: toplam / vade, iki hane. */
@@ -178,12 +161,17 @@ final class MobilTahsilatHesabi
         return array_map(fn (int $k) => round($k / 100, 2), TahsilatDagitim::reconcile($netler, self::paraKurus($odeme)));
     }
 
-    /** Para metni → kurus. Virgul varsa Turkce bicim ("1.234,56"), yoksa ondalik nokta ("100.00"). */
+    /**
+     * Para metni → kurus. Virgul varsa Turkce bicim ("1.234,56"); virgulsuz ve noktalar uc haneli gruplarsa binlik ayirici
+     * ("1.500" → 1500 TL); aksi halde ondalik nokta (veritabani "100.00").
+     */
     public static function paraKurus(mixed $deger): int
     {
         $m = trim((string) ($deger ?? '0'));
         if (str_contains($m, ',')) {
             $m = str_replace(['.', ','], ['', '.'], $m);
+        } elseif (preg_match('/^-?\d{1,3}(\.\d{3})+$/', $m)) {
+            $m = str_replace('.', '', $m);
         }
 
         return (int) round((float) $m * 100);
@@ -212,19 +200,14 @@ final class MobilTahsilatHesabi
     {
         $tutar = max(0, self::virgulluSayi($ham));
 
-        return $toplam > 0 ? min($tutar, $toplam) : 0;
+        // Iki haneye yuvarlanir: tahsilat satiri ile kalemlere dagitilan kurus ayni sayidan cikar.
+        return $toplam > 0 ? round(min($tutar, $toplam), 2) : 0;
     }
 
-    /** Harici tahsilat kalem payi, yuvarlanmaz. */
-    public static function hariciPay(float $fiyat, float $toplam, float $tahsilat): float
-    {
-        return ($fiyat / $toplam) * $tahsilat;
-    }
-
-    /** Harici kalem fiyati: negatif 0. */
+    /** Harici kalem fiyati: negatif 0, kolon gibi iki hane (toplam ve dagitim kurus-kesin kalsin). */
     public static function hariciFiyat(mixed $ham): float
     {
-        return max(0, self::virgulluSayi($ham));
+        return round(max(0, self::virgulluSayi($ham)), 2);
     }
 
     /** Harici urun adedi: 0 ve alti 1. */
@@ -241,13 +224,13 @@ final class MobilTahsilatHesabi
         return round(self::virgulluSayi($ham), 2);
     }
 
-    /** Hizli satis satiri: birim fiyat varsa o, yoksa katalog; miktar mutlak deger. */
+    /** Hizli satis satiri: birim fiyat varsa o, yoksa katalog; miktar mutlak deger; satir tutari kolon gibi iki hane. */
     public static function hizliSatisSatiri(mixed $birimFiyat, mixed $katalogFiyat, mixed $miktar): array
     {
         $birim = $birimFiyat !== null ? (float) $birimFiyat : (float) $katalogFiyat;
         $adet = abs((float) ($miktar ?? 1));
 
-        return ['birim' => $birim, 'adet' => $adet, 'tutar' => $birim * $adet];
+        return ['birim' => $birim, 'adet' => $adet, 'tutar' => round($birim * $adet, 2)];
     }
 
     /** Senet on odemesi var mi: str_replace sonucu `!= 0`. */
