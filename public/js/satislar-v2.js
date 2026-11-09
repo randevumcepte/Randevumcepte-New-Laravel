@@ -268,16 +268,16 @@ function islemlerCiz(a) {
   return `<div class="s-islemler">${b.join('')}</div>`;
 }
 
-// İçerik: API'nin yapılandırılmış kalem listesi — her kalem tek satır: tür etiketi + ad + ek + personel.
+// İçerik: API'nin yapılandırılmış kalem listesi — tür etiketi + ad + ek (seans/adet…); personel gösterilmez (aranabilir).
 const TUR_KISA = { hizmet: 'H', urun: 'Ü', paket: 'P' };
 const TUR_UZUN = { hizmet: 'Hizmet', urun: 'Ürün', paket: 'Paket' };
 function icerikCiz(a) {
   const k = a.kalemler || [];
   if (!k.length) return '<span class="s-ic-bos">—</span>';
-  return k.map((x) => `<div class="s-ic" title="${esc(x.ad)}${x.personel ? ' — ' + esc(x.personel) : ''}">`
+  return k.map((x) => `<div class="s-ic" title="${esc(x.ad)}">`
     + `<span class="s-ic-tur s-ic-${x.tur}" title="${TUR_UZUN[x.tur] || ''}">${TUR_KISA[x.tur] || '?'}</span>`
     + `<span class="s-ic-ad">${esc(x.ad)}</span>`
-    + (x.ek || x.personel ? `<span class="s-ic-alt">${x.ek ? `<span class="s-ic-ek">${esc(x.ek)}</span>` : ''}${x.personel ? `<span class="s-ic-per">${esc(x.personel)}</span>` : ''}</span>` : '')
+    + (x.ek ? `<span class="s-ic-alt"><span class="s-ic-ek">${esc(x.ek)}</span></span>` : '')
     + '</div>').join('');
 }
 
