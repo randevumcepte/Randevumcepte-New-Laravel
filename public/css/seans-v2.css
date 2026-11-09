@@ -35,7 +35,7 @@
 .st-tablosu tr.st-detay > td { background: #f8f9fa; padding: 14px !important; white-space: normal; }
 
 /* ── Hizmet (bölge) kartları ── */
-.st-kartlar { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.st-kartlar { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .st-kart { background: #fff; border: 1px solid rgba(0, 0, 0, .06); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .st-kart-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .st-kart-bas h6 { margin: 0; font-size: 14px; font-weight: 700; color: #1f2937; }
@@ -92,11 +92,14 @@
 .st-yil-tarih b { font-size: 13.5px; white-space: nowrap; }
 .st-yil-tarih i { color: #9D5DC8; }
 .st-yil-tarih div:last-child { text-align: right; }
-.st-yil-durum { margin: 6px 0 10px; color: #16a34a; font-size: 12px; font-weight: 600; text-align: center; }
+.st-yil-durum { margin: 0; color: #16a34a; font-size: 12px; font-weight: 600; text-align: center; }
 .st-yil-durum.st-doldu { color: #dc2626; }
 .st-yil-durum.st-bekliyor { color: #6b7280; }
-.st-yil-btn { display: flex; gap: 8px; margin-top: 12px; }
-.st-yil-btn .rc-btn { flex: 1 1 0; justify-content: center; }
+/* Butonlar sığmazsa alt alta iner (kart genişliğinden bağımsız taşmaz); Cihaz Bilgileri tam satır. */
+.st-yil-btn { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-yil-btn .rc-btn { flex: 1 1 120px; min-width: 0; justify-content: center; white-space: nowrap; padding: 9px 10px; font-size: 12.5px; }
+.st-yil-btn .st-cihaz-btn { flex-basis: 100%; }
+.st-mini-3 { grid-template-columns: repeat(3, 1fr); }
 .st-yil-dokum { max-height: 420px; overflow-y: auto; }
 .st-yil-dokum table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .st-yil-dokum th { position: sticky; top: 0; padding: 9px 12px; background: #f5eefe; color: #5C008E; font-size: 11.5px; text-align: left; }

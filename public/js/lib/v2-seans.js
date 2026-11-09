@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=7';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=8';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -149,10 +149,10 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
         <div class="st-kart-bas"><h6>${esc(h.ad || '-')}</h6><span class="rc-rozet rc-rozet-mor">Sınırsız${g.sure ? ` · ${esc(g.sure)}` : ''}</span></div>
         <div class="st-yil-tarih"><div><small>Başlangıç</small><b>${g.baslangic ? tarihTr(g.baslangic) : '—'}</b></div><i class="bi bi-arrow-right"></i><div><small>Bitiş</small><b>${g.bitis ? tarihTr(g.bitis) : '—'}</b></div></div>
         ${durum}
-        <div class="st-mini">${mini('Kullanıldı', h.sayac.kullanilan, 'geldi')}${mini('Bekleyen', bekleyen, 'beklemede')}${mini('Kullanılmadı', h.sayac.kullanilmayan, 'gelmedi')}</div>
+        <div class="st-mini st-mini-3">${mini('Kullanıldı', h.sayac.kullanilan, 'geldi')}${mini('Bekleyen', bekleyen, 'beklemede')}${mini('Kullanılmadı', h.sayac.kullanilmayan, 'gelmedi')}</div>
         <div class="st-yil-btn"><button type="button" class="rc-btn rc-btn-birincil" data-dokum="1" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-list-ul"></i> Seans Dökümü</button>
-        ${g.suresi_doldu ? '' : `<button type="button" class="rc-btn rc-btn-ikincil" data-ekle="1" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-plus-lg"></i> Yeni Kullanım</button>`}</div>
-        ${h.lazer ? `<button type="button" class="rc-btn st-cihaz-btn" data-cihaz="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-lightning-charge"></i> Cihaz Bilgileri</button>` : ''}
+        ${g.suresi_doldu ? '' : `<button type="button" class="rc-btn rc-btn-ikincil" data-ekle="1" data-anahtar="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-plus-lg"></i> Yeni Kullanım</button>`}
+        ${h.lazer ? `<button type="button" class="rc-btn st-cihaz-btn" data-cihaz="${esc(k.anahtar)}" data-hizmet="${h.hizmet_id}"><i class="bi bi-lightning-charge"></i> Cihaz Bilgileri</button>` : ''}</div>
       </div>`;
   }
 

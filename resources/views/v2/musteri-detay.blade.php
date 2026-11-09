@@ -5,7 +5,7 @@
 
 @push('stil')
     <link rel="stylesheet" href="/css/musteri-v2.css?v=4">
-    <link rel="stylesheet" href="/css/seans-v2.css?v=3">
+    <link rel="stylesheet" href="/css/seans-v2.css?v=4">
     <link rel="stylesheet" href="/css/formlar-v2.css?v=2">
     <link rel="stylesheet" href="/css/takvim-v2.css?v=15">
 @endpush
@@ -19,5 +19,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/musteri-detay-v2.js?v=15"></script>
+    <script type="module" src="/js/musteri-detay-v2.js?v=16"></script>
 @endpush
