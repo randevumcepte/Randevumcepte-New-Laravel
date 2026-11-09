@@ -1,7 +1,7 @@
 /**
  * v2 ÖN GÖRÜŞME FORMU — TEK KAYNAK. Ön Görüşmeler ekranı (ongorusmeler-v2.js) ve Çağrı Merkezi
  * "Ön Görüşme Randevusu" sonucu aynı formu kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=7';
+ * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=8';
  *
  *   ongorusmeFormu({ salonId, fv, kayit, musteri, onKaydet })
  *     fv       : GET /ongorusme/form-verisi cevabı (verilmezse çekilir — formVerisi())
@@ -83,10 +83,18 @@ export async function ongorusmeFormu({ salonId, fv = null, kayit: k = null, must
   el('[data-kapat]', ov).onclick = modalKapat;
   tarihBagla(el('#fTarih', ov));
 
-  // Mevcut müşteri seçilince ad / telefon ondan dolar; "Değiştir" serbest girişe döner.
+  // Mevcut müşteri seçilince ad / telefon + (arama cevabında varsa) e-mail, cinsiyet, referans ondan
+  // dolar; "Değiştir" serbest girişe döner. Başlangıç seçiminde (düzenleme) olmayan alana dokunulmaz.
+  const doldur = (m) => {
+    if (!m) return;
+    el('#fAd', ov).value = m.ad || '';
+    el('#fTel', ov).value = m.telefon || '';
+    if ('email' in m) el('#fEmail', ov).value = m.email || '';
+    if ('cinsiyet' in m) el('#fCinsiyet', ov).value = m.cinsiyet ?? '';
+    if ('musteri_tipi' in m) el('#fReferans', ov).value = m.musteri_tipi ?? '';
+  };
   const secici = musteriSecici(el('#fMusteri', ov), {
-    salonId, yol: '/ongorusme/musteri-ara', baslangic: ilk, sabit: !!musteri,
-    onSec: (m) => { if (m) { el('#fAd', ov).value = m.ad || ''; el('#fTel', ov).value = m.telefon || ''; } },
+    salonId, yol: '/ongorusme/musteri-ara', baslangic: ilk, sabit: !!musteri, onSec: doldur,
   });
 
   el('#ogForm', ov).addEventListener('submit', (e) => {

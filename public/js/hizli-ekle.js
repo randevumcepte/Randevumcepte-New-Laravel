@@ -29,7 +29,7 @@ const EYLEMLER = {
   ongorusme: {
     css: '/css/ongorusmeler-v2.css?v=1',
     async ac({ salon }) {
-      const { ongorusmeFormu } = await import('/js/lib/v2-ongorusme.js?v=7');
+      const { ongorusmeFormu } = await import('/js/lib/v2-ongorusme.js?v=8');
       ongorusmeFormu({ salonId: salon.id, onKaydet: ekraniTazele('ongorusmeler') });
     },
   },

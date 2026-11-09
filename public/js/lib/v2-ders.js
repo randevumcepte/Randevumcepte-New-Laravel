@@ -11,7 +11,7 @@ import { api, el, esc, mesaj, onay, tarihStr, yazSonuc } from '/js/lib/v2-ortak.
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=7';
+import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=8';
 
 if (!document.querySelector('link[href^="/css/ders-v2.css"]')) {
   document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/css/ders-v2.css?v=1">');

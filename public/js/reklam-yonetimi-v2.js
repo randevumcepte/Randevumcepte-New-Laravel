@@ -16,7 +16,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 import { trTarih, sayi } from '/js/lib/v2-donem.js?v=7';
-import { alan, secenekler, tarihBagla, sayiVeyaNull } from '/js/lib/v2-ongorusme.js?v=7';
+import { alan, secenekler, tarihBagla, sayiVeyaNull } from '/js/lib/v2-ongorusme.js?v=8';
 import { baglam as b, kanalRozeti, durumRozeti } from '/js/reklam/ortak.js?v=1';
 
 const kok = document.getElementById('rc-reklam');

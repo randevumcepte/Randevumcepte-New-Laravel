@@ -3,7 +3,7 @@
  * Alan adları kolon adlarıyla aynı; tip / indirim sözlükleri API'den (form-verisi).
  */
 import { el, esc } from '/js/lib/v2-ortak.js?v=7';
-import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=7';
+import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=8';
 
 const girdi = (ad, deger, ek = '') => `<input data-odul="${ad}" value="${esc(deger ?? '')}" ${ek}>`;
 

@@ -58,7 +58,11 @@ class RandevuFormServisi
     }
 
     /** Musteri arama — yalniz salonun AKTIF portfoyu; min 2 karakter; telefon yetkiye gore maskeli. */
-    public function musteriAra(int $salonId, string $q, bool $telGor): array
+    /**
+     * @param  bool  $detay  true → form on-doldurma alanlari da doner (email, cinsiyet, musteri_tipi —
+     *                       on gorusme formu). Varsayilan kapali: diger seciciler yalniz ad + telefon alir.
+     */
+    public function musteriAra(int $salonId, string $q, bool $telGor, bool $detay = false): array
     {
         $q = trim($q);
         if (mb_strlen($q) < 2) {
@@ -74,12 +78,16 @@ class RandevuFormServisi
                     $w->orWhere('u.cep_telefon', 'like', '%'.$rakam.'%');
                 }
             })
-            ->orderBy('u.name')->limit(20)->get(['u.id', 'u.name', 'u.cep_telefon'])
+            ->orderBy('u.name')->limit(20)->get(['u.id', 'u.name', 'u.cep_telefon', 'u.email', 'u.cinsiyet', 'mp.musteri_tipi'])
             ->map(fn ($u) => [
                 'id'      => (int) $u->id,
                 'ad'      => $u->name,
                 'telefon' => $telGor ? $u->cep_telefon : YetkiSabitleri::telefonMaskele((string) $u->cep_telefon),
-            ])->all();
+            ] + ($detay ? [
+                'email'        => $u->email ?: null,
+                'cinsiyet'     => $u->cinsiyet === null || $u->cinsiyet === '' ? null : (int) $u->cinsiyet,
+                'musteri_tipi' => $u->musteri_tipi ? (int) $u->musteri_tipi : null, // portfoy (salona ozel) referans
+            ] : []))->all();
     }
 
     /**

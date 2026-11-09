@@ -86,7 +86,8 @@ class OnGorusmeController extends V2Controller
     {
         [$uid, $salonId] = $this->salonDenetle($request, self::YAZ);
 
-        return ApiCevap::basarili($form->musteriAra($salonId, (string) $request->input('q', ''), $this->yetkiVar($uid, $salonId, 'musteri.telefon_gor')));
+        // detay: secilen musterinin email / cinsiyet / referansi formu on-doldurur.
+        return ApiCevap::basarili($form->musteriAra($salonId, (string) $request->input('q', ''), $this->yetkiVar($uid, $salonId, 'musteri.telefon_gor'), true));
     }
 
     public function ekle(OnGorusmeKaydetIstegi $request, OnGorusmeYazServisi $yaz)

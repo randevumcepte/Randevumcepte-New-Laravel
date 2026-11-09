@@ -17,7 +17,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=7';
 import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=7';
 import { trTarih } from '/js/lib/v2-donem.js?v=7';
-import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=7';
+import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=8';
 
 const kok = document.getElementById('rc-ongorusme');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
