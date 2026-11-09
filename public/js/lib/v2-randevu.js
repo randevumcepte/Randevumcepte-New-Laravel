@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=7';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=8';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -100,7 +100,8 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
       <div class="t-ck-rozetler">
         <span class="t-rozet ${dRenk}">${dEt}</span>
         <span class="t-rozet ${geldi[1]}">${geldi[0]}</span>
-        ${v.seans_var ? '<span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket seansı</span>' : ''}
+        ${v.paket ? '<span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket randevusu</span>' : ''}
+        ${!v.paket && v.on_gorusme_id ? `<span class="t-rozet turuncu"><i class="bi bi-chat-dots"></i> Ön görüşme${v.ongorusme_nedeni ? ' · ' + esc(v.ongorusme_nedeni) : ''}</span>` : ''}
         ${v.seans_telafisi ? '<span class="t-rozet turuncu"><i class="bi bi-arrow-repeat"></i> Seans telafisi (hak saklı)</span>' : ''}
       </div>
       <div class="t-ck-zaman"><i class="bi bi-clock"></i> ${esc(new Date(v.tarih + 'T00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' }))} · ${esc(String(v.saat || '').slice(0, 5))}</div>
@@ -108,7 +109,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         ${(v.hizmetler || []).map((h) => `
           <div class="t-ck-kalem">
             <div class="t-ck-kalem-ust">
-              <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b><span>${esc(h.personel_adi || '—')}</span></div>
+              <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b>${h.paket ? ' <span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket</span>' : ''}<span>${esc(h.personel_adi || '—')}</span></div>
               <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${TL(h.fiyat)}</b>` : ''}</div>
             </div>
             ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-bandaid"></i> Telafi randevusu (ücretsiz)</span>'

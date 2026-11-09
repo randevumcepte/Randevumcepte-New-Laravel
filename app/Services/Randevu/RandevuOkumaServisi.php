@@ -198,6 +198,8 @@ class RandevuOkumaServisi
             ->whereIn('randevu_id', $randevuIds)
             ->get(['randevu_id', 'adisyon_paket_id', 'adisyon_hizmet_id', 'hizmet_id', 'geldi']);
         $seanslarByRandevu = $seanslar->groupBy('randevu_id');
+        $paketliHizmetler = $this->paketliHizmetler($seanslar);
+        $ogNedenleri = $this->ongorusmeNedenleri($rhler->pluck('randevu.on_gorusme_id')->all());
 
         // Ekranda olay basligi icin hizmet adlari (tek sorgu).
         $hizmetAdlari = DB::table('hizmetler')
@@ -282,6 +284,9 @@ class RandevuOkumaServisi
                 'hizmet'       => $kapali ? null : ($hizmetAdlari[$rh->hizmet_id] ?? null),
                 'kapali'       => $kapali,
                 'ongorusmeid'  => $randevu->on_gorusme_id,
+                // Eski takvim basligindaki "(PAKET)" / "(ÖN GÖRÜŞME) Nedeni: …" — yapisal alan olarak.
+                'paket'        => isset($paketliHizmetler[$rh->randevu_id][(int) $rh->hizmet_id]),
+                'ongorusme_nedeni' => $randevu->on_gorusme_id !== null ? ($ogNedenleri[(int) $randevu->on_gorusme_id] ?? null) : null,
                 'satis_olustu' => $satisOlustu,
                 'durum'        => $durumStr,
                 '_paketSource' => $paketSource,
@@ -289,6 +294,54 @@ class RandevuOkumaServisi
         }
 
         return $cikti;
+    }
+
+    /**
+     * Randevu → paketten dusen hizmetler [randevu_id][hizmet_id] = true. Eski takvimin
+     * "(PAKET)" kurali: seans GERCEK pakete (adisyon_paket_id) ya da seans sayisi kayitli
+     * (> 0) hizmet satisina bagliysa. Seans sayisi bos satislar paket SAYILMAZ (salon 204 vakasi).
+     *
+     * @param  iterable<object>  $seanslar  adisyon_paket_seanslar (randevu_id, hizmet_id, adisyon_paket_id, adisyon_hizmet_id)
+     * @return array<int,array<int,true>>
+     */
+    private function paketliHizmetler(iterable $seanslar): array
+    {
+        $seanslar = collect($seanslar);
+        $seansliSatis = DB::table('adisyon_hizmetler')
+            ->whereIn('id', $seanslar->pluck('adisyon_hizmet_id')->filter()->unique()->all())
+            ->where('seans_sayisi', '>', 0)->pluck('id')->flip();
+
+        $sonuc = [];
+        foreach ($seanslar as $sv) {
+            if ($sv->hizmet_id && ($sv->adisyon_paket_id || ($sv->adisyon_hizmet_id && isset($seansliSatis[$sv->adisyon_hizmet_id])))) {
+                $sonuc[(int) $sv->randevu_id][(int) $sv->hizmet_id] = true;
+            }
+        }
+
+        return $sonuc;
+    }
+
+    /**
+     * On gorusme id → nedeni (eski sira: paket adi > hizmet adi > urun adi).
+     *
+     * @param  array<int,mixed>  $ogIdler
+     * @return array<int,string>
+     */
+    private function ongorusmeNedenleri(array $ogIdler): array
+    {
+        $ogIdler = array_values(array_unique(array_filter(array_map('intval', $ogIdler))));
+        if (! $ogIdler) {
+            return [];
+        }
+
+        return DB::table('on_gorusmeler as og')
+            ->leftJoin('paketler as p', 'p.id', '=', 'og.paket_id')
+            ->leftJoin('hizmetler as h', 'h.id', '=', 'og.hizmet_id')
+            ->leftJoin('urunler as u', 'u.id', '=', 'og.urun_id')
+            ->whereIn('og.id', $ogIdler)
+            ->get(['og.id', 'p.paket_adi', 'h.hizmet_adi', 'u.urun_adi'])
+            ->mapWithKeys(fn ($r) => [(int) $r->id => trim((string) ($r->paket_adi ?: $r->hizmet_adi ?: $r->urun_adi))])
+            ->filter()->all();
     }
 
     private function resourceIdHesapla(RandevuHizmetler $rh, int $takvimTuru)
@@ -462,7 +515,10 @@ class RandevuOkumaServisi
         $hizmetler = RandevuHizmetler::where('randevu_id', $randevuId)->get();
         $hizmetAdlari  = DB::table('hizmetler')->whereIn('id', $hizmetler->pluck('hizmet_id')->filter()->unique()->all())->pluck('hizmet_adi', 'id');
         $personelAdlari = DB::table('salon_personelleri')->whereIn('id', $hizmetler->pluck('personel_id')->filter()->unique()->all())->pluck('personel_adi', 'id');
-        $seansSayisi = DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)->count();
+        $seanslar = DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)
+            ->get(['randevu_id', 'hizmet_id', 'adisyon_paket_id', 'adisyon_hizmet_id']);
+        $paketli = $this->paketliHizmetler($seanslar)[$randevuId] ?? [];
+        $seansSayisi = $seanslar->count();
         $seansTelafisi = $seansSayisi > 0 && DB::table('adisyon_paket_seanslar')->where('randevu_id', $randevuId)->where('geldi', 2)->exists();
 
         return [
@@ -476,6 +532,8 @@ class RandevuOkumaServisi
             'durum'         => $randevu->durum !== null ? (int) $randevu->durum : null,
             'randevuya_geldi' => $randevu->randevuya_geldi,
             'on_gorusme_id' => $randevu->on_gorusme_id,
+            'ongorusme_nedeni' => $randevu->on_gorusme_id !== null ? ($this->ongorusmeNedenleri([$randevu->on_gorusme_id])[(int) $randevu->on_gorusme_id] ?? null) : null,
+            'paket'         => $paketli !== [], // en az bir hizmet gercekten paketten dusuyor (eski "Paket Randevusu")
             'personel_notu' => $randevu->personel_notu,
             'kapali'        => (int) $randevu->user_id === Randevular::KAPALI_SAAT_USER_ID,
             'seans_var'     => $seansSayisi > 0,
@@ -484,6 +542,7 @@ class RandevuOkumaServisi
                 'id'           => (int) $h->id,
                 'hizmet_id'    => $h->hizmet_id !== null ? (int) $h->hizmet_id : null,
                 'hizmet_adi'   => $hizmetAdlari[$h->hizmet_id] ?? null,
+                'paket'        => isset($paketli[(int) $h->hizmet_id]),
                 'personel_id'  => $h->personel_id !== null ? (int) $h->personel_id : null,
                 'personel_adi' => $personelAdlari[$h->personel_id] ?? null,
                 // Telafi: bu kalem bir telafi randevusu mu / bunun icin telafi verildi mi

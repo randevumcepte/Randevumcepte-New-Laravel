@@ -19,11 +19,11 @@ const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) 
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 const MODULLER = {
-  calisma: () => import('/js/cagri-merkezi/calisma.js?v=6'),
-  ajanda: () => import('/js/cagri-merkezi/ajanda.js?v=6'),
-  takvim: () => import('/js/cagri-merkezi/takvim.js?v=6'),
-  kayitlar: () => import('/js/cagri-merkezi/kayitlar.js?v=6'),
-  performans: () => import('/js/cagri-merkezi/performans.js?v=6'),
+  calisma: () => import('/js/cagri-merkezi/calisma.js?v=7'),
+  ajanda: () => import('/js/cagri-merkezi/ajanda.js?v=7'),
+  takvim: () => import('/js/cagri-merkezi/takvim.js?v=7'),
+  kayitlar: () => import('/js/cagri-merkezi/kayitlar.js?v=7'),
+  performans: () => import('/js/cagri-merkezi/performans.js?v=7'),
   listeler: () => import('/js/cagri-merkezi/listeler.js?v=3'),
   ayarlar: () => import('/js/cagri-merkezi/ayarlar.js?v=3'),
 };

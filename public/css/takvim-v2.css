@@ -129,6 +129,13 @@
 .t-olay-ust { display: flex; justify-content: space-between; gap: 4px; }
 .t-olay-ust b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .t-ikonlar { display: inline-flex; gap: 3px; flex: 0 0 auto; color: var(--a); font-size: 12px; }
+.t-etiket {
+  display: inline-flex; align-items: center; gap: 3px; width: fit-content; margin: 1px 0;
+  padding: 0 6px; border-radius: 6px; font-size: 10.5px; font-weight: 700; line-height: 16px; white-space: nowrap;
+}
+.t-etiket.paket { background: #efe3f8; color: #5C008E; }
+.t-etiket.og { background: #fff1d6; color: #8a5300; }
+.t-olay-neden { font-size: 11px; color: #8a5300; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .t-olay-hizmet { font-size: 11.5px; color: #5b6080; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
 .t-olay-saat { font-size: 11.5px; color: #6b7194; font-variant-numeric: tabular-nums; }
 .t-olay-kapali { border-left-color: #8a8fa6; color: #5b5f73; font-weight: 700; font-size: 12px; flex-direction: row; gap: 6px; align-items: flex-start; }

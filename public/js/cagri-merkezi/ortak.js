@@ -14,7 +14,7 @@
 import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { randevuIslemleri, randevuTablosu } from '/js/lib/v2-randevu.js?v=7';
+import { randevuIslemleri, randevuTablosu } from '/js/lib/v2-randevu.js?v=8';
 import { ongorusmeFormu, alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=7';
 
 /** Sonuç kodu → ikon (yalnız görsel; anlamı sunucu sözlüğünde). */

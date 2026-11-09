@@ -17,7 +17,7 @@
  */
 
 import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=7';
-import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=7';
+import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=8';
 import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=7';
 
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
@@ -260,10 +260,16 @@ function olayIcerik(info) {
     d.telafi ? '<i class="bi bi-arrow-repeat" title="Seans telafisi (hak saklandı)"></i>' : '',
     d.telafiRandevusu ? '<i class="bi bi-bandaid" title="Telafi randevusu (ücretsiz düzeltme)"></i>' : '',
   ].join('');
+  // Eski takvimdeki "(PAKET)" / "(ÖN GÖRÜŞME)" etiketi — paket önceliklidir (eskiyle aynı).
+  const ongorusme = !e.paket && e.ongorusmeid != null;
+  const etiket = e.paket ? '<span class="t-etiket paket"><i class="bi bi-box-seam"></i> Paket</span>'
+    : ongorusme ? '<span class="t-etiket og"><i class="bi bi-chat-dots"></i> Ön Görüşme</span>' : '';
   return {
     html: `<div class="t-olay" style="--a:${e.ana}">
       <div class="t-olay-ust"><b>${esc(e.musteri || '')}</b><span class="t-ikonlar">${ikonlar}</span></div>
+      ${etiket}
       ${e.hizmet ? `<div class="t-olay-hizmet">${esc(e.hizmet)}</div>` : ''}
+      ${ongorusme && e.ongorusme_nedeni ? `<div class="t-olay-neden">Nedeni: ${esc(e.ongorusme_nedeni)}</div>` : ''}
       <div class="t-olay-saat">${esc(info.timeText)}</div>
     </div>`,
   };
