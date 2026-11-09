@@ -5,7 +5,7 @@
 
 @push('stil')
     {{-- Kokpit içindeki ortak formlar: randevu formu (takvim-v2.css .t-* / .rf-*), ön görüşme formu (ongorusmeler-v2.css .og-*) --}}
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=12">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=15">
     <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=1">
     <link rel="stylesheet" href="/css/cagri-merkezi-v2.css?v=3">
 @endpush

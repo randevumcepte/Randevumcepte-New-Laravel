@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak tablo/modal/toast (rc-*) + sistem yonetimi temasi (sy-*) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=17">
+    <link rel="stylesheet" href="/css/panel.css?v=20">
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=3">
     <link rel="stylesheet" href="/css/sistem-yonetim.css?v=1">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">

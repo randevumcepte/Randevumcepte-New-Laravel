@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/musteri-v2.css?v=4">
     <link rel="stylesheet" href="/css/seans-v2.css?v=3">
     <link rel="stylesheet" href="/css/formlar-v2.css?v=2">
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=12">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=15">
 @endpush
 
 @section('icerik')

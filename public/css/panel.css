@@ -500,3 +500,16 @@ html, body { margin: 0; padding: 0; }
   .rc-tablo thead th { white-space: normal; line-height: 1.35; }
   .rc-tablo thead th.rc-siralanir i { white-space: nowrap; }
 }
+
+/* ═════════ Tarih seçici (flatpickr) — TÜM v2 ekranları (önceden yalnız takvim-v2.css'teydi) ═════════ */
+.flatpickr-calendar { z-index: 9700 !important; border-radius: 14px; box-shadow: 0 16px 40px rgba(31,23,75,.18); border: 1px solid #ececf0; font-family: inherit; }
+.flatpickr-current-month { font-size: 15px; padding-top: 6px; }
+.flatpickr-current-month .numInputWrapper { width: 6.2ch; }
+.flatpickr-current-month input.cur-year { font-size: inherit; font-weight: 700; padding: 0 0 0 2px; height: auto; line-height: inherit; box-shadow: none; border: 0; }
+.flatpickr-current-month .cur-month { font-weight: 700; }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: #7c3aed; border-color: #7c3aed; }
+.flatpickr-day.today { border-color: #c4b5fd; }
+.flatpickr-day:hover { background: #f5f3ff; border-color: #f5f3ff; }
+.flatpickr-months .flatpickr-prev-month:hover svg, .flatpickr-months .flatpickr-next-month:hover svg { fill: #7c3aed; }
+.flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 700; }
+@media (prefers-color-scheme: dark) { .flatpickr-current-month input.cur-year { color: inherit; } }

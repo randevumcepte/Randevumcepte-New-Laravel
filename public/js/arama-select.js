@@ -9,7 +9,8 @@
  *   - kodun yaptigi sel.value = ... / selectedIndex atamalari ve innerHTML ile
  *     degisen secenekler otomatik yansir.
  *
- * Haric tutmak: <select data-arama="yok">. multiple select'lere dokunulmaz.
+ * Haric tutmak: <select data-arama="yok">. multiple select'lere ve flatpickr takviminin
+ * kendi ay seciminin (.flatpickr-calendar icinde) dokunulmaz — aksi halde yil alani kayar.
  * Arama Turkce harf duyarsizdir (İ/ı/ş/ğ/ü/ö/ç). Klavye: ↑ ↓ Enter Esc.
  */
 
@@ -51,7 +52,7 @@ function etiketYenile(sel) {
 }
 
 function gelistir(sel) {
-  if (sel._rsBtn || sel.multiple || sel.dataset.arama === 'yok') return;
+  if (sel._rsBtn || sel.multiple || sel.dataset.arama === 'yok' || sel.closest('.flatpickr-calendar')) return;
 
   const btn = document.createElement('button');
   btn.type = 'button';
