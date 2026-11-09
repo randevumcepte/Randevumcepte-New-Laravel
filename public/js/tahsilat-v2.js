@@ -232,7 +232,10 @@ const turAd = (x) => (x.seansli ? TUR_AD.paket : TUR_AD[x.tip]);
 // Üründe adet, randevudan gelmeyen hizmette opsiyonel seans; paket seansı katalogdan.
 function miktarHucre(x) {
   if (x.tip === 'urun') return `<input type="number" min="1" value="${x.adet || 1}" class="t-adet-inp" data-id="${x.id}" title="Adet" aria-label="Adet">`;
-  if (x.tip === 'hizmet' && !x.randevudan) return `<input type="number" min="0" value="${x.seans || ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-id="${x.id}" title="Boş: tek hizmet · 2 ve üzeri: paket satışı" aria-label="Seans sayısı">`;
+  if (x.tip === 'hizmet') {
+    const ipucu = x.randevudan ? 'Randevudan gelen hizmet: seans takibine girer, paket satışı sayılmaz' : 'Boş: tek hizmet · 2 ve üzeri: paket satışı';
+    return `<input type="number" min="0" value="${x.seans || ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-id="${x.id}" title="${ipucu}" aria-label="Seans sayısı">`;
+  }
   return '—';
 }
 
@@ -764,7 +767,7 @@ function iskelet() {
           <div class="t-ekle-panel" id="t-ekle-panel" hidden>
             <label id="t-ekle-baslik">Kalem Ekle</label>
             <div class="t-ekle-satir">
-              <select id="t-ekle-tip" style="display:none"><option value="hizmet">Hizmet</option><option value="urun">Ürün</option><option value="paket">Paket</option></select>
+              <select id="t-ekle-tip" data-arama="yok" style="display:none"><option value="hizmet">Hizmet</option><option value="urun">Ürün</option><option value="paket">Paket</option></select>
               <select id="t-ekle-katalog" class="t-katalog"></select>
               <select id="t-ekle-personel" class="t-personel" aria-label="Personel"></select>
               <span id="t-ekle-adet-kutu"><input id="t-ekle-adet" class="t-adet" type="number" min="1" value="1" title="Adet"></span>

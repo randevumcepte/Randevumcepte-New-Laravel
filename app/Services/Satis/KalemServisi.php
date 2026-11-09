@@ -6,7 +6,6 @@ use App\Domain\Satis\AdisyonSatir;
 use App\Domain\Stok\HareketTipi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
-use App\Exceptions\GecersizIslemException;
 use App\Models\Adisyonlar;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
@@ -307,7 +306,8 @@ class KalemServisi
 
     /**
      * Hizmetin seans sayısını değiştir (eski hizmetseansdegistir): boş/≤1 tekil hizmet, 2+ paket
-     * satışı. Randevu kalemi değişmez; kullanılmış seansın altına inilemez.
+     * satışı (randevudan gelen kalemde paket sayılmaz — seansliMi). Eskisi gibi her hizmette
+     * değiştirilebilir; kullanılmış seansın altına inilemez.
      */
     public function hizmetSeansGuncelle(int $kalemId, $girilen): array
     {
@@ -315,9 +315,6 @@ class KalemServisi
             $k = AdisyonHizmetler::where('id', $kalemId)->lockForUpdate()->first();
             if (! $k) {
                 throw new BulunamadiException('Kalem bulunamadı');
-            }
-            if ($k->randevu_id !== null) {
-                throw new GecersizIslemException('Randevudan gelen hizmetin seans sayısı değiştirilemez');
             }
             $seans = AdisyonHizmetler::seansNormal($girilen);
             $kullanilan = (int) $k->kullanilan_seans + (int) $k->kullanilmayan_seans;
