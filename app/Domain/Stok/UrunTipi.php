@@ -18,6 +18,15 @@ enum UrunTipi: string
         };
     }
 
+    /**
+     * Musteriye satilabilir mi (Satis / Karma)? Sarf yalnizca hizmette tuketilir. Bos / bilinmeyen
+     * deger = Satis (kolon varsayilani 'satis'; eski urunler).
+     */
+    public static function satilabilirMi(?string $tip): bool
+    {
+        return (self::tryFrom((string) $tip) ?? self::Satis) !== self::Sarf;
+    }
+
     /** [{deger, etiket}] */
     public static function secenekler(): array
     {

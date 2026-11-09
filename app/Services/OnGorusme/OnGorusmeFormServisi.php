@@ -4,6 +4,7 @@ namespace App\Services\OnGorusme;
 
 use App\Domain\Musteri\MusteriSozluk;
 use App\Domain\OnGorusme\GorusmeDurumu;
+use App\Domain\Stok\UrunTipi;
 use App\Models\Salonlar;
 use App\Services\Randevu\RandevuFormServisi;
 use App\Services\Satis\KatalogServisi;
@@ -39,7 +40,9 @@ class OnGorusmeFormServisi
             // Tek select'te üç tür (eski "Ön Görüşme Sebebi"): anahtar = "tur-id".
             'nedenler' => [
                 ['tur' => 'paket', 'etiket' => 'Paketler', 'secenekler' => array_map($secenek('paket', 'paket_id'), $katalog['paketler'])],
-                ['tur' => 'urun', 'etiket' => 'Ürünler', 'secenekler' => array_map($secenek('urun', 'urun_id'), $katalog['urunler'])],
+                // Yalnız satılabilir ürünler (sarf malzemesi görüşme / satış nedeni olamaz — UrunTipi).
+                ['tur' => 'urun', 'etiket' => 'Ürünler', 'secenekler' => array_map($secenek('urun', 'urun_id'),
+                    array_values(array_filter($katalog['urunler'], fn ($u) => UrunTipi::satilabilirMi($u['tip'] ?? null))))],
                 ['tur' => 'hizmet', 'etiket' => 'Hizmetler', 'secenekler' => array_map($secenek('hizmet', 'hizmet_id'), $katalog['hizmetler'])],
             ],
             'personeller'            => $k['personeller'],

@@ -5,6 +5,7 @@ namespace App\Services\OnGorusme;
 use App\Domain\OnGorusme\GorusmeDurumu;
 use App\Domain\OnGorusme\GorusmeNedeni;
 use App\Domain\Personel\Telefon;
+use App\Domain\Stok\UrunTipi;
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
@@ -120,7 +121,10 @@ class OnGorusmeYazServisi
         return ['cakismavar' => '0', 'cakisanunsurlar' => 'Başarılı', 'yazildi' => true, 'id' => $sonuc['id'], 'randevu_id' => $sonuc['randevu_id']];
     }
 
-    /** Neden (paket / ürün / hizmet) bu salonun AKTİF kataloğunda olmalı. */
+    /**
+     * Neden bu salonun AKTİF ve SATILABİLİR kataloğunda olmalı — form listesiyle aynı kural:
+     * paket aktif; ürün aktif + sarf değil (UrunTipi); hizmet salonda aktif sunuluyor.
+     */
     public function nedenSalonaAitOlmali(GorusmeNedeni $neden, int $salonId): void
     {
         match ($neden->tur) {
@@ -128,6 +132,13 @@ class OnGorusmeYazServisi
             GorusmeNedeni::URUN   => $this->stok->aitOlmali('urun', $neden->id, $salonId),
             GorusmeNedeni::HIZMET => $this->sahiplik->hizmetOlmali($neden->id, $salonId),
         };
+        if ($neden->tur === GorusmeNedeni::URUN && ! UrunTipi::satilabilirMi(DB::table('urunler')->where('id', $neden->id)->value('tip'))) {
+            throw new GecersizIslemException('Sarf malzemesi ön görüşme nedeni olamaz.');
+        }
+        if ($neden->tur === GorusmeNedeni::HIZMET
+            && ! DB::table('salon_sunulan_hizmetler')->where('salon_id', $salonId)->where('hizmet_id', $neden->id)->where('aktif', 1)->exists()) {
+            throw new GecersizIslemException('Hizmet bu işletmede aktif değil.');
+        }
     }
 
     /** Düzenlenebilir (beklemede) kayıt; yoksa 404, sonuçlanmışsa 422. */

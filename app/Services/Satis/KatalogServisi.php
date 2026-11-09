@@ -26,12 +26,13 @@ class KatalogServisi
             ->where('salon_id', $salonId)
             ->where('aktif', 1)
             ->orderBy('urun_adi')
-            ->get(['id', 'urun_adi as ad', 'fiyat', 'stok_adedi as stok'])
+            ->get(['id', 'urun_adi as ad', 'fiyat', 'stok_adedi as stok', 'tip'])
             ->map(fn ($r) => [
                 'urun_id' => (int) $r->id,
                 'ad'      => trim((string) $r->ad),
                 'fiyat'   => $r->fiyat,   // BİRİM fiyat
                 'stok'    => $r->stok,
+                'tip'     => $r->tip ?: 'satis', // Domain\Stok\UrunTipi (sarf = satilmaz)
             ])->all();
 
         // Etkin fiyat ve bolge basina satis seansi tek kuraldan (PaketTutari) — SQL'de tekrar yazilmaz.
