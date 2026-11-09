@@ -4,7 +4,7 @@
 @section('aktif', 'satis-takibi')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/satislar-v2.css?v=10">
+    <link rel="stylesheet" href="/css/satislar-v2.css?v=11">
 @endpush
 
 @section('icerik')
@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/satislar-v2.js?v=10"></script>
+    <script type="module" src="/js/satislar-v2.js?v=11"></script>
 @endpush

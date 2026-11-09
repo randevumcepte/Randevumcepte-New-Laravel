@@ -257,7 +257,7 @@ function islemlerCiz(a) {
   const b = [];
   if (x.odeme_al) b.push(`<button class="s-ib s-ib-yesil" data-islem="odeme-al" data-id="${a.id}" title="Ödeme Alındı"><i class="bi bi-check-lg"></i></button>`);
   if (x.odeme_geri_al) b.push(`<button class="s-ib s-ib-uyari" data-islem="odeme-geri" data-id="${a.id}" title="Ödemeyi Geri Al"><i class="bi bi-arrow-counterclockwise"></i></button>`);
-  if (x.tahsil_et) b.push(`<a class="s-ib-metin" href="${url}" title="Tahsil Et"><i class="bi bi-cash-coin"></i> Tahsil Et</a>`);
+  if (x.tahsil_et) b.push(`<a class="s-ib s-ib-yesil" href="${url}" title="Tahsil Et" aria-label="Tahsil Et"><i class="bi bi-cash-coin"></i></a>`);
   if (x.odeme_bilgisi) b.push(`<a class="s-ib s-ib-mor" href="${url}" title="Ödeme Bilgileri"><i class="bi bi-eye"></i></a>`);
   if (x.duzenle) b.push(`<a class="s-ib s-ib-gri" href="${url}" title="Düzenle"><i class="bi bi-pencil-square"></i></a>`);
   if (x.fatura) {
@@ -277,8 +277,7 @@ function icerikCiz(a) {
   return k.map((x) => `<div class="s-ic" title="${esc(x.ad)}${x.personel ? ' — ' + esc(x.personel) : ''}">`
     + `<span class="s-ic-tur s-ic-${x.tur}" title="${TUR_UZUN[x.tur] || ''}">${TUR_KISA[x.tur] || '?'}</span>`
     + `<span class="s-ic-ad">${esc(x.ad)}</span>`
-    + (x.ek ? `<span class="s-ic-ek">${esc(x.ek)}</span>` : '')
-    + (x.personel ? `<span class="s-ic-per">${esc(x.personel)}</span>` : '')
+    + (x.ek || x.personel ? `<span class="s-ic-alt">${x.ek ? `<span class="s-ic-ek">${esc(x.ek)}</span>` : ''}${x.personel ? `<span class="s-ic-per">${esc(x.personel)}</span>` : ''}</span>` : '')
     + '</div>').join('');
 }
 
