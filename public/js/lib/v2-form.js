@@ -1,7 +1,7 @@
 /**
  * v2 FORM ARŞİVİ bileşeni — TEK KAYNAK. Form Yönetimi sayfası (formlar-v2.js) ve müşteri
  * detay "Sözleşmeler/Belgeler" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=7';
+ * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=8';
  *
  * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Harici Belgeler),
  * Form Gönder, Sözleşme Oluştur, Belge Ekle modalları. İş kuralları SUNUCUDA: satırın
@@ -188,7 +188,10 @@ export async function formArsivi(kap, { salonId, musteri = null, aksiyonKap = nu
 
   // ─────────────────────────── FORM GÖNDER ───────────────────────────
 
-  const formGonderAc = () => formGonderModali({ salonId, veri, musteri, onGonderildi: () => arsivTablo.yenile(false) });
+  // function bildirimi (hoisting): yukarıdaki `ac` haritası tanımlanırken erişilir; const olursa TDZ hatası.
+  function formGonderAc() {
+    formGonderModali({ salonId, veri, musteri, onGonderildi: () => arsivTablo.yenile(false) });
+  }
 
   // ─────────────────────────── SÖZLEŞME OLUŞTUR ───────────────────────────
 
