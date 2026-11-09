@@ -234,8 +234,8 @@ function ozetCiz(v) {
 // Kolon seti (stüdyoda para kolonları yerine Ödeme Tarihi — eski panel).
 function kolonlar() {
   const para = studyo ? [] : [
-    { baslik: 'İndirim', sinif: 'rc-sag', sirala: 'indirim' }, { baslik: 'Toplam', sinif: 'rc-sag', sirala: 'toplam' },
-    { baslik: 'Ödenen', sinif: 'rc-sag', sirala: 'odenen' }, { baslik: 'Kalan', sinif: 'rc-sag', sirala: 'kalan' },
+    { baslik: 'İndirim ₺', sinif: 'rc-sag', sirala: 'indirim' }, { baslik: 'Toplam ₺', sinif: 'rc-sag', sirala: 'toplam' },
+    { baslik: 'Ödenen ₺', sinif: 'rc-sag', sirala: 'odenen' }, { baslik: 'Kalan ₺', sinif: 'rc-sag', sirala: 'kalan' },
   ];
   return [
     { baslik: 'Durum', sinif: 's-k-durum', sirala: 'durum' },
@@ -288,10 +288,10 @@ function satirCiz(a) {
     : '<span class="s-rozet s-r-acik">Açık</span>';
   const icerik = icerikCiz(a);
   const para = studyo ? '' : `
-    <td class="rc-sag">${esc(a.indirim || '0,00')} ₺</td>
-    <td class="rc-sag">${esc(a.toplam)} ₺</td>
-    <td class="rc-sag">${esc(a.odenen)} ₺</td>
-    <td class="rc-sag s-kalan${a.kapali ? ' s-sifir' : ''}">${esc(a.kalan_tutar)} ₺</td>`;
+    <td class="rc-sag s-t-indirim">${Number(a.indirim_numeric) ? esc(a.indirim) : '-'}</td>
+    <td class="rc-sag"><span class="s-tutar s-t-toplam">${esc(a.toplam)}</span></td>
+    <td class="rc-sag"><span class="s-tutar s-t-odenen">${esc(a.odenen)}</span></td>
+    <td class="rc-sag"><span class="s-tutar ${Number(a.kalan_tutar_numeric) > 0 ? 's-t-kalan' : 's-t-sifir'}">${esc(a.kalan_tutar)}</span></td>`;
   const st = studyo ? `<td class="rc-nowrap">${esc(a.odendi_tarihi || '-')}</td>` : '';
   return `<tr>
     <td>${rozet}</td>

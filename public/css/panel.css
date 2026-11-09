@@ -490,3 +490,13 @@ html, body { margin: 0; padding: 0; }
 .rc-zil-oge .rc-zil-eylem { flex: none; margin: 8px 8px 0 0; }
 .rc-zil-bos { padding: 28px 16px; text-align: center; color: var(--rc-sol); font-size: 14px; }
 .rc-zil-daha { display: block; width: 100%; padding: 10px; border: 0; border-top: 1px solid var(--rc-cizgi); background: none; color: var(--rc-mor); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* ═════════ Tablo tek pencereye sığar (eski panel gibi YATAY KAYDIRMA YOK) ═════════
+   Masaüstünde ekranlara özgü min-width'ler (s-/p-/pk-/st-/rk-/og-/hk-tablo…) devre dışı:
+   başlıklar ve uzun metin sarılır, tutar/tarih hücreleri (rc-sag/rc-nowrap) bölünmez.
+   Yalnız dar ekranda (≤860px) ekranın min-width'i geçerli olur ve tablo yatay kayar. */
+@media (min-width: 861px) {
+  .rc-tablo { min-width: 0 !important; }
+  .rc-tablo thead th { white-space: normal; line-height: 1.35; }
+  .rc-tablo thead th.rc-siralanir i { white-space: nowrap; }
+}

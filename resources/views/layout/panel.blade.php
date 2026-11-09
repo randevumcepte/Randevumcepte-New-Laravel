@@ -8,7 +8,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=18">
+    <link rel="stylesheet" href="/css/panel.css?v=19">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=3">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
