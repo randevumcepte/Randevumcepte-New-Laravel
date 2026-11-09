@@ -421,3 +421,7 @@
 }
 
 @media (prefers-color-scheme: dark) { .t-baslik h1 { color: #f0ecff; } }
+
+/* Ön görüşme sonucu (çekmece) */
+.t-ck-og { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.t-ck-og:empty { display: none; }

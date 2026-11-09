@@ -2,6 +2,7 @@
 
 namespace App\Services\Randevu;
 
+use App\Domain\OnGorusme\GorusmeDurumu;
 use App\Domain\Randevu\SeansDurumGecisi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
@@ -10,6 +11,7 @@ use App\Models\AdisyonPaketSeanslar;
 use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
+use App\Services\OnGorusme\OnGorusmeSonucServisi;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use Illuminate\Support\Facades\DB;
@@ -45,10 +47,14 @@ use Illuminate\Support\Facades\DB;
  */
 class RandevuDurumServisi
 {
+    /** Iptal edilen on gorusme randevusunun "satış yapılmadı" sebebi. */
+    private const OG_IPTAL_NOTU = 'Randevu iptal edildi';
+
     public function __construct(
         private DakikaPaketServisi $dakika,
         private MusteriDogrulamaKodu $dogrulama,
         private KvkkOnayKodu $kvkk,
+        private OnGorusmeSonucServisi $ongorusme,
     ) {}
 
     /**
@@ -274,17 +280,24 @@ class RandevuDurumServisi
         $salonId = (int) $randevu->salon_id;
         $red = (int) $randevu->durum === Randevular::BEKLENIYOR;
         $seansPlan = SeansDurumGecisi::iptal($this->seanslar($randevuId), ! $mobil);
-        $plan = ['randevu' => ['durum' => Randevular::IPTAL_EDILDI], 'red' => $red, 'seans' => $seansPlan];
+        // Acik on gorusmenin randevusu iptal edilirse gorusme "Satış yapılmadı" (sebep: iptal) kapanir.
+        $ogId = $randevu->on_gorusme_id !== null ? (int) $randevu->on_gorusme_id : null;
+        $ogKapat = $ogId && GorusmeDurumu::dbden(DB::table('on_gorusmeler')->where('id', $ogId)->value('durum'))->acikMi();
+        $plan = ['randevu' => ['durum' => Randevular::IPTAL_EDILDI], 'red' => $red, 'seans' => $seansPlan]
+            + ($ogKapat ? ['ongorusme' => ['id' => $ogId, 'durum' => GorusmeDurumu::SATIS_YAPILMADI->value, 'not' => self::OG_IPTAL_NOTU]] : []);
         $bildirimler = ['randevu_iptal'];
 
         if (! $yaz) {
             return $this->sonuc(['mesaj' => 'DRY-RUN'], $plan, false, $bildirimler);
         }
 
-        DB::transaction(function () use ($randevuId, $seansPlan, $salonId, $yetkiliId, $red) {
+        DB::transaction(function () use ($randevuId, $seansPlan, $salonId, $yetkiliId, $red, $ogKapat, $ogId) {
             Randevular::where('id', $randevuId)->update(['durum' => Randevular::IPTAL_EDILDI]);
             $this->seansPlaniUygula($randevuId, $seansPlan);
             $this->kuyruga($salonId, 'randevu_iptal', $randevuId, $yetkiliId, ['red' => $red]);
+            if ($ogKapat) {
+                $this->ongorusme->satisYapilmadi($salonId, $ogId, self::OG_IPTAL_NOTU, (int) $yetkiliId);
+            }
         });
 
         AktiviteLog::yaz($salonId, $yetkiliId, $red ? 'randevu_red' : 'randevu_iptal', 'randevu', $randevuId,

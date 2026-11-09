@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=8';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=9';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -27,6 +27,7 @@
 import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=7';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
+import { satisYapildiModal, satisYapilmadiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=1';
 
 export const normalTR = (x) => String(x ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 export const saatStr = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -77,6 +78,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
     const geldiMi = isaretli && String(v.randevuya_geldi) === '1';
     const gelmediMi = isaretli && String(v.randevuya_geldi) === '0';
 
+    const og = !v.paket && v.on_gorusme_id ? v.on_gorusme_id : null; // ön görüşme randevusu (paket öncelikli, eskiyle aynı)
     const btn = (islem, ikon, etiket, sinif = '') => `<button class="t-aks ${sinif}" data-islem="${islem}"><i class="bi ${ikon}"></i> ${etiket}</button>`;
     const butonlar = [
       v.durum === 0 ? btn('onayla', 'bi-check2-all', 'Onayla', 'mavi') : '',
@@ -109,15 +111,16 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         ${(v.hizmetler || []).map((h) => `
           <div class="t-ck-kalem">
             <div class="t-ck-kalem-ust">
-              <div><b>${esc(h.hizmet_adi || 'Hizmet')}</b>${h.paket ? ' <span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket</span>' : ''}<span>${esc(h.personel_adi || '—')}</span></div>
+              <div><b>${esc(og ? 'Ön görüşme' : (h.hizmet_adi || 'Hizmet'))}</b>${h.paket ? ' <span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket</span>' : ''}<span>${esc(h.personel_adi || '—')}</span></div>
               <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${TL(h.fiyat)}</b>` : ''}</div>
             </div>
             ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-bandaid"></i> Telafi randevusu (ücretsiz)</span>'
               : h.telafi_devir_yapildi ? '<span class="t-rozet gri"><i class="bi bi-check2"></i> Telafi randevusu verildi</span>'
-              : (aktif ? `<button class="t-kalem-telafi" data-telafi-rh="${h.id}"><i class="bi bi-calendar-plus"></i> Telafi randevusu oluştur</button>` : '')}
+              : (aktif && !og ? `<button class="t-kalem-telafi" data-telafi-rh="${h.id}"><i class="bi bi-calendar-plus"></i> Telafi randevusu oluştur</button>` : '')}
           </div>`).join('')}
       </div>
       ${v.personel_notu ? `<div class="t-ck-not"><i class="bi bi-sticky"></i> ${esc(v.personel_notu)}</div>` : ''}
+      ${og ? '<div class="t-ck-og" id="tOgSonuc"></div>' : ''}
       <div class="t-ck-aks">${butonlar || '<div class="t-ck-bos">Bu randevuda yapılabilecek işlem yok.</div>'}</div>
       <div id="tOnizleme"></div>`;
 
@@ -129,10 +132,35 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
         return islemYap(v, b.dataset.islem, {});
       };
     });
+    if (og) ongorusmeSonucCiz(v, og);
     ck().querySelectorAll('[data-telafi-rh]').forEach((b) => {
       const h = (v.hizmetler || []).find((x) => String(x.id) === b.dataset.telafiRh);
       b.onclick = () => telafiFormu(v, h);
     });
+  }
+
+  /**
+   * Ön görüşme randevusu: görüşme açıksa "Satış Yapıldı / Yapılmadı" (eski takvim modalı ile aynı),
+   * sonuçlanmışsa sonucu. Pencereler Ön Görüşmeler ekranıyla ortak (lib/v2-ongorusme-sonuc.js).
+   */
+  async function ongorusmeSonucCiz(v, ogId) {
+    const r = await api('GET', `/ongorusme/${ogId}`, { params: { salon_id: salonId } });
+    const kutu = el('#tOgSonuc', ck());
+    if (!kutu || !r.ok || !r.govde?.basarili) return; // yetki yok / bulunamadı → sessiz
+    const k = r.govde.veri;
+    if (!k.islemler?.sonuclandir) {
+      const renk = k.durum_kodu === 'satis_yapildi' ? 'yesil' : 'kirmizi';
+      kutu.innerHTML = `<span class="t-rozet ${renk}"><i class="bi bi-chat-dots"></i> ${esc(k.durum_adi || '')}</span>`
+        + (k.satisyapilmadi_not ? `<div class="t-ck-not"><i class="bi bi-chat-quote"></i> ${esc(k.satisyapilmadi_not)}</div>` : '');
+      return;
+    }
+    kutu.innerHTML = `<div class="t-ck-aks">
+      ${k.neden ? '<button class="t-aks yesil" data-og="yapildi"><i class="bi bi-cart-check"></i> Satış Yapıldı</button>' : ''}
+      <button class="t-aks kirmizi" data-og="yapilmadi"><i class="bi bi-x-circle"></i> Satış Yapılmadı</button>
+    </div>`;
+    const yapildi = el('[data-og="yapildi"]', kutu);
+    if (yapildi) yapildi.onclick = () => satisYapildiModal({ salonId, kayit: k });
+    el('[data-og="yapilmadi"]', kutu).onclick = () => satisYapilmadiModal({ salonId, kayit: k, onBitti: () => { yenidenAc(v.id); yenile?.(); } });
   }
 
   /** Randevunun adisyonunu sunucu bulur/açar; tahsilat ekranına gidilir (mobil de aynı uç). */
@@ -155,7 +183,8 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
       if (!tamam) return;
     }
     if (!dryRun && islem === 'iptal') {
-      const tamam = await panel().onay(`${v.musteri_ad || 'Bu'} randevusu ${v.durum === 0 ? 'reddedilsin' : 'iptal edilsin'} mi? Paket seansları bakiyeye geri döner.`,
+      const ogNotu = v.on_gorusme_id && !v.paket ? ' Ön görüşme "Satış yapılmadı — randevu iptal edildi" olarak kapanır.' : '';
+      const tamam = await panel().onay(`${v.musteri_ad || 'Bu'} randevusu ${v.durum === 0 ? 'reddedilsin' : 'iptal edilsin'} mi? Paket seansları bakiyeye geri döner.${ogNotu}`,
         { baslik: v.durum === 0 ? 'Talebi reddet' : 'Randevuyu iptal et', tamam: 'Evet' });
       if (!tamam) return;
     }

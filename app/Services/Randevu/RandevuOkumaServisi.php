@@ -281,7 +281,8 @@ class RandevuOkumaServisi
                 'personelId'   => $rh->personel_id !== null ? (int) $rh->personel_id : null,
                 'odaId'        => $rh->oda_id !== null ? (int) $rh->oda_id : null,
                 'musteri'      => $kapali ? 'Kapalı Saat' : ($randevu->users->name ?? null),
-                'hizmet'       => $kapali ? null : ($hizmetAdlari[$rh->hizmet_id] ?? null),
+                // On gorusme kalemindeki hizmet YER TUTUCU (config ongorusme.randevu_hizmet_id) — gosterilmez.
+                'hizmet'       => $kapali || $randevu->on_gorusme_id !== null ? null : ($hizmetAdlari[$rh->hizmet_id] ?? null),
                 'kapali'       => $kapali,
                 'ongorusmeid'  => $randevu->on_gorusme_id,
                 // Eski takvim basligindaki "(PAKET)" / "(ÖN GÖRÜŞME) Nedeni: …" — yapisal alan olarak.

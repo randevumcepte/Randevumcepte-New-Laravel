@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="/css/musteri-v2.css?v=4">
     <link rel="stylesheet" href="/css/seans-v2.css?v=5">
     <link rel="stylesheet" href="/css/formlar-v2.css?v=2">
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=15">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=16">
+    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=1">
 @endpush
 
 @section('icerik')
@@ -19,5 +20,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/musteri-detay-v2.js?v=16"></script>
+    <script type="module" src="/js/musteri-detay-v2.js?v=17"></script>
 @endpush
