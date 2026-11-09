@@ -289,6 +289,7 @@ class SatisListeServisi
             return $this->satirBasi($a, $salonId, $sonTahsilat, $alacaklar, $toplamSayisi, (float) $s['kalan_tutar_numeric']) + [
                 'icerik'                => $s['icerik'],
                 'icerikKisaltilmis'     => $s['icerik_kisaltilmis'],
+                'kalemler'              => $s['kalemler'],   // web tablosu (yapılandırılmış içerik)
                 'hizmet_veren'          => $s['hizmet_veren'],
                 'toplam'                => $s['toplam'],
                 'toplam_numeric'        => $s['toplam_numeric'],
@@ -418,6 +419,7 @@ class SatisListeServisi
         foreach ($a->urunler as $u) {
             $urunler[] = [
                 'ad'           => $u->urun->urun_adi ?? '',
+                'adet'         => (int) ($u->adet ?? 1),
                 'fiyat'        => $u->fiyat ?? 0,
                 'indirim'      => $u->indirim_tutari ?? 0,
                 'tahsilat'     => $u->tahsilatlar->sum('tutar'),

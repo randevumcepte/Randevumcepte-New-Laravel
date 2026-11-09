@@ -122,4 +122,22 @@ class AdisyonSatirTest extends TestCase
         $d = AdisyonSatir::hesapla(['paketler' => [['ad' => 'Lazer', 'fiyat' => 100, 'seans_sayisi' => 8, 'personel_adi' => '']]]);
         $this->assertStringNotContainsString('Yükseltildi', $d['icerik']);
     }
+
+    public function test_kalemler_yapilandirilmis_liste(): void
+    {
+        $s = AdisyonSatir::hesapla([
+            'hizmetler' => [
+                ['ad' => 'Cilt Bakımı', 'fiyat' => 1000, 'personel_id' => 3, 'personel_adi' => 'Naciye'],
+                ['ad' => 'Lazer', 'fiyat' => 500, 'seansli' => true, 'seans_sayisi' => 8, 'personel_id' => 1, 'personel_adi' => 'Ece'],
+            ],
+            'urunler'  => [['ad' => 'Krem', 'fiyat' => 300, 'adet' => 3]],
+            'paketler' => [['ad' => 'Sınırsız Lazer', 'fiyat' => 10000, 'sinirsiz' => true]],
+        ]);
+        $this->assertSame([
+            ['tur' => 'hizmet', 'ad' => 'Cilt Bakımı', 'personel' => 'Naciye', 'ek' => ''],
+            ['tur' => 'paket', 'ad' => 'Lazer', 'personel' => 'Ece', 'ek' => '8 seans'],      // seanslı hizmet = paket
+            ['tur' => 'urun', 'ad' => 'Krem', 'personel' => '', 'ek' => '3 adet'],
+            ['tur' => 'paket', 'ad' => 'Sınırsız Lazer', 'personel' => '', 'ek' => 'Sınırsız'],
+        ], $s['kalemler']);
+    }
 }

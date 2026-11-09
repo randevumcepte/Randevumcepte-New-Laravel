@@ -268,11 +268,25 @@ function islemlerCiz(a) {
   return `<div class="s-islemler">${b.join('')}</div>`;
 }
 
+// İçerik: API'nin yapılandırılmış kalem listesi — her kalem tek satır: tür etiketi + ad + ek + personel.
+const TUR_KISA = { hizmet: 'H', urun: 'Ü', paket: 'P' };
+const TUR_UZUN = { hizmet: 'Hizmet', urun: 'Ürün', paket: 'Paket' };
+function icerikCiz(a) {
+  const k = a.kalemler || [];
+  if (!k.length) return '<span class="s-ic-bos">—</span>';
+  return k.map((x) => `<div class="s-ic" title="${esc(x.ad)}${x.personel ? ' — ' + esc(x.personel) : ''}">`
+    + `<span class="s-ic-tur s-ic-${x.tur}" title="${TUR_UZUN[x.tur] || ''}">${TUR_KISA[x.tur] || '?'}</span>`
+    + `<span class="s-ic-ad">${esc(x.ad)}</span>`
+    + (x.ek ? `<span class="s-ic-ek">${esc(x.ek)}</span>` : '')
+    + (x.personel ? `<span class="s-ic-per">${esc(x.personel)}</span>` : '')
+    + '</div>').join('');
+}
+
 function satirCiz(a) {
   const rozet = a.kapali
     ? '<span class="s-rozet s-r-kapali">Kapalı</span>'
     : '<span class="s-rozet s-r-acik">Açık</span>';
-  const icerik = esc(a.icerikKisaltilmis || a.icerik || '').trim().replace(/\r?\n/g, '<br>');
+  const icerik = icerikCiz(a);
   const para = studyo ? '' : `
     <td class="rc-sag">${esc(a.indirim || '0,00')} ₺</td>
     <td class="rc-sag">${esc(a.toplam)} ₺</td>
@@ -282,7 +296,7 @@ function satirCiz(a) {
   return `<tr>
     <td>${rozet}</td>
     <td class="rc-nowrap">${esc(a.acilis_tarihi)}${a.acilis_saati ? ' <small>' + esc(a.acilis_saati) + '</small>' : ''}</td>
-    <td>${esc(a.musteri)}</td>
+    <td class="s-musteri">${esc(a.musteri)}</td>
     <td class="rc-nowrap">${esc(a.planlanan_alacak_tarihi || '-')}</td>
     <td class="s-icerik">${icerik}</td>
     ${para}${st}

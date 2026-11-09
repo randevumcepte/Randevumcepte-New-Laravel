@@ -47,6 +47,7 @@ class AdisyonSatir
         $paketBrut = 0;
 
         $icerik = '';
+        $liste = [];   // yapılandırılmış kalem listesi (web tablosu: tür + ad + personel + ek bilgi)
         $icerikKisa = '';
         $personelStr = '';
 
@@ -73,6 +74,7 @@ class AdisyonSatir
             $adPer = (string) ($h['personel_adi'] ?? '');
             $etiket = $seansli ? ' (P) ('.(int) ($h['seans_sayisi'] ?? 0).' Seans)  ' : ' (H)  ';
             $icerik .= (string) ($h['ad'] ?? '').$etiket.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
+            $liste[] = self::kalem($seansli ? 'paket' : 'hizmet', $h, $seansli ? (int) ($h['seans_sayisi'] ?? 0).' seans' : '');
             $icerikKisa .= (string) ($h['ad'] ?? '').(! empty($h['personel_id']) ? ' ('.trim($adPer).')' : '').$etiket.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $personelStr .= $adPer.' ';
         }
@@ -92,6 +94,7 @@ class AdisyonSatir
 
             $adPer = (string) ($u['personel_adi'] ?? '');
             $icerik .= (string) ($u['ad'] ?? '').' (Ü)  '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
+            $liste[] = self::kalem('urun', $u, (int) ($u['adet'] ?? 1) > 1 ? (int) $u['adet'].' adet' : '');
             $icerikKisa .= (string) ($u['ad'] ?? '').(! empty($u['personel_id']) ? ' ('.trim($adPer).')' : '').' (Ü)  '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $personelStr .= $adPer.' ';
         }
@@ -115,6 +118,7 @@ class AdisyonSatir
             // Yukseltilmis paket: "⬆ Yükseltildi (Eski Paket) " — duz metin (istemci esc yapar); mobil girdide alan yok.
             $yukseltme = ! empty($p['yukseltme_kaynak_adi']) ? '⬆ Yükseltildi ('.$p['yukseltme_kaynak_adi'].') ' : '';
             $icerik .= (string) ($p['ad'] ?? '').' (P) '.$yukseltme.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
+            $liste[] = self::kalem('paket', $p, trim(trim($yukseltme).' '.(! empty($p['sinirsiz']) ? 'Sınırsız' : ($seansAdet > 0 ? $seansAdet.' seans' : ''))));
             $icerikKisa .= (string) ($p['ad'] ?? '').(! empty($p['personel_id']) ? ' ('.trim($adPer).')' : '').' (P) '.$yukseltme.$seansEt.' '.$adPer.'  '.self::trFormat($fiyat)." ₺\r\n";
             $personelStr .= $adPer.' ';
         }
@@ -149,10 +153,17 @@ class AdisyonSatir
             'hakedis'               => AdisyonHesap::kurusToTl($hakedisKurus),
 
             'icerik'                => $icerik,
+            'kalemler'              => $liste,
             'icerik_kisaltilmis'    => $icerikKisa,
             'hizmet_veren'          => trim($personelStr),
             'durum'                 => $kalanKurus > 0 ? 'acik' : 'kapali',
         ];
+    }
+
+    /** Yapılandırılmış kalem: tur (seanslı hizmet = paket), ad, personel, ek (seans/adet/sınırsız/yükseltme). */
+    private static function kalem(string $tur, array $k, string $ek): array
+    {
+        return ['tur' => $tur, 'ad' => (string) ($k['ad'] ?? ''), 'personel' => trim((string) ($k['personel_adi'] ?? '')), 'ek' => $ek];
     }
 
     /** Turkce para bicimi: 1.234,56 (eski number_format($n,2,',','.') ile ayni). */
