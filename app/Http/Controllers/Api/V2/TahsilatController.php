@@ -6,6 +6,7 @@ use App\Domain\Tahsilat\TahsilatNet;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
+use App\Services\Ayar\MusteriIndirimServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
@@ -63,8 +64,10 @@ class TahsilatController extends V2Controller
         if (! $request->boolean('dry_run')) {
             // Çift güvenlik: config bayrağı kapalıysa asla yazma.
             $this->yazmaAcikMi('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).');
-            // Harici indirim varsa ek yetki: satis.indirim_uygula.
-            if ((float) $request->input('indirim', 0) > 0) {
+            // Harici indirim varsa ek yetki: satis.indirim_uygula. Müşterinin hak ettiği aktif/sadık indirim payı
+            // (brüt = tutar + indirim üzerinden %) yetkisiz uygulanabilir — eski ekranda kendiliğinden düşüyordu.
+            $indirim = (float) $request->input('indirim', 0);
+            if ($indirim > 0 && ! $this->musteriIndirimiIcinde($salonId, $adisyonId, (float) $request->input('tutar', 0), $indirim)) {
                 $this->kapi->denetle($user->id, $salonId, ['satis.indirim_uygula']);
             }
             // Taksit/senet vade ödemesi + harici indirim: ARTIK destekleniyor.
@@ -180,5 +183,14 @@ class TahsilatController extends V2Controller
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Tahsilat iade edildi (silindi).');
+    }
+
+    /** İndirim, müşterinin bu adisyondaki aktif/sadık payını (brüt × %, 1 kuruş tolerans) aşmıyor mu? */
+    private function musteriIndirimiIcinde(int $salonId, int $adisyonId, float $tutar, float $indirim): bool
+    {
+        $userId = (int) DB::table('adisyonlar')->where('id', $adisyonId)->value('user_id');
+        $m = app(MusteriIndirimServisi::class)->adisyonIcin($salonId, $userId, $adisyonId);
+
+        return $m !== null && $indirim <= MusteriIndirimServisi::pay($tutar + $indirim, $m['yuzde']) + 0.01;
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V2\AdisyonController;
+use App\Http\Controllers\Api\V2\AdisyonIndirimController;
 use App\Domain\Asistan\GorevTuru;
 use App\Http\Controllers\Api\V2\AlacakController;
 use App\Http\Controllers\Api\V2\ArsivController;
@@ -129,6 +130,10 @@ Route::prefix('v2')->middleware('throttle:'.AppServiceProvider::GENEL_SINIR)->gr
         Route::patch('/adisyon/{id}/odeme', [SatisController::class, 'odeme'])->whereNumber('id');
         Route::patch('/adisyon/{id}/tarih', [SatisController::class, 'tarih'])->whereNumber('id');
         Route::patch('/adisyon/{id}/odeme-tarihi', [SatisController::class, 'odemeTarihi'])->whereNumber('id');
+        // Kazanılmış indirimler (müşteri %, çark kuponu, kampanya kodu) — web + Flutter aynı uçlar.
+        Route::get('/adisyon/{id}/indirimler', [AdisyonIndirimController::class, 'liste'])->whereNumber('id');
+        Route::post('/adisyon/{id}/cark-kuponu', [AdisyonIndirimController::class, 'carkKuponu'])->whereNumber('id');
+        Route::post('/adisyon/{id}/kampanya-kodu', [AdisyonIndirimController::class, 'kampanyaKodu'])->whereNumber('id');
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).
         Route::post('/tahsilat', [TahsilatController::class, 'ekle']);

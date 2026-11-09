@@ -55,6 +55,9 @@ let salonId = null;
 let tutarManuel = false;        // kullanıcı Tahsilat Tutarı'na elle yazdı mı?
 let duzenlenenTahsilat = null;  // düzenlenen tahsilat id (null = yeni tahsilat)
 let duzenlenenAlacak = null;    // düzenlenen alacak id (null = yeni alacak)
+let indirimler = null;          // GET /adisyon/{id}/indirimler (müşteri %, kuponlar, kampanya kodları)
+let musteriIndirimAcik = true;  // aktif/sadık müşteri indirimi kutusu
+let indirimManuel = false;      // kullanıcı İndirim'e elle yazdı mı?
 
 /* ───────────── Datepicker (flatpickr, TR) ───────────── */
 function datepickerBagla() {
@@ -89,9 +92,85 @@ async function adisyonYukle() {
   alacakGoster();
   studyoOdemeGoster();
   if (tahsilAlacaklar.size) tahsilAlacakCiz();
-  // Tahsilat Tutarı güncel Kalan'ı takip eder (elle yazılınca / düzenleme modunda ezme).
-  const h = adisyon.hesap;
-  if (!tutarManuel && !duzenlenenTahsilat) el('#t-tutar').value = h.kalan > 0 ? h.kalan : '';
+  tutarOner();
+  await indirimYukle();
+}
+
+/* ───────────── Tahsilat Tutarı / İndirim önerisi (tek yer) ─────────────
+   Tutar güncel Kalan'ı takip eder; aktif/sadık müşteri indirimi açıksa brüt Kalan'ın %'si İndirim'e
+   yazılır, Tutar = Kalan − İndirim. Elle yazılınca, düzenleme modunda ve alacak tahsilinde ezilmez. */
+function tutarOner() {
+  if (!adisyon || duzenlenenTahsilat || tahsilAlacaklar.size) return;
+  const kalan = Math.max(0, Number(adisyon.hesap.kalan) || 0);
+  const m = indirimler?.musteri_indirimi;
+  if (!indirimManuel) el('#t-indirim').value = m && musteriIndirimAcik && kalan > 0 ? Math.round(kalan * m.yuzde) / 100 : 0;
+  if (tutarManuel) return;
+  const ind = parseFloat(el('#t-indirim').value || '0') || 0;
+  const t = Math.round((kalan - ind) * 100) / 100;
+  el('#t-tutar').value = t > 0 ? t : '';
+}
+
+/* ───────────── Kazanılmış indirimler: müşteri %, çark kuponu, kampanya kodu ───────────── */
+async function indirimYukle() {
+  if (!adisyonId) { indirimler = null; indirimCiz(); return; }
+  const { ok, govde } = await api('GET', `/adisyon/${adisyonId}/indirimler`);
+  indirimler = ok ? govde.veri : null;
+  indirimCiz();
+  tutarOner();
+}
+
+function indirimCiz() {
+  const kap = el('#t-indirimler');
+  const v = indirimler;
+  if (!v) { kap.hidden = true; kap.innerHTML = ''; return; }
+  const m = v.musteri_indirimi;
+  const satir = [];
+  if (m) {
+    satir.push(`<label class="t-ind-musteri"><input type="checkbox" id="t-ind-musteri"${musteriIndirimAcik ? ' checked' : ''}>
+      <span><i class="bi bi-award"></i> ${esc(m.etiket)} indirimi <b>%${esc(String(m.yuzde))}</b></span></label>`);
+  }
+  const uyg = [
+    ...(v.uygulanan?.kuponlar || []).map((k) => `${esc(k.baslik)} <code>${esc(k.kod)}</code>`),
+    ...(v.uygulanan?.kampanya ? [`Kampanya kodu <code>${esc(v.uygulanan.kampanya.kod)}</code> · ${esc(v.uygulanan.kampanya.metin || '')}`] : []),
+  ];
+  uyg.forEach((x) => satir.push(`<div class="t-ind-uyg"><i class="bi bi-check-circle-fill"></i><span>${x} uygulandı</span></div>`));
+  const kuponlar = [
+    ...(v.cark_kuponlari || []).map((k) => ({ tur: 'kupon', kod: k.kod, ad: k.baslik, ek: k.gecerlilik_tarihi ? 'Son: ' + String(k.gecerlilik_tarihi).slice(0, 10) : '' })),
+    ...(v.kampanya_kodlari || []).map((k) => ({ tur: 'kampanya', kod: k.kod, ad: k.indirim || 'Kampanya indirimi', ek: 'Kampanya kodu' })),
+  ];
+  kuponlar.forEach((k) => satir.push(`<div class="t-ind-kupon"><i class="bi ${k.tur === 'kupon' ? 'bi-gift' : 'bi-megaphone'}"></i>
+      <span><b>${esc(k.ad)}</b> <code>${esc(k.kod)}</code>${k.ek ? `<small>${esc(k.ek)}</small>` : ''}</span>
+      <button type="button" class="t-btn-mini" data-ind-tur="${k.tur}" data-ind-kod="${esc(k.kod)}">Uygula</button></div>`));
+  satir.push(`<div class="t-ind-kod"><input id="t-ind-kod" type="text" placeholder="Kupon / kampanya kodu" autocomplete="off">
+      <button type="button" class="t-btn-mini" id="t-ind-kod-btn">Uygula</button></div>`);
+  kap.innerHTML = '<div class="t-ind-baslik">İndirimler</div>' + satir.join('');
+  kap.hidden = false;
+  const cb = el('#t-ind-musteri');
+  if (cb) cb.onchange = () => { musteriIndirimAcik = cb.checked; indirimManuel = false; tutarOner(); };
+  kap.querySelectorAll('[data-ind-tur]').forEach((b) => (b.onclick = () => indirimKoduUygula(b.dataset.indKod, b.dataset.indTur, b)));
+  const kodGir = el('#t-ind-kod');
+  el('#t-ind-kod-btn').onclick = () => indirimKoduUygula(kodGir.value, null, el('#t-ind-kod-btn'));
+  kodGir.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); el('#t-ind-kod-btn').click(); } };
+}
+
+// tur: 'kupon' | 'kampanya' | null (elle girilen kod: listede yoksa önce çark kuponu, bulunamazsa kampanya kodu denenir).
+async function indirimKoduUygula(kod, tur, buton) {
+  kod = String(kod || '').trim();
+  if (!kod) { mesaj('Kod girin.', 'bilgi'); return; }
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
+  if (!tur) {
+    const v = indirimler || {};
+    if ((v.kampanya_kodlari || []).some((k) => String(k.kod) === kod)) tur = 'kampanya';
+    else if ((v.cark_kuponlari || []).some((k) => String(k.kod).toUpperCase() === kod.toUpperCase())) tur = 'kupon';
+  }
+  const istek = (t) => api('POST', `/adisyon/${adisyonId}/${t === 'kampanya' ? 'kampanya-kodu' : 'cark-kuponu'}`, { body: { kod, idempotency_key: uuid() } });
+  if (buton) buton.disabled = true;
+  let r = await istek(tur || 'kupon');
+  if (!tur && r.kod === 404) r = await istek('kampanya');
+  if (buton) buton.disabled = false;
+  if (!r.ok) { mesaj(r.govde?.mesaj || `Kod uygulanamadı (${r.kod}).`, 'hata'); return; }
+  mesaj(r.govde?.mesaj || 'İndirim uygulandı.', 'ok');
+  await adisyonYukle();
 }
 
 async function katalogYukle() {
@@ -567,7 +646,7 @@ function tahsilAlacakCiz() {
   const kap = el('#t-tahsil-alacak');
   // Silinmiş/kapanmış alacak seçimden düşer.
   for (const id of [...tahsilAlacaklar.keys()]) if (!(adisyon.alacaklar || []).some((x) => x.id === id)) tahsilAlacaklar.delete(id);
-  if (!tahsilAlacaklar.size) { kap.innerHTML = ''; kap.hidden = true; return; }
+  if (!tahsilAlacaklar.size) { kap.innerHTML = ''; kap.hidden = true; if (adisyon) { tutarManuel = false; tutarOner(); } return; }
   let toplam = 0;
   kap.innerHTML = '<div class="t-ta-baslik">Tahsil edilecek alacaklar</div>' + [...tahsilAlacaklar.values()].map((a) => {
     toplam += Number(a.tutar) || 0;
@@ -577,6 +656,8 @@ function tahsilAlacakCiz() {
   kap.hidden = false;
   kap.querySelectorAll('[data-cikar]').forEach((b) => (b.onclick = () => { tahsilAlacaklar.delete(parseInt(b.dataset.cikar, 10)); tahsilAlacakCiz(); }));
   tutarManuel = true;
+  indirimManuel = false;
+  el('#t-indirim').value = 0;
   el('#t-tutar').value = Math.round(toplam * 100) / 100;
 }
 
@@ -626,6 +707,7 @@ async function kaydet() {
   mesaj('Tahsilat kaydedildi' + (govde.veri?.replay ? ' (zaten işlenmişti)' : '') + '. Tahsilat #' + (govde.veri?.tahsilat_id ?? '-'), 'ok');
   el('#t-plan').innerHTML = '';
   tutarManuel = false;
+  indirimManuel = false;
   tahsilAlacaklar.clear();
   await adisyonYukle();
   tahsilAlacakCiz();
@@ -653,7 +735,8 @@ function tahsilatDuzenVazgec() {
   tutarManuel = false;
   el('#t-onizle').textContent = 'Tahsil Et (Önizle)';
   el('#t-duzen-vazgec').hidden = true;
-  if (adisyon) { const h = adisyon.hesap; el('#t-tutar').value = h.kalan > 0 ? h.kalan : ''; }
+  indirimManuel = false;
+  tutarOner();
 }
 
 async function tahsilatGuncelleKaydet() {
@@ -806,6 +889,7 @@ function iskelet() {
         <div class="t-ozet-detay" id="t-ozet-detay"></div>
         <div class="t-form">
           <div id="t-tahsil-alacak" class="t-tahsil-alacak" hidden></div>
+          <div id="t-indirimler" class="t-indirimler" hidden></div>
           <div class="grid">
             <div><label>Tahsilat Tutarı (₺)</label><input id="t-tutar" type="number" step="0.01" min="0"></div>
             <div><label>İndirim (₺)</label><input id="t-indirim" type="number" step="0.01" min="0" value="0"></div>
@@ -838,6 +922,7 @@ function iskelet() {
   el('#t-satis-tarih').onchange = satisTarihiKaydet;
   tarihAyarla('#t-tarih', new Date().toISOString().slice(0, 10));
   el('#t-tutar').addEventListener('input', () => { if (!duzenlenenTahsilat) tutarManuel = true; });
+  el('#t-indirim').addEventListener('input', () => { if (!duzenlenenTahsilat) { indirimManuel = true; tutarOner(); } });
   el('#t-onizle').onclick = odemeButon;
   el('#t-studyo-alindi').onclick = () => studyoOdeme(true);
   el('#t-studyo-alinmadi').onclick = () => studyoOdeme(false);

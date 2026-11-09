@@ -4,6 +4,7 @@ namespace App\Services\Cark;
 
 use App\Domain\Cark\DilimTipi;
 use App\Domain\Cark\KuponDurumu;
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
@@ -130,6 +131,113 @@ class CarkKuponServisi
                 'deger' => $k->deger !== null ? (float) $k->deger : null,
                 'indirim_tipi' => DilimTipi::birim($k->tip, $k->indirim_tipi ?? null),
                 'gecerlilik_tarihi' => $k->gecerlilik_tarihi,
+            ])->values()->all();
+    }
+
+    /** Kupon tipi → indirimin uygulanacağı adisyon kalem tablosu ve katalog kısıt kolonu. */
+    private const KALEM = [
+        DilimTipi::HIZMET => ['adisyon_hizmetler', 'tahsilat_hizmetler', 'adisyon_hizmet_id', 'hizmet_id'],
+        DilimTipi::URUN   => ['adisyon_urunler', 'tahsilat_urunler', 'adisyon_urun_id', 'urun_id'],
+        DilimTipi::PAKET  => ['adisyon_paketler', 'tahsilat_paketler', 'adisyon_paket_id', null],
+    ];
+
+    /**
+     * Kuponu ADİSYONA uygular (eski StoreAdminController@kuponUygula — web + Flutter tek yazıcı):
+     * kupon müşterinin, kullanılmamış, süresi dolmamış ve bu şubede geçerli olmalı. Tipine uygun
+     * (hizmet/ürün/paket) taksitsiz-senetsiz kalemlere: yüzde → her kaleme fiyat × %; tutar → ₺ bakiye
+     * sırayla. Kupon belirli bir hizmet/ürüne kısıtlıysa yalnız o kalem. İndirim kalemin MEVCUT
+     * indirimine eklenir ve kalan borcuyla sınırlıdır (eski üzerine yazıyordu; önceki indirim kaybolurdu).
+     * En az bir kaleme uygulanınca kupon kullanıldı + adisyon_id işaretlenir; hiçbirine uymazsa yakılmaz.
+     *
+     * @return array{kupon_id:int, kod:string, baslik:string, uygulanan_kalem:int, indirim_tutari:float, mesaj:string}
+     */
+    public function adisyonaUygula(int $salonId, int $yetkiliId, int $adisyonId, string $kod): array
+    {
+        $kod = strtoupper(trim($kod));
+        if ($kod === '') {
+            throw new GecersizIslemException('Kupon kodu zorunlu.');
+        }
+        $adisyon = DB::table('adisyonlar')->where('id', $adisyonId)->where('salon_id', $salonId)->first(['id', 'user_id']);
+        if (! $adisyon) {
+            throw new GecersizIslemException('Önce sepete bir hizmet/ürün/paket ekleyin.');
+        }
+
+        $sonuc = DB::transaction(function () use ($salonId, $yetkiliId, $adisyon, $kod) {
+            $o = DB::table(self::TABLO)->where('kod', $kod)->where('user_id', (int) $adisyon->user_id)
+                ->whereIn('tip', array_keys(self::KALEM))->lockForUpdate()->first();
+            if (! $o || ! in_array($salonId, $this->subeler->kuponSubeleri($o->gecerli_salonlar ?? null, (int) $o->salon_id), true)) {
+                throw new BulunamadiException('Kupon bulunamadı, müşteriye ait değil veya bu şubede geçerli değil.');
+            }
+            $durum = KuponDurumu::hesapla((bool) $o->kullanildi, $o->gecerlilik_tarihi, now()->toDateString());
+            if ($durum !== KuponDurumu::GECERLI) {
+                throw new CakismaException($durum === KuponDurumu::KULLANILDI ? 'Kupon zaten kullanılmış.' : 'Kuponun süresi dolmuş.');
+            }
+
+            [$tablo, $odemeTablo, $odemeFk, $katalogKolon] = self::KALEM[$o->tip];
+            $kisit = match ($o->tip) {
+                DilimTipi::HIZMET => (int) ($o->hizmet_id ?? 0),
+                DilimTipi::URUN   => (int) ($o->urun_id ?? 0),
+                default           => 0,
+            };
+            $q = DB::table($tablo)->where('adisyon_id', (int) $adisyon->id)->whereNull('senet_id')->whereNull('taksitli_tahsilat_id');
+            if ($kisit && $katalogKolon) {
+                $q->where($katalogKolon, $kisit);
+            }
+            $kalemler = $q->orderBy('id')->lockForUpdate()->get(['id', 'fiyat', 'indirim_tutari']);
+            $odenen = $kalemler->isEmpty() ? collect() : DB::table($odemeTablo)->whereIn($odemeFk, $kalemler->pluck('id'))
+                ->groupBy($odemeFk)->selectRaw($odemeFk.' as k, SUM(tutar) as t')->pluck('t', 'k');
+
+            $tutarMi = DilimTipi::birim($o->tip, $o->indirim_tipi ?? null) === DilimTipi::TUTAR;
+            $deger = (float) ($o->deger ?? 0);
+            $bakiye = AdisyonHesap::tlToKurus($deger);
+            $uygulanan = 0;
+            $toplam = 0;
+            foreach ($kalemler as $k) {
+                $fiyat = AdisyonHesap::tlToKurus($k->fiyat ?? 0);
+                $mevcut = AdisyonHesap::tlToKurus($k->indirim_tutari ?? 0);
+                $kapasite = max(0, $fiyat - $mevcut - AdisyonHesap::tlToKurus($odenen[$k->id] ?? 0));
+                $ind = min($kapasite, $tutarMi ? $bakiye : (int) round($fiyat * $deger / 100));
+                if ($ind <= 0) {
+                    continue;
+                }
+                DB::table($tablo)->where('id', $k->id)->update(['indirim_tutari' => AdisyonHesap::kurusToTl($mevcut + $ind)]);
+                $uygulanan++;
+                $toplam += $ind;
+                if ($tutarMi && ($bakiye -= $ind) <= 0) {
+                    break;
+                }
+            }
+            if (! $uygulanan) {
+                $tipAd = [DilimTipi::HIZMET => 'hizmet', DilimTipi::URUN => 'ürün', DilimTipi::PAKET => 'paket'][$o->tip];
+                throw new GecersizIslemException("Sepette ödenmemiş uygun {$tipAd} bulunmadığı için kupon uygulanamadı."
+                    .($kisit ? ' (Bu kupon yalnızca belirli bir '.$tipAd.' için geçerli.)' : ''));
+            }
+            DB::table(self::TABLO)->where('id', $o->id)->update([
+                'kullanildi' => 1, 'kullanim_tarihi' => now(), 'adisyon_id' => (int) $adisyon->id, 'updated_at' => now(),
+            ]);
+
+            return [$o, $uygulanan, AdisyonHesap::kurusToTl($toplam)];
+        });
+        [$o, $uygulanan, $tutar] = $sonuc;
+
+        AktiviteLog::yaz($salonId, $yetkiliId, 'cark_kupon_adisyona_uygula', 'adisyon', (int) $adisyon->id, $o->kod,
+            'Çark kuponu adisyona uygulandı', ['kupon_id' => (int) $o->id, 'tip' => $o->tip, 'deger' => $o->deger, 'indirim' => $tutar]);
+
+        return [
+            'kupon_id' => (int) $o->id, 'kod' => (string) $o->kod,
+            'baslik' => (string) ($o->baslik ?: DilimTipi::odulMetni((string) $o->tip, $o->deger !== null ? (float) $o->deger : null, $o->indirim_tipi ?? null)),
+            'uygulanan_kalem' => $uygulanan, 'indirim_tutari' => $tutar,
+            'mesaj' => DilimTipi::degerMetni((string) $o->tip, (float) $o->deger, $o->indirim_tipi ?? null).' indirim '.$uygulanan.' kaleme uygulandı.',
+        ];
+    }
+
+    /** Bu adisyona uygulanmış çark kuponları (tahsilat ekranında "uygulandı" listesi). */
+    public function adisyonKuponlari(int $adisyonId): array
+    {
+        return DB::table(self::TABLO)->where('adisyon_id', $adisyonId)->orderBy('id')->get()
+            ->map(fn ($k) => [
+                'id' => (int) $k->id, 'kod' => $k->kod,
+                'baslik' => (string) ($k->baslik ?: DilimTipi::odulMetni((string) $k->tip, $k->deger !== null ? (float) $k->deger : null, $k->indirim_tipi ?? null)),
             ])->values()->all();
     }
 

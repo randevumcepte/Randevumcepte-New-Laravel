@@ -65,10 +65,14 @@ class MobilKampanyaKoduServisi
         $this->kapsam->adisyonOlmali($salonId, $g['adisyon_id'] ?? null);
 
         return Idempotency::calistir('mobil_kampanya_kodu', (string) ($g['idempotency_key'] ?? ''), $yetkiliId, $salonId,
-            fn () => $this->uygula($salonId, $yetkiliId, $musteriId, $kod, (int) ($g['adisyon_id'] ?? 0)));
+            fn () => $this->uygula($salonId, $yetkiliId, $musteriId, $kod, (int) ($g['adisyon_id'] ?? 0), ! empty($g['tahsilata_dusulmus'])));
     }
 
-    private function uygula(int $salonId, int $yetkiliId, int $musteriId, string $kod, int $adisyonId): array
+    /**
+     * $dusulmus: istemci kod indirimini tahsilattaki harici indirime ayrıca EKLEMEZ (web v2 Satış & Tahsilat) —
+     * indirim kaleme yazıldığı an hesaba düşmüş sayılır; yoksa kupon guard'ı sonraki harici/müşteri indirimini yer.
+     */
+    private function uygula(int $salonId, int $yetkiliId, int $musteriId, string $kod, int $adisyonId, bool $dusulmus = false): array
     {
         $k = DB::table('kampanya_katilimcilari as k')->join('kampanya_yonetimi as y', 'y.id', '=', 'k.kampanya_id')
             ->where('k.user_id', $musteriId)->where('k.indirim_kodu', $kod)->where('y.salon_id', $salonId)
@@ -116,7 +120,8 @@ class MobilKampanyaKoduServisi
                 if ($yazili > 0) {
                     $indirimTutar = $yazili;
                     if (Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tutar')) {
-                        DB::table('kampanya_katilimcilari')->where('id', $k->id)->update(['indirim_kodu_tutar' => $yazili]);
+                        DB::table('kampanya_katilimcilari')->where('id', $k->id)->update(['indirim_kodu_tutar' => $yazili]
+                            + ($dusulmus && Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu') ? ['indirim_kodu_tahsilata_dusuldu' => 1] : []));
                     }
                 }
             } catch (\Throwable $e) {
