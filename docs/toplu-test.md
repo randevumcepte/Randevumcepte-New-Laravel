@@ -152,4 +152,4 @@ iPhone 17 Pro Max simülatörü, tablet yatay ve Android derlemesi. Salon 20'de,
 
 ## Toplu testten sonra
 
-Eski şifre kayıtlarını maskeleme (`v2:sifre-maskele --gecmis`, geri alınamaz), tipsiz token kapısı (`OTURUM_TIPSIZ_TOKEN_KABUL=false`), tek adımlı şifre gönderimi, resim ve logo taşıma, Google Takvim, ana ekran notu, aynı telefonda çok kayıt, `ios_profil`, Flutter git bağlantısı.
+Eski şifre kayıtlarını maskeleme (`v2:sifre-maskele --gecmis`, geri alınamaz), tek adımlı şifre gönderimi, resim ve logo taşıma, Google Takvim, ana ekran notu, aynı telefonda çok kayıt, `ios_profil`, Flutter git bağlantısı.

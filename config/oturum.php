@@ -11,8 +11,10 @@ return [
     // Apple/Google inceleme hesaplari: sifreleri sifirlanamaz, SMS gitmez.
     'korunan_hesaplar' => ['isletme' => [3], 'musteri' => [123244]],
 
-    // Tipsiz token gecisi: yeni uygulama yeni girise gecene kadar acik; sonra OTURUM_TIPSIZ_TOKEN_KABUL=false.
-    'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', true),
+    // Tipsiz (eski sistemin 'appToken') token KAPALI (kullanici 2026-11-09): musteri ve yetkili ayni adla uretildigi icin
+    // hesap tipi guvenle cozulemez, id cakismasinda guard'lar arasi erisim olur. Eski panel koprusu ('v2-web') etkilenmez.
+    // Guncelleme alan mobil kullanici bir kez kodla yeniden giris yapar. Acil geri donus: OTURUM_TIPSIZ_TOKEN_KABUL=true.
+    'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', false),
     'kopru_token_adi'    => 'v2-web',
 
     // Yetki veya dogrulamayi gevseten ya da eski mobil sonucunu secen istek alanlari. Yalniz imzali mobil token'la
