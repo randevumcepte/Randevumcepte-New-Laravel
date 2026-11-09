@@ -8,10 +8,10 @@
  * PDF görüntüle/indir eski paneldedir (oturumlu link).
  */
 
-import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { formArsivi } from '/js/lib/v2-form.js?v=1';
+import { qp, api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { formArsivi } from '/js/lib/v2-form.js?v=7';
 
 const kok = document.getElementById('rc-formlar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

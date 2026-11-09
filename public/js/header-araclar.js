@@ -8,7 +8,7 @@
  * Kabuk verisi ('rc:kabuk') her geldiğinde salon değiştiyse rozetler yeniden kurulur;
  * softphone yalnız salon değişince (yeni dahili) yeniden bağlanır.
  */
-import { api, el, esc } from '/js/lib/v2-ortak.js?v=2';
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=7';
 
 const SIP_KUTUPHANESI = '/js/vendor/sip-0.21.2.min.js';
 

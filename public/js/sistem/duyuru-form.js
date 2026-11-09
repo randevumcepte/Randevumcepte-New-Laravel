@@ -1,6 +1,6 @@
 /** Duyuru formu: kayit id'si varsa duzenleme, yoksa yeni. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, kayitId, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, kayitId, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { geriLink, kilitli, salonSecici, sayfaBaslik, secenekHtml, tarihSaatBagla } from '/js/sistem/ortak.js?v=1';
 
 const LISTE = '/sistemyonetim/duyuru';

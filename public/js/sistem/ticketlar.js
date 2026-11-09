@@ -1,7 +1,7 @@
 /** Destek talepleri listesi. */
-import { el, esc, tarihStr } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ekran, syApi, syIndir, syVeri, tarihSaat } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, tarihStr } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ekran, syApi, syIndir, syVeri, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { kisalt, etiketRozet, sayfaBaslik, secenekHtml } from '/js/sistem/ortak.js?v=1';
 
 const ALT = (n) => `${n} talep — gerçek zamanlı çalışma alanı`;

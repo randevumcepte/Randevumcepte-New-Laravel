@@ -153,8 +153,11 @@ class MusteriHesapController extends MusteriUygulamaController
             'kaynak'                       => ['required', 'in:web,uygulama'],
             'idempotency_key'              => ['nullable', 'string', 'max:64'],
             'mobil'                        => ['nullable', 'boolean'],
+            '_hp'                          => ['nullable', 'string', 'max:200'],
+            'form_sure_sn'                 => ['nullable', 'integer'],
         ]);
 
+        // Kimligi dogrulanmis musteri: IP siniri yok, musteri basina salon basina gunluk sinir (OnlineRandevuSiniri).
         return ApiCevap::basarili($servis->olustur((int) $g['salon_id'], $this->musteriId(), $g), 'Randevu talebiniz alındı.', 201);
     }
 

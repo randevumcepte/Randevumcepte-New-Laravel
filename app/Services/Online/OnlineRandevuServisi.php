@@ -27,12 +27,14 @@ class OnlineRandevuServisi
         private OnlineMusaitlikServisi $musaitlik,
         private RandevuKayitServisi $kayit,
         private PortfoyKaydi $portfoy,
+        private OnlineRandevuSiniri $sinir,
     ) {}
 
     /**
-     * @param  array{tarih:string,saat:string,kalemler:array,not?:?string,kaynak:string,idempotency_key?:?string,mobil?:bool}  $g
+     * @param  array{tarih:string,saat:string,kalemler:array,not?:?string,kaynak:string,idempotency_key?:?string,mobil?:bool,_hp?:?string,form_sure_sn?:?int}  $g
      */
-    public function olustur(int $salonId, int $userId, array $g): array
+    /** @param  ?string  $misafirIp  yalniz kimliksiz / misafir yolda (IP siniri); kimlikli musteri isteginde null */
+    public function olustur(int $salonId, int $userId, array $g, ?string $misafirIp = null): array
     {
         // Online kapali veya lisansi dolmus salona her yoldan kapali. Mobil bayrak yalniz gizli personel secimini acar.
         $salon = $this->kapi->randevuyaAcikSalon($salonId);
@@ -40,7 +42,14 @@ class OnlineRandevuServisi
             throw new CakismaException(RandevuYazma::KAPALI_MESAJ);
         }
 
-        $is = fn () => DB::transaction(fn () => $this->yaz($salon, $userId, $g));
+        // Sinir is icinde: idempotent tekrar (kayitli cevap) sinira takilmaz, yalniz basarili olusturma sayilir.
+        $is = function () use ($salon, $salonId, $userId, $g, $misafirIp) {
+            $this->sinir->denetle($salonId, $userId, $misafirIp, $g);
+            $sonuc = DB::transaction(fn () => $this->yaz($salon, $userId, $g));
+            $this->sinir->say($salonId, $userId, $misafirIp);
+
+            return $sonuc;
+        };
         $anahtar = trim((string) ($g['idempotency_key'] ?? ''));
 
         return $anahtar !== ''

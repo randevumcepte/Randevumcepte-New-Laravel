@@ -1,6 +1,6 @@
 /** Ücretsiz deneme: form → SMS kodu → hesap. Tüm kurallar /api/v2/deneme'de. */
-import { api, el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { formBagla, gonder, mesajGoster } from '/js/lib/v2-oturum-form.js?v=1';
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { formBagla, gonder, mesajGoster } from '/js/lib/v2-oturum-form.js?v=7';
 
 const YONLENDIRME_MS = 5000;
 const kutu = el('#denemeMesaj');

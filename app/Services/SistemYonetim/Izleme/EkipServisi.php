@@ -9,10 +9,11 @@ use App\Exceptions\GecersizIslemException;
 use App\Models\SistemYoneticisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\SistemYonetim\Denetim;
+use App\Services\SistemYonetim\ImpersonationServisi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/** Ekip uyeleri ve roller. Sifre degisince uyenin oturumlari duser; pasif hesap guard'da zaten duser. */
+/** Ekip uyeleri ve roller. Sifre degisince uyenin oturumlari duser; pasif hesap guard'da zaten duser, acik salon girisleri kapanir. */
 class EkipServisi
 {
     public const SIRALAMA = ['uye' => 'name', 'email' => 'email', 'telefon' => 'telefon', 'rol' => 'rol', 'son_giris' => 'son_giris_tarihi', 'durum' => 'aktif'];
@@ -37,7 +38,7 @@ class EkipServisi
         ['Sistem sağlık / güvenlik', '✅', '✅', '—', '—'],
     ];
 
-    public function __construct(private ErisimTokenServisi $token) {}
+    public function __construct(private ErisimTokenServisi $token, private ImpersonationServisi $impersonation) {}
 
     public function secenekler(SistemYoneticisi $yonetici): array
     {
@@ -87,6 +88,9 @@ class EkipServisi
         if ($sifreDegisti) {
             $this->token->sistemDigerleriniIptal($id, (int) $u->id === (int) $yapan->id ? $aktifToken : null);
         }
+        if ((int) $eski['aktif'] === 1 && ! $aktif) {
+            $this->impersonation->yoneticininOturumlariniKapat($id);
+        }
 
         Denetim::yaz('kullanici_guncelle', 'sistem_yoneticisi', (int) $u->id, $u->name, null, [
             'eski' => $eski,
@@ -100,6 +104,8 @@ class EkipServisi
         $this->kendiniPasifEtmeyiEngelle($u, $yapan, false);
         $u->aktif = 0;
         $u->save();
+        // Pasif yoneticinin kendi token'i guard'da duser; acik "salon hesabina gir" token'lari da kapanir.
+        $this->impersonation->yoneticininOturumlariniKapat($id);
 
         Denetim::yaz('kullanici_pasif', 'sistem_yoneticisi', (int) $u->id, $u->name);
     }

@@ -5,8 +5,8 @@
  * GET /api/v2/anket/form-verisi'nden (Flutter da aynı ucu kullanır). Her sekme kendi modülünü tembel
  * yükler (public/js/anket/<kod>.js → export async function ciz(kap, ctx)).
  */
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=1';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=7';
 
 const kok = document.getElementById('rc-anket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

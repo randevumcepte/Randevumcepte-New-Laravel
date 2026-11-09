@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sistem;
 
+use App\Domain\Oturum\TokenTipi;
 use App\Services\Oturum\ErisimTokenServisi;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,20 @@ class SistemKimlikTest extends TestCase
             foreach (['name', 'email', 'gsm1', 'password'] as $k) {
                 $t->string($k)->nullable();
             }
+        });
+        // Isletme guard'i tamamen pasif personeli her istekte reddeder (KapsamServisi::tamamenPasifMi).
+        Schema::create('salon_personelleri', function (Blueprint $t) {
+            $t->id();
+            $t->integer('yetkili_id')->nullable();
+            $t->integer('salon_id');
+            $t->integer('role_id')->nullable();
+            $t->integer('aktif')->default(1);
+        });
+        Schema::create('model_has_roles', function (Blueprint $t) {
+            $t->integer('role_id');
+            $t->string('model_type')->nullable();
+            $t->integer('model_id');
+            $t->integer('salon_id');
         });
         Schema::create('oauth_access_tokens', function (Blueprint $t) {
             $t->string('id')->primary();
@@ -121,10 +136,22 @@ class SistemKimlikTest extends TestCase
 
     public function test_isletme_tokeni_sistem_ucuna_giremez(): void
     {
-        $token = app(ErisimTokenServisi::class)->uret(self::ID);
+        $token = app(ErisimTokenServisi::class)->uret(self::ID, TokenTipi::ISLETME);
 
         $this->getJson('/api/test/isletme', $this->bearer($token))->assertOk()->assertJsonPath('ad', 'Baska Kisi');
         $this->getJson('/api/v2/sistem/kabuk', $this->bearer($token))->assertStatus(401);
+    }
+
+    public function test_tamamen_pasif_personelin_tokeni_her_istekte_reddedilir(): void
+    {
+        $token = app(ErisimTokenServisi::class)->uret(self::ID, TokenTipi::ISLETME);
+        DB::table('salon_personelleri')->insert(['yetkili_id' => self::ID, 'salon_id' => 20, 'role_id' => 5, 'aktif' => 1]);
+        $this->getJson('/api/test/isletme', $this->bearer($token))->assertOk();
+
+        // Pasife alma kuyrugu islenmeden (token iptal edilmeden) de oturum duser.
+        DB::table('salon_personelleri')->where('yetkili_id', self::ID)->update(['aktif' => 0]);
+        $this->app['auth']->forgetGuards();
+        $this->getJson('/api/test/isletme', $this->bearer($token))->assertStatus(401);
     }
 
     public function test_rol_kapisi_403(): void
@@ -144,7 +171,7 @@ class SistemKimlikTest extends TestCase
     {
         $this->sistemTokeni();
         $servis = app(ErisimTokenServisi::class);
-        $servis->uret(self::ID);
+        $servis->uret(self::ID, TokenTipi::ISLETME);
 
         $servis->digerleriniIptal(self::ID, null);
 

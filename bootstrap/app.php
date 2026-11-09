@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('api', \App\Http\Middleware\ApiJsonKabul::class);
         // Kimlik guard'indan gecmeyen rotalarda (vitrin, kimliksiz oturum uclari) mobil bayrak kurali.
         $middleware->appendToGroup('api', \App\Http\Middleware\MobilBayrakSuzgeci::class);
+        // Suresi biten salonun isletme uclari 402 'lisans_suresi_doldu' (muaf uclar config/lisans.php).
+        $middleware->appendToGroup('api', \App\Http\Middleware\LisansKapisi::class);
         $middleware->alias(['sistem.rol' => \App\Http\Middleware\SistemRolGerekli::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

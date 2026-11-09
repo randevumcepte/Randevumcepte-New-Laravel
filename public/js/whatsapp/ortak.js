@@ -2,9 +2,9 @@
  * WhatsApp Yönetimi sekmelerinin ortak parçaları: durum rozeti, tarih biçimi, mesaj detayı.
  * Etiket/renk sözlüğü API'den (ctx.gonderimDurumlari).
  */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc } from '/js/lib/v2-modal.js?v=1';
-import { trTarih } from '/js/lib/v2-donem.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc } from '/js/lib/v2-modal.js?v=7';
+import { trTarih } from '/js/lib/v2-donem.js?v=7';
 
 export const tarihSaat = (s) => (s ? `${trTarih(s)} ${String(s).slice(11, 16)}` : '—');
 

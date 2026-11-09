@@ -4,9 +4,9 @@ namespace App\Services\Profil;
 
 use App\Domain\Personel\Telefon;
 use App\Exceptions\BulunamadiException;
-use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\IsletmeYetkilileri;
+use App\Services\Personel\GirisTelefonuDenetimi;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use App\Support\DosyaYukleme;
@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class ProfilServisi
 {
+    public function __construct(private GirisTelefonuDenetimi $girisTelefonu) {}
+
     public function getir(int $yetkiliId): array
     {
         return $this->sunum($this->bul($yetkiliId));
@@ -90,16 +92,15 @@ class ProfilServisi
         return $this->sunum($y);
     }
 
-    /** gsm1 giriş kimliğidir: normalize edilir; değiştiyse başka hesapta olmamalı. */
+    /** gsm1 giriş kimliğidir: normalize edilir; değiştiyse başka hesapta olmamalı (GirisTelefonu, personelle ortak; 422). */
     private function telefonCoz(string $ham, IsletmeYetkilileri $y): string
     {
         if (Telefon::maskeliMi($ham)) {
             throw new GecersizIslemException('Geçerli bir telefon numarası giriniz.');
         }
         $tel = Telefon::normalize($ham);
-        if ($tel !== (string) $y->gsm1
-            && IsletmeYetkilileri::where('gsm1', $tel)->where('id', '!=', $y->id)->exists()) {
-            throw new CakismaException('Bu telefon numarası başka bir hesapta kayıtlı.');
+        if ($tel !== (string) $y->gsm1) {
+            $this->girisTelefonu->numaraDenetle((int) $y->id, $tel);
         }
 
         return $tel;

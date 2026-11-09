@@ -2,16 +2,16 @@
  * v2 GRUP DERSİ ORTAK KATMANI — TEK KAYNAK (stil: css/ders-v2.css; bu modül kendisi yükler).
  * Takvim, Ders Programı, Satış, Paket, Ön Görüşme ve Müşteri Detay aynı modalları kullanır.
  * Import yolu her yerde AYNI olmalı:
- *   import { dersOturumAc, dersOturumYeni, dersFormu, dersPlani } from '/js/lib/v2-ders.js?v=2';
+ *   import { dersOturumAc, dersOturumYeni, dersFormu, dersPlani } from '/js/lib/v2-ders.js?v=7';
  *
  * Veri ve kurallar /api/v2/ders/* uçlarından (Flutter aynı uçları kullanır): durum sözlüğü,
  * kapasite → bekleme, telafi bağlama, seans düşümü burada HESAPLANMAZ.
  */
-import { api, el, esc, mesaj, onay, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
+import { api, el, esc, mesaj, onay, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=7';
 
 if (!document.querySelector('link[href^="/css/ders-v2.css"]')) {
   document.head.insertAdjacentHTML('beforeend', '<link rel="stylesheet" href="/css/ders-v2.css?v=1">');

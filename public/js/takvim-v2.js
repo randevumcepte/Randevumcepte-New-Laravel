@@ -13,12 +13,12 @@
  * Yuk-tasiyan akislar eski mobil ile ayni: geldi → hatali 2 (dogrulama kodu),
  * 3 (KVKK kodu), 4 (seans secimi); gelmedi → seansDusmeOnayi.
  *
- * Token: localStorage['rc_access_token'] (pilotta ?token=). salon: data-salon / ?sube=.
+ * Token: localStorage['rc_access_token'] (eski panel köprüsünde #token=; ?token= kabul edilmez). salon: data-salon / ?sube=.
  */
 
-import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=2';
-import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=6';
-import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=2';
+import { qp, api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=7';
+import { randevuIslemleri, saatStr } from '/js/lib/v2-randevu.js?v=7';
+import { dersOturumAc, dersOturumYeni } from '/js/lib/v2-ders.js?v=7';
 
 const ESKI_PANEL = 'https://app.randevumcepte.com.tr';
 

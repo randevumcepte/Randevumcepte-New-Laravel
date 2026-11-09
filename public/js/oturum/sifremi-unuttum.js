@@ -1,6 +1,6 @@
 /** Şifremi unuttum: önce SMS kodu istenir, sonra kod + yeni şifre gönderilir. */
-import { el } from '/js/lib/v2-ortak.js?v=2';
-import { formBagla, gonder, mesajGoster, sifreGosterBagla } from '/js/lib/v2-oturum-form.js?v=1';
+import { el } from '/js/lib/v2-ortak.js?v=7';
+import { formBagla, gonder, mesajGoster, sifreGosterBagla } from '/js/lib/v2-oturum-form.js?v=7';
 
 const HESAP_TURU = 'isletme';
 const YONLENDIRME_MS = 3000;

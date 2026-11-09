@@ -2,7 +2,7 @@
  * v2 ORTAK GRAFİK — Chart.js 4 (window.Chart, sayfa <script> ile yükler) ince sarmalayıcı.
  * Marka paleti, TR sayı biçimi, ₺ ipucu ve "aynı tuvale yeniden çizince eskisini yok et"
  * tek yerde. Import yolu her yerde AYNI olmalı:
- *   import { cubuk, halka, cizgi, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=1';
+ *   import { cubuk, halka, cizgi, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=7';
  * (v=2: yiginCubuk eklendi — kullanan ekran v=2 ile import eder; diğerleri için v=1 de çalışır.)
  */
 

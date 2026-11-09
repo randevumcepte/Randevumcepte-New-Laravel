@@ -3,11 +3,11 @@
  * Sekme listesi ve tüm veri GET /hesabim'den; kart kuralları sunucuda. Ödeme (paket yükseltme,
  * duyuru paketi satın alma) eski panelde kalır, linkler API'den hazır gelir.
  */
-import { api, qp, esc, el, TL, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { trTarih, sayi } from '/js/lib/v2-donem.js?v=1';
+import { api, qp, esc, el, TL, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { trTarih, sayi } from '/js/lib/v2-donem.js?v=7';
 
 const kok = document.getElementById('rc-hesabim');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

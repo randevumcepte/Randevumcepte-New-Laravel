@@ -1,6 +1,6 @@
 /** Talep detayi: konusma, hazir cevap secici, durum/oncelik/atama, salon hesabina giris. */
-import { el, esc, onay } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, kayitId, syApi, syVeri, syYaz, tarihSaat } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, kayitId, syApi, syVeri, syYaz, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { geriLink, kilitli, kisalt, metinHtml, etiketRozet, secenekHtml, hesabinaGir } from '/js/sistem/ortak.js?v=1';
 
 const id = kayitId();

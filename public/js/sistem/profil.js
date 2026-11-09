@@ -1,6 +1,6 @@
 /** Profilim: kisisel bilgiler, sifre degisikligi, son girisler ve aktiviteler. Her rol kendi profilini gorur. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { bos, kisalt, rozet, sayfaBaslik } from '/js/sistem/ortak.js?v=1';
 
 const SATIR = 'style="padding:10px 18px;border-bottom:1px solid var(--sy-border)"';

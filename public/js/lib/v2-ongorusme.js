@@ -1,7 +1,7 @@
 /**
  * v2 ÖN GÖRÜŞME FORMU — TEK KAYNAK. Ön Görüşmeler ekranı (ongorusmeler-v2.js) ve Çağrı Merkezi
  * "Ön Görüşme Randevusu" sonucu aynı formu kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=7';
  *
  *   ongorusmeFormu({ salonId, fv, kayit, musteri, onKaydet })
  *     fv       : GET /ongorusme/form-verisi cevabı (verilmezse çekilir — formVerisi())
@@ -10,10 +10,10 @@
  *     onKaydet : (cevap.veri, yeniMi) → kayıt sonrası (liste tazele / çağrıyı işaretle)
  * Çakışma iş sonucudur (veri.cakismavar='1') → onayla "yine de kaydet". Stil: css/ongorusmeler-v2.css (.og-*).
  */
-import { api, el, esc, tarihStr, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
+import { api, el, esc, tarihStr, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 
 /* ─────────────── form yardımcıları (ön görüşme + satış modalları ortak) ─────────────── */
 

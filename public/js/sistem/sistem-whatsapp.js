@@ -1,6 +1,6 @@
 /** Sistem WhatsApp: bildirim ayari, test, gonderen oturumu (QR / telefon kodu). Yalniz super_admin. Veri /api/v2/sistem/sistem-whatsapp. */
-import { el, esc, mesaj, onay } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, syApi, syVeri, syYaz, girisGit } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, mesaj, onay } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, syApi, syVeri, syYaz, girisGit } from '/js/lib/v2-sistem.js?v=7';
 
 const KOK = '/sistem-whatsapp';
 const HIZLI_MS = 2000, NORMAL_MS = 5000, BAGLI_MS = 8000, KOD_MS = 3000;

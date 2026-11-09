@@ -2,14 +2,17 @@
 
 namespace App\Services\Yetki;
 
+use App\Exceptions\LisansKapaliException;
 use App\Exceptions\YetkisizErisimException;
+use App\Services\Lisans\LisansServisi;
 
 /**
  * Guvenlik Kapisi — her korumali ucun gectigi TEK denetim noktasi.
  *
  * Uc sirasiyla sunu dogrular (fail-closed; herhangi biri gecmezse 403 firlatir):
  *   1. KIMLIK  : yetkili_id var mi (kimlik middleware'den gelir; burada guvence).
- *   2. KAPSAM  : kullanici bu salona (isletme/sube) bagli mi?
+ *   2. KAPSAM  : kullanici bu salona (isletme/sube) bagli mi? Bagliysa salonun LISANSI acik mi (402; yalniz
+ *                LisansKapisi'nin denetledigi isletme isteginde, bitis tarihi her cagrida taze okunur)?
  *   3. YETKI   : kullanicinin bu salonda gereken yetki anahtar(lar)i var mi?
  *
  * Yetki icin anahtar listesi verilirse OR-gate uygulanir (herhangi biri yeterli)
@@ -21,6 +24,7 @@ class GuvenlikKapisi
     public function __construct(
         private KapsamServisi $kapsam,
         private YetkiServisi $yetki,
+        private LisansServisi $lisans,
     ) {}
 
     /**
@@ -45,7 +49,11 @@ class GuvenlikKapisi
      * Yalnizca KIMLIK + KAPSAM (yetki anahtari aranmaz). Salonun her uyesinin gorebilecegi
      * referans veriler icin (orn. randevu/satis formlarindaki personel secici, kendi yetkilerim).
      *
+     * Lisans: kayit id'li uclar salonu kayittan aldigi icin istekteki salon_id ile oynamak lisans kapisini
+     * atlatamaz; erisilen salonun lisansi burada denetlenir (muaf uclar ve salon hesabina giris haric).
+     *
      * @throws YetkisizErisimException
+     * @throws LisansKapaliException
      */
     public function kapsamDenetle($yetkiliId, $salonId): void
     {
@@ -56,6 +64,8 @@ class GuvenlikKapisi
         if (! $this->kapsam->salonaBagliMi($yetkiliId, $salonId)) {
             throw new YetkisizErisimException('Bu işletmeye erişim yetkiniz yok');
         }
+
+        $this->lisans->erisimDenetle((int) $salonId);
     }
 
     /**

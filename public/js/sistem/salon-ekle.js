@@ -1,7 +1,7 @@
 /** Yeni demo salon: ucretsiz denemeyle ayni kurulum. Veri /api/v2/sistem/salon. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { syYaz, ekran, tarih } from '/js/lib/v2-sistem.js?v=1';
-import { modalAc } from '/js/lib/v2-modal.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { syYaz, ekran, tarih } from '/js/lib/v2-sistem.js?v=7';
+import { modalAc } from '/js/lib/v2-modal.js?v=7';
 import { salonSecenekleri, secenekler, ilIlceBagla, formOku } from '/js/sistem/salon-ortak.js?v=1';
 
 const kok = ekran();

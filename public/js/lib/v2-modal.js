@@ -1,12 +1,12 @@
 /**
  * v2 ORTAK modal — TEK KAYNAK (stil: css/v2-bilesen.css .rc-modal*). Personel'den taşındı.
  * Import yolu her yerde AYNI olmalı:
- *   import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
+ *   import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
  *
  * Aynı anda tek modal açıktır (yeni modalAc öncekini kapatır). Esc / arka plana tık kapatır;
  * opt.sabit=true ise arka plan tıkı kapatmaz (uzun formlar — eski data-backdrop="static").
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
 
 const ID = 'rcModal';
 

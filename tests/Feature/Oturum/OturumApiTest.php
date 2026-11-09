@@ -272,7 +272,7 @@ class OturumApiTest extends TestCase
         $token->shouldHaveReceived('uret')->with(Mockery::any(), 'isletme', true)->once();
     }
 
-    public function test_kayitli_numara_kimliksiz_kayitla_degismez(): void
+    public function test_kayitli_numara_kimliksiz_kayitla_degismez_ve_cevap_sizdirmaz(): void
     {
         $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
         $sifre = Hash::make('eski-sifre');
@@ -280,17 +280,38 @@ class OturumApiTest extends TestCase
         DB::table('musteri_portfoy')->insert(['salon_id' => $salon, 'user_id' => $user, 'aktif' => 0]);
         $baskaSalon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Baska', 'sms_secret' => 'GIZLI']);
 
+        $cevaplar = [];
         foreach ([$salon, $baskaSalon] as $salonId) {
-            $this->postJson('/api/v2/musteri-oturum/kayit', ['ad_soyad' => 'Yeni Ad', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salonId, 'sifre_gonder' => true])
-                ->assertOk()->assertJsonPath('veri.kayitli', true);
+            $cevaplar[] = $this->postJson('/api/v2/musteri-oturum/kayit', ['ad_soyad' => 'Yeni Ad', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salonId, 'sifre_gonder' => true])
+                ->assertOk()->assertJsonMissingPath('veri.kayitli')->json();
         }
+        // Yeni numara da ayni cevabi alir: hesap varligi sizdirilmaz.
+        $yeni = $this->postJson('/api/v2/musteri-oturum/kayit', ['ad_soyad' => 'Yeni Kisi', 'cep_telefon' => '5321112244', 'kvkk' => true, 'salon_id' => $salon, 'sifre_gonder' => true])
+            ->assertOk()->json();
+        $this->assertSame($yeni, $cevaplar[0]);
 
         $satir = DB::table('users')->where('id', $user)->first();
         $this->assertSame($sifre, $satir->password);
         $this->assertSame('Eski Ad', $satir->name);
         $this->assertSame(0, (int) DB::table('musteri_portfoy')->where('salon_id', $salon)->value('aktif'));
         $this->assertFalse(DB::table('musteri_portfoy')->where('salon_id', $baskaSalon)->exists());
-        $this->assertSame([], $this->smsler);
+        // Kayitli numaranin sahibine sifre degil "hesabiniz var" bilgisi gider.
+        $kayitliyaGiden = array_values(array_filter($this->smsler, fn ($m) => $m['tel'] === self::TEL));
+        $this->assertCount(2, $kayitliyaGiden);
+        $this->assertStringContainsString('kayıtlı bir hesabınız var', $kayitliyaGiden[0]['mesaj']);
+    }
+
+    public function test_kayitli_numara_denemesi_de_sinira_islenir(): void
+    {
+        $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
+        DB::table('users')->insert(['name' => 'Kayitli', 'cep_telefon' => self::TEL, 'password' => Hash::make('x')]);
+        $g = ['ad_soyad' => 'Deneme', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon];
+
+        foreach (range(1, 3) as $i) {
+            $this->postJson('/api/v2/musteri-oturum/kayit', $g + ['form_sure_sn' => 10])->assertOk()->assertJsonPath('veri.sifre_gerekli', true);
+        }
+        // Numara basina gunluk 3: kayitli numarayla sinirsiz "kayitli mi" sorgusu yapilamaz.
+        $this->postJson('/api/v2/musteri-oturum/kayit', $g + ['form_sure_sn' => 10])->assertStatus(429);
     }
 
     public function test_kimliksiz_sifre_gonder_isletme_hesabina_dokunmaz(): void

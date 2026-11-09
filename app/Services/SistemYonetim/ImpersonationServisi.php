@@ -69,6 +69,25 @@ class ImpersonationServisi
         }
     }
 
+    /**
+     * Yoneticinin ACIK "salon hesabina gir" oturumlarinin tumu kapanir: token iptal, log bitis tarihi. Yonetici cikis
+     * yapinca ya da pasife alininca cagrilir; aksi halde isletme token'i (10 saat) yonetici gittikten sonra da gecerliydi.
+     *
+     * @return int kapatilan oturum sayisi
+     */
+    public function yoneticininOturumlariniKapat(int $yoneticiId): int
+    {
+        $loglar = DB::table('sistemyonetim_impersonation_loglari')->where('user_id', $yoneticiId)->whereNull('bitis_tarihi')->pluck('id');
+        foreach ($loglar as $logId) {
+            $this->token->impersonationIptal((int) $logId);
+        }
+        if ($loglar->isNotEmpty()) {
+            DB::table('sistemyonetim_impersonation_loglari')->whereIn('id', $loglar->all())->update(['bitis_tarihi' => now()]);
+        }
+
+        return $loglar->count();
+    }
+
     /** Secilen hesap mutlaka bu salona bagli olmali. */
     private function seciliHesap(int $salonId, int $yetkiliId): object
     {

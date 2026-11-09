@@ -4,6 +4,7 @@ namespace App\Services\MusteriHesap;
 
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\BulunamadiException;
+use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Support\DosyaYukleme;
@@ -12,16 +13,21 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * Musterinin kendi profili (eski HomeController@profilim + musteri_profil_guncelleme,
  * v1 musteri/{id} + musteribilgiguncelle). Kimlik token'dan; eski web ucunda dogrulama yoktu
- * ve telefon serbestce yazilabiliyordu. Yeni numara baska hesapta kayitliysa reddedilir.
+ * ve telefon serbestce yazilabiliyordu. Yeni numara baska hesapta kayitliysa genel mesajla reddedilir
+ * (numara sizdirilmaz) ve degisim denemesi gunde sinirlidir.
  */
 class MusteriProfilServisi
 {
     private const ALANLAR = ['id', 'name', 'cep_telefon', 'email', 'meslek', 'cinsiyet', 'ev_telefon', 'dogum_tarihi', 'profil_resim', 'adres'];
     private const SIFRE_MIN = 6;
+
+    /** Numara baska hesapta olsa da genel metin: hesap varligi sizdirilmaz. */
+    public const TELEFON_KULLANILAMAZ = 'Bu telefon numarası kullanılamıyor. Numarayı kontrol edin ya da işletmeyle iletişime geçin.';
 
     public function __construct(private ErisimTokenServisi $token) {}
 
@@ -107,9 +113,18 @@ class MusteriProfilServisi
         if ($tel === '') {
             throw new GecersizIslemException('Geçerli bir telefon numarası girin.');
         }
+        if (TelefonNumarasi::kanonik((string) DB::table('users')->where('id', $userId)->value('cep_telefon')) === $tel) {
+            return $tel; // degismedi (uygulama her kayitta numarayi da gonderir): sinir islemez
+        }
+        // Numara taramasina karsi: degisim denemesi kullanici basina gunde sinirli; dolu numarada genel mesaj.
+        $anahtar = 'musteri-tel-degisim:'.$userId;
+        if (RateLimiter::tooManyAttempts($anahtar, (int) config('online.telefon_degisim_gunluk'))) {
+            throw new CokFazlaIstekException('Bugün çok fazla telefon değişikliği denendi. Lütfen yarın tekrar deneyin.');
+        }
+        RateLimiter::hit($anahtar, 86400);
         $baskasi = DB::table('users')->whereIn('cep_telefon', TelefonNumarasi::aramaVaryantlari($tel))->where('id', '!=', $userId)->exists();
         if ($baskasi) {
-            throw new GecersizIslemException('Bu telefon numarası başka bir hesapta kayıtlı.');
+            throw new GecersizIslemException(self::TELEFON_KULLANILAMAZ);
         }
 
         return $tel;

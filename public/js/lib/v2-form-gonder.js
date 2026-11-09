@@ -1,11 +1,11 @@
 /**
  * v2 FORM GÖNDER modalı — TEK KAYNAK: Form Yönetimi / müşteri detayı arşivi (v2-form.js) ve header
  * "+" menüsü aynı modalı açar. Form başına ek alanlar sunucudan (`ek_alanlar`). Stil: css/formlar-v2.css.
- * Import yolu her yerde AYNI olmalı:  import { formGonderModali } from '/js/lib/v2-form-gonder.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { formGonderModali } from '/js/lib/v2-form-gonder.js?v=7';
  */
-import { api, el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
+import { api, el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
 
 /** "1.234,56" görünümü (tr-TR); boş/NaN → '' */
 export const tlYaz = (n) => (n === null || n === undefined || n === '' || isNaN(Number(n)) ? ''

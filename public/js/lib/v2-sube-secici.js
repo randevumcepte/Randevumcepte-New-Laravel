@@ -1,6 +1,6 @@
 /**
  * v2 ÇOKLU ŞUBE SEÇİCİ — "Hangi şubelere uygulansın?" (eski partials/sube_secici) TEK KAYNAK.
- * Import yolu her yerde AYNI olmalı:  import { subeSecici } from '/js/lib/v2-sube-secici.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { subeSecici } from '/js/lib/v2-sube-secici.js?v=7';
  *
  * Şube listesi API'den gelir (SubeGrubu::secenekler → [{id, ad, secili}]); tek şubede liste boş
  * gelir ve hiçbir şey çizilmez. Gönderimde `salon_ids: s.secili()` — sunucu yetkili şubelerle
@@ -10,7 +10,7 @@
  *   s.secili()      // [12, 15]
  *   s.goster(false) // düzenleme modunda gizle (grup korunur)
  */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
 
 export function subeSecici(kap, subeler = [], { baslik = 'Hangi şubelere uygulansın?' } = {}) {
   if (!kap || (subeler || []).length < 2) {

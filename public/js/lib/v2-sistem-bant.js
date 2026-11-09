@@ -3,7 +3,7 @@
  * Oturumu baslatan sistem yonetimi ekrani rc_sy_imp'i yazar; isletme paneli rc_sy_imp yoksa hicbir sey yapmaz.
  * Bu modul sistem kutuphanelerine bagli degil: isletme kabugunun yuku artmasin.
  */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
 
 const IMP = 'rc_sy_imp';
 

@@ -155,7 +155,7 @@ class KasaController extends RaporTabanController
         $this->yazmaAcikMi();
         $sonuc = $this->yaz->gelirSil($salonId, $uid, $id, $r->input('onay_kodu'));
 
-        return ApiCevap::basarili($sonuc, $sonuc['silindi'] ? 'Kayıt silindi.' : 'Onay kodu hesap sahibine gönderildi.');
+        return ApiCevap::basarili($sonuc, 'Kayıt silindi.');
     }
 
     /** @return array{tarih1:?string, tarih2:?string, odeme:?int} */

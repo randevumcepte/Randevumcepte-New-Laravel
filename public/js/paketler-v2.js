@@ -11,13 +11,13 @@
  * hesaplanmaz. Yazmalar PAKET_V2_YAZMA_AKTIF kapalıyken 409 döner; yazSonuc toast gösterir.
  */
 
-import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=1';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
-import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=2';
-import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi, sinirsizRozet } from '/js/lib/v2-paket-satis.js?v=1';
+import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=7';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=7';
+import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi, sinirsizRozet } from '/js/lib/v2-paket-satis.js?v=7';
 
 const kok = document.getElementById('rc-paket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

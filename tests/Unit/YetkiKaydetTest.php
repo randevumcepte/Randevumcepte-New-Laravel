@@ -36,6 +36,7 @@ class YetkiKaydetTest extends TestCase
             $t->unsignedBigInteger('yetkili_id')->nullable();
             $t->unsignedBigInteger('salon_id');
             $t->unsignedBigInteger('role_id')->nullable();
+            $t->integer('aktif')->default(1);
         });
         Schema::create('model_has_roles', function (Blueprint $t) {
             $t->unsignedBigInteger('role_id');

@@ -21,4 +21,12 @@ return [
     'giris_deneme_sn'     => 600,
     'sifre_kodu_tel_sn'   => 300,
     'sifre_kodu_ip_gunluk'=> 20,
+
+    // Online randevu olusturma (eski randevuonaylaDirekt): musteri basina salon basina gunde; IP basina saatte
+    // yalniz kimliksiz / misafir yolda (kimlikli musteri isteginde IP siniri uygulanmaz).
+    'randevu_ip_saatlik'     => 5,
+    'randevu_musteri_gunluk' => 3,
+
+    // Musteri profilinde telefon degistirme denemesi (numara taramasi siniri), kullanici basina gunde.
+    'telefon_degisim_gunluk' => 5,
 ];

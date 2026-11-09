@@ -1,7 +1,7 @@
 /**
  * v2 ORTAK sunucu-aramalı MÜŞTERİ SEÇİCİ — TEK KAYNAK (stil: css/v2-bilesen.css .rc-ms-*).
  * Import yolu her yerde AYNI olmalı:
- *   import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
+ *   import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
  *
  * En az 2 karakterde (300 ms gecikmeli) `yol`a {salon_id, q} ile sorar; cevap
  * [{id, ad, telefon}] (RandevuFormServisi::musteriAra sözleşmesi — telefon yetkiye göre
@@ -12,7 +12,7 @@
  *   s.secili()   // {id, ad, telefon} | null
  *   s.temizle()
  */
-import { api, esc } from '/js/lib/v2-ortak.js?v=2';
+import { api, esc } from '/js/lib/v2-ortak.js?v=7';
 
 export function musteriSecici(kap, { salonId, yol, onSec = () => {}, ipucu = 'Ad veya telefon ile arayın', baslangic = null, sabit = false }) {
   let secili = baslangic;

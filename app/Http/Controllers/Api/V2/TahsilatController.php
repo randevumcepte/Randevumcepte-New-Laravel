@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Domain\Tahsilat\TahsilatNet;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
@@ -9,6 +10,7 @@ use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\HesapSahibiOnayi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,7 @@ class TahsilatController extends V2Controller
         private TahsilatSilServisi $silServisi,
         private AdisyonOkumaServisi $adisyonServisi,
         private GuvenlikKapisi $kapi,
+        private HesapSahibiOnayi $onay,
     ) {}
 
     /** POST /api/v2/tahsilat */
@@ -95,8 +98,9 @@ class TahsilatController extends V2Controller
     }
 
     /**
-     * PATCH /api/v2/tahsilat/{id} — tahsilat DÜZENLE (eski kaydı iade et + yeniyi yaz, atomik).
-     * KVKK: kimlik + kapsam (tahsilatın salonu) + satis.tahsilat_al. Flag korumalı.
+     * PATCH /api/v2/tahsilat/{id} {onay_kodu?} — tahsilat DÜZENLE (eski kaydı iade et + yeniyi yaz, atomik).
+     * KVKK: kimlik + kapsam (tahsilatın salonu) + satis.tahsilat_al; tutar düşüyorsa satis.tahsilat_sil + SMS ayarı 23
+     * hesap sahibi onayı (428 → kodla tekrar). Flag korumalı.
      */
     public function guncelle(Request $request, int $id)
     {
@@ -119,6 +123,18 @@ class TahsilatController extends V2Controller
         if (! $request->filled('idempotency_key')) {
             return ApiCevap::hata('idempotency_key zorunlu', 422);
         }
+        // Kullanilmis anahtarda yaz() replay doner ve yeni kayit yazmaz; once silme yapilirsa tahsilat onaysiz kaybolur.
+        // Gecerli tekrar denemede eski kayit zaten silindigi icin yukarida 404 doner; buraya gelen kullanilmis anahtar reddedilir.
+        if ($this->servis->anahtarKullanildi((string) $request->input('idempotency_key'))) {
+            return ApiCevap::hata('Bu istek anahtarı daha önce kullanıldı; yeni bir anahtarla tekrar deneyin.', 409);
+        }
+        // NET dusuyorsa (yeni tutar - komisyon < eski tahsilatlar.tutar; yazmayla ayni tanim) fiilen kismi silme:
+        // satis.tahsilat_sil + SMS ayari 23 hesap sahibi onayi (silmeyle ortak kapi).
+        $komisyon = (float) $request->input('komisyon', 0);
+        if (TahsilatNet::azaltmaMi((float) $t->tutar, $tutar, $komisyon)) {
+            $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_sil']);
+            $this->onay->tahsilatAzaltma($salonId, (int) $user->id, $id, $tutar, $request->input('onay_kodu'), $komisyon);
+        }
 
         $olusturanId = Personeller::where('salon_id', $salonId)
             ->where('yetkili_id', $user->id)->value('id');
@@ -139,10 +155,11 @@ class TahsilatController extends V2Controller
     }
 
     /**
-     * DELETE /api/v2/tahsilat/{id} — tahsilat İADE/SİLME.
+     * DELETE /api/v2/tahsilat/{id} {onay_kodu?} — tahsilat İADE/SİLME.
      * KVKK: kimlik + kapsam (tahsilatın salonu) + satis.tahsilat_sil. Flag korumalı.
+     * SMS ayarı 23: hesap sahibi olmayan personel için hesap sahibinin onay kodu (428 → kodla tekrar).
      */
-    public function sil(int $id)
+    public function sil(Request $request, int $id)
     {
         $user = $this->kullanici();
 
@@ -157,6 +174,7 @@ class TahsilatController extends V2Controller
 
         // Kapsam + yetki.
         $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_sil']);
+        $this->onay->tahsilatSilme($salonId, (int) $user->id, $id, $request->input('onay_kodu'));
 
         $sonuc = $this->silServisi->sil($id, ['yetkili_id' => $user->id, 'salon_id' => $salonId]);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];

@@ -14,14 +14,14 @@
  * Kartta hiçbir sekme ayrı sayfaya gitmez.
  * Görünürlük/izin kararları SUNUCUDAN (`yetkiler`, `ayarlar`); UI yeniden hesaplamaz.
  */
-import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
-import { seansTakibi } from '/js/lib/v2-seans.js?v=4';
-import { formArsivi } from '/js/lib/v2-form.js?v=1';
-import { randevuTablosu } from '/js/lib/v2-randevu.js?v=6';
-import { musteriDersSekmesi } from '/js/lib/v2-ders.js?v=2';
+import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
+import { seansTakibi } from '/js/lib/v2-seans.js?v=7';
+import { formArsivi } from '/js/lib/v2-form.js?v=7';
+import { randevuTablosu } from '/js/lib/v2-randevu.js?v=7';
+import { musteriDersSekmesi } from '/js/lib/v2-ders.js?v=7';
 
 const kok = document.getElementById('rc-musteri-detay');
 const musteriId = parseInt(kok.dataset.musteri, 10) || 0;

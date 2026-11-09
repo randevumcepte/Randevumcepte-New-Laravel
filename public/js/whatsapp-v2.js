@@ -6,8 +6,8 @@
  * export async function ciz(kap, ctx)). YENİ SEKME: sunucuda Domain\Whatsapp\WhatsappSayfasi'na
  * tek satır + aşağıdaki MODULLER'e tek satır.
  */
-import { qp, api, el, esc, onay } from '/js/lib/v2-ortak.js?v=2';
-import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=1';
+import { qp, api, el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
+import { sekmeliSayfa } from '/js/lib/v2-sekme.js?v=7';
 
 const kok = document.getElementById('rc-whatsapp');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

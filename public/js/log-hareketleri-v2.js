@@ -4,8 +4,8 @@
  * tarih aralığı filtreleri, tablo içi arama, 10/25/50/100 sayfalama, satır detayı (meta).
  * Tüm çizim ortak lib/v2-hareket.js'te (başka ekranlara gömülen hareket tablolarıyla aynı kod).
  */
-import { qp } from '/js/lib/v2-ortak.js?v=2';
-import { hareketTablosu } from '/js/lib/v2-hareket.js?v=1';
+import { qp } from '/js/lib/v2-ortak.js?v=7';
+import { hareketTablosu } from '/js/lib/v2-hareket.js?v=7';
 
 const kok = document.getElementById('rc-hareket');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

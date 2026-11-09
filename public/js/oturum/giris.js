@@ -2,8 +2,8 @@
  * Panel girişi: varsayılan tek kullanımlık kod, yedek yol şifre. Giriş kuralları /api/v2/oturum/*'ta;
  * burada yalnız form ve yönlendirme var. Mobil uygulama aynı uçları kullanır.
  */
-import { api, el, qp, token } from '/js/lib/v2-ortak.js?v=2';
-import { formBagla, gonder, mesajGoster, sifreGosterBagla } from '/js/lib/v2-oturum-form.js?v=1';
+import { api, el, qp, token } from '/js/lib/v2-ortak.js?v=7';
+import { formBagla, gonder, mesajGoster, sifreGosterBagla } from '/js/lib/v2-oturum-form.js?v=7';
 import { hedefSayfa, oturumuKaydet } from '/js/lib/v2-oturum-depo.js?v=3';
 
 const HESAP_TURU = 'isletme';

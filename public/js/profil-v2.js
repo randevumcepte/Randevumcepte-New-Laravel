@@ -2,10 +2,10 @@
  * Profil Bilgileri (v2) — build'siz island. Eski /isletmeyonetim/profil ekranının karşılığı: kişisel
  * bilgiler + şifre değiştirme + kırpmalı profil resmi. Kurallar sunucuda (GET/PUT /profil, POST /profil/resim).
  */
-import { api, qp, esc, el, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { apiForm } from '/js/lib/v2-dosya.js?v=3';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
+import { api, qp, esc, el, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { apiForm } from '/js/lib/v2-dosya.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 
 const CROPPER = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/';
 const RESIM_BOYUT = 800;

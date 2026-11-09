@@ -6,13 +6,13 @@
  *
  *   reklamRaporu(kampanyaId, { onDegisti })
  */
-import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle, ozetKart } from '/js/lib/v2-bilesen.js?v=2';
-import { trTarih, sayi } from '/js/lib/v2-donem.js?v=1';
-import { secenekler } from '/js/lib/v2-ongorusme.js?v=1';
+import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle, ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { trTarih, sayi } from '/js/lib/v2-donem.js?v=7';
+import { secenekler } from '/js/lib/v2-ongorusme.js?v=7';
 import { baglam as b, kanalRozeti, durumRozeti } from '/js/reklam/ortak.js?v=1';
 
 export async function reklamRaporu(id, { onDegisti = () => {} } = {}) {

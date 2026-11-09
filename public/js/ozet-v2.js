@@ -8,10 +8,10 @@
  * "karsilastirma" kartı Flutter içindir; web çizmez.
  */
 
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { trTarih } from '/js/lib/v2-donem.js?v=1';
-import { halka, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=3';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { trTarih } from '/js/lib/v2-donem.js?v=7';
+import { halka, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=7';
 
 const kok = document.getElementById('rc-ozet');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

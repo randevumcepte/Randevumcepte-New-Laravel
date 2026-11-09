@@ -9,9 +9,9 @@
  * Burada iş kuralı hesaplanmaz; yalnızca çizilir. Anons metni de sunucudan gelir.
  */
 
-import { qp, api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { qp, api, el, esc, tarihStr, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 
 const kok = document.getElementById('rc-santral');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

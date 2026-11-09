@@ -31,17 +31,28 @@ class PersonelOkumaServisi
     public function formVerisi(): array
     {
         return [
-            'hesap_turleri' => DB::table('roles')
-                ->whereNotIn('id', self::SECILEMEZ_ROLLER)
-                ->orderBy('id')
-                ->get(['id', 'name'])
-                ->map(fn ($r) => ['id' => (int) $r->id, 'ad' => $r->name])
-                ->all(),
+            'hesap_turleri' => self::hesapTurleri(),
             'cinsiyetler' => collect(self::CINSIYETLER)
                 ->map(fn ($ad, $id) => ['id' => $id, 'ad' => $ad])
                 ->values()
                 ->all(),
         ];
+    }
+
+    /**
+     * Secilebilir hesap turleri (roles tablosu, SECILEMEZ_ROLLER haric) — form secenekleri ve yazmada rol
+     * dogrulamasinin (HesapSahibiDenetimi) TEK kaynagi.
+     *
+     * @return array<int, array{id:int, ad:string}>
+     */
+    public static function hesapTurleri(): array
+    {
+        return DB::table('roles')
+            ->whereNotIn('id', self::SECILEMEZ_ROLLER)
+            ->orderBy('id')
+            ->get(['id', 'name'])
+            ->map(fn ($r) => ['id' => (int) $r->id, 'ad' => $r->name])
+            ->all();
     }
 
     /**

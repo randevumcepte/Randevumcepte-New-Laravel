@@ -2,10 +2,10 @@
  * WhatsApp › KONTÖR: bakiye bandı + paketler + talep. Bant metni, seviye, fiyat ve avantaj API'den
  * (GET /whatsapp/kontor); istemci yalnız çizer, talepte paket KODU gönderir.
  */
-import { el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { sayi } from '/js/lib/v2-donem.js?v=1';
+import { el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { sayi } from '/js/lib/v2-donem.js?v=7';
 
 const birim = (n) => Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 

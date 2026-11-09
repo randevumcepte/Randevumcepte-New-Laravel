@@ -73,7 +73,7 @@ class YetkiAkislariTest extends TestCase
     {
         $tablolar = [
             'isletmeyetkilileri' => ['name'],
-            'salonlar' => ['salon_adi', 'uyelik_turu', 'studyo_modu'],
+            'salonlar' => ['salon_adi', 'uyelik_turu', 'studyo_modu', 'uyelik_bitis_tarihi'],
             'salon_personelleri' => ['yetkili_id', 'salon_id', 'role_id', 'personel_adi', 'dahili_no', 'dahili_no_webrtc', 'aktif'],
             'model_has_roles' => ['role_id', 'model_type', 'model_id', 'salon_id'],
             'personel_yetki_ayarlari' => ['personel_id', 'salon_id', 'sablon', 'ayarlar', 'created_at', 'updated_at'],
@@ -102,8 +102,9 @@ class YetkiAkislariTest extends TestCase
     private function veriKur(): void
     {
         DB::table('salonlar')->insert([
-            ['id' => self::SALON, 'salon_adi' => 'Premium', 'uyelik_turu' => 3, 'studyo_modu' => 0],
-            ['id' => self::PAKETSIZ_SALON, 'salon_adi' => 'Basit', 'uyelik_turu' => 1, 'studyo_modu' => 0],
+            // Lisans acik: LisansKapisi her isletme isteginde bitis tarihini okur.
+            ['id' => self::SALON, 'salon_adi' => 'Premium', 'uyelik_turu' => 3, 'studyo_modu' => 0, 'uyelik_bitis_tarihi' => '2099-12-31'],
+            ['id' => self::PAKETSIZ_SALON, 'salon_adi' => 'Basit', 'uyelik_turu' => 1, 'studyo_modu' => 0, 'uyelik_bitis_tarihi' => '2099-12-31'],
         ]);
         foreach ([
             [self::SAHIP, 1, null], [self::ROL2, 2, null], [self::ROL3, 3, null], [self::SEKRETER, 4, '104'],

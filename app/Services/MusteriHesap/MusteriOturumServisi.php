@@ -7,6 +7,7 @@ use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Exceptions\GirisHatasiException;
+use App\Services\Online\BotKapisi;
 use App\Services\Online\OnlineSalonKapisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\Hesap\MusteriHesabi;
@@ -60,16 +61,13 @@ class MusteriOturumServisi
 
     /**
      * Hizli kayit (eski randevuonaylaDirekt): numara yeniyse hesap acar ve oturum verir;
-     * numara kayitliysa sifre_gerekli doner, istemci sifre sorup giris'e gecer.
+     * numara kayitliysa sifre_gerekli doner, istemci sifre sorup giris'e gecer (mini site akisi geregi).
+     * Numara taramasina karsi IP (saatte 5) ve numara (gunde 3) siniri kayitli numarada da islenir:
+     * eskiden kayitli numara hic sayilmiyordu, sinirsiz "bu numara kayitli mi" sorgusu yapilabiliyordu.
      */
     public function kayit(array $g, string $ip): array
     {
-        $this->botKapisi($g, $ip);
-        $tel = $this->telefon($g['cep_telefon']);
-        $telAnahtar = 'musteri-kayit-tel:'.$tel;
-        if (RateLimiter::tooManyAttempts($telAnahtar, (int) config('online.kayit_tel_gunluk'))) {
-            throw new CokFazlaIstekException();
-        }
+        $tel = $this->kayitKapisi($g, $ip);
         if ($this->hesap->telefonlaBul($tel) !== null) {
             return ['sifre_gerekli' => true];
         }
@@ -85,39 +83,34 @@ class MusteriOturumServisi
 
             return $id;
         });
-        RateLimiter::hit($telAnahtar, 86400);
-        RateLimiter::hit('musteri-kayit-ip:'.$ip, 3600);
 
         return ['sifre_gerekli' => false] + $this->oturumAc($userId, $salonId);
     }
 
     /**
      * Musteri uygulamasi kaydi (v1 yenimusteridanisankaydi): yeni numaraya hesap ve marka subelerine portfoy acar, sifre
-     * SMS ile gider, musteri giris ekranina doner. Kayitli numara kayitli:true alir (ekran girise yonlendirir) ve hicbir
-     * sey degismez: kimliksiz istekle sifre degistirilmez, pasif kayit acilmaz, baska salonun musterisi portfoye eklenmez.
+     * SMS ile gider, musteri giris ekranina doner. Kayitli numarada hicbir sey degismez (kimliksiz istekle sifre
+     * degistirilmez, pasif kayit acilmaz, baska salonun musterisi portfoye eklenmez) ve CEVAP AYNIDIR: numaranin
+     * sahibine "hesabiniz var, giris yapin" mesaji gider. Eskiden kayitli:true donuyordu (numara sizdiriyordu).
      *
-     * @return array{kayitli:bool}
+     * @return array{sms_gonderildi:true}
      */
     public function sifreyleKayit(array $g, string $ip): array
     {
-        $this->botKapisi($g, $ip);
-        $tel = $this->telefon($g['cep_telefon']);
         $salonId = (int) $g['salon_id'];
         $this->kapi->salon($salonId);
+        $tel = $this->kayitKapisi($g, $ip);
+        $marka = $this->kapi->markaAdi($g['app_bundle'] ?? null);
+
         if ($this->hesap->telefonlaBul($tel) !== null) {
-            return ['kayitli' => true];
-        }
-        $telAnahtar = 'musteri-kayit-tel:'.$tel;
-        if (RateLimiter::tooManyAttempts($telAnahtar, (int) config('online.kayit_tel_gunluk'))) {
-            throw new CokFazlaIstekException();
+            $this->mesajGonder($tel, $marka.' uygulamasında bu numarayla kayıtlı bir hesabınız var. Giriş yapabilir ya da "Şifremi unuttum" ile yeni şifre alabilirsiniz.', 'Bilgi', $salonId);
+
+            return ['sms_gonderildi' => true];
         }
 
         $salonlar = array_values(array_unique(array_merge([$salonId], $this->markaSalonlari($g['app_bundle'] ?? null))));
         $sifre = Str::random(self::UYGULAMA_SIFRE_UZUNLUK);
-        $gonderildi = $this->mesaj->kod($tel, $this->kapi->markaAdi($g['app_bundle'] ?? null).' uygulama şifreniz  : '.$sifre, 'Sifre', $salonId);
-        if (! $gonderildi) {
-            throw new GecersizIslemException('Şifreniz gönderilemedi. Lütfen daha sonra tekrar deneyin.');
-        }
+        $this->mesajGonder($tel, $marka.' uygulama şifreniz  : '.$sifre, 'Sifre', $salonId);
         DB::transaction(function () use ($g, $tel, $salonlar, $sifre) {
             $userId = (int) DB::table('users')->insertGetId([
                 'name' => trim((string) $g['ad_soyad']), 'cep_telefon' => $tel, 'password' => Hash::make($sifre), 'created_at' => now(), 'updated_at' => now(),
@@ -126,10 +119,33 @@ class MusteriOturumServisi
                 $this->portfoy->garantile($salon, $userId);
             }
         });
+
+        return ['sms_gonderildi' => true];
+    }
+
+    /**
+     * Iki kayit yolunun ortak kapisi: bot + IP siniri, numara siniri; deneme kayitli numarada da sayilir.
+     * Numara gunluk sinira ulasinca kayitli/kayitsiz ayni 429'u alir.
+     */
+    private function kayitKapisi(array $g, string $ip): string
+    {
+        $this->botKapisi($g, $ip);
+        $tel = $this->telefon($g['cep_telefon']);
+        $telAnahtar = 'musteri-kayit-tel:'.$tel;
+        if (RateLimiter::tooManyAttempts($telAnahtar, (int) config('online.kayit_tel_gunluk'))) {
+            throw new CokFazlaIstekException();
+        }
         RateLimiter::hit($telAnahtar, 86400);
         RateLimiter::hit('musteri-kayit-ip:'.$ip, 3600);
 
-        return ['kayitli' => false];
+        return $tel;
+    }
+
+    private function mesajGonder(string $tel, string $mesaj, string $baslik, int $salonId): void
+    {
+        if (! $this->mesaj->kod($tel, $mesaj, $baslik, $salonId)) {
+            throw new GecersizIslemException('Mesaj gönderilemedi. Lütfen daha sonra tekrar deneyin.');
+        }
     }
 
     /** @return int[] ana uygulama marka sayilmaz */
@@ -181,10 +197,7 @@ class MusteriOturumServisi
     /** Honeypot + cok hizli gonderim + IP siniri (eski randevuonaylaDirekt ile ayni degerler). */
     private function botKapisi(array $g, string $ip): void
     {
-        $sure = isset($g['form_sure_sn']) ? (int) $g['form_sure_sn'] : null;
-        if (! empty($g['_hp']) || ($sure !== null && $sure < (int) config('online.kayit_min_saniye'))) {
-            throw new GecersizIslemException('İşlem doğrulanamadı. Lütfen tekrar deneyiniz.');
-        }
+        BotKapisi::denetle($g);
         if (RateLimiter::tooManyAttempts('musteri-kayit-ip:'.$ip, (int) config('online.kayit_ip_saatlik'))) {
             throw new CokFazlaIstekException();
         }

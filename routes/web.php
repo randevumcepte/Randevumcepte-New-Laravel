@@ -28,8 +28,8 @@ Route::view('/ucretsiz-deneme', 'deneme.baslat');
 
 /*
  | Tahsilat v2 — web paneli island host sayfasi (ilk tuketici, pilot).
- | Sayfa yalnizca HTML iskelet; veri /api/v2 (Bearer) ile yuklenir. Token
- | pilotta ?token=... ile saglanir (uretimde eski panel enjekte eder).
+ | Sayfa yalnizca HTML iskelet; veri /api/v2 (Bearer) ile yuklenir. Token girisle
+ | ya da eski panel koprusunun #token= fragment'iyla gelir (?token= kabul edilmez: lib/v2-ortak.js).
  */
 Route::get('/v2/tahsilat/{adisyon}', function ($adisyon) {
     return view('v2.tahsilat', ['adisyonId' => (int) $adisyon]);

@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Domain\Personel\HesapSahibiKorumasi;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\PersonelYetkiAyari;
@@ -21,7 +22,12 @@ use Illuminate\Support\Facades\DB;
  */
 class YetkiYonetimServisi
 {
-    public function __construct(private YetkiServisi $motor) {}
+    private HesapSahibiDenetimi $sahip;
+
+    public function __construct(private YetkiServisi $motor, ?HesapSahibiDenetimi $sahip = null)
+    {
+        $this->sahip = $sahip ?? new HesapSahibiDenetimi();
+    }
 
     /** Yetki semasi: tanimlar + kategori etiketleri + hazir sablonlar. (Public referans veri.) */
     public function sema(): array
@@ -89,15 +95,21 @@ class YetkiYonetimServisi
     /**
      * Yetki ayarlarini kaydet. Kayit + whitelist motorda; personele force_logout push'u
      * ayni islemde kuyruga yazilir (eski personelYetkiDegistiBildir gonderir).
-     * Kullanici kendi yetkisini degistiremez (kendine rapor/telefon acmasin).
+     * Kullanici kendi yetkisini degistiremez (kendine rapor/telefon acmasin). Hesap sahibinin satiri (personel rol 1
+     * ya da model_has_roles rol 1; HesapSahibiDenetimi) yalniz sahibin kendisi / sistem yonetimi tarafindan
+     * (HesapSahibiKorumasi::YETKI) — kendi yetkisi kurali sahibe de uygulandigindan fiilen yalniz sistem yonetimi.
      *
      * @throws YetkisizErisimException
+     * @throws \App\Exceptions\GecersizIslemException hesap sahibinin yetkisi (422)
      */
     public function kaydet(int $personelId, int $salonId, string $sablon, array $ayarlar, ?int $yapanId = null): void
     {
-        if ($yapanId && (int) Personeller::where('id', $personelId)->value('yetkili_id') === $yapanId) {
+        $p = Personeller::where('id', $personelId)->where('salon_id', $salonId)->first(['role_id', 'yetkili_id']);
+        $hedefYetkili = $p && $p->yetkili_id ? (int) $p->yetkili_id : null;
+        if ($yapanId && $hedefYetkili === $yapanId) {
             throw new YetkisizErisimException('Kendi yetkilerinizi değiştiremezsiniz');
         }
+        $this->sahip->denetle(HesapSahibiKorumasi::YETKI, $p && $p->role_id !== null ? (int) $p->role_id : null, $hedefYetkili, $salonId, $yapanId);
 
         DB::transaction(function () use ($personelId, $salonId, $sablon, $ayarlar, $yapanId) {
             $this->motor->ayarlariKaydet($personelId, $salonId, $sablon, $ayarlar);

@@ -1,7 +1,7 @@
 /** Sistem yonetimi kabugu: menu, rozet, bildirim zili, genel arama (Ctrl+K), kullanici menusu, cikis. Veri /api/v2/sistem. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { toast, onay } from '/js/lib/v2-arayuz.js?v=1';
-import { syApi, syToken, syTokenSil, girisGit } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { toast, onay } from '/js/lib/v2-arayuz.js?v=7';
+import { syApi, syToken, syTokenSil, girisGit } from '/js/lib/v2-sistem.js?v=7';
 
 // Ekran modulleri mesaj()/onay() icin bu kancayi kullanir (v2-ortak panel()).
 window.rcPanel = { toast, onay };

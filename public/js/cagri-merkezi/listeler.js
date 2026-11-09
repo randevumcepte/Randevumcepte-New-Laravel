@@ -4,10 +4,10 @@
  * segment(ler)i yeni listeyle başka personele taşı, listenin tamamını personele ata / atamayı
  * geri al, aktif / pasif / arşiv, sil. Veri: /cagri-merkezi/listeler[/{id}/segmentler|csv|durum|personel|tasi].
  */
-import { token, BASE, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=1';
+import { token, BASE, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=7';
 import { listeOlustur } from '/js/cagri-merkezi/liste-olustur.js?v=1';
 
 export async function ciz(kap, ctx) {

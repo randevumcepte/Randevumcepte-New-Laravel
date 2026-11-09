@@ -11,13 +11,13 @@
  * satır işlemleri (islemler.duzenle/sonuclandir) /api/v2/ongorusme/* uçlarından — Flutter da aynı
  * uçları kullanır; burada iş kuralı yok. Yazmalar ONGORUSME_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
-import { qp, api, el, esc, TL, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=2';
-import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=2';
-import { trTarih } from '/js/lib/v2-donem.js?v=1';
-import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=1';
+import { qp, api, el, esc, TL, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kilitle, satisAltButonlari, satisSonrasi } from '/js/lib/v2-bilesen.js?v=7';
+import { satisSonrasiDersPlani } from '/js/lib/v2-ders.js?v=7';
+import { trTarih } from '/js/lib/v2-donem.js?v=7';
+import { ongorusmeFormu, alan, secenekler, tarihBagla, sayiVeyaNull, nedenListesi } from '/js/lib/v2-ongorusme.js?v=7';
 
 const kok = document.getElementById('rc-ongorusme');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

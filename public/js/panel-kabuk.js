@@ -2,7 +2,7 @@
  * Panel kabuğu (shell) — sol menü + header'ı /api/v2/kabuk ile doldurur.
  *
  * Tüm v2 ekranları bu betiği paylaşır (tek kaynak). Veri Bearer token ile gelir
- * (localStorage['rc_access_token']; pilotta ?token=). Menü linkleri YALNIZCA
+ * (localStorage['rc_access_token']; eski panel köprüsünde #token=; ?token= kabul edilmez). Menü linkleri YALNIZCA
  * aktif v2 sayfalarına gider; v2 karşılığı olmayan öğe pasif ("Yakında") çizilir.
  * Şube değişimi aynı v2 sayfasında ?sube= ile yapılır. Eski panele yönlendirme YOK.
  *
@@ -11,13 +11,13 @@
  * adisyondan salon'u öğrenince kabuğu o salona göre tazeler.
  */
 
-// Token tohumlama (?token= ve eski panel koprusunun #token= fragment'i) ortak modulde
+// Token tohumlama (yalniz eski panel koprusunun #token= fragment'i; ?token= kabul edilmez) ortak modulde
 // tek yerde yapilir; modul tekil oldugu icin hangi ekran once yuklenirse yuklensin
 // tum istekler tokeni bulur.
-import { api, el, esc } from '/js/lib/v2-ortak.js?v=2';
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=7';
 import { oturumuTemizle, girisSayfasinaGit } from '/js/lib/v2-oturum-depo.js?v=3';
-import { toast, onay } from '/js/lib/v2-arayuz.js?v=1';
-import { impersonationBandi } from '/js/lib/v2-sistem-bant.js?v=1';
+import { toast, onay } from '/js/lib/v2-arayuz.js?v=7';
+import { impersonationBandi } from '/js/lib/v2-sistem-bant.js?v=7';
 
 const kabukGetir = (salonId) => api('GET', '/kabuk', { params: { salon_id: salonId } });
 

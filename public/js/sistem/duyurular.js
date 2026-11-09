@@ -1,7 +1,7 @@
 /** Duyuru listesi. */
-import { el, esc, onay } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ekran, syApi, syVeri, syYaz, tarih } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ekran, syApi, syVeri, syYaz, tarih } from '/js/lib/v2-sistem.js?v=7';
 import { aktifRozet, etiketRozet, sayfaBaslik } from '/js/sistem/ortak.js?v=1';
 
 const KOK = '/sistemyonetim/duyuru';

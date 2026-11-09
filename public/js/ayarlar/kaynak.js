@@ -5,9 +5,9 @@
  * Uçlar: GET {yol} (veriTablosu sözleşmesi), GET {yol}/form-verisi, GET/PATCH/DELETE {yol}/{id},
  * PATCH {yol}/{id}/durum, PATCH {yol}/{id}/sira, POST {yol}.
  */
-import { api, el, esc, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
+import { api, el, esc, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 
 export function kaynakSekmesi(cfg) {
   return {

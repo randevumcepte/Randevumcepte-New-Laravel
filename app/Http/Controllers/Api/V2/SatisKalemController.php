@@ -11,6 +11,7 @@ use App\Services\Satis\KalemServisi;
 use App\Services\Satis\MobilKalemServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\HesapSahibiOnayi;
 use App\Services\Yetki\SalonSahipligi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
@@ -40,6 +41,7 @@ class SatisKalemController extends V2Controller
         private YetkiServisi $yetki,
         private MobilKalemServisi $mobilKalem,
         private PaketYukseltServisi $yukselt,
+        private HesapSahibiOnayi $onay,
     ) {}
 
     /**
@@ -224,12 +226,15 @@ class SatisKalemController extends V2Controller
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         // Mobil: eski tahsilat_*_sil sonucu; yetki istegi eski mobilde etkisizdi, kapsam zorunlu.
+        // SMS ayari 23 (hesap sahibi onayi) web ve mobilde ayni kapi: kod yoksa 428.
         if ($request->boolean('mobil')) {
             $this->kapi->kapsamDenetle($user->id, $salonId);
+            $this->onay->kalemSilme($salonId, (int) $user->id, $tip, $id, $request->input('onay_kodu'));
 
             return ApiCevap::basarili($this->mobilKalem->sil($tip, $id, $salonId, (int) $user->id));
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->onay->kalemSilme($salonId, (int) $user->id, $tip, $id, $request->input('onay_kodu'));
 
         $sonuc = $this->servis->sil($tip, $id, (int) $user->id);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];

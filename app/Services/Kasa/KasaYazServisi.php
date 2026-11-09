@@ -7,9 +7,11 @@ use App\Exceptions\GecersizIslemException;
 use App\Models\Masraf;
 use App\Models\Tahsilat;
 use App\Services\Tahsilat\TahsilatSilServisi;
+use App\Services\Yetki\HesapSahibiOnayi;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use App\Support\OnayKodu;
+use App\Support\SmsAyari;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,9 +32,7 @@ class KasaYazServisi
 
     private const SMS_PARA_CEKILDI = 19;
 
-    private const SMS_SILME_ONAYI = 23;
-
-    public function __construct(private TahsilatSilServisi $tahsilatSil) {}
+    public function __construct(private TahsilatSilServisi $tahsilatSil, private HesapSahibiOnayi $onay) {}
 
     /** @param array{tarih:string, tutar:float, odeme_yontemi_id:int, personel_id:?int, aciklama:?string} $v */
     public function paraGiris(int $salonId, int $yetkiliId, array $v): array
@@ -61,11 +61,15 @@ class KasaYazServisi
     /** Para cekme onay kodu — secili subenin yetkililerine SMS; kod tutara baglidir. */
     public function paraCikisKodu(int $salonId, int $yetkiliId, float $tutar): array
     {
-        $kod = OnayKodu::uret('kasa_cikis', $salonId, $yetkiliId, ['tutar' => round($tutar, 2)]);
-        $adet = $this->yetkililereSms($salonId, $yetkiliId, 'Kasadan '.self::tl($tutar).' TL çekilmesi için onay kodu: '.$kod, true);
-        if ($adet === 0) {
-            throw new GecersizIslemException('Onay kodu gönderilecek yetkili telefonu bulunamadı');
-        }
+        // Ortak adim (OnayKodu::zorunlu ile ayni): bekleme + gunluk kod / yanlis siniri; gonderilemezse kod iptal
+        // edilir ve bekleme kalkar (alici yokken kullanici 60 sn kilitlenmez).
+        $adet = 0;
+        OnayKodu::uretVeGonder('kasa_cikis', $salonId, $yetkiliId, ['tutar' => round($tutar, 2)], function (string $kod) use ($salonId, $yetkiliId, $tutar, &$adet) {
+            $adet = $this->yetkililereSms($salonId, $yetkiliId, 'Kasadan '.self::tl($tutar).' TL çekilmesi için onay kodu: '.$kod, true);
+            if ($adet === 0) {
+                throw new GecersizIslemException('Onay kodu gönderilecek yetkili telefonu bulunamadı');
+            }
+        });
 
         return ['gonderilen' => $adet];
     }
@@ -73,7 +77,7 @@ class KasaYazServisi
     /** @param array{tarih:string, tutar:float, odeme_yontemi_id:int, personel_id:?int, aciklama:?string, onay_kodu:string} $v */
     public function paraCikis(int $salonId, int $yetkiliId, array $v): array
     {
-        if (! OnayKodu::dogrula('kasa_cikis', $salonId, $yetkiliId, $v['onay_kodu'] ?? null, ['tutar' => round((float) $v['tutar'], 2)])) {
+        if (! OnayKodu::dogrulaSinirli('kasa_cikis', $salonId, $yetkiliId, $v['onay_kodu'] ?? null, ['tutar' => round((float) $v['tutar'], 2)])) {
             throw new GecersizIslemException('Doğrulama kodu hatalı veya süresi doldu, lütfen yeni kod isteyin.');
         }
 
@@ -99,8 +103,8 @@ class KasaYazServisi
 
     /**
      * Kasadaki para girisi / bagimsiz tahsilati siler. Hesap sahibi olmayan personel ve
-     * SMS ayari 23 aciksa hesap sahibinin onay kodu gerekir: kod yoksa uretilip gonderilir
-     * ve {dogrulama_gerekli:true} doner (eski akisla ayni iki adim).
+     * SMS ayari 23 aciksa hesap sahibinin onay kodu gerekir (HesapSahibiOnayi — satis ekraniyla
+     * ayni kapi): kod yoksa uretilip gonderilir ve 428 {dogrulama_gerekli:true} doner.
      */
     public function gelirSil(int $salonId, int $yetkiliId, int $tahsilatId, ?string $onayKodu): array
     {
@@ -113,44 +117,18 @@ class KasaYazServisi
             throw new GecersizIslemException('Satış tahsilatı kasadan silinemez; Satış Takibi ekranından iade edin.');
         }
 
-        if ($this->hesapSahibiOnayiGerekli($salonId, $yetkiliId)) {
-            $baglam = ['tahsilat_id' => $tahsilatId];
-            if ($onayKodu === null || $onayKodu === '') {
-                $kod = OnayKodu::uret('kasa_gelir_sil', $salonId, $yetkiliId, $baglam);
-                $sahip = DB::table('salon_personelleri as p')->join('isletmeyetkilileri as y', 'y.id', '=', 'p.yetkili_id')
-                    ->where('p.salon_id', $salonId)->where('p.role_id', 1)->value('y.gsm1');
-                if (! trim((string) $sahip)) {
-                    throw new GecersizIslemException('Hesap sahibinin telefonu kayıtlı değil; onay kodu gönderilemiyor.');
-                }
-                $islemYapan = DB::table('salon_personelleri')->where('salon_id', $salonId)->where('yetkili_id', $yetkiliId)->value('personel_adi');
-                BildirimKuyrugu::sms($salonId, $yetkiliId, [['to' => $sahip, 'message' => trim($islemYapan.' '.date('d.m.Y', strtotime((string) $t->odeme_tarihi))
-                    .' tarihli '.self::tl($t->tutar).' ₺ tutarındaki tahsilatı silmek için onayınızı istiyor. Onay Kodu : '.$kod)]], true);
-
-                return ['silindi' => false, 'dogrulama_gerekli' => true];
-            }
-            if (! OnayKodu::dogrula('kasa_gelir_sil', $salonId, $yetkiliId, $onayKodu, $baglam)) {
-                throw new GecersizIslemException('Onay kodu hatalı veya süresi doldu.');
-            }
-        }
+        $this->onay->tahsilatSilme($salonId, $yetkiliId, $tahsilatId, $onayKodu);
 
         AktiviteLog::yaz($salonId, $yetkiliId, 'tahsilat_sil', 'tahsilat', $tahsilatId, self::tl($t->tutar).' ₺',
             $t->para_girisi ? 'Kasa para girişi silindi' : 'Bağımsız tahsilat silindi', ['kaynak_ekran' => 'kasa']);
         $sonuc = $this->tahsilatSil->sil($tahsilatId, ['yetkili_id' => $yetkiliId, 'salon_id' => $salonId]);
 
-        return ['silindi' => true, 'dogrulama_gerekli' => false] + $sonuc;
-    }
-
-    /** Eski kural: islem yapan hesap sahibi (role_id 1) degilse ve ayar 23 aciksa. */
-    private function hesapSahibiOnayiGerekli(int $salonId, int $yetkiliId): bool
-    {
-        $rol = DB::table('salon_personelleri')->where('salon_id', $salonId)->where('yetkili_id', $yetkiliId)->value('role_id');
-
-        return $rol !== null && (int) $rol > 1 && $this->smsAyari($salonId, self::SMS_SILME_ONAYI);
+        return ['silindi' => true] + $sonuc;
     }
 
     private function smsAyari(int $salonId, int $ayarId): bool
     {
-        return (bool) DB::table('salon_sms_ayarlari')->where('salon_id', $salonId)->where('ayar_id', $ayarId)->value('personel');
+        return SmsAyari::personel($salonId, $ayarId);
     }
 
     /** Salonun yetkili personeline (rol 1/2/3) SMS — HER birine (eski donguden yalniz sonuncusu). */

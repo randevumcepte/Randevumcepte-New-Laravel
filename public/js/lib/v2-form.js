@@ -1,7 +1,7 @@
 /**
  * v2 FORM ARŞİVİ bileşeni — TEK KAYNAK. Form Yönetimi sayfası (formlar-v2.js) ve müşteri
  * detay "Sözleşmeler/Belgeler" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=7';
  *
  * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Harici Belgeler),
  * Form Gönder, Sözleşme Oluştur, Belge Ekle modalları. İş kuralları SUNUCUDA: satırın
@@ -15,11 +15,11 @@
  *     ekSekme    : {ad, etiket, ikon, panel, ac()} → arşiv sekmelerinin yanına ek sekme
  *   arsiv.veri / arsiv.yetki(k) / arsiv.veriTazele()
  */
-import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { apiForm } from '/js/lib/v2-dosya.js?v=3';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { formGonderModali, formMusteriSecici, tlBagla, tlOku, tlYaz } from '/js/lib/v2-form-gonder.js?v=1';
+import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { apiForm } from '/js/lib/v2-dosya.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { formGonderModali, formMusteriSecici, tlBagla, tlOku, tlYaz } from '/js/lib/v2-form-gonder.js?v=7';
 
 const SEKMELER = [
   { ad: 'tumu', etiket: 'Tümü', ikon: 'bi-grid' },

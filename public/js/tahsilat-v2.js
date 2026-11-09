@@ -19,16 +19,17 @@
  *     POST /adisyon ile adisyonu açar, ekran aynı sayfada normal akışa geçer (eski
  *     /yenitahsilat ile aynı: boş adisyon oluşmaz). Ayrı form kodu yok.
  *
- * Token: localStorage['rc_access_token'] (pilotta ?token=). Menü+header shell'den
+ * Token: localStorage['rc_access_token'] (eski panel köprüsünde #token=; ?token= kabul edilmez). Menü+header shell'den
  * (panel-kabuk.js); bu betik yalnızca içerik alanını yönetir.
  */
 
-import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=2';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { dersPlani } from '/js/lib/v2-ders.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi } from '/js/lib/v2-paket-satis.js?v=1';
+import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { dersPlani } from '/js/lib/v2-ders.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
+import { paketSatisKalemi, paketSatisBagla, paketSatisGirdisi } from '/js/lib/v2-paket-satis.js?v=7';
 
 // Ekrandaki tablolar ortak veri tablosu (YEREL mod: kayıtlar adisyon cevabında hazır).
 const tablolar = {};
@@ -113,7 +114,10 @@ function studyoOdemeGoster() {
 }
 
 async function studyoOdeme(alindi) {
-  const { ok, kod, govde } = await api('PATCH', `/adisyon/${adisyonId}/odeme`, { body: { alindi } });
+  // Geri almada (tahsilat silinir) SMS ayarı 23: hesap sahibi onayı.
+  const r = await kodluIstek('PATCH', `/adisyon/${adisyonId}/odeme`, { body: { alindi } });
+  if (!r) return;
+  const { ok, kod, govde } = r;
   if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Kaydedildi.', 'ok');
   await adisyonYukle();
@@ -513,7 +517,9 @@ async function seansDegistir(i) {
 async function kalemSil(tip, kalemId) {
   const onaylandi = await onay('Bu kalemi adisyondan silmek istediğinize emin misiniz?', { baslik: 'Kalemi Sil', tamam: 'Sil', iptal: 'Vazgeç' });
   if (!onaylandi) return;
-  const { ok, kod, govde } = await api('DELETE', '/kalem/' + tip + '/' + kalemId);
+  const r = await kodluIstek('DELETE', '/kalem/' + tip + '/' + kalemId); // SMS ayarı 23: hesap sahibi onayı
+  if (!r) return;
+  const { ok, kod, govde } = r;
   if (!ok) { mesaj(`Kalem silinemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Kalem silindi.', 'ok');
   await adisyonYukle();
@@ -594,7 +600,9 @@ function tahsilatDuzenVazgec() {
 async function tahsilatGuncelleKaydet() {
   const g = girdi(false); g.idempotency_key = uuid();
   const id = duzenlenenTahsilat;
-  const { ok, kod, govde } = await api('PATCH', '/tahsilat/' + id, { body: g });
+  const r = await kodluIstek('PATCH', '/tahsilat/' + id, { body: g }); // tutar düşerse SMS ayarı 23: hesap sahibi onayı
+  if (!r) return;
+  const { ok, kod, govde } = r;
   if (!ok) { mesaj(`Güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Tahsilat güncellendi.', 'ok');
   tahsilatDuzenVazgec();
@@ -604,7 +612,9 @@ async function tahsilatGuncelleKaydet() {
 async function tahsilatSil(id) {
   const onaylandi = await onay('Bu tahsilatı iade edip silmek istediğinize emin misiniz?', { baslik: 'Tahsilatı İade Et', tamam: 'İade Et', iptal: 'Vazgeç' });
   if (!onaylandi) return;
-  const { ok, kod, govde } = await api('DELETE', '/tahsilat/' + id);
+  const r = await kodluIstek('DELETE', '/tahsilat/' + id); // SMS ayarı 23: hesap sahibi onayı
+  if (!r) return;
+  const { ok, kod, govde } = r;
   if (!ok) { mesaj(`İade edilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Tahsilat iade edildi.', 'ok');
   if (duzenlenenTahsilat === id) tahsilatDuzenVazgec();

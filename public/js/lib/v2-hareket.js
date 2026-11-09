@@ -12,8 +12,8 @@
  *   sabit   : her istekte gönderilen, kullanıcının değiştiremeyeceği filtreler
  *   filtreler: false → yalnız tablo (tablo içi arama + sayfalama yine var)
  */
-import { api, el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { api, el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 
 const secenek = (liste, bos, deger = 'kod', ad = 'etiket') =>
   `<option value="">${esc(bos)}</option>` + liste.map((x) => `<option value="${esc(x[deger])}">${esc(x[ad])}</option>`).join('');

@@ -1,6 +1,6 @@
 /** Salon hesabina giris kayitlari: kim, hangi salona, hangi sebeple, ne kadar sure. */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran } from '/js/lib/v2-sistem.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran } from '/js/lib/v2-sistem.js?v=7';
 import { guvenlikSekmeleri, rozet, sayfaBaslik, syTablo } from '/js/sistem/ortak.js?v=1';
 
 ekran().innerHTML = `

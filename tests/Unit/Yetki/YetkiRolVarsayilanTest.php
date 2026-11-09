@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Yetki;
 
+use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\PersonelYetkiAyari;
 use App\Services\Personel\YetkiYonetimServisi;
@@ -37,6 +38,7 @@ class YetkiRolVarsayilanTest extends TestCase
             $t->unsignedBigInteger('yetkili_id')->nullable();
             $t->unsignedBigInteger('salon_id');
             $t->unsignedBigInteger('role_id')->nullable();
+            $t->integer('aktif')->default(1);
             $t->string('personel_adi')->nullable();
         });
         Schema::create('model_has_roles', function (Blueprint $t) {
@@ -300,5 +302,48 @@ class YetkiRolVarsayilanTest extends TestCase
         $kuyruk = DB::table('v2_bildirim_kuyrugu')->first();
         $this->assertSame('yetki_degisti', $kuyruk->tur);
         $this->assertSame(40, json_decode($kuyruk->payload, true)['personel_id']);
+    }
+
+    // ---- Hesap sahibi: iki kaynakli tek tanim (personel rol 1 VEYA model_has_roles rol 1) ----
+
+    public function test_yalniz_personel_satiri_rol_1_olan_sahip_de_tam_yetkili_ve_ozel_kayitla_kilitlenmez(): void
+    {
+        // model_has_roles'ta rol 1 yok, personel satiri rol 1; ozel kayit her seyi kapatiyor.
+        DB::table('salon_personelleri')->insert(['id' => 11, 'yetkili_id' => 2, 'salon_id' => self::SALON, 'role_id' => 1]);
+        PersonelYetkiAyari::create(['personel_id' => 11, 'salon_id' => self::SALON, 'sablon' => 'ozel', 'ayarlar' => ['rapor.kasa' => false, 'personel.yetki_yonet' => false]]);
+
+        $motor = $this->motor();
+        $this->assertTrue($motor->hesapSahibiMi(11, self::SALON));
+        $this->assertTrue($motor->yetkiliYetkiVar(2, self::SALON, 'rapor.kasa'));
+        $this->assertTrue($motor->yetkiliYetkiVar(2, self::SALON, 'personel.yetki_yonet'));
+        $this->assertTrue($motor->yetkiliHesapSahibiGorunur(2, self::SALON));
+        $benim = (new YetkiYonetimServisi($this->motor()))->benimYetkilerim(2, self::SALON);
+        $this->assertSame(['tam_yetki', true], [$benim['sablon'], $benim['salon_sahibi']]);
+    }
+
+    public function test_hesap_sahibinin_yetkisini_baskasi_degistiremez_sistem_yonetimi_degistirir(): void
+    {
+        $this->kur(1, 10, 1);
+        $this->kur(4, 40, 2);
+        // Ikinci sahip: personel satiri rol 2 ama model_has_roles rol 1 (iki kaynak).
+        DB::table('salon_personelleri')->insert(['id' => 12, 'yetkili_id' => 5, 'salon_id' => self::SALON, 'role_id' => 2]);
+        DB::table('model_has_roles')->insert(['role_id' => 1, 'model_type' => 'isletme', 'model_id' => 5, 'salon_id' => self::SALON]);
+
+        foreach ([10, 12] as $sahipSatiri) {
+            try {
+                (new YetkiYonetimServisi($this->motor()))->kaydet($sahipSatiri, self::SALON, 'ozel', ['rapor.kasa' => false], 4);
+                $this->fail('sahibin yetkisi baskasinca degisti');
+            } catch (GecersizIslemException $e) {
+                $this->assertSame('Hesap sahibinin yetkilerini yalnız kendisi değiştirebilir.', $e->getMessage());
+            }
+        }
+        $this->assertSame(0, DB::table('personel_yetki_ayarlari')->count());
+        $this->assertSame(0, DB::table('v2_bildirim_kuyrugu')->count());
+
+        // Sistem yonetimi ("salon hesabina gir" token'i) degistirebilir; sahip olmayan satir her zamanki gibi.
+        (new YetkiYonetimServisi($this->motor()))->kaydet(40, self::SALON, 'ozel', ['rapor.kasa' => true], 1);
+        request()->attributes->set('oauth_access_token_id', 'imp_1');
+        (new YetkiYonetimServisi($this->motor()))->kaydet(10, self::SALON, 'ozel', ['rapor.kasa' => false], 4);
+        $this->assertSame(2, DB::table('personel_yetki_ayarlari')->count());
     }
 }

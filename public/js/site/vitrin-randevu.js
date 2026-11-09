@@ -150,7 +150,7 @@ form.addEventListener('submit', (e) => {
                     ad_soyad: $('rdv_adsoyad').value, cep_telefon: telefon, kvkk: true, salon_id: SALON,
                     _hp: $('_hp').value, form_sure_sn: Math.floor((Date.now() - durum.acilis) / 1000),
                 } });
-            if (sonuc.sifre_gerekli) { sifreBilgi('Bu numara sistemde kayıtlı. Mevcut şifrenizi girin ya da "Şifremi unuttum" ile SMS kodu isteyin.'); return; }
+            if (sonuc.sifre_gerekli) { sifreBilgi('Devam etmek için şifrenizi girin ya da "Şifremi unuttum" ile SMS kodu isteyin.'); return; }
             tokenYaz(sonuc.token);
             durum.musteri = sonuc.musteri;
             ozetiGoster();
@@ -208,6 +208,8 @@ $('randevuonaylabutton').addEventListener('click', () => {
         await api('/musteri-uygulama/randevular', { yontem: 'POST', govde: {
             salon_id: SALON, tarih: durum.tarih, saat: durum.saat, kalemler: durum.kalemler, kaynak: 'web',
             not: document.querySelector('textarea[name="randevunotu"]').value || null, idempotency_key: idempotency,
+            // Bot kapisi (sunucuda BotKapisi): gizli alan + formun acik kalma suresi.
+            _hp: $('_hp').value, form_sure_sn: Math.floor((Date.now() - durum.acilis) / 1000),
         } });
         const b = $('randevuonaybildirim');
         b.style.display = 'block';

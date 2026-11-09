@@ -2,7 +2,7 @@
  * Ayarlar → Müşteri İndirimleri (v2). Eski #musteriindirimleri formuyla birebir: Sadık ve
  * Aktif müşteri için aç/kapa + yüzde. Kapalı = %0 (sunucu kuralı). Uçlar: GET/PUT /ayar/musteri-indirimleri.
  */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
 import { yukle, kaydet, kart, anahtar, kaydetCubugu, gonderBagla, isaretli, deger } from '/js/ayarlar/ortak.js?v=4';
 
 const TURLER = [

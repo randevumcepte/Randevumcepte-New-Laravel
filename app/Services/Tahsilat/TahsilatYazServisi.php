@@ -4,6 +4,7 @@ namespace App\Services\Tahsilat;
 
 use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\TahsilatDagitim;
+use App\Domain\Tahsilat\TahsilatNet;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
 use App\Models\Adisyonlar;
@@ -260,6 +261,12 @@ class TahsilatYazServisi
     // ------------------------------------------------------------------
     // GERÇEK YAZMA
     // ------------------------------------------------------------------
+    /** Anahtar 'tahsilat' ucunda daha once kullanildi mi (yanit yazilmis ya da islemde). */
+    public function anahtarKullanildi(string $anahtar): bool
+    {
+        return DB::table('api_idempotency_anahtarlari')->where('anahtar', trim($anahtar))->where('uc', 'tahsilat')->exists();
+    }
+
     public function yaz(array $g, array $meta): array
     {
         $anahtar = trim((string) ($g['idempotency_key'] ?? ''));
@@ -441,10 +448,8 @@ class TahsilatYazServisi
     /** @return array{0:int,1:int,2:int} [tutarKurus, komisyonKurus, adisyonPaymentKurus] */
     private function tutarlar(array $g): array
     {
-        $tutarKurus = AdisyonHesap::tlToKurus($g['tutar'] ?? 0);
-        $komisyonKurus = AdisyonHesap::tlToKurus($g['komisyon'] ?? 0);
-
-        return [$tutarKurus, $komisyonKurus, max(0, $tutarKurus - $komisyonKurus)];
+        return [AdisyonHesap::tlToKurus($g['tutar'] ?? 0), AdisyonHesap::tlToKurus($g['komisyon'] ?? 0),
+            TahsilatNet::kurus($g['tutar'] ?? 0, $g['komisyon'] ?? 0)];
     }
 
     private function kalanKurus($kalem, float $onceki): int
@@ -572,7 +577,7 @@ class TahsilatYazServisi
             'salon_id'   => $salonId,
             'parent_tahsilat' => [
                 'adisyon_id'       => $adisyonId,
-                'tutar'            => AdisyonHesap::kurusToTl(max(0, AdisyonHesap::tlToKurus($g['tutar'] ?? 0) - $komisyonKurus)),
+                'tutar'            => AdisyonHesap::kurusToTl(TahsilatNet::kurus($g['tutar'] ?? 0, $g['komisyon'] ?? 0)),
                 'komisyon_tutari'  => AdisyonHesap::kurusToTl($komisyonKurus),
                 'para_girisi'      => 0,
                 'odeme_yontemi_id' => isset($g['odeme_yontemi_id']) ? (int) $g['odeme_yontemi_id'] : null,

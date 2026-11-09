@@ -18,7 +18,7 @@ class SistemOturumController extends SistemTabanController
 
     public function cikis(SistemOturumServisi $servis)
     {
-        $servis->cikis($this->aktifTokenId());
+        $servis->cikis($this->aktifTokenId(), (int) $this->yonetici()->id);
 
         return ApiCevap::basarili();
     }

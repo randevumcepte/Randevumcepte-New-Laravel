@@ -3,7 +3,7 @@
  * Genel yardımcılar lib/ altında (kopyalanmaz); burada yalnız bu ekrana özgü olanlar.
  * Import yolu her yerde AYNI:  import { baglam } from '/js/reklam/ortak.js?v=1';
  */
-import { api, esc } from '/js/lib/v2-ortak.js?v=2';
+import { api, esc } from '/js/lib/v2-ortak.js?v=7';
 
 /** Sayfa bağlamı — salon + form verisi (API'den, sabit liste yok) + istek kısayolları. */
 export const baglam = {

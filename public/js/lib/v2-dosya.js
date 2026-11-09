@@ -1,10 +1,10 @@
 /**
  * v2 ÇOK PARÇALI (dosyalı) istek — TEK KAYNAK. api() (v2-ortak.js) yalnız JSON gönderir.
  * Import yolu her yerde AYNI olmalı:
- *   import { apiForm } from '/js/lib/v2-dosya.js?v=3';
+ *   import { apiForm } from '/js/lib/v2-dosya.js?v=7';
  * Dönüş api() ile aynı: {ok, kod, govde}.
  */
-import { BASE, token } from '/js/lib/v2-ortak.js?v=2';
+import { BASE, token } from '/js/lib/v2-ortak.js?v=7';
 
 export async function apiForm(yol, formData, method = 'POST', { kok = BASE, tokenOku = token } = {}) {
   const r = await fetch(kok + yol, {

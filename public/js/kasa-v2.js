@@ -11,12 +11,13 @@
  * (eskiden ay başına sıfırlanıyordu). Yazmalar KASA_V2_YAZMA_AKTIF kapalıyken 409 → toast.
  */
 
-import { qp, api, el, esc, TL, tarihStr, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { donemSecici, trTarih } from '/js/lib/v2-donem.js?v=1';
-import { masrafModal, personeller, secim, tarihSecici, formOku } from '/js/lib/v2-kasa-form.js?v=1';
+import { qp, api, el, esc, TL, tarihStr, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { donemSecici, trTarih } from '/js/lib/v2-donem.js?v=7';
+import { masrafModal, personeller, secim, tarihSecici, formOku } from '/js/lib/v2-kasa-form.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
 
 const kok = document.getElementById('rc-kasa');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -231,20 +232,11 @@ async function gelirDetay(id) {
     ${kalemler ? `<h4 class="rp-alt-baslik">Ödenen Kalemler</h4>${kalemler}` : ''}`, '', { ikon: 'cash-coin', dar: true, altbaslik: g.tip });
 }
 
-async function gelirSil(id, onayKodu = null) {
-  if (onayKodu === null && !(await onay('Bu kayıt kasadan silinecek. Emin misiniz?'))) return;
-  const r = await api('DELETE', `/kasa/gelir/${id}`, { params: { salon_id: salonId, onay_kodu: onayKodu } });
-  const kodGerekli = !!r.govde?.veri?.dogrulama_gerekli;
-  if (!yazSonuc(r, kodGerekli ? null : r.govde?.mesaj)) return;
-  if (kodGerekli) onayKoduSor(id); else yenile();
-}
-
-function onayKoduSor(id) {
-  const ov = modalAc('Onay Kodu', `<p class="rp-not">Hesap sahibine SMS ile onay kodu gönderildi. Silmek için kodu girin.</p>
-    <div class="rc-alan"><label>Onay Kodu</label><input name="kod" inputmode="numeric" maxlength="6" autofocus></div>`,
-  '<button class="rc-btn rc-btn-ikincil" data-kapat>Vazgeç</button><button class="rc-btn rp-btn-kirmizi" id="ksKodOnay"><i class="bi bi-trash"></i> Sil</button>', { ikon: 'shield-lock', dar: true });
-  el('[data-kapat]', ov).onclick = modalKapat;
-  el('#ksKodOnay', ov).onclick = () => { const kod = el('[name="kod"]', ov).value.trim(); modalKapat(); gelirSil(id, kod); };
+async function gelirSil(id) {
+  if (!(await onay('Bu kayıt kasadan silinecek. Emin misiniz?'))) return;
+  // SMS ayarı 23: hesap sahibi onay kodu (428) ortak pencereyle sorulur.
+  const r = await kodluIstek('DELETE', `/kasa/gelir/${id}`, { params: { salon_id: salonId } });
+  if (r && yazSonuc(r, r.govde?.mesaj)) yenile();
 }
 
 // ───────────────────────── Devreden Aylar ─────────────────────────

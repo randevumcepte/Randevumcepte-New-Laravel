@@ -17,7 +17,7 @@
  * hizmetler: salonun hizmetleri [{hizmet_id, ad, fiyat}] (eklenen hizmetin fiyatı için).
  */
 
-import { el, esc, mesaj } from '/js/lib/v2-ortak.js?v=2';
+import { el, esc, mesaj } from '/js/lib/v2-ortak.js?v=7';
 
 const CSS = '/css/v2-paket-satis.css?v=1';
 if (!document.querySelector(`link[href="${CSS}"]`)) {

@@ -1,6 +1,6 @@
 /** Salon detayi: uyelik, saglik, isletme bilgileri, notlar, talepler, hesaplar. Veri /api/v2/sistem/salon/{id}. */
-import { el, esc, onay } from '/js/lib/v2-ortak.js?v=2';
-import { syVeri, syYaz, syIndir, ekran, kayitId, tarih, tarihSaat } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
+import { syVeri, syYaz, syIndir, ekran, kayitId, tarih, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { salonSecenekleri, secenekler, ilIlceBagla, formOku, telLink } from '/js/sistem/salon-ortak.js?v=1';
 import { bos, hesabinaGir } from '/js/sistem/ortak.js?v=1';
 

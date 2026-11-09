@@ -8,6 +8,7 @@ use App\Domain\Personel\Telefon;
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
+use App\Services\Randevu\KvkkOnayKodu;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use App\Support\Metin;
@@ -256,7 +257,7 @@ class MusteriYazServisi
             'updated_at'   => now(),
         ];
         if ($yeniSatir || $kvkkSifirla) {
-            $alanlar += ['kvkk_onay_alindi' => 0, 'onay_kodu' => (string) random_int(1000, 9999)];
+            $alanlar += ['kvkk_onay_alindi' => 0, 'onay_kodu' => KvkkOnayKodu::yeniKod()];
         }
 
         $var = DB::table('musteri_portfoy')->where('salon_id', $salonId)->where('user_id', $userId)->orderByDesc('aktif')->value('id');

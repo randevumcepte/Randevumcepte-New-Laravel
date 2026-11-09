@@ -67,7 +67,7 @@ function girisSayfasi() {
                     ad_soyad: $('ad_soyad').value, cep_telefon: telefon(), kvkk: $('kvkk').checked, salon_id: SALON,
                     _hp: e.target.elements._hp.value, form_sure_sn: Math.floor((Date.now() - acilis) / 1000),
                 } });
-                if (sonuc.sifre_gerekli) { modKur('giris'); bildir('Bu numara zaten kayıtlı. Şifrenizle giriş yapabilirsiniz.'); return; }
+                if (sonuc.sifre_gerekli) { modKur('giris'); bildir('Devam etmek için şifrenizle giriş yapın ya da "Şifremi unuttum" ile SMS kodu isteyin.'); return; }
                 girildi(sonuc);
             } else {
                 await api('/musteri-oturum/sifre-sifirla', { yontem: 'POST', govde: { cep_telefon: telefon(), salon_id: SALON, kod: $('sifre_kod').value, yeni_sifre: $('yeni_sifre').value } });

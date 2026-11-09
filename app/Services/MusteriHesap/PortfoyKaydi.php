@@ -2,6 +2,7 @@
 
 namespace App\Services\MusteriHesap;
 
+use App\Services\Randevu\KvkkOnayKodu;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,7 +19,7 @@ class PortfoyKaydi
         }
         DB::table('musteri_portfoy')->insert([
             'salon_id' => $salonId, 'user_id' => $userId, 'tur' => 1, 'aktif' => 1, 'kara_liste' => 0,
-            'kvkk_onay_alindi' => 0, 'onay_kodu' => (string) random_int(1000, 9999),
+            'kvkk_onay_alindi' => 0, 'onay_kodu' => KvkkOnayKodu::yeniKod(),
             'created_at' => now(), 'updated_at' => now(),
         ]);
     }

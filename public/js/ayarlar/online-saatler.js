@@ -6,7 +6,7 @@
  * gönderilir, sunucu bitişik slotları pencereye birleştirir (Flutter ile aynı sözleşme).
  * Uçlar: GET/PUT /ayar/online-saatler.
  */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
 import { yukle, kaydet, kart, anahtar, secim, kaydetCubugu, gonderBagla, saatBagla, tarihBagla, isaretli, deger } from '/js/ayarlar/ortak.js?v=4';
 
 export async function ciz(kap, ctx) {

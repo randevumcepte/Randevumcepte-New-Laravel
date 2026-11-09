@@ -3,6 +3,7 @@
 namespace App\Services\Yetki;
 
 use App\Services\Oturum\ErisimTokenServisi;
+use App\Services\Personel\HesapSahibiDenetimi;
 use App\Models\Personeller;
 use App\Models\PersonelYetkiAyari;
 use App\Support\Yetki\YetkiSabitleri;
@@ -39,6 +40,14 @@ class YetkiServisi
     private array $yetkiliYetkiVarCache = [];
     private array $personelIdCache = [];
     private array $hesapSahibiCache = [];
+
+    /** Hesap sahibi TEK tanimi (personel rol 1 VEYA model_has_roles rol 1) — korumalar ve onay kapisiyla ortak. */
+    private HesapSahibiDenetimi $sahip;
+
+    public function __construct(?HesapSahibiDenetimi $sahip = null)
+    {
+        $this->sahip = $sahip ?? new HesapSahibiDenetimi();
+    }
 
     /**
      * Aksiyon/sayfa yetki kontrolu — salon_personelleri.id bazli.
@@ -131,14 +140,12 @@ class YetkiServisi
             return $this->yetkiliYetkiVarCache[$cacheKey];
         }
 
-        // Yetkili'nin bu salondaki personel_id'si (bag Personeller.yetkili_id'de).
+        // Yetkili'nin bu salondaki AKTIF personel_id'si (bag Personeller.yetkili_id'de).
         $personelCacheKey = $yetkiliId.'|'.$salonId;
         if (array_key_exists($personelCacheKey, $this->personelIdCache)) {
             $personelId = $this->personelIdCache[$personelCacheKey];
         } else {
-            $personelId = Personeller::where('yetkili_id', $yetkiliId)
-                ->where('salon_id', $salonId)
-                ->value('id');
+            $personelId = $this->aktifPersonelId($yetkiliId, $salonId);
             $this->personelIdCache[$personelCacheKey] = $personelId;
         }
 
@@ -169,15 +176,44 @@ class YetkiServisi
         return (bool) ($ayarlar[$key] ?? ! in_array(YetkiSabitleri::ROL_PERSONEL, $roller, true));
     }
 
-    /** @return int[] kullanicinin bu salondaki rolleri (model_has_roles) */
+    /**
+     * Yetkilinin bu salondaki personel kaydi — YALNIZ aktif=1 (KapsamServisi ile ayni kural). Pasif satir
+     * yetki kaynagi olmaz; kapsam zaten disarida birakir, hesap sahibi rol kurali (model_has_roles) korunur.
+     */
+    private function aktifPersonelId($yetkiliId, $salonId): ?int
+    {
+        $id = Personeller::where('yetkili_id', $yetkiliId)->where('salon_id', $salonId)->where('aktif', 1)->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    /**
+     * @return int[] kullanicinin bu salondaki rolleri (model_has_roles); hesap sahibi (HesapSahibiDenetimi: personel
+     * rol 1 de sayilir) rol 1'siz kayitliysa rol 1 eklenir — rol varsayilani ve benimYetkilerim sahibi ayni tanimla tanir.
+     */
     private function yetkiliRolleri($yetkiliId, $salonId): array
     {
-        return DB::table('model_has_roles')
+        $roller = DB::table('model_has_roles')
             ->where('model_id', $yetkiliId)
             ->where('salon_id', $salonId)
             ->pluck('role_id')
             ->map(fn ($r) => (int) $r)
             ->all();
+
+        return self::sahipRolEkle($roller, ! in_array(YetkiSabitleri::ROL_HESAP_SAHIBI, $roller, true)
+            && $this->sahip->yetkiliSahipMi((int) $yetkiliId, (int) $salonId));
+    }
+
+    /**
+     * Saf: hesap sahibiyse rol listesine rol 1 eklenir (yoksa).
+     *
+     * @param  int[]  $roller
+     * @return int[]
+     */
+    public static function sahipRolEkle(array $roller, bool $sahip): array
+    {
+        return $sahip && ! in_array(YetkiSabitleri::ROL_HESAP_SAHIBI, $roller, true)
+            ? [...$roller, YetkiSabitleri::ROL_HESAP_SAHIBI] : $roller;
     }
 
     /** @return int[] personelin bagli oldugu yetkilinin rolleri (bag yoksa bos) */
@@ -194,7 +230,10 @@ class YetkiServisi
         return $this->personelRoluCache[$k] = $yetkiliId ? $this->yetkiliRolleri($yetkiliId, $salonId) : [];
     }
 
-    /** Hesap Sahibi mi? (model_has_roles.role_id=1) */
+    /**
+     * Hesap Sahibi mi? Personel satiri rol 1 YA DA yetkilisinin bu salondaki model_has_roles rol 1'i —
+     * HesapSahibiDenetimi::satirSahipMi (korumalar, onay kapisi ve motor ayni iki kaynakli tanim).
+     */
     public function hesapSahibiMi($personelId, $salonId): bool
     {
         $k = $personelId.'|'.$salonId;
@@ -202,18 +241,15 @@ class YetkiServisi
             return $this->hesapSahibiCache[$k];
         }
 
-        $yetkiliId = Personeller::where('id', $personelId)
+        $p = Personeller::where('id', $personelId)
             ->where('salon_id', $salonId)
-            ->value('yetkili_id');
-        if (! $yetkiliId) {
+            ->first(['role_id', 'yetkili_id']);
+        if (! $p) {
             return $this->hesapSahibiCache[$k] = false;
         }
 
-        return $this->hesapSahibiCache[$k] = DB::table('model_has_roles')
-            ->where('role_id', 1) // Hesap Sahibi
-            ->where('model_id', $yetkiliId)
-            ->where('salon_id', $salonId)
-            ->exists();
+        return $this->hesapSahibiCache[$k] = $this->sahip->satirSahipMi(
+            $p->role_id !== null ? (int) $p->role_id : null, $p->yetkili_id ? (int) $p->yetkili_id : null, (int) $salonId);
     }
 
     /**
@@ -232,9 +268,7 @@ class YetkiServisi
      */
     public function yetkiliHesapSahibiGorunur($yetkiliId, $salonId): bool
     {
-        return $this->yetkiliHesapSahibiIslem($yetkiliId, $salonId)
-            || DB::table('model_has_roles')->where('role_id', 1)
-                ->where('model_id', $yetkiliId)->where('salon_id', $salonId)->exists();
+        return $this->sahip->yetkiliSahipMi($yetkiliId ? (int) $yetkiliId : null, (int) $salonId);
     }
 
     /** Personel rolunde mi? (model_has_roles.role_id=5) */
@@ -289,8 +323,7 @@ class YetkiServisi
     public function efektifYetkiler($yetkiliId, $salonId): array
     {
         $roller = $this->yetkiliRolleri($yetkiliId, $salonId);
-        $personelId = Personeller::where('yetkili_id', $yetkiliId)->where('salon_id', $salonId)->value('id');
-        $personelId = $personelId ? (int) $personelId : null;
+        $personelId = $this->aktifPersonelId($yetkiliId, $salonId);
 
         if (! in_array(YetkiSabitleri::ROL_HESAP_SAHIBI, $roller, true) && $personelId) {
             return ['roller' => $roller, 'personel_id' => $personelId] + $this->ayarlariGetir($personelId, $salonId);

@@ -5,11 +5,11 @@
  * (ARA + sonuç + ertele/iptal + geçmiş). "Arama Randevusu" ile manuel ekleme.
  * Veri: GET /cagri-merkezi/takvim?bas=&bit= (gün), /kayit/{id}; POST /arama-randevusu.
  */
-import { el, esc, tarihStr, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
+import { el, esc, tarihStr, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=7';
 import { gorusmeKokpiti, harf } from '/js/cagri-merkezi/ortak.js?v=6';
 
 const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];

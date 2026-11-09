@@ -1,7 +1,7 @@
 /** Genel Bakis: metrikler, son hareketler, bekleyen talepler, trend grafikleri. Veri /sistem/dashboard ve /sistem/dashboard/grafik. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { halka, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=3';
-import { ekran, syVeri } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { halka, grafikleriTemizle } from '/js/lib/v2-grafik.js?v=7';
+import { ekran, syVeri } from '/js/lib/v2-sistem.js?v=7';
 import { bos, kisalt, metrik, rozet, sayfaBaslik, sayi } from '/js/sistem/ortak.js?v=1';
 
 const CHART_ADRESI = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';

@@ -11,6 +11,7 @@ use App\Services\Satis\AdisyonSilServisi;
 use App\Services\Satis\MobilStudyoOdemeServisi;
 use App\Services\Satis\SatisListeServisi;
 use App\Services\Yetki\GuvenlikKapisi;
+use App\Services\Yetki\HesapSahibiOnayi;
 use App\Services\Yetki\KapsamServisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\AktiviteLog;
@@ -49,6 +50,7 @@ class SatisController extends V2Controller
         private YetkiServisi $yetki,
         private KapsamServisi $kapsam,
         private MobilStudyoOdemeServisi $mobilOdeme,
+        private HesapSahibiOnayi $onay,
     ) {}
 
     /**
@@ -144,7 +146,7 @@ class SatisController extends V2Controller
         return ApiCevap::basarili($veri);
     }
 
-    /** DELETE /api/v2/adisyon/{id}  (satis.adisyon_sil) — eski adisyon_sil kaskadi. */
+    /** DELETE /api/v2/adisyon/{id} {onay_kodu?} (satis.adisyon_sil) — eski adisyon_sil kaskadi; SMS ayari 23 hesap sahibi onayi. */
     public function sil(Request $request, int $id)
     {
         $user = $this->kullanici();
@@ -152,6 +154,7 @@ class SatisController extends V2Controller
 
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $this->kapi->denetle($user->id, $salonId, ['satis.adisyon_sil']);
+        $this->onay->adisyonSilme($salonId, (int) $user->id, $id, $request->input('onay_kodu'));
 
         return ApiCevap::basarili($this->silServisi->sil($id, (int) $user->id, $request->boolean('mobil')), 'Adisyon kaydı başarıyla kaldırıldı');
     }
@@ -206,7 +209,7 @@ class SatisController extends V2Controller
         return ApiCevap::basarili($sonuc);
     }
 
-    /** PATCH /api/v2/adisyon/{id}/odeme  body:{alindi:bool} — studyo "Ödeme Alındı / Geri Al" (satis.tahsilat_al). */
+    /** PATCH /api/v2/adisyon/{id}/odeme  body:{alindi:bool, onay_kodu?} — studyo "Ödeme Alındı / Geri Al" (satis.tahsilat_al; geri almada SMS ayarı 23 onayı). */
     public function odeme(Request $request, int $id)
     {
         $user = $this->kullanici();
@@ -222,6 +225,7 @@ class SatisController extends V2Controller
         if (! $this->islem->studyoModu($salonId)) {
             return ApiCevap::hata('Yalnızca stüdyo modunda kullanılabilir', 422);
         }
+        $this->odemeGeriAlmaOnayi($request, $id, (int) $user->id, $salonId, $alindi);
 
         return ApiCevap::basarili($this->islem->studyoOdeme($id, $salonId, $alindi, [
             'yetkili_id'   => (int) $user->id,
@@ -297,11 +301,23 @@ class SatisController extends V2Controller
     {
         $this->mobilSalonEslesmeli($request, $salonId);
         $this->kapi->kapsamDenetle($yetkiliId, $salonId);
+        $this->odemeGeriAlmaOnayi($request, $id, $yetkiliId, $salonId, $alindi);
 
         $sonuc = Idempotency::calistir('mobil_odeme', (string) $request->input('idempotency_key'), $yetkiliId, $salonId,
             fn () => ['odendi' => $this->mobilOdeme->isaretle(Adisyonlar::findOrFail($id), $alindi)]);
 
         return ApiCevap::basarili(['durum' => 'ok', 'odendi' => $sonuc['odendi']]);
+    }
+
+    /**
+     * "Ödeme alınmadı" adisyonun tahsilatlarini siler: SMS ayari 23 hesap sahibi onayi (HesapSahibiOnayi tahsilat
+     * azaltma kapisi; mobil token'da kod girisi yok → 409, MobilKodGirisi). Web ve mobil yol ayni cagri.
+     */
+    private function odemeGeriAlmaOnayi(Request $request, int $adisyonId, int $yetkiliId, int $salonId, bool $alindi): void
+    {
+        if (! $alindi) {
+            $this->onay->odemeGeriAlma($salonId, $yetkiliId, $adisyonId, $request->input('onay_kodu'));
+        }
     }
 
     private function mobilSalonEslesmeli(Request $request, int $salonId): void

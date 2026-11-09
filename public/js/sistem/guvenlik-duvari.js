@@ -1,6 +1,6 @@
 /** Guvenlik Duvari: watchdog durumu, engelli IP'ler, whitelist/blacklist, son olaylar. Panel kural yazar, watchdog uygular. */
-import { el, esc, onay } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { kisalt, metrik, rozet, sayfaBaslik, syTablo } from '/js/sistem/ortak.js?v=1';
 
 const WATCHDOG_IKON = { calisiyor: 'mdi-shield-check', durmus: 'mdi-shield-off', kurulmamis: 'mdi-shield-alert' };

@@ -6,10 +6,10 @@
  * Veri: GET /sms/alicilar · /alicilar/idler · POST /gonderim/onizle · /gonderim · /sablonlar.
  * Ücret eşikleri API'den (acilis.parca_esikleri); onay kutusundaki kişi/kredi sayısı sunucudan.
  */
-import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { alan } from '/js/lib/v2-ongorusme.js?v=1';
+import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { alan } from '/js/lib/v2-ongorusme.js?v=7';
 
 const SAYFA = 100;
 const IZLEME_MS = 3000;

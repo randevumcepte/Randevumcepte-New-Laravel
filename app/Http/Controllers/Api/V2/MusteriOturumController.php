@@ -17,7 +17,8 @@ use Illuminate\Http\Request;
  *        → {sifre_gerekli:true} ya da {sifre_gerekli:false, token, user_type, musteri}
  *   POST /musteri-oturum/sifre-kodu {cep_telefon, salon_id}
  *   POST /musteri-oturum/sifre-sifirla {cep_telefon, salon_id, kod, yeni_sifre}
- *   POST /musteri-oturum/kayit {sifre_gonder:true, app_bundle?, ...}      → {kayitli} (uygulama: sifre SMS ile gider; kayitli numarada hicbir sey degismez)
+ *   POST /musteri-oturum/kayit {sifre_gonder:true, app_bundle?, ...}      → {sms_gonderildi} (uygulama: yeni numaraya sifre, kayitli numaraya
+ *        "hesabiniz var" mesaji gider; cevap ikisinde AYNI — numara varligi sizdirilmaz, kayitli numarada hicbir sey degismez)
  *   POST /musteri-oturum/sifre-gonder {cep_telefon, app_bundle?}          → {bulundu} (uygulama: tek adimda yeni sifre; yalniz musteri hesabi)
  *   POST /musteri-oturum/yenile (Bearer, suresi dolmus olabilir)          → {token|null, expires_at} (yalniz imzali musteri token'i)
  */
@@ -48,9 +49,9 @@ class MusteriOturumController extends Controller
             'app_bundle'   => ['nullable', 'string', 'max:190'],
         ]);
 
-        return ApiCevap::basarili($request->boolean('sifre_gonder')
-            ? $this->servis->sifreyleKayit($g, (string) $request->ip())
-            : $this->servis->kayit($g, (string) $request->ip()));
+        return $request->boolean('sifre_gonder')
+            ? ApiCevap::basarili($this->servis->sifreyleKayit($g, (string) $request->ip()), 'Numaranıza SMS gönderildi.')
+            : ApiCevap::basarili($this->servis->kayit($g, (string) $request->ip()));
     }
 
     public function sifreGonder(Request $request, SifreSifirlamaServisi $sifre)

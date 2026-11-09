@@ -1,10 +1,10 @@
 /**
  * v2 island'larinin ORTAK UI bilesenleri (cekirdek yardimcilar v2-ortak.js'te).
  * Stil: panel.css (.rc-ozet / .rc-kutu). Import yolu her yerde AYNI olmali:
- *   import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=2';
+ *   import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=7';
  * (v=2: kilitle eklendi — kilitle kullanan ekran v=2 ile import eder; ozetKart icin v=1 de calisir.)
  */
-import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
+import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 
 /**
  * Satış (adisyon) açan modalların alt butonları — stüdyo modunda (fiyat gizli, MODEL B)

@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Domain\Personel\HesapSahibiKorumasi;
 use App\Models\Personeller;
 use App\Models\RandevuHizmetler;
 use App\Support\AktiviteLog;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\DB;
  */
 class PersonelArsivServisi
 {
+    public function __construct(private HesapSahibiDenetimi $sahip) {}
+
     /**
      * Arsivleme oncesi: personelin gelecek randevulardaki hizmet kalemleri +
      * devralabilecek diger aktif personeller. (Salt-okuma.)
@@ -66,6 +69,9 @@ class PersonelArsivServisi
             if (! $personel) {
                 return ['sonuc' => 'notfound'];
             }
+            // Arsiv = pasif: hesap sahibi ve kendi satiri korunur (HesapSahibiKorumasi, durum() ile ayni kural).
+            $this->sahip->denetle(HesapSahibiKorumasi::ARSIV, $personel->role_id !== null ? (int) $personel->role_id : null,
+                $personel->yetkili_id ? (int) $personel->yetkili_id : null, $salonId, $yapanId);
 
             $gelecekIdler = $this->gelecekHizmetSorgusu($salonId, $personelId)
                 ->pluck('randevu_hizmetler.id')

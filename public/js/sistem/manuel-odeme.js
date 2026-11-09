@@ -1,6 +1,6 @@
 /** Manuel odeme linki: serbest hizmet satirlari + eski paneldeki odeme sayfasina link. */
-import { el, mesaj } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, para, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=1';
+import { el, mesaj } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, para, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { kilitli, salonSecici, sayfaBaslik } from '/js/sistem/ortak.js?v=1';
 
 const SATIR = `<div class="mol-satir">

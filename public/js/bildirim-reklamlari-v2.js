@@ -11,13 +11,13 @@
  * etiket / kural kopyalanmaz. Yazmalar BILDIRIM_REKLAM_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
 
-import { qp, api, el, esc, mesaj, onay, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { musteriSecici } from '/js/lib/v2-secici.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { apiForm } from '/js/lib/v2-dosya.js?v=3';
-import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=1';
-import { subeSecici } from '/js/lib/v2-sube-secici.js?v=1';
+import { qp, api, el, esc, mesaj, onay, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { apiForm } from '/js/lib/v2-dosya.js?v=7';
+import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=7';
+import { subeSecici } from '/js/lib/v2-sube-secici.js?v=7';
 
 const kok = document.getElementById('rc-reklam');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

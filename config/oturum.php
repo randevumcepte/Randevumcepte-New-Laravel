@@ -36,6 +36,9 @@ return [
         'inceleme_kodu' => env('OTURUM_INCELEME_KODU'),
     ],
 
+    // /api/v2 genel istek siniri: IP + kimlik basina dakikada (eski Kernel api grubu ile ayni). AppServiceProvider.
+    'genel_istek_dakika' => (int) env('API_GENEL_ISTEK_DAKIKA', 300),
+
     // Token bitimine bu kadar gun kala /oturum/yenile yeni token verir.
     'token_yenile_gun' => 30,
 
@@ -44,6 +47,15 @@ return [
     'sifre_kodu_tel_sn'    => 300,
     'sifre_kodu_ip_gunluk' => 20,
     'sifre_min'            => 6,
+
+    // Iki adimli onay / dogrulama kodu (App\Support\KodGonderimSiniri; OnayKodu::zorunlu, kasa para cikisi, randevu geldi).
+    'onay_kodu' => [
+        'bekleme_sn'  => 60,  // ayni anahtara yeniden gonderim beklemesi; bu surede yeni kod uretilmez
+        'gunluk_kod'  => 5,   // anahtar basina gunde en cok uretilen kod
+        'gunluk_hata' => 10,  // anahtar basina gunde toplam yanlis deneme (yeni kod uretilince sifirlanmaz)
+        'randevu_hata' => 5,  // randevu geldi kodu: randevu basina yanlis deneme ...
+        'randevu_hata_sn' => 600, // ... bu surede (RateLimiter)
+    ],
 
     // Platform adina giden SMS (dogrulama kodu, deneme sifresi). Salon bakiyesinden dusmez. Kimlikler yalniz .env'de.
     'platform_sms' => [

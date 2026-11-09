@@ -2,6 +2,7 @@
 
 namespace App\Services\Yetki;
 
+use App\Services\Lisans\LisansServisi;
 use App\Support\SalonIdListesi;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,9 @@ use Illuminate\Support\Facades\DB;
  *
  *   secenekler() : seçicide gösterilecek şubeler (kullanıcının erişebildiği salonlar)
  *   hedefler()   : istekteki salon_ids ∩ kullanıcının o yetkiye sahip olduğu şubeler;
- *                  boşsa yalnız istekteki salon (güvenli varsayılan — eski davranış)
+ *                  boşsa yalnız istekteki salon (güvenli varsayılan — eski davranış). Her hedef
+ *                  salonun lisansı denetlenir: kapalı şube varsa 402 (kapalı şubeye yazılmaz;
+ *                  sessizce listeden düşürülmez — kullanıcı neden uygulanmadığını görür).
  *   kuponSubeleri(): bir kupon/ödül satırının geçerli olduğu şubeler — gecerli_salonlar
  *                  doluysa o grup, değilse kaydın salonunun sahip (kardeş şube) grubu
  *                  (eski CarkifelekOdulleri::gecerliSubeler ile birebir)
@@ -25,6 +28,7 @@ class SubeGrubu
     public function __construct(
         private KapsamServisi $kapsam,
         private YetkiServisi $yetki,
+        private LisansServisi $lisans,
     ) {}
 
     /** @return array<int, array{id:int, ad:string, secili:bool}> tek şubede [] (seçici çizilmez) */
@@ -43,19 +47,22 @@ class SubeGrubu
     /**
      * @param  mixed  $secili  istekteki salon_ids (dizi | JSON | "1,2")
      * @return int[] boş olmaz; $salonId her zaman güvenli alt sınır
+     *
+     * @throws \App\Exceptions\LisansKapaliException hedeflerden birinin lisansı kapalı
      */
     public function hedefler(int $yetkiliId, int $salonId, mixed $secili, string $yetkiAnahtari): array
     {
         $secili = SalonIdListesi::coz($secili);
-        if (! $secili) {
-            return [$salonId];
-        }
-        $izinli = array_filter(
+        $izinli = $secili ? array_filter(
             array_intersect($secili, $this->kapsam->kullaniciSalonlari($yetkiliId)),
             fn (int $id) => $id === $salonId || $this->yetki->yetkiliYetkiVar($yetkiliId, $id, $yetkiAnahtari),
-        );
+        ) : [];
+        $hedefler = $izinli ? array_values(array_unique($izinli)) : [$salonId];
+        foreach ($hedefler as $id) {
+            $this->lisans->erisimDenetle($id); // kapali sube: 402 (LisansKapaliException); muaf/destek isteginde atlanir
+        }
 
-        return $izinli ? array_values(array_unique($izinli)) : [$salonId];
+        return $hedefler;
     }
 
     /** @return int[] */

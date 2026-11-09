@@ -8,7 +8,12 @@ use App\Services\BildirimKuyrugu\Randevu\RandevuVerisi;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
-/** kvkk_kodu: eski V2BildirimIsle kvkk dali + ApiController::kvkkOnayKoduGonder. Yalniz SMS, dogrulama=true (iletim raporu yazilmaz). */
+/**
+ * kvkk_kodu: eski V2BildirimIsle kvkk dali + ApiController::kvkkOnayKoduGonder. Yalniz SMS, dogrulama=true (iletim raporu yazilmaz).
+ * Satir yalniz KvkkOnayKodu::denetle uzerinden kuyruga girer (ilk gonderim ve yeniden gonder): yeniden gonderim
+ * beklemesi, gunluk kod siniri (KodGonderimSiniri::hakAl) ve bos portfoy kodunun uretimi orada; isleyici yalniz
+ * mevcut kodu iletir (yeniden denemeler sinira sayilmaz).
+ */
 class KvkkKoduIsleyici extends RandevuTabanliIsleyici
 {
     public function __construct(

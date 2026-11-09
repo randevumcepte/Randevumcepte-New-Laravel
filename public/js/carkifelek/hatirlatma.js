@@ -6,8 +6,8 @@
  * Veri: GET /cark/hatirlatma → {aktif, bugun_gonderilen, slotlar[], atlanan_gunler[], gunler[]};
  * PUT /cark/hatirlatma (aynı yapı). Varsayılan metinler/saatler API'de (config cark.hatirlatma).
  */
-import { esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
+import { esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 
 export async function ciz(kap, ctx) {
   const r = await ctx.oku('/cark/hatirlatma');

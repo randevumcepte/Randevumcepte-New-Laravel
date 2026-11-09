@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
  */
 class SistemOturumServisi
 {
-    public function __construct(private ErisimTokenServisi $token) {}
+    public function __construct(private ErisimTokenServisi $token, private ImpersonationServisi $impersonation) {}
 
     public function giris(string $email, string $sifre, string $ip, string $tarayici): array
     {
@@ -53,10 +53,14 @@ class SistemOturumServisi
         ];
     }
 
-    public function cikis(?string $tokenId): void
+    /** Oturum token'i ve yoneticinin acik "salon hesabina gir" oturumlari birlikte kapanir. */
+    public function cikis(?string $tokenId, ?int $yoneticiId = null): void
     {
         if ($tokenId) {
             $this->token->iptal($tokenId);
+        }
+        if ($yoneticiId) {
+            $this->impersonation->yoneticininOturumlariniKapat($yoneticiId);
         }
     }
 

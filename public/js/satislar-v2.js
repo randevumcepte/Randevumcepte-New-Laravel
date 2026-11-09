@@ -11,8 +11,9 @@
  * Eski panele yönlendirme YOK.
  */
 
-import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
 
 const kok = document.getElementById('rc-satislar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -300,7 +301,8 @@ async function satirIslem(e) {
       { baslik: 'Adisyonu sil', tamam: 'Sil', tehlike: true });
     if (!evet) return;
     b.disabled = true;
-    sonuc = await api('DELETE', `/adisyon/${id}`);
+    sonuc = await kodluIstek('DELETE', `/adisyon/${id}`); // SMS ayarı 23: hesap sahibi onayı
+    if (!sonuc) { b.disabled = false; return; }
   } else if (islem === 'fatura') {
     b.disabled = true;
     sonuc = await api('PATCH', `/adisyon/${id}/fatura`);
@@ -308,7 +310,8 @@ async function satirIslem(e) {
     const al = islem === 'odeme-al';
     if (!al && !(await onay('Bu adisyonun tüm tahsilatları kaldırılacak ve adisyon tekrar açık olacak.', { baslik: 'Ödemeyi geri al', tamam: 'Geri Al' }))) return;
     b.disabled = true;
-    sonuc = await api('PATCH', `/adisyon/${id}/odeme`, { body: { alindi: al } });
+    sonuc = await kodluIstek('PATCH', `/adisyon/${id}/odeme`, { body: { alindi: al } }); // geri almada SMS ayarı 23 onayı
+    if (!sonuc) { b.disabled = false; return; }
   } else {
     return;
   }

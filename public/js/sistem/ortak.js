@@ -2,10 +2,10 @@
  * Sistem yonetimi ekranlarinin ortak gorunum parcalari (sy-* siniflari) — TEK KAYNAK. Veri kurallari API'de.
  *   import { rozet, etiketRozet, sayfaBaslik, metrik, syTablo, ... } from '/js/sistem/ortak.js?v=1';
  */
-import { esc, el } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { syApi, syYaz } from '/js/lib/v2-sistem.js?v=1';
-import { impersonationBaslat } from '/js/lib/v2-sistem-bant.js?v=1';
+import { esc, el } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { syApi, syYaz } from '/js/lib/v2-sistem.js?v=7';
+import { impersonationBaslat } from '/js/lib/v2-sistem-bant.js?v=7';
 
 export const kisalt = (metin, boy) => {
   const m = String(metin ?? '');

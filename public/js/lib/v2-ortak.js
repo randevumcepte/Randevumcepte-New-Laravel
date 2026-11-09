@@ -1,27 +1,24 @@
 /**
  * v2 island'larinin ORTAK yardimcilari — TEK KAYNAK (ekranlarda kopyalanmaz).
  *
- * Build'siz: her ekran `import { ... } from '/js/lib/v2-ortak.js?v=2'` ile alir.
+ * Build'siz: her ekran `import { ... } from '/js/lib/v2-ortak.js?v=7'` ile alir.
  * ONEMLI: import yolu (?v=N dahil) TUM ekranlarda AYNI olmali — farkli URL, tarayicida
  * ayri modul ornegi demektir (token tohumlama iki kez calisir). Bu dosya degisince
  * tum import satirlarindaki ?v= birlikte artirilir.
  */
 
 import { ilkAlanHatasi } from '/js/lib/v2-hata.js?v=1';
+import { adrestenToken } from '/js/lib/v2-adres-token.js?v=7';
 
 export const BASE = '/api/v2';
-export const qp = new URLSearchParams(location.search);
 
-// Token tohumlama (modul tekil → bir kez):
-//  - ?token=  : pilot/dogrudan link
-//  - #token=  : eski panel koprusu (/isletmeyonetim/v2-gecis) — sunucu loglarina ve
-//               Referer'a dusmez; saklandiktan sonra adres cubugundan silinir.
-if (qp.get('token')) localStorage.setItem('rc_access_token', qp.get('token'));
-const _hash = new URLSearchParams(location.hash.slice(1));
-if (_hash.get('token')) {
-  localStorage.setItem('rc_access_token', _hash.get('token'));
-  history.replaceState(null, '', location.pathname + location.search);
-}
+// Token tohumlama (modul tekil → bir kez): YALNIZ #token= (eski panel koprusu /isletmeyonetim/v2-gecis);
+// fragment sunucu loglarina ve Referer'a dusmez. ?token= kabul edilmez. Ikisi de okunduktan sonra adres
+// cubugundan silinir (history.replaceState) — qp token'siz adresten uretilir.
+const _adres = adrestenToken(location.search, location.hash);
+if (_adres.token) localStorage.setItem('rc_access_token', _adres.token);
+if (_adres.temizle) history.replaceState(null, '', location.pathname + _adres.adres);
+export const qp = new URLSearchParams(location.search);
 export const token = () => localStorage.getItem('rc_access_token') || '';
 
 /**
@@ -49,8 +46,23 @@ export function apiIstemcisi(tokenOku, kok) {
   };
 }
 
+/** Sunucunun lisans kapisi kodu (402): tum isletme ekranlari icin TEK yakalama yeri. */
+export const LISANS_KODU = 'lisans_suresi_doldu';
+export const lisansKapaliMi = ({ kod, govde }) => kod === 402 && govde?.veri?.kod === LISANS_KODU;
+
+/** Lisans kapaliysa lisans ekranini (v2-lisans.js, yalniz gerekince yuklenir) cizer; cevap aynen doner. */
+function lisansYakala(istemci) {
+  return async (...argumanlar) => {
+    const sonuc = await istemci(...argumanlar);
+    if (lisansKapaliMi(sonuc)) {
+      import('/js/lib/v2-lisans.js?v=7').then((m) => m.lisansKapandi(sonuc.govde)).catch(() => {});
+    }
+    return sonuc;
+  };
+}
+
 /** /api/v2 istegi (isletme paneli token'i). */
-export const api = apiIstemcisi(token, BASE);
+export const api = lisansYakala(apiIstemcisi(token, BASE));
 
 export const el = (s, k = document) => k.querySelector(s);
 export const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

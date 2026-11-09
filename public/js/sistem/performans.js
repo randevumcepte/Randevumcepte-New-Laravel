@@ -1,6 +1,6 @@
 /** Ekip performansi ve SLA ozeti. Veri /sistem/performans; gun secenekleri API'den. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran } from '/js/lib/v2-sistem.js?v=7';
 import { avatar, metrik, rozet, sayfaBaslik, syTablo } from '/js/sistem/ortak.js?v=1';
 
 const sure = (deger, birim) => (deger !== null && deger !== undefined ? `${Math.round(deger)} ${birim}` : '—');

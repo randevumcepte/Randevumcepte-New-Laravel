@@ -10,11 +10,11 @@
  * yalnız çizim. Maskeli (rapor.ciro_kar_gor yok) değerler sunucudan null gelir → "****".
  */
 
-import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
-import { modalAc } from '/js/lib/v2-modal.js?v=1';
-import { donemSecici, trTarih, sayi } from '/js/lib/v2-donem.js?v=1';
+import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { modalAc } from '/js/lib/v2-modal.js?v=7';
+import { donemSecici, trTarih, sayi } from '/js/lib/v2-donem.js?v=7';
 
 const kok = document.getElementById('rc-raporlar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

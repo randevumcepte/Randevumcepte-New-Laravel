@@ -4,10 +4,10 @@
  * Veri: GET /cagri-merkezi/ayarlar · POST|PATCH|DELETE /scriptler[/{id}] · /kategoriler[/{id}].
  * Kayıt sonrası açılış verisi (ctx.acilis) de tazelenir → kokpit yeni scripti / kategoriyi hemen görür.
  */
-import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { kilitle } from '/js/lib/v2-bilesen.js?v=2';
-import { alan } from '/js/lib/v2-ongorusme.js?v=1';
+import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
+import { alan } from '/js/lib/v2-ongorusme.js?v=7';
 
 export async function ciz(kap, ctx) {
   let v = { scriptler: [], kategoriler: [] };

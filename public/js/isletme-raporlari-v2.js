@@ -7,11 +7,11 @@
  * yetkisiz sekme sessizce sıfır gösteriyordu). Veri /api/v2/rapor/isletme/*; burada hesap yok.
  */
 
-import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
-import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=1';
-import { cubuk, halka, cizgi, grafikleriTemizle, RENK } from '/js/lib/v2-grafik.js?v=1';
+import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=7';
+import { cubuk, halka, cizgi, grafikleriTemizle, RENK } from '/js/lib/v2-grafik.js?v=7';
 
 const kok = document.getElementById('rc-isletme-raporlari');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

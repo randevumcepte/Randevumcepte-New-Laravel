@@ -6,7 +6,7 @@
  * tembel yükler; henüz taşınmamış olan (Entegrasyonlar — Google Takvim)
  * eski paneldeki aynı sekmeye link verir. Seçili sekme ?p= ile adres çubuğunda tutulur.
  */
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
 import { YUKLENIYOR } from '/js/ayarlar/ortak.js?v=4';
 
 const kok = document.getElementById('rc-ayarlar');

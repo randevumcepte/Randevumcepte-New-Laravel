@@ -1,7 +1,7 @@
 /** Salon listesi: filtreler, hizli filtre sekmeleri, toplu islem. Veri /api/v2/sistem/salon. */
-import { el, esc, onay, mesaj } from '/js/lib/v2-ortak.js?v=2';
-import { syApi, syYaz, syIndir, ekran, tarih } from '/js/lib/v2-sistem.js?v=1';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
+import { el, esc, onay, mesaj } from '/js/lib/v2-ortak.js?v=7';
+import { syApi, syYaz, syIndir, ekran, tarih } from '/js/lib/v2-sistem.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 import { hesabinaGir } from '/js/sistem/ortak.js?v=1';
 import { salonSecenekleri, secenekler, telLink } from '/js/sistem/salon-ortak.js?v=1';
 

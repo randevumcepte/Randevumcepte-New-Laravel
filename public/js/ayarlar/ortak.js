@@ -5,7 +5,7 @@
  *
  * Her sekme modülü `export async function ciz(kap, ctx)` sunar; ctx = {salonId}.
  */
-import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
+import { api, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 
 /** Yükleniyor görünümü (dönen çember + sabit metin) — rc-yukleniyor yalnız çemberdir, içine metin konmaz. */
 export const YUKLENIYOR = '<div class="ay-bekle"><span class="rc-yukleniyor"></span> Yükleniyor…</div>';

@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=4';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=7';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -13,10 +13,14 @@
  * Sayaçlar, durum etiketleri, PDF linki, lazer kararı SUNUCUDAN; burada yalnız görsel eşleme.
  * Veri GET/POST/PATCH/PUT /api/v2/seans* (Flutter ile aynı uçlar). Stil: css/seans-v2.css.
  */
-import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
-import { tarihTr } from '/js/lib/v2-musteri.js?v=1';
+import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
+import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
+
+// SMS ayarı 16: 'geldi' işareti müşteri doğrulama kodu ister (428 → ortak kod penceresi).
+const KOD = { alan: 'dogrulama_kodu', baslik: 'Müşteri Doğrulama Kodu' };
 
 // Yalnız görsel eşleme (durum kodları + etiketler API'deki `durumlar` sözlüğünden).
 const GORSEL = {
@@ -226,8 +230,8 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
   }
 
   async function durumYaz(s, geldi) {
-    const r = await api('PATCH', `/seans/${s.id}`, { body: { geldi } });
-    if (!yazSonuc(r, r.govde && r.govde.mesaj)) return false;
+    const r = await kodluIstek('PATCH', `/seans/${s.id}`, { body: { geldi } }, KOD);
+    if (!r || !yazSonuc(r, r.govde && r.govde.mesaj)) return false;
     satirYenile(r.govde.veri.satir);
     return true;
   }
@@ -256,8 +260,8 @@ export function seansTakibi(kap, { salonId, musteriId = null }) {
     const inp = el('#stTarih', ov);
     if (window.flatpickr) window.flatpickr(inp, { locale: 'tr', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd.m.Y' });
     butonlariBagla(ov, async (geldi) => {
-      const r = await api('POST', '/seans', { body: { tur: k.tur, kalem_id: k.id, hizmet_id: h.hizmet_id, geldi, tarih: inp.value || null } });
-      if (!yazSonuc(r, r.govde && r.govde.mesaj)) return false;
+      const r = await kodluIstek('POST', '/seans', { body: { tur: k.tur, kalem_id: k.id, hizmet_id: h.hizmet_id, geldi, tarih: inp.value || null } }, KOD);
+      if (!r || !yazSonuc(r, r.govde && r.govde.mesaj)) return false;
       satirYenile(r.govde.veri.satir);
       return true;
     });

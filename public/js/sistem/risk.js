@@ -1,6 +1,6 @@
 /** Risk altindaki salonlar. Skor ve kapsam sunucuda; destek rolu yalniz kendi salonlarini alir. */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran } from '/js/lib/v2-sistem.js?v=7';
 import { rozet, sayfaBaslik, syTablo } from '/js/sistem/ortak.js?v=1';
 
 ekran().innerHTML = `

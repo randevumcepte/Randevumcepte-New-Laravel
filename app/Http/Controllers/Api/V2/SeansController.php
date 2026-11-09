@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V2;
 use App\Domain\Seans\MobilSeansKurali;
 use App\Domain\Seans\SeansDurumu;
 use App\Domain\Seans\SeansKalemTuru;
+use App\Services\Randevu\MusteriDogrulamaKodu;
 use App\Services\Seans\SeansCihazServisi;
 use App\Services\Seans\SeansDokumServisi;
 use App\Services\Seans\SeansKapsam;
@@ -24,8 +25,11 @@ use Illuminate\Http\Request;
  * docs/flutter-uyum-yol-haritasi.md "Seans takibi".
  *
  *   GET   /seans?salon_id=&musteri_id= + ListeIstegi   satirlar + kartlar + seanslar + sayaclar
- *   POST  /seans {tur, kalem_id, hizmet_id, geldi, tarih}  bos daireye kullanim ekle
- *   PATCH /seans/{id} {geldi: 0|1|2|null}                 durum (null = beklemede)
+ *   POST  /seans {tur, kalem_id, hizmet_id, geldi, tarih, dogrulama_kodu?}  bos daireye kullanim ekle
+ *   PATCH /seans/{id} {geldi: 0|1|2|null, dogrulama_kodu?}                 durum (null = beklemede)
+ *
+ * SMS ayari 16 aciksa 'geldi' (1) isareti musteri dogrulama kodu ister (randevu geldi ile ortak ayar ve kanal):
+ * kod yoksa musteriye gider ve 428 {dogrulama_gerekli:true} doner; istemci kodla ayni istegi tekrarlar.
  *   GET   /seans/{id}/cihaz                               lazer cihaz bilgisi + personeller
  *   PUT   /seans/{id}/cihaz {bolgeler: [...]}              lazer cihaz bilgisi kaydet
  *   GET   /seans/dokum?tur=&kalem_id=                      seans dokumu PDF (mobil)
@@ -56,6 +60,7 @@ class SeansController extends V2Controller
         private SeansYazServisi $yaz,
         private SeansCihazServisi $cihaz,
         private SeansMobilServisi $mobil,
+        private MusteriDogrulamaKodu $dogrulama,
     ) {}
 
     public function liste(Request $request)
@@ -88,6 +93,7 @@ class SeansController extends V2Controller
         $tur = SeansKalemTuru::from($g['tur']);
         $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
         $this->kayitDenetle((int) $kalem->salon_id);
+        $this->geldiKodu($request, $g['geldi'], $kalem, ['kalem' => $tur->value.':'.$kalem->id, 'hizmet' => (int) $g['hizmet_id']]);
 
         $sonuc = $this->yaz->ekle($tur, $kalem, (int) $g['hizmet_id'], SeansDurumu::geldidenCoz($g['geldi']), $g['tarih'] ?? now()->toDateString());
 
@@ -98,12 +104,15 @@ class SeansController extends V2Controller
     {
         $g = $this->dogrula($request, ['geldi' => ['present', 'nullable', 'integer', 'in:0,1,2']]);
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
+        $geldiKodu = fn () => $this->geldiKodu($request, $g['geldi'] ?? null, $kalem, ['seans' => (int) $seans->id]);
         if ($request->boolean('mobil')) {
             $this->kayitDenetle((int) $kalem->salon_id, true, true);
+            $geldiKodu();
 
             return ApiCevap::basarili($this->mobil->durum($seans, isset($g['geldi']) ? (int) $g['geldi'] : null, (int) $kalem->salon_id, (int) $this->kullanici()->id));
         }
         $this->kayitDenetle((int) $kalem->salon_id);
+        $geldiKodu();
 
         $durum = SeansDurumu::geldidenCoz($g['geldi']);
         $sonuc = $this->yaz->durumGuncelle($seans, $durum);
@@ -171,6 +180,7 @@ class SeansController extends V2Controller
         $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
         $salonId = (int) $kalem->salon_id;
         $this->kayitDenetle($salonId, true, true);
+        $this->geldiKodu($request, $g['geldi'], $kalem, ['kalem' => $tur->value.':'.$kalem->id, 'hizmet' => (int) $g['hizmet_id']]);
         $uid = (int) $this->kullanici()->id;
         $tarih = MobilSeansKurali::seansTarihi($g['tarih'] ?? null, now()->toDateString());
 
@@ -179,6 +189,14 @@ class SeansController extends V2Controller
             'Seans eklendi',
             201,
         );
+    }
+
+    /** Yalniz 'geldi' (1) isareti: SMS ayari 16 aciksa musteri dogrulama kodu (web ve mobil ayni kapi). */
+    private function geldiKodu(Request $request, mixed $geldi, object $kalem, array $baglam): void
+    {
+        if (SeansDurumu::geldidenCoz($geldi) === SeansDurumu::GELDI) {
+            $this->dogrulama->seansGeldi((int) $kalem->salon_id, $kalem->user_id ? (int) $kalem->user_id : null, $baglam, $request->input('dogrulama_kodu'));
+        }
     }
 
     /** Kaydin salonunda kapsam + yetki (mobilde yalniz kapsam); yazma ise ardindan kill-switch. */

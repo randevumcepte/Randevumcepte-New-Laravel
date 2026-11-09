@@ -10,7 +10,7 @@
  * Her çağrı aşaması document'e 'rc:softphone' olayı ({asama, numara, cagriId, yon}) olarak
  * yayılır; çağrı sonrası iş (ses kaydı bağlama vb.) ekranlar tarafından dinlenir.
  */
-import { api, esc } from '/js/lib/v2-ortak.js?v=2';
+import { api, esc } from '/js/lib/v2-ortak.js?v=7';
 import { SipHat } from '/js/softphone/sip-hat.js?v=2';
 import { Zil } from '/js/softphone/zil.js?v=1';
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\Personel;
 
+use App\Domain\Personel\HesapSahibiKorumasi;
 use App\Domain\Personel\Telefon;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
@@ -28,11 +29,22 @@ use Illuminate\Support\Str;
  */
 class PersonelYazServisi
 {
-    /** Aktif/pasif. Pasifte oturum sonlandirma eski koda kuyruktan devredilir. */
+    public function __construct(
+        private HesapSahibiDenetimi $sahip,
+        private GirisTelefonuDenetimi $girisTelefonu,
+    ) {}
+
+    /**
+     * Aktif/pasif. Pasifte oturum sonlandirma eski koda kuyruktan devredilir. Hesap sahibi ve istegi yapanin kendi
+     * satiri pasife alinamaz (HesapSahibiKorumasi — isletme sahipsiz / yonetici kendini disarida birakmasin).
+     */
     public function durum(int $personelId, bool $aktif, ?int $yapanId = null): array
     {
         return DB::transaction(function () use ($personelId, $aktif, $yapanId) {
             $p = $this->bul($personelId);
+            if (! $aktif) {
+                $this->sahip->denetle(HesapSahibiKorumasi::PASIF, self::rol($p), self::yetkiliId($p), (int) $p->salon_id, $yapanId);
+            }
             $p->aktif = $aktif;
             $p->save();
 
@@ -69,6 +81,7 @@ class PersonelYazServisi
         if (! $p->yetkili_id) {
             throw new CakismaException('Personelin giriş hesabı yok; önce kaydedin.');
         }
+        $this->sahip->denetle(HesapSahibiKorumasi::SIFRE, self::rol($p), self::yetkiliId($p), (int) $p->salon_id, $yapanId);
         BildirimKuyrugu::yaz((int) $p->salon_id, 'personel_sifre', null, $yapanId, ['personel_id' => (int) $p->id]);
 
         return ['kuyruga_alindi' => true];
@@ -150,10 +163,20 @@ class PersonelYazServisi
                 $yeniHesap = true;
             }
 
+            $this->sahipKorumasi($salonId, $personel, $yeniHesap ? null : (int) $yetkili->id,
+                $yeniHesap ? null : (string) $yetkili->gsm1, $tel, $g['sistem_yetki'] ?? null, $yapanId);
+            // Hesap devralma korumasi (GirisTelefonu): baska isletmede kayitli hesaba baglama ve baska hesabin
+            // numarasina / baska salonlarda da kayitli hesabin telefonunu degistirme 422.
+            if (! $yeniHesap) {
+                $this->girisTelefonu->personelDenetle($salonId, (int) $yetkili->id, self::yetkiliIdVeyaNull($personel),
+                    (string) $yetkili->gsm1, $tel, $yapanId);
+            }
+
             $yetkili->unvan = $g['unvan'] ?? null;
             $yetkili->cinsiyet = $g['cinsiyet'] ?? null;
             $yetkili->name = $g['personel_adi'] ?? null;
-            if ($tel !== '') {
+            // Maskeli/eksik numara giris telefonuna yazilmaz (personel satiriyla ayni kural).
+            if ($tel !== '' && ! Telefon::maskeliMi($tel)) {
                 $yetkili->gsm1 = $tel;
             } elseif ($yeniHesap) {
                 $yetkili->gsm1 = '';
@@ -238,6 +261,48 @@ class PersonelYazServisi
     }
 
     // ===================== yardimcilar =====================
+
+    /**
+     * Ekle/duzenlemede hesap sahibi korumasi (HesapSahibiKorumasi): gecerli rol + rol 1 atamasi, sahibin rolu ve
+     * telefonu. Telefon degisikligi = gercek (maskesiz) numara personel/giris telefonundan farkli YA DA satir baska
+     * bir giris hesabina (orn. sahibin numarasina) baglaniyor. Yazmadan ONCE cagrilir (engel → 422, islem geri alinir).
+     */
+    private function sahipKorumasi(int $salonId, ?Personeller $personel, ?int $yetkiliId, ?string $gsm, string $tel, mixed $rol, ?int $yapanId): void
+    {
+        $rolId = $personel ? self::rol($personel) : null;
+        $hedefSahip = $this->sahip->satirSahipMi($rolId, $yetkiliId, $salonId)
+            || $this->sahip->satirSahipMi($rolId, self::yetkiliIdVeyaNull($personel), $salonId);
+
+        $this->sahip->rolAtamasiDenetle($rol, $hedefSahip ? HesapSahibiKorumasi::ROL_HESAP_SAHIBI : $rolId, $salonId, $yapanId);
+        if ($rol !== null && $rol !== '' && (int) $rol !== HesapSahibiKorumasi::ROL_HESAP_SAHIBI) {
+            $this->sahip->denetle(HesapSahibiKorumasi::ROL, $rolId, $yetkiliId ?? self::yetkiliIdVeyaNull($personel), $salonId, $yapanId);
+        }
+
+        $oncekiYetkili = self::yetkiliIdVeyaNull($personel);
+        $telefonDegisir = $tel !== '' && ! Telefon::maskeliMi($tel) && (
+            ($personel !== null && Telefon::normalize($personel->cep_telefon) !== $tel)
+            || ($gsm !== null && Telefon::normalize($gsm) !== $tel)
+            || ($yetkiliId !== null && $yetkiliId !== $oncekiYetkili)
+        );
+        if ($telefonDegisir) {
+            $this->sahip->denetle(HesapSahibiKorumasi::TELEFON, $rolId, $yetkiliId ?? $oncekiYetkili, $salonId, $yapanId);
+        }
+    }
+
+    private static function rol(Personeller $p): ?int
+    {
+        return $p->role_id !== null ? (int) $p->role_id : null;
+    }
+
+    private static function yetkiliId(Personeller $p): ?int
+    {
+        return $p->yetkili_id ? (int) $p->yetkili_id : null;
+    }
+
+    private static function yetkiliIdVeyaNull(?Personeller $p): ?int
+    {
+        return $p ? self::yetkiliId($p) : null;
+    }
 
     /** Verilen gun dizilerini sil-ve-yaz (bos dizi gelirse o tur korunur). */
     private function saatleriYaz(int $personelId, array $calisma, array $mola): void

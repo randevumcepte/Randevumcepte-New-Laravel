@@ -6,13 +6,20 @@ use App\Domain\Oturum\TokenTipi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\IstekTokeni;
 use App\Services\Oturum\MobilBayraklar;
+use App\Services\Yetki\KapsamServisi;
 use Illuminate\Auth\RequestGuard;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** routes/api.php: Route::middleware('throttle:'.AppServiceProvider::GENEL_SINIR) */
+    public const GENEL_SINIR = 'v2-genel';
+
     public function register(): void
     {
         // Yetki karar motoru — request boyunca tek ornek (cache paylasimi icin singleton).
@@ -28,6 +35,22 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->legacyPassportGuardKaydet();
+        $this->istekSiniriKaydet();
+    }
+
+    /**
+     * /api/v2 GENEL istek siniri (eski Kernel api grubu 'throttle:300,1' ile ayni deger): IP + kimlik basina dakikada
+     * 300. Kimlik, rotanin auth middleware'inden SONRA cozulur (Laravel middleware onceligi), kimliksiz istekte yalniz IP.
+     * Hesap tipi anahtara girer: ayni sayisal id farkli tablolarda farkli kisidir. Uclarin kendi siki sinirlari ayrica kalir.
+     */
+    private function istekSiniriKaydet(): void
+    {
+        RateLimiter::for(self::GENEL_SINIR, function (Request $istek) {
+            $kullanici = $istek->user();
+            $kimlik = $kullanici ? class_basename($kullanici).':'.$kullanici->getAuthIdentifier() : '-';
+
+            return Limit::perMinute((int) config('oturum.genel_istek_dakika', 300))->by($kimlik.'|'.$istek->ip());
+        });
     }
 
     /**
@@ -51,11 +74,15 @@ class AppServiceProvider extends ServiceProvider
         $tokenGuard = $this->tokenGuard(...);
 
         // Yalniz sayisal subject: sistem yoneticisi token'i ("sy:<id>") isletme/musteri ucuna giremez.
+        // Isletme hesabi: tum personel satirlari pasif (hicbir salona erisemeyen) hesabin token'i her istekte
+        // reddedilir; pasife alma bildirimi kuyrukta beklese de oturum duser (KapsamServisi::tamamenPasifMi).
         Auth::extend('legacy-passport', fn ($app, $name, array $config) => $tokenGuard(
             $app,
             $config,
             fn (string $sub) => ctype_digit($sub) ? (int) $sub : null,
-            fn ($kullanici) => true,
+            ($config['hesap_turu'] ?? null) === TokenTipi::ISLETME
+                ? fn ($kullanici) => ! app(KapsamServisi::class)->tamamenPasifMi($kullanici->getAuthIdentifier())
+                : fn ($kullanici) => true,
             $config['hesap_turu'] ?? null,
         ));
 

@@ -1,7 +1,7 @@
 /** Asistan Egitimi: kalip kutuphanesi, AI'ya dusen sorular, PDF ile toplu egitim. Veri /api/v2/sistem/asistan-egitim. */
-import { el, esc, mesaj, onay } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ekran, syApi, syVeri, syYaz, syForm, para, tarihSaat } from '/js/lib/v2-sistem.js?v=1';
+import { el, esc, mesaj, onay } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ekran, syApi, syVeri, syYaz, syForm, para, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { sayi } from '/js/sistem/ortak.js?v=1';
 
 const KOK = '/asistan-egitim';

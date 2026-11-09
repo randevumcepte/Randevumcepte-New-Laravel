@@ -2,15 +2,15 @@
  * v2 MÜŞTERİ ortak modülü — liste (/v2/musteriler) ve detay (/v2/musteri/{id}) ekranları
  * AYNI ekle/düzenle formunu ve yardımcıları kullanır (kod tekrarı yok).
  * Import yolu her yerde AYNI olmalı:
- *   import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=1';
+ *   import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
  *
  * Form seçenekleri (referans, cinsiyet, cilt tipi, sağlık soruları) API'den gelir
  * (GET /musteri/form-verisi) — UI'da sabit liste yok. Alan adları eski "Müşteri Bilgileri"
  * modalı ile aynı: ad_soyad*, telefon*, tc_kimlik_no, doğum günü (gün/ay/yıl — yıl
  * opsiyonel), email, cinsiyet, musteri_tipi (referans), ozel_notlar.
  */
-import { api, el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
+import { api, el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 
 let _formVeri = null;
 

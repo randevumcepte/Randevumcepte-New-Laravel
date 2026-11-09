@@ -5,10 +5,11 @@ namespace App\Services\BildirimKuyrugu\Isleyici;
 use App\Models\Randevular;
 use App\Services\BildirimKuyrugu\Kanal\WhatsappKanali;
 use App\Services\BildirimKuyrugu\Randevu\RandevuMesajKanali;
+use App\Services\Randevu\MusteriDogrulamaKodu;
 use Illuminate\Support\Facades\Log;
 
 /**
- * dogrulama_kodu: eski ApiController::dogrulama_kodu_gonder. Kodu uretir, randevuya yazar, gonderir. WhatsApp oncelikli (sistem
+ * dogrulama_kodu: eski ApiController::dogrulama_kodu_gonder. Kodu uretir (MusteriDogrulamaKodu::randevuKoduUret), randevuya yazar, gonderir. WhatsApp oncelikli (sistem
  * kurali): bagliysa acil WhatsApp, gidemezse SMS. Eskiden SMS kredisi varsa once SMS'ti ve paylasilan oturumlu alt salon bagli
  * sayilmiyordu; ikisi duzeltildi. Yeniden deneme yalniz saglayiciya ulasilamazsa olur (SmsKanali).
  */
@@ -17,17 +18,16 @@ class DogrulamaKoduIsleyici extends RandevuTabanliIsleyici
     public function __construct(
         private WhatsappKanali $whatsapp,
         private RandevuMesajKanali $kanal,
+        private MusteriDogrulamaKodu $dogrulama,
     ) {}
 
     protected function randevuIsle(object $kayit, array $payload, Randevular $randevu): void
     {
-        $kod = substr(str_shuffle('1234567890'), 0, 4);
-        $randevu->dogrulama = $kod;
-        $randevu->save();
+        $kod = $this->dogrulama->randevuKoduUret($randevu); // tek uretici: random_int, 10 dk gecerlilik
 
         $telefon = $randevu->users->cep_telefon ?? null;
         $salonId = $randevu->salon_id;
-        $mesajMetni = 'Doğrulama kodunuz : '.$kod;
+        $mesajMetni = MusteriDogrulamaKodu::mesaj($kod);
         $mesaj = [['to' => $telefon, 'message' => $mesajMetni]];
 
         $salon = $this->whatsapp->salon($salonId);

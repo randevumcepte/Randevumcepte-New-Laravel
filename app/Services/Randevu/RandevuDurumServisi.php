@@ -47,6 +47,8 @@ class RandevuDurumServisi
 {
     public function __construct(
         private DakikaPaketServisi $dakika,
+        private MusteriDogrulamaKodu $dogrulama,
+        private KvkkOnayKodu $kvkk,
     ) {}
 
     /**
@@ -64,39 +66,30 @@ class RandevuDurumServisi
         [$seanslar, $yetimIdler] = $this->gecerliSeanslar($randevuId);
         $seansVar = count($seanslar) > 0;
 
-        // (2) Dogrulama kodu kapisi — paket seansi varsa ve salon ayari (16) aciksa.
-        if ($seansVar && $this->smsAyari($salonId, 16)) {
-            $kod = $g['dogrulama_kodu'] ?? null;
-            if ($randevu->dogrulama === null || (string) $randevu->dogrulama !== (string) $kod) {
-                // Eski davranis: her kod istendiginde YENI kod uretilip gonderilir
-                // (monolit dogrulama_kodu_gonder — kuyruk uzerinden).
-                if ($yaz) {
-                    $this->kuyruga($salonId, 'dogrulama_kodu', $randevuId, $yetkiliId);
-                }
-
-                return [
-                    'hatali'         => '2',
-                    'mesaj'          => 'Lütfen müşteri/danışanın telefon numarasına gönderilen doğrulama kodunu giriniz!',
-                    'kod_gonderildi' => $yaz,
-                ];
+        // (2) Dogrulama kodu kapisi — paket seansi varsa ve salon ayari (16) aciksa (seans geldi ile ortak ayar/metin).
+        // Kod kuyrukta uretilip randevular.dogrulama'ya yazilir (eski isleyiciyle ortak); dogru kod isaretlemeyle ayni
+        // transaction'da temizlenir. Yanlis deneme ve yeniden gonderim sinirli (MusteriDogrulamaKodu).
+        $kodGerekli = $seansVar && $this->dogrulama->gerekli($salonId);
+        if ($kodGerekli) {
+            $istem = $this->dogrulama->randevuKoduDenetle($randevu, $g['dogrulama_kodu'] ?? null, $yaz,
+                fn () => $this->kuyruga($salonId, 'dogrulama_kodu', $randevuId, $yetkiliId));
+            if ($istem !== null) {
+                return $istem;
             }
         }
 
-        // (3) KVKK onay kodu kapisi — salon ayari (22) aciksa ve portfoyde onay yoksa.
+        // (3) KVKK onay kodu kapisi — salon ayari (22) aciksa ve portfoyde onay yoksa. Randevu geldi koduyla ayni kapi
+        // (KvkkOnayKodu / KayitKodKapisi): hash_equals, bos kod gecmez, dry-run dahil yanlis sayimi, gonderim sinirli.
         $portfoy = DB::table('musteri_portfoy')
             ->where('user_id', $randevu->user_id)->where('salon_id', $salonId)
             ->first(['id', 'onay_kodu', 'kvkk_onay_alindi']);
-        if ($portfoy && $this->smsAyari($salonId, 22) && ! $portfoy->kvkk_onay_alindi
-            && (string) ($g['kvkk_kodu'] ?? '') !== (string) $portfoy->onay_kodu) {
-            if ($yaz) {
-                $this->kuyruga($salonId, 'kvkk_kodu', $randevuId, $yetkiliId);
+        $kvkkGerekli = $this->kvkk->gerekli($salonId, $portfoy);
+        if ($kvkkGerekli) {
+            $istem = $this->kvkk->denetle($portfoy, $g['kvkk_kodu'] ?? null, $yaz,
+                fn () => $this->kuyruga($salonId, 'kvkk_kodu', $randevuId, $yetkiliId));
+            if ($istem !== null) {
+                return $istem;
             }
-
-            return [
-                'hatali'         => '3',
-                'mesaj'          => 'Lütfen müşteri/danışanın telefon numarasına gönderilen kvkk onay kodunu giriniz!',
-                'kod_gonderildi' => $yaz,
-            ];
         }
 
         // (4) Seans secimi — yeni istemci destekliyor ama secim gondermedi.
@@ -129,7 +122,10 @@ class RandevuDurumServisi
             return $this->sonuc(['hatali' => '0', 'mesaj' => 'DRY-RUN'], $plan, false, $bildirimler);
         }
 
-        $dakikaSonuc = DB::transaction(function () use ($randevuId, $portfoy, $yetimIdler, $seansPlan, $dakikaPlan, $yetkiliId, $salonId, $seansVar) {
+        $dakikaSonuc = DB::transaction(function () use ($randevuId, $portfoy, $yetimIdler, $seansPlan, $dakikaPlan, $yetkiliId, $salonId, $seansVar, $kodGerekli, $g) {
+            if ($kodGerekli) {
+                $this->dogrulama->randevuKoduTuket($randevuId, $g['dogrulama_kodu'] ?? null); // tek kullanimlik
+            }
             if ($yetimIdler) {
                 AdisyonPaketSeanslar::whereIn('id', $yetimIdler)->delete();
             }
@@ -145,6 +141,9 @@ class RandevuDurumServisi
             return $this->dakika->dusumUygula($randevuId, $dakikaPlan, $this->personelId($salonId, $yetkiliId));
         });
 
+        if ($kvkkGerekli) {
+            $this->kvkk->basarili((int) $portfoy->id);
+        }
         AktiviteLog::yaz($salonId, $yetkiliId, 'randevu_geldi', 'randevu', $randevuId,
             $this->musteriAdi($randevu), 'Randevu "geldi" olarak işaretlendi');
 
@@ -440,11 +439,6 @@ class RandevuDurumServisi
         $son = array_pop($adlar);
 
         return $adlar ? implode(', ', $adlar).' ve '.$son : (string) $son;
-    }
-
-    private function smsAyari(int $salonId, int $ayarId): bool
-    {
-        return (bool) DB::table('salon_sms_ayarlari')->where('salon_id', $salonId)->where('ayar_id', $ayarId)->value('musteri');
     }
 
     private function personelId(int $salonId, ?int $yetkiliId): ?int

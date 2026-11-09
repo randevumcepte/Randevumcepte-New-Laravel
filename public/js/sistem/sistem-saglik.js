@@ -1,6 +1,6 @@
 /** Veritabani, PHP, disk, WhatsApp ve son log hatalari. Veri /sistem/sistem-saglik. */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
-import { ekran, syVeri } from '/js/lib/v2-sistem.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
+import { ekran, syVeri } from '/js/lib/v2-sistem.js?v=7';
 import { bos, metrik, sayfaBaslik } from '/js/sistem/ortak.js?v=1';
 
 const diskRenk = (k) => (k > 90 ? 'danger' : (k > 75 ? 'warning' : 'success'));

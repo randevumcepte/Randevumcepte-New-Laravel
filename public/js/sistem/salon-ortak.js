@@ -1,6 +1,6 @@
 /** Salon ekranlarinin ortak parcalari: secenekler, select cizimi, il-ilce bagi, form okuma, salon hesabina giris. */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
-import { syVeri, syYaz } from '/js/lib/v2-sistem.js?v=1';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
+import { syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 
 export const salonSecenekleri = () => syVeri('/salon/secenekler');
 

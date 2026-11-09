@@ -6,10 +6,10 @@
  *   - düzenle (havuz hizmetinin adı/kategorisi değişirse sunucu salona özel kopya açar) / kaldır
  * Seçenekler GET /ayar/hizmetler/form-verisi'nden; yetki ve iş kuralları SUNUCUDA.
  */
-import { api, el, esc, TL, onay, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=2';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=2';
-import { ozetKart } from '/js/lib/v2-bilesen.js?v=1';
-import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=1';
+import { api, el, esc, TL, onay, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
+import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { secim, secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=4';
 
 const sayiOku = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); return Number.isFinite(n) ? n : null; };

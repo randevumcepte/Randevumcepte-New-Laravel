@@ -8,9 +8,9 @@
  * müşteri kartı + takvimle ORTAK bileşen (lib/v2-randevu.js); zaman seçici rapor
  * ekranlarıyla ortak (lib/v2-donem.js, stil css/rapor-v2.css).
  */
-import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=2';
-import { donemSecici } from '/js/lib/v2-donem.js?v=1';
-import { randevuTablosu } from '/js/lib/v2-randevu.js?v=6';
+import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
+import { donemSecici } from '/js/lib/v2-donem.js?v=7';
+import { randevuTablosu } from '/js/lib/v2-randevu.js?v=7';
 
 const kok = document.getElementById('rc-randevular');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

@@ -23,6 +23,9 @@ final class SalonIdListesi
             $deger = [$deger];
         }
 
+        // Ic ice dizi / nesne ogesi yok sayilir (istekten gelen salon_ids[][]=x 500 vermesin).
+        $deger = array_filter($deger, fn ($v) => is_scalar($v));
+
         return array_values(array_unique(array_filter(array_map(fn ($v) => (int) trim((string) $v), $deger), fn ($n) => $n > 0)));
     }
 }

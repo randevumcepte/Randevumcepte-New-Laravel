@@ -1,11 +1,11 @@
 /**
  * Sistem yonetimi ekranlarinin ORTAK yardimcilari — TEK KAYNAK.
- *   import { syApi, syYaz, syVeri, ekran, kayitId, syIndir, syForm, para, tarihSaat, tarih } from '/js/lib/v2-sistem.js?v=1';
+ *   import { syApi, syYaz, syVeri, ekran, kayitId, syIndir, syForm, para, tarihSaat, tarih } from '/js/lib/v2-sistem.js?v=7';
  * Geri kalani (el, esc, mesaj, onay, veriTablosu, modalAc) isletme paneliyle ayni kutuphanelerden gelir.
  * Kimlik: localStorage rc_sy_token — isletme panelinin rc_access_token'indan ayri.
  */
-import { apiIstemcisi, yazSonuc, mesaj, el } from '/js/lib/v2-ortak.js?v=2';
-import { apiForm, apiBlob, blobIndir } from '/js/lib/v2-dosya.js?v=3';
+import { apiIstemcisi, yazSonuc, mesaj, el } from '/js/lib/v2-ortak.js?v=7';
+import { apiForm, apiBlob, blobIndir } from '/js/lib/v2-dosya.js?v=7';
 
 const KOK = '/api/v2/sistem';
 const TOKEN = 'rc_sy_token';

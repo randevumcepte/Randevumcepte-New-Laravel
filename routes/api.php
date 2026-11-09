@@ -23,7 +23,7 @@ use App\Http\Controllers\Api\V2\SoftphoneController;
 use App\Http\Controllers\Api\V2\SatisKalemController;
 use App\Http\Controllers\Api\V2\TahsilatController;
 use App\Http\Controllers\Api\V2\TelefonController;
-use Illuminate\Support\Facades\DB;
+use App\Providers\AppServiceProvider;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,31 +43,19 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('v2')->group(function () {
+// Genel istek siniri (IP + kimlik basina dakikada 300, eski Kernel ile ayni) TUM v2 uclarinda; uclarin kendi siki
+// sinirlari (oturum, vitrin, kayit...) ayrica gecerli. Limiter: AppServiceProvider::GENEL_SINIR.
+Route::prefix('v2')->middleware('throttle:'.AppServiceProvider::GENEL_SINIR)->group(function () {
 
     /*
-     | PUBLIC — kisisel veri ICERMEZ (yalnizca servis + DB sagligi).
+     | PUBLIC — kisisel veri ICERMEZ.
      */
     // Imzali bos form PDF linki (kisisel veri yok).
     require __DIR__.'/v2/form-acik.php';
 
-    Route::get('/health', function () {
-        $veritabani = 'down';
-
-        try {
-            DB::connection()->getPdo();
-            $veritabani = 'up';
-        } catch (\Throwable $e) {
-            $veritabani = 'error';
-        }
-
-        return response()->json([
-            'servis'     => 'randevumcepte-v2',
-            'durum'      => $veritabani === 'up' ? 'ok' : 'degraded',
-            'veritabani' => $veritabani,
-            'surum'      => 'v2',
-        ], $veritabani === 'up' ? 200 : 503);
-    });
+    // Hafif canlilik ucu: kimliksiz, veritabani ACMAZ (kimliksiz istekle DB baglantisi tuketilmesin).
+    // Veritabani dahil derin saglik kimlikle: GET /api/v2/sistem/sistem-saglik.
+    Route::get('/health', fn () => response()->json(['servis' => 'randevumcepte-v2', 'durum' => 'ok', 'surum' => 'v2']));
 
     // Telefon ulke kodlari + bicimleri (web + Flutter tek kaynak; kisisel veri yok).
     Route::get('/telefon/ulkeler', [TelefonController::class, 'ulkeler']);

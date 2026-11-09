@@ -1,5 +1,5 @@
 /** Toast + onay kutusu — TEK KAYNAK (isletme paneli ve sistem yonetimi kabuklari paylasir). Stil: panel.css .rc-toast / .rc-onay. */
-import { esc } from '/js/lib/v2-ortak.js?v=2';
+import { esc } from '/js/lib/v2-ortak.js?v=7';
 
 function toastKap() {
   let k = document.getElementById('rcToastKap');

@@ -3,7 +3,7 @@
  * Gün Sonu) TEK bileşen. Seçenek listesi API'den gelir (/rapor/secenekler → donemler);
  * tarih aralığı SUNUCUDA çözülür (RaporDonemi) — burada tarih hesabı yok.
  * Stil: css/rapor-v2.css .rp-donem*. Import yolu her yerde AYNI olmalı:
- *   import { donemSecici } from '/js/lib/v2-donem.js?v=1';
+ *   import { donemSecici } from '/js/lib/v2-donem.js?v=7';
  *
  *   const d = donemSecici(el('#kap'), { donemler, varsayilan: 'ay', onDegis: () => yukle() });
  *   d.params()          // { donem, baslangic?, bitis? } → API isteğine eklenir
@@ -11,7 +11,7 @@
  *
  * Rapor ekranlarının ortak biçimleri de buradadır: trTarih (Y-m-d[ H:i] → gg.aa.yyyy), sayi (tr tamsayı).
  */
-import { el, esc } from '/js/lib/v2-ortak.js?v=2';
+import { el, esc } from '/js/lib/v2-ortak.js?v=7';
 
 export const trTarih = (ymd) => (ymd ? String(ymd).slice(0, 10).split('-').reverse().join('.') : '');
 export const sayi = (n) => (Number(n) || 0).toLocaleString('tr-TR');
