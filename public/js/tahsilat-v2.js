@@ -45,6 +45,9 @@ const yontemAd = (id) => YONTEM[parseInt(id, 10)] || 'Diğer';
 const kok = document.getElementById('rc-tahsilat');
 let adisyonId = parseInt(kok.dataset.adisyon, 10) || 0;   // 0 = Yeni Satış modu
 let yeniMusteri = null;                                    // Yeni Satış: seçilen müşteri
+// Yeni Satış ekranı (eski /yenitahsilat): adisyon ilk kalemle arka planda açılır; başlık,
+// adres ve yerleşim DEĞİŞMEZ — kalemler peş peşe eklenir, tahsilat aynı ekranda alınır.
+const yeniMod = !adisyonId;
 let adisyon = null;
 let katalog = null;
 let salonId = null;
@@ -114,6 +117,7 @@ function studyoOdemeGoster() {
 }
 
 async function studyoOdeme(alindi) {
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
   // Geri almada (tahsilat silinir) SMS ayarı 23: hesap sahibi onayı.
   const r = await kodluIstek('PATCH', `/adisyon/${adisyonId}/odeme`, { body: { alindi } });
   if (!r) return;
@@ -124,6 +128,7 @@ async function studyoOdeme(alindi) {
 }
 
 async function studyoOdemeTarihi() {
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
   const { ok, kod, govde } = await api('PATCH', `/adisyon/${adisyonId}/odeme-tarihi`, { body: { tarih: tarihDeger('#t-studyo-tarih') || null } });
   if (!ok) { mesaj(`Kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Ödeme tarihi kaydedildi.', 'ok');
@@ -143,7 +148,7 @@ async function satisTarihiKaydet() {
 
 function basligiGoster() {
   const a = adisyon.adisyon;
-  el('#t-musteri').textContent = a.musteri_ad || 'Müşteri';
+  if (!yeniMod) el('#t-musteri').textContent = a.musteri_ad || 'Müşteri'; // yeni satışta müşteri kartta
   el('#t-adisyon-no').textContent = '#' + adisyonId;
   tarihAyarla('#t-satis-tarih', a.tarih ? String(a.tarih).slice(0, 10) : '');
   // Stüdyoda fiyat pratikte 0: kapalılık kalandan değil, odendi bayrağından.
@@ -466,6 +471,11 @@ function yeniSatisBaslat() {
   el('#t-baslik-h1').textContent = 'Yeni Satış';
   el('#t-adisyon-no').textContent = '';
   document.querySelectorAll('.t-yeni-gizle').forEach((x) => { x.hidden = true; });
+  // Adisyon açılana dek ödeme özeti / tahsilat / alacak boş görünür (eski formda da hep görünürdü).
+  adisyon = { adisyon: {}, hesap: { brut: 0, indirim: 0, net: 0, odenen: 0, kalan: 0, durum: 'acik' }, hizmetler: [], urunler: [], paketler: [], tahsilatlar: [], alacaklar: [] };
+  ozetGoster();
+  gecmisGoster();
+  alacakGoster();
   el('#t-kalemler').innerHTML = '<div class="t-yeni-ipucu"><i class="bi bi-person-check"></i> Önce müşteri seçin, ardından hizmet / ürün / paket ekleyin.</div>';
   yeniButonlar(false);
   katalogYukle();
@@ -481,7 +491,7 @@ function yeniButonlar(acik) {
   if (!acik) el('#t-ekle-panel').hidden = true;
 }
 
-// İlk kalem: adisyonu açar (POST /adisyon), sonra ekran normal Satış & Tahsilat akışına geçer.
+// İlk kalem: adisyonu arka planda açar (POST /adisyon). Sayfa/başlık değişmez; müşteri kilitlenir.
 async function yeniSatisAc(kalem) {
   if (!yeniMusteri) { mesaj('Önce müşteri seçin', 'hata'); return; }
   const { ok, kod, govde } = await api('POST', '/adisyon', {
@@ -489,12 +499,10 @@ async function yeniSatisAc(kalem) {
   });
   if (!ok || !govde?.basarili) { mesaj(`Satış açılamadı (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   adisyonId = govde.veri.adisyon_id;
-  history.replaceState(null, '', `/v2/tahsilat/${adisyonId}?sube=${salonId}`);
-  el('#t-musteri-sec').innerHTML = '';
-  el('#t-baslik-h1').textContent = 'Satış & Tahsilat Düzenleme';
+  musteriSecici(el('#t-musteri-sec'), { salonId, yol: '/musteri/ara', baslangic: yeniMusteri, sabit: true });
   document.querySelectorAll('.t-yeni-gizle').forEach((x) => { x.hidden = false; });
   el('#t-ekle-panel').hidden = true;
-  mesaj('Satış açıldı.', 'ok');
+  mesaj('Kalem eklendi.', 'ok');
   await adisyonYukle();
 }
 
@@ -552,6 +560,7 @@ function girdi(dryRun) {
 
 // Ödeme panelindeki ana buton: düzenleme modundaysa güncelle, değilse önizle.
 function odemeButon() {
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
   if (duzenlenenTahsilat) tahsilatGuncelleKaydet();
   else onizle();
 }
@@ -635,6 +644,7 @@ async function tahsilatSil(id) {
 
 /* ───────────── Alacak (vade): yeni / düzenle / iptal ───────────── */
 function alacakFormAc() {
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
   const f = el('#t-alacak-form');
   if (!f.hidden) { alacakFormKapat(); return; }
   duzenlenenAlacak = null;
@@ -700,7 +710,7 @@ function iskelet() {
       <span class="t-durum t-yeni-gizle" id="t-durum"></span>
     </div>
 
-    <div class="t-ozet-serit t-yeni-gizle" id="t-ozet-serit"></div>
+    <div class="t-ozet-serit" id="t-ozet-serit"></div>
 
     <div class="t-kolon">
       <!-- SOL: kalemler + ekleme + tahsilatlar + alacaklar -->
@@ -731,19 +741,19 @@ function iskelet() {
           <div class="t-kart-govde" id="t-kalemler"></div>
         </section>
 
-        <section class="t-kart t-gecmis t-yeni-gizle">
+        <section class="t-kart t-gecmis">
           <div class="t-kart-bas"><h3>Yapılan Tahsilatlar</h3></div>
           <div class="t-kart-govde" id="t-gecmis"></div>
         </section>
 
-        <section class="t-kart t-alacaklar t-yeni-gizle">
+        <section class="t-kart t-alacaklar">
           <div class="t-kart-bas"><h3>Planlanan Alacaklar</h3></div>
           <div class="t-kart-govde" id="t-alacaklar"></div>
         </section>
       </div>
 
       <!-- SAĞ: ödeme / özet -->
-      <aside class="t-kart t-sag t-yeni-gizle">
+      <aside class="t-kart t-sag">
         <div class="t-odeme-bas">Ödeme</div>
         <div class="t-studyo-panel">
           <div id="t-studyo-rozet"></div>
