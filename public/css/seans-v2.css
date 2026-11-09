@@ -95,10 +95,11 @@
 .st-yil-durum { margin: 0; color: #16a34a; font-size: 12px; font-weight: 600; text-align: center; }
 .st-yil-durum.st-doldu { color: #dc2626; }
 .st-yil-durum.st-bekliyor { color: #6b7280; }
-/* Butonlar sığmazsa alt alta iner (kart genişliğinden bağımsız taşmaz); Cihaz Bilgileri tam satır. */
-.st-yil-btn { display: flex; flex-wrap: wrap; gap: 8px; }
-.st-yil-btn .rc-btn { flex: 1 1 120px; min-width: 0; justify-content: center; white-space: nowrap; padding: 9px 10px; font-size: 12.5px; }
-.st-yil-btn .st-cihaz-btn { flex-basis: 100%; }
+/* Butonlar 2 eşit kolon; tek kalan son buton (ör. Cihaz Bilgileri) tam satır → kenarlar hep hizalı,
+   dar kartta da taşmaz (metin gerekirse kendi kutusunda kaydırılır). */
+.st-yil-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.st-yil-btn .rc-btn { width: 100%; min-width: 0; justify-content: center; text-align: center; white-space: normal; line-height: 1.2; padding: 9px 8px; font-size: 12.5px; }
+.st-yil-btn .rc-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .st-mini-3 { grid-template-columns: repeat(3, 1fr); }
 .st-yil-dokum { max-height: 420px; overflow-y: auto; }
 .st-yil-dokum table { width: 100%; border-collapse: collapse; font-size: 13px; }
