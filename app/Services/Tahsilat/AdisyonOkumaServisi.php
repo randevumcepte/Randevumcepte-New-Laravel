@@ -117,7 +117,7 @@ class AdisyonOkumaServisi
                 'islem_saati'   => $h->islem_saati,
                 'seans_sayisi'  => $h->seans_sayisi,
                 'seansli'       => $h->seansliMi(),                // paket satışı sayılır
-                'randevudan'    => $h->randevu_id !== null,        // randevu kalemi: seans girilse de paket sayılmaz
+                'randevudan'    => $h->randevu_id !== null,        // randevu kalemi: seans satırdan değişmez
             ])->values(),
             'urunler' => $urunler->map(fn ($u) => [
                 'id'             => (int) $u->id,
