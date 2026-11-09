@@ -13,7 +13,8 @@
  *   - Pakette hizmet çıkar / aramalı ekle, bölge başına seans, sınırsız rozeti ve süre
  *     (ortak bileşen lib/v2-paket-satis.js; satışa özel kopya sunucuda).
  *   - Tahsil Et: Önizle (dry-run) → Onayla; tahsilat DÜZENLE / İADE.
- *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL.
+ *   - Alacak (vade) OLUŞTUR / DÜZENLE / İPTAL; alacak satırında TAHSİL ET → alacak ödeme
+ *     panelinde kalem olarak listelenir, tahsilat kaydında ödenen kadar kapanır/azalır (sunucu).
  *   - Tarihler flatpickr (TR) ile seçilir.
  *   - YENİ SATIŞ modu (/v2/yeni-satis, data-adisyon=0): önce müşteri seçilir; ilk kalem
  *     POST /adisyon ile adisyonu açar, ekran aynı sayfada normal akışa geçer (eski
@@ -87,6 +88,7 @@ async function adisyonYukle() {
   gecmisGoster();
   alacakGoster();
   studyoOdemeGoster();
+  if (tahsilAlacaklar.size) tahsilAlacakCiz();
   // Tahsilat Tutarı güncel Kalan'ı takip eder (elle yazılınca / düzenleme modunda ezme).
   const h = adisyon.hesap;
   if (!tutarManuel && !duzenlenenTahsilat) el('#t-tutar').value = h.kalan > 0 ? h.kalan : '';
@@ -370,10 +372,12 @@ function alacakGoster() {
           <td>${esc(x.aciklama || '')}</td>
           <td class="rc-sag" style="font-weight:700">${TL(x.tutar)}</td>
           <td class="rc-sag t-islem">
+            <button class="t-tahsil" data-alt="${x.id}" title="Tahsil Et"><i class="bi bi-cash-coin"></i></button>
             <button class="t-duzen" data-ald="${x.id}" title="Düzenle"><i class="bi bi-pencil"></i></button>
             <button class="t-sil"   data-al="${x.id}"  title="İptal"><i class="bi bi-trash"></i></button>
           </td></tr>`,
     cizildi: () => {
+      document.querySelectorAll('#t-alacaklar .t-tahsil[data-alt]').forEach((b) => (b.onclick = () => alacakTahsilEkle(parseInt(b.dataset.alt, 10))));
       document.querySelectorAll('#t-alacaklar .t-duzen[data-ald]').forEach((b) => (b.onclick = () => alacakDuzenle(parseInt(b.dataset.ald, 10))));
       document.querySelectorAll('#t-alacaklar .t-sil[data-al]').forEach((b) => (b.onclick = () => alacakSil(b.dataset.al)));
     },
@@ -546,8 +550,38 @@ async function kalemSil(tip, kalemId) {
 }
 
 /* ───────────── Tahsilat: yeni / düzenle / iade ───────────── */
+/* ───────────── Alacağa karşılık tahsilat (eski: alacak satırında "Tahsil Et") ───────────── */
+const tahsilAlacaklar = new Map(); // alacak_id → alacak
+
+function alacakTahsilEkle(id) {
+  const a = (adisyon.alacaklar || []).find((x) => x.id === id);
+  if (!a || duzenlenenTahsilat) return;
+  tahsilAlacaklar.set(id, a);
+  tahsilAlacakCiz();
+  el('#t-tutar').focus();
+}
+
+// Ödeme panelinde "Tahsil edilecek alacaklar" kalemleri; Tahsilat Tutarı = seçilenlerin toplamı.
+function tahsilAlacakCiz() {
+  const kap = el('#t-tahsil-alacak');
+  // Silinmiş/kapanmış alacak seçimden düşer.
+  for (const id of [...tahsilAlacaklar.keys()]) if (!(adisyon.alacaklar || []).some((x) => x.id === id)) tahsilAlacaklar.delete(id);
+  if (!tahsilAlacaklar.size) { kap.innerHTML = ''; kap.hidden = true; return; }
+  let toplam = 0;
+  kap.innerHTML = '<div class="t-ta-baslik">Tahsil edilecek alacaklar</div>' + [...tahsilAlacaklar.values()].map((a) => {
+    toplam += Number(a.tutar) || 0;
+    return `<div class="t-ta-kalem"><i class="bi bi-wallet2"></i><span>${esc(a.planlanan_odeme_tarihi || '')}${a.aciklama ? ' · ' + esc(a.aciklama) : ''}</span>`
+      + `<b>${TL(a.tutar)}</b><button type="button" data-cikar="${a.id}" title="Çıkar" aria-label="Çıkar"><i class="bi bi-x-lg"></i></button></div>`;
+  }).join('');
+  kap.hidden = false;
+  kap.querySelectorAll('[data-cikar]').forEach((b) => (b.onclick = () => { tahsilAlacaklar.delete(parseInt(b.dataset.cikar, 10)); tahsilAlacakCiz(); }));
+  tutarManuel = true;
+  el('#t-tutar').value = Math.round(toplam * 100) / 100;
+}
+
 function girdi(dryRun) {
   return {
+    alacak_id: [...tahsilAlacaklar.keys()],
     salon_id: salonId, adisyon_id: adisyonId,
     tutar: parseFloat(el('#t-tutar').value || '0'),
     indirim: parseFloat(el('#t-indirim').value || '0'),
@@ -591,12 +625,15 @@ async function kaydet() {
   mesaj('Tahsilat kaydedildi' + (govde.veri?.replay ? ' (zaten işlenmişti)' : '') + '. Tahsilat #' + (govde.veri?.tahsilat_id ?? '-'), 'ok');
   el('#t-plan').innerHTML = '';
   tutarManuel = false;
+  tahsilAlacaklar.clear();
   await adisyonYukle();
+  tahsilAlacakCiz();
 }
 
 function tahsilatDuzenle(id) {
   const o = (adisyon.tahsilatlar || []).find((x) => x.id === id);
   if (!o) return;
+  tahsilAlacaklar.clear(); tahsilAlacakCiz(); // düzenleme yeni alacak kapatmaz
   duzenlenenTahsilat = id;
   tutarManuel = true;
   el('#t-tutar').value = o.tutar;
@@ -767,6 +804,7 @@ function iskelet() {
         <div class="t-alacak"><span>Kalan Alacak (₺)</span><b id="t-kalan-buyuk">—</b></div>
         <div class="t-ozet-detay" id="t-ozet-detay"></div>
         <div class="t-form">
+          <div id="t-tahsil-alacak" class="t-tahsil-alacak" hidden></div>
           <div class="grid">
             <div><label>Tahsilat Tutarı (₺)</label><input id="t-tutar" type="number" step="0.01" min="0"></div>
             <div><label>İndirim (₺)</label><input id="t-indirim" type="number" step="0.01" min="0" value="0"></div>

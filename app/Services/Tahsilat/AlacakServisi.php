@@ -2,6 +2,7 @@
 
 namespace App\Services\Tahsilat;
 
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Exceptions\BulunamadiException;
 use App\Models\Adisyonlar;
 use App\Models\Alacaklar;
@@ -32,6 +33,46 @@ class AlacakServisi
             ->where('alacaklar.tutar', '>', 0)
             ->whereRaw('NOT EXISTS (SELECT 1 FROM taksit_vadeleri tv WHERE tv.id = alacaklar.taksit_vade_id AND tv.odendi = 1)')
             ->whereRaw('NOT EXISTS (SELECT 1 FROM senet_vadeleri sv WHERE sv.id = alacaklar.senet_vade_id AND sv.odendi = 1)');
+    }
+
+    /**
+     * Tahsilat alacağa karşılık alındı (eski: alacak satırında "Tahsil Et" → kalem olarak tahsilat).
+     * Seçilen planlanan alacaklar vadesi en yakından başlayarak ödenen tutar kadar düşülür:
+     * tamamı karşılanan silinir, kısmen karşılanan kalan tutara iner. Yalnız bu adisyonun
+     * vadesiz (taksit/senet vadesine bağlı olmayan) alacakları — vade ödemesi vade modunda kapanır.
+     * Çağıran tahsilat transaction'ı içinde çalışır.
+     *
+     * @param  array<int>  $alacakIdleri
+     * @return array{kapanan:array<int>, azalan:array<int,float>}
+     */
+    public function tahsilatlaKapat(int $adisyonId, array $alacakIdleri, float $odenenTl): array
+    {
+        $sonuc = ['kapanan' => [], 'azalan' => []];
+        $kalanKurus = AdisyonHesap::tlToKurus($odenenTl);
+        $alacaklar = Alacaklar::where('adisyon_id', $adisyonId)
+            ->whereIn('id', array_map('intval', $alacakIdleri))
+            ->whereNull('taksit_vade_id')->whereNull('senet_vade_id')
+            ->orderBy('planlanan_odeme_tarihi')->orderBy('id')
+            ->lockForUpdate()->get();
+
+        foreach ($alacaklar as $a) {
+            if ($kalanKurus <= 0) {
+                break;
+            }
+            $tutarKurus = AdisyonHesap::tlToKurus($a->tutar);
+            if ($kalanKurus >= $tutarKurus) {
+                $a->delete();
+                $sonuc['kapanan'][] = (int) $a->id;
+                $kalanKurus -= $tutarKurus;
+            } else {
+                $a->tutar = AdisyonHesap::kurusToTl($tutarKurus - $kalanKurus);
+                $a->save();
+                $sonuc['azalan'][(int) $a->id] = (float) $a->tutar;
+                $kalanKurus = 0;
+            }
+        }
+
+        return $sonuc;
     }
 
     /** Bu adisyon için planlanan alacakları listele (minimum alan). */

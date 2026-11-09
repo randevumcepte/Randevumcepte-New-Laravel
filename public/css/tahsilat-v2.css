@@ -173,3 +173,15 @@
 .t-satis-tarih[hidden] { display: none; }
 .t-satis-tarih input { width: 120px; padding: 5px 9px; border: 1px solid #dcdce8; border-radius: 8px; font: inherit; color: #2a2140; background: #fff; }
 @media (prefers-color-scheme: dark) { .t-satis-tarih input { background: #1b1b26; border-color: #34344c; color: #ededf5; } }
+
+/* Alacak satırı "Tahsil Et" + ödeme panelinde tahsil edilecek alacak kalemleri */
+.t-tahsil { background: #e4f6ec; color: #1e7a45; border: 0; border-radius: 9px; width: 30px; height: 30px; cursor: pointer; margin-right: 6px; }
+.t-tahsil:hover { background: #d3efdf; }
+.t-tahsil-alacak { border: 1px dashed #c9ead7; background: #f6fcf8; border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
+.t-tahsil-alacak[hidden] { display: none; }
+.t-ta-baslik { font-size: 12px; font-weight: 700; color: #1e7a45; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+.t-ta-kalem { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 4px 0; }
+.t-ta-kalem span { flex: 1; color: #4b4b5c; }
+.t-ta-kalem button { border: 0; background: transparent; color: #9a9aac; cursor: pointer; padding: 2px 4px; }
+.t-ta-kalem button:hover { color: #d03b3b; }
+@media (prefers-color-scheme: dark) { .t-tahsil-alacak { background: #16261d; border-color: #24533a; } .t-ta-kalem span { color: #cfcfe0; } }

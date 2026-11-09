@@ -40,6 +40,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class TahsilatYazServisi
 {
+    public function __construct(private AlacakServisi $alacak) {}
+
     private function vadeVar(array $g): bool
     {
         return ! empty($g['taksit_vade_id']) || ! empty($g['senet_vade_id']);
@@ -322,6 +324,12 @@ class TahsilatYazServisi
                     $this->komisyonYaz($plan, $adisyonId, $adisyon, $salonId, $olusturanId, $t->id);
                 }
 
+                // 4) Alacağa karşılık tahsilat (alacak satırında "Tahsil Et"): seçilen planlanan
+                //    alacaklar ödenen kadar kapanır / azalır — aynı transaction.
+                $alacakSonuc = ! empty($g['alacak_id'])
+                    ? $this->alacak->tahsilatlaKapat($adisyonId, (array) $g['alacak_id'], (float) $plan['parent_tahsilat']['tutar'])
+                    : null;
+
                 $yanit = [
                     'tahsilat_id' => (int) $t->id,
                     'adisyon_id'  => $adisyonId,
@@ -333,6 +341,7 @@ class TahsilatYazServisi
                         'vade'     => count($plan['vade_guncellemeleri']),
                         'indirim'  => count($plan['indirim_uygulamalari']),
                     ],
+                    'alacak'  => $alacakSonuc,
                     'replay' => false,
                 ];
 
