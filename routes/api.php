@@ -127,6 +127,7 @@ Route::prefix('v2')->middleware('throttle:'.AppServiceProvider::GENEL_SINIR)->gr
         Route::delete('/adisyon/{id}', [SatisController::class, 'sil'])->whereNumber('id');
         Route::patch('/adisyon/{id}/fatura', [SatisController::class, 'fatura'])->whereNumber('id');
         Route::patch('/adisyon/{id}/odeme', [SatisController::class, 'odeme'])->whereNumber('id');
+        Route::patch('/adisyon/{id}/tarih', [SatisController::class, 'tarih'])->whereNumber('id');
         Route::patch('/adisyon/{id}/odeme-tarihi', [SatisController::class, 'odemeTarihi'])->whereNumber('id');
         Route::get('/katalog', [KatalogController::class, 'index']);
         // YAZMA — su an yalnizca DRY-RUN (controller gercek yazmayi reddeder).

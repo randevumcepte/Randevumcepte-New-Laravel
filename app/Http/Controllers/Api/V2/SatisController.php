@@ -285,10 +285,35 @@ class SatisController extends V2Controller
         return ApiCevap::basarili($veri);
     }
 
+    /**
+     * PATCH /api/v2/adisyon/{id}/tarih  body: {tarih: Y-m-d} — satış tarihi (eski adisyonTarihGuncelle).
+     * Tahsilatların ödeme tarihi de aynı güne kayar (kasa raporu ile hizalı). Rol 5 + tum_satis_gor yok → 403.
+     */
+    public function tarih(Request $request, int $id)
+    {
+        $user = $this->kullanici();
+        $this->yazmaAcikMi();
+        $request->validate(['tarih' => ['required', 'date_format:Y-m-d']]);
+
+        $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Satış bulunamadı');
+        $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
+        if ($this->satisKisitli($user->id, $salonId)) {
+            throw new YetkisizErisimException('Yetkisiz işlem');
+        }
+
+        return ApiCevap::basarili($this->islem->satisTarihiGuncelle($id, $salonId, (string) $request->input('tarih')), 'Satış tarihi güncellendi.');
+    }
+
+    /** Eski personelmi($r, 'satis.tum_satis_gor'): salonda Personel rolü (5) VAR ve tum_satis_gor YOK. */
+    private function satisKisitli(int $yetkiliId, int $salonId): bool
+    {
+        return in_array(5, $this->kapsam->salonRolleri($yetkiliId, $salonId), true)
+            && ! $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'satis.tum_satis_gor');
+    }
+
     private function mobilFiltreKullanicisi(int $yetkiliId, int $salonId, int $istenen, bool $musteriVar): ?int
     {
-        $sinirli = in_array(5, $this->kapsam->salonRolleri($yetkiliId, $salonId), true)
-            && ! $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'satis.tum_satis_gor');
+        $sinirli = $this->satisKisitli($yetkiliId, $salonId);
         if (! $sinirli) {
             return $istenen ?: null;
         }

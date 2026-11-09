@@ -55,7 +55,7 @@ let duzenlenenAlacak = null;    // düzenlenen alacak id (null = yeni alacak)
 /* ───────────── Datepicker (flatpickr, TR) ───────────── */
 function datepickerBagla() {
   if (!window.flatpickr) return;
-  ['#t-tarih', '#t-alacak-tarih', '#t-studyo-tarih'].forEach((sel) => {
+  ['#t-tarih', '#t-alacak-tarih', '#t-studyo-tarih', '#t-satis-tarih'].forEach((sel) => {
     const i = el(sel);
     if (i && !i._fp) i._fp = flatpickr(i, { dateFormat: 'Y-m-d', locale: 'tr', allowInput: true, disableMobile: true });
   });
@@ -130,10 +130,22 @@ async function studyoOdemeTarihi() {
   await adisyonYukle();
 }
 
+// Satış tarihi (eski adisyon-tarih-guncelle): sunucu tahsilat ödeme tarihlerini de kaydırır.
+async function satisTarihiKaydet() {
+  const yeni = tarihDeger('#t-satis-tarih');
+  const eski = adisyon?.adisyon?.tarih ? String(adisyon.adisyon.tarih).slice(0, 10) : '';
+  if (!yeni || yeni === eski) return;
+  const { ok, kod, govde } = await api('PATCH', `/adisyon/${adisyonId}/tarih`, { body: { tarih: yeni } });
+  if (ok) mesaj('Satış tarihi güncellendi.', 'ok');
+  else mesaj(`Satış tarihi güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
+  await adisyonYukle(); // tahsilat tarihleri de değişti; hata durumunda eski tarihe döner
+}
+
 function basligiGoster() {
   const a = adisyon.adisyon;
   el('#t-musteri').textContent = a.musteri_ad || 'Müşteri';
-  el('#t-adisyon-no').textContent = '#' + adisyonId + (a.tarih ? ' · ' + a.tarih : '');
+  el('#t-adisyon-no').textContent = '#' + adisyonId;
+  tarihAyarla('#t-satis-tarih', a.tarih ? String(a.tarih).slice(0, 10) : '');
   // Stüdyoda fiyat pratikte 0: kapalılık kalandan değil, odendi bayrağından.
   const kapali = studyo() ? a.odendi === 1 : adisyon.hesap.durum === 'kapali';
   const d = el('#t-durum');
@@ -680,7 +692,9 @@ function iskelet() {
     <div class="t-baslik">
       <div>
         <h1 id="t-baslik-h1">Satış &amp; Tahsilat Düzenleme</h1>
-        <div class="t-alt"><b id="t-musteri"></b> <span id="t-adisyon-no"></span></div>
+        <div class="t-alt"><b id="t-musteri"></b> <span id="t-adisyon-no"></span>
+          <label class="t-satis-tarih t-yeni-gizle"><i class="bi bi-calendar3"></i> Satış Tarihi
+            <input id="t-satis-tarih" type="text" class="t-date" placeholder="YYYY-AA-GG" autocomplete="off"></label></div>
         <div id="t-musteri-sec" class="t-musteri-sec"></div>
       </div>
       <span class="t-durum t-yeni-gizle" id="t-durum"></span>
@@ -772,6 +786,7 @@ function iskelet() {
     </div>`;
 
   datepickerBagla();
+  el('#t-satis-tarih').onchange = satisTarihiKaydet;
   tarihAyarla('#t-tarih', new Date().toISOString().slice(0, 10));
   el('#t-tutar').addEventListener('input', () => { if (!duzenlenenTahsilat) tutarManuel = true; });
   el('#t-onizle').onclick = odemeButon;

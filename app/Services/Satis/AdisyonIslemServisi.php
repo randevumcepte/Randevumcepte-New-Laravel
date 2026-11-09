@@ -124,6 +124,21 @@ class AdisyonIslemServisi
      *
      * @param array{yetkili_id:int,olusturan_id:?int} $kim
      */
+    /**
+     * Satış tarihi (eski adisyonTarihGuncelle): adisyonlar.tarih + bu satışın tahsilatlarının
+     * odeme_tarihi aynı güne (kasa raporu ödeme tarihinden okur; ikisi hizalı kalsın).
+     */
+    public function satisTarihiGuncelle(int $adisyonId, int $salonId, string $tarih): array
+    {
+        $tarih = date('Y-m-d', strtotime($tarih));
+        DB::transaction(function () use ($adisyonId, $salonId, $tarih) {
+            DB::table('adisyonlar')->where('id', $adisyonId)->where('salon_id', $salonId)->update(['tarih' => $tarih]);
+            DB::table('tahsilatlar')->where('adisyon_id', $adisyonId)->where('salon_id', $salonId)->update(['odeme_tarihi' => $tarih]);
+        });
+
+        return ['adisyon_id' => $adisyonId, 'tarih' => $tarih];
+    }
+
     public function studyoOdemeTarihi(int $adisyonId, int $salonId, ?string $tarih, array $kim): array
     {
         $tarih = date('Y-m-d H:i:s', $tarih ? strtotime($tarih) : time());

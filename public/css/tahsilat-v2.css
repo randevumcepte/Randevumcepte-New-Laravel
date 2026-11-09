@@ -167,3 +167,9 @@
 .t-studyo #t-kalemler th:nth-child(4), .t-studyo #t-kalemler td:nth-child(4),
 .t-studyo #t-kalemler th:nth-child(5), .t-studyo #t-kalemler td:nth-child(5),
 .t-studyo #t-kalemler th:nth-child(6), .t-studyo #t-kalemler td:nth-child(6) { display: none !important; }
+
+/* Başlıkta düzenlenebilir satış tarihi */
+.t-satis-tarih { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; font-size: 13px; color: #8a8fae; font-weight: 600; }
+.t-satis-tarih[hidden] { display: none; }
+.t-satis-tarih input { width: 120px; padding: 5px 9px; border: 1px solid #dcdce8; border-radius: 8px; font: inherit; color: #2a2140; background: #fff; }
+@media (prefers-color-scheme: dark) { .t-satis-tarih input { background: #1b1b26; border-color: #34344c; color: #ededf5; } }
