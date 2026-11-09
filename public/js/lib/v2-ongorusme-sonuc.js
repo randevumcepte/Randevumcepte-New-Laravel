@@ -1,7 +1,7 @@
 /**
  * v2 ÖN GÖRÜŞME SONUÇLANDIRMA — TEK KAYNAK. Ön Görüşmeler ekranı ve randevu çekmecesi (takvim,
  * randevular, müşteri detayı) aynı "Satış Yapıldı" / "Satış Yapılmadı" pencerelerini açar.
- * Import yolu her yerde AYNI olmalı:  import { satisYapildiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=1';
+ * Import yolu her yerde AYNI olmalı:  import { satisYapildiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=2';
  *
  *   satisYapildiModal({ salonId, fv, kayit })            → satış açılır, tahsilat ekranına gidilir
  *   satisYapilmadiModal({ salonId, kayit, onBitti })     → sebep notu zorunlu
@@ -33,7 +33,7 @@ export async function satisYapildiModal({ salonId, fv = null, kayit: k }) {
   }[n.tur];
   const govde = `
     <div class="og-satis-ozet"><span class="og-neden-tur">${esc(n.etiket)}</span> <b>${esc(n.ad || '')}</b></div>
-    <div class="rc-form-izgara">
+    <div class="rc-form-izgara og-satis-izgara">
       ${ozel()}
       ${alan('Satış Tarihi', `<input id="sTarih" value="${tarihStr(new Date())}">`)}
       ${alan('Satıcı', `<select id="sPersonel">${secenekler(fv.personeller, k.personel_id, 'Görüşmeyi yapan')}</select>`)}

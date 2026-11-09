@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=9';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=10';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -27,7 +27,7 @@
 import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=7';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
-import { satisYapildiModal, satisYapilmadiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=1';
+import { satisYapildiModal, satisYapilmadiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=2';
 
 export const normalTR = (x) => String(x ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 export const saatStr = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
