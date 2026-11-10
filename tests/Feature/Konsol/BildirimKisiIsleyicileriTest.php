@@ -549,6 +549,7 @@ class BildirimKisiIsleyicileriTest extends TestCase
 
     public function test_sistem_whatsapp_giden_aliciya_sms_gitmez_gidemeyene_efetech_sms(): void
     {
+        config(['bildirim_kuyrugu.sistem_sms.apikey' => 'test-anahtar']); // anahtarsiz talep sessizce kaybolmasin diye zorunlu
         $this->sistemAyari(['numara' => '05321234567,5339998877', 'aktif' => true, 'session_id' => 'sistem-1']);
         $kopru = $this->mock(WhatsappKoprusu::class);
         $kopru->shouldReceive('gonder')->once()->with('sistem-1', '905321234567', 'talep')->andReturn(new KopruCevabi(202));
@@ -632,7 +633,7 @@ class BildirimKisiIsleyicileriTest extends TestCase
         $this->isle('form_link', ['mesajlar' => [$a, $b], 'user_id' => 5]);
     }
 
-    public function test_form_link_tamami_whatsapp_ile_giderse_sms_yok_istisnada_tum_liste_sms(): void
+    public function test_form_link_tamami_whatsapp_ile_giderse_sms_yok_istisnada_yalniz_o_mesaj_sms(): void
     {
         $this->waBagla();
         $a = ['to' => '5321111111', 'message' => 'a'];
@@ -648,7 +649,8 @@ class BildirimKisiIsleyicileriTest extends TestCase
         $wa2->shouldReceive('acilGonder')->with(Mockery::any(), '5321111111', 'a', null)->andReturn(['ok' => true]);
         $wa2->shouldReceive('acilGonder')->with(Mockery::any(), '5322222222', 'b', null)->andThrow(new \RuntimeException('kopuk'));
         $sms2 = $this->sms();
-        $sms2->shouldReceive('gonder2')->once()->with([$a, $b], false, 6, true, self::SALON, false);
+        // WhatsApp'tan giden 'a' SMS olarak tekrar gitmez (mukerrer); yalniz istisna veren 'b' SMS'e duser.
+        $sms2->shouldReceive('gonder2')->once()->with([$b], false, 6, true, self::SALON, false);
         $this->isle('form_link', ['mesajlar' => [$a, $b]]);
     }
 }
