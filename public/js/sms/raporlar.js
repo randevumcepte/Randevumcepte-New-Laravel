@@ -4,7 +4,7 @@
  */
 import { esc, mesaj } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 
 export async function ciz(kap, ctx) {
   let tur = ctx.acilis.rapor_turleri[0]?.kod;

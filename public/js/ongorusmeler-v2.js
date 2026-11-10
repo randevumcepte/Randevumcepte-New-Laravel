@@ -12,7 +12,7 @@
  * uçları kullanır; burada iş kuralı yok. Yazmalar ONGORUSME_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
 import { qp, api, el, esc, mesaj } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { trTarih } from '/js/lib/v2-donem.js?v=7';
 import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=8';

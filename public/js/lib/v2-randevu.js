@@ -25,7 +25,7 @@
  * (`aksiyonlar`), durum rozeti v2-bilesen.css .rc-rdurum (eski dolgulu renkler).
  */
 import { api, el, esc, pad, tarihStr, TL, panel } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
 import { satisYapildiModal, satisYapilmadiModal } from '/js/lib/v2-ongorusme-sonuc.js?v=2';
 

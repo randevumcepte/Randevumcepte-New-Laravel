@@ -15,7 +15,7 @@
  * Görünürlük/izin kararları SUNUCUDAN (`yetkiler`, `ayarlar`); UI yeniden hesaplamaz.
  */
 import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=8';

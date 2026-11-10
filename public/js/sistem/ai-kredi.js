@@ -1,6 +1,6 @@
 /** AI Kredi & Kullanim: donem filtresi, ozet kartlari, kredi yukleme ve alarm, tur/salon/gunluk tablolari. Veri /api/v2/sistem/ai-kredi. */
 import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ekran, syApi, syVeri, syYaz, para, tarih, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { sayi } from '/js/sistem/ortak.js?v=1';
 

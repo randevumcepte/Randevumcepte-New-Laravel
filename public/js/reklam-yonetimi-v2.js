@@ -12,7 +12,7 @@
  * KAMPANYA_V2_YAZMA_AKTIF kapalıyken 409 (toast).
  */
 import { qp, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 import { trTarih, sayi } from '/js/lib/v2-donem.js?v=7';

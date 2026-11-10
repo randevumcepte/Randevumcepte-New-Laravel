@@ -7,7 +7,7 @@
  * /cark/kupon/{id}/kullan | /geri-al. Durum kuralı ve sekme listesi API'de (KuponDurumu).
  */
 import { el, esc, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { kilitle, ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 
 const tarih = (s) => (s ? String(s).slice(0, 16).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2.$1') : '—');

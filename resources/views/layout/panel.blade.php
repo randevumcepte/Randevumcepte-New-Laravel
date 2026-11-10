@@ -2,15 +2,15 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
     <title>@yield('baslik', 'Panel') — Randevumcepte</title>
 
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=21">
+    <link rel="stylesheet" href="/css/panel.css?v=22">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
-    <link rel="stylesheet" href="/css/v2-bilesen.css?v=3">
+    <link rel="stylesheet" href="/css/v2-bilesen.css?v=4">
     {{-- Sağ alt hatırlatma kartları (eski partials/hatirlatma_popup) --}}
     <link rel="stylesheet" href="/css/hatirlatma-kartlari.css?v=1">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
@@ -38,6 +38,8 @@
             <img class="rc-brand-mini" alt="Randevumcepte" src="{{ $eskiPanel }}/public/profil_resimleri/6adf2d1dbc531.jpg">
             <img class="rc-brand-tam"  alt="Randevumcepte" src="{{ $eskiPanel }}/public/yeni_panel/vendors/images/randevumcepte.png">
         </div>
+        {{-- Çekmece modunda (telefon/tablet) şube seçici burada; header'daki gizlenir. panel-kabuk.js subeCiz doldurur. --}}
+        <div class="rc-sube-menu" id="rcSubeMenu"></div>
         <nav class="rc-menu" id="rcMenu" aria-label="Ana menü">
             <div class="rc-menu-iskele">Menü yükleniyor…</div>
         </nav>
@@ -59,7 +61,7 @@
 
             <div class="rc-sube-sec" id="rcSubeSec" title="İşletme / Şube"></div>
 
-            <div class="rc-lisans" id="rcLisans" title="Kalan lisans süresi" style="display:none">
+            <div class="rc-lisans" id="rcLisans" title="Kalan lisans süresi" hidden>
                 <i class="bi bi-shop"></i>
                 <span class="rc-lisans-ad" id="rcSalonAd"></span>
                 <span class="rc-lisans-gun" id="rcLisansGun"></span>
@@ -105,7 +107,7 @@
 
     {{-- Ortak kabuk JS (menü/header'ı /api/v2/kabuk ile doldurur) --}}
     {{-- Aranabilir select: TUM select'leri (sonradan eklenenler dahil) otomatik donusturur. --}}
-    <script type="module" src="/js/arama-select.js?v=3"></script>
+    <script type="module" src="/js/arama-select.js?v=4"></script>
     {{-- Telefon: TUM input[type=tel]'lere ulke kodu secici + ulkeye gore bicim (sonradan eklenenler dahil). --}}
     <script type="module" src="/js/telefon-ulke.js?v=2"></script>
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
@@ -113,7 +115,7 @@
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
     <script type="module" src="/js/hizli-ekle.js?v=8"></script>
-    <script type="module" src="/js/panel-kabuk.js?v=12"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=13"></script>
     @stack('betik')
 </body>
 </html>

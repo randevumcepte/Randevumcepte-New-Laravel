@@ -1,6 +1,6 @@
 /** Dakika Yonetimi: e-santral musterilerinin giden dakika havuzu. Veri /api/v2/sistem/dakika. */
 import { el, esc, mesaj } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { ekran, syApi, syYaz, para, tarih, tarihSecici } from '/js/lib/v2-sistem.js?v=7';
 

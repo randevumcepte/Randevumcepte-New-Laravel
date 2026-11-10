@@ -111,12 +111,18 @@
   .rc-switch input:checked + .rc-kaydir::before { transform: translateX(20px); }
   .rc-modal-overlay { padding: 0; align-items: flex-end; }
   .rc-modal { max-width: 100%; border-radius: 20px 20px 0 0; animation: rc-modal-yukari .2s ease; }
-  .rc-modal-govde { max-height: 72vh; padding: 18px 16px; }
+  .rc-modal-govde { max-height: 72vh; max-height: 72dvh; padding: 18px 16px; } /* dvh: tarayıcı çubukları açıkken de sığar */
   .rc-modal-bas, .rc-modal-alt { padding: 15px 16px; }
   .rc-modal-alt { position: sticky; bottom: 0; }     /* kaydet butonu hep erişilebilir */
   .rc-modal-alt .rc-btn { flex: 1; padding: 13px 16px; }
 }
 @keyframes rc-modal-yukari { from { transform: translateY(100%); } }
+/* Dokunmatik (tablet dahil): modal gövdesi görünür alana göre; kapat butonu parmak boyunda. */
+@media (pointer: coarse) {
+  .rc-modal-govde { max-height: 70dvh; }
+  .rc-kapat { width: 44px; height: 44px; }
+}
+@media (pointer: coarse) and (max-width: 560px) { .rc-modal-govde { max-height: 72dvh; } }
 
 /* ── Müşteri seçici (lib/v2-secici.js) ── */
 .rc-ms-ara { position: relative; }

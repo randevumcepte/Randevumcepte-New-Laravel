@@ -8,7 +8,7 @@
  */
 
 import { qp, api, el, esc, TL } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=7';
 import { cubuk, halka, cizgi, grafikleriTemizle, RENK } from '/js/lib/v2-grafik.js?v=7';

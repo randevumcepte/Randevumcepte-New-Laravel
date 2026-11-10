@@ -170,7 +170,8 @@ function ac(sel) {
   };
   ciz();
   konumla();
-  ara.focus();
+  // Dokunmatikte otomatik odak klavyeyi açıp listeyi örter; kullanıcı yazmak isterse aramaya dokunur.
+  if (!window.matchMedia('(pointer: coarse)').matches) ara.focus();
 }
 
 function kapat() {

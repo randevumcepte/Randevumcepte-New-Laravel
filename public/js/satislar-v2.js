@@ -12,7 +12,7 @@
  */
 
 import { qp, api, el, esc, mesaj as toast, onay, tarihStr as ts } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
 
 const kok = document.getElementById('rc-satislar');

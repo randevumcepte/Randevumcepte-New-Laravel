@@ -1,6 +1,6 @@
 /** Duyuru paketi siparisleri: odenenler elle yuklenip isaretlenir. */
 import { el, esc, onay } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ekran, para, syApi, syYaz, tarihSaat } from '/js/lib/v2-sistem.js?v=7';
 import { etiketRozet, sayfaBaslik, sayi } from '/js/sistem/ortak.js?v=1';
 

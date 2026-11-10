@@ -3,7 +3,7 @@
  *   import { rozet, etiketRozet, sayfaBaslik, metrik, syTablo, ... } from '/js/sistem/ortak.js?v=1';
  */
 import { esc, el } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { syApi, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { impersonationBaslat } from '/js/lib/v2-sistem-bant.js?v=7';
 

@@ -3,7 +3,7 @@
  * cevap tablosu, cevap detayı, "sitede göster/gizle". Hesap yok — tüm değerler /anket/ozet + /anket/gonderimler.
  */
 import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc } from '/js/lib/v2-modal.js?v=7';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=7';

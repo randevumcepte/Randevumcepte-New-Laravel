@@ -14,5 +14,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/musteriler-v2.js?v=1"></script>
+    <script type="module" src="/js/musteriler-v2.js?v=2"></script>
 @endpush

@@ -26,7 +26,7 @@
 
 import { api, el, esc, TL, mesaj, onay, qp } from '/js/lib/v2-ortak.js?v=7';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { dersPlani } from '/js/lib/v2-ders.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';

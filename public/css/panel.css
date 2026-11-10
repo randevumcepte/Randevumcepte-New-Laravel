@@ -250,24 +250,71 @@ html, body { margin: 0; padding: 0; }
 .rc-onay-tamam { background: var(--rc-mor); color: #fff; }
 .rc-onay-tamam.tehlike { background: var(--rc-kirmizi); }
 
-/* ───────────────── Responsive ───────────────── */
+/* ───────────────── Responsive ─────────────────
+   KIRILIM SÖZLEŞMESİ (tüm v2 CSS'leri bu değerleri kullanır; yeni değer uydurulmaz):
+     telefon   : (max-width: 600px)
+     çekmece   : (max-width: 860px), (hover: none) and (pointer: coarse)
+                 → dar pencere VEYA dokunmatik cihaz (tablet dahil). Fareli bilgisayarda
+                   ikinci koşul hiçbir zaman doğru değildir; masaüstü görünüm değişmez.
+                   JS karşılığı: panel-kabuk.js CEKMECE_SORGU (aynı metin).
+     tablet    : (max-width: 1024px)
+     dokunmatik: (pointer: coarse) → yalnız dokunma alanı/yazı boyu; yerleşim değiştirmez. */
+.rc-lisans[hidden] { display: none; }
 @media (max-width: 1100px) {
   .rc-lisans, .rc-geri span { display: none; }
   .rc-ara { width: 200px; }
 }
-@media (max-width: 860px) {
+@media (max-width: 860px), (hover: none) and (pointer: coarse) {
   .rc-sidebar { transform: translateX(-100%); width: var(--rc-yan-gen); }
   .rc-ac-menu .rc-sidebar { transform: translateX(0); box-shadow: var(--rc-golge-2); }
   .rc-govde { margin-left: 0 !important; }
-  /* Mobil çekmece açıkken tam menü (etiket + bölüm + logo) görünür */
+  /* Çekmece açıkken tam menü (etiket + bölüm + logo) görünür */
   .rc-sidebar .rc-menu-etiket { opacity: 1; width: auto; }
   .rc-sidebar .rc-bolum { opacity: 1; height: auto; padding: 16px 12px 6px; }
   .rc-sidebar .rc-link { justify-content: flex-start; }
   .rc-sidebar .rc-brand-mini { display: none; }
   .rc-sidebar .rc-brand-tam { display: inline; }
+  .rc-sidebar .rc-link .rc-yakinda { display: inline-block; }
+  /* Şube seçici çekmecenin üstünde (header'dakinin kopyası değil; aynı subeCiz iki hedefe çizer) */
+  .rc-sube-menu:not(:empty) { display: block; padding: 12px 12px 0; }
+  .rc-sube-menu select, .rc-sube-menu .rs-btn { width: 100%; max-width: none; }
+}
+.rc-sube-menu { display: none; }
+@media (max-width: 860px) {
   .rc-sube-sec, .rc-kullanici-ad, .rc-kullanici-ok { display: none; }
   .rc-ara { width: 100%; max-width: none; }
   .rc-icerik { padding: 14px; }
+}
+/* Telefon: header sığsın — arama ikona döner (dokununca header boyunca açılır), ayar menüde zaten var */
+@media (max-width: 600px) {
+  .rc-header { gap: 8px; padding: 0 10px; }
+  .rc-header-sag { gap: 6px; }
+  #rcAyarBtn { display: none !important; }
+  .rc-ara { position: static; flex: 0 0 auto; width: 42px; padding: 0; justify-content: center; cursor: pointer; }
+  .rc-ara input { display: none; }
+  .rc-ara.acik { position: absolute; left: 8px; right: 8px; top: 12px; width: auto; z-index: 45;
+    padding: 0 14px; justify-content: flex-start; background: var(--rc-kart);
+    box-shadow: 0 0 0 12px var(--rc-kart), var(--rc-golge-2); } /* kenar: altta kalan header ikonlarını örter */
+  .rc-ara.acik input { display: block; }
+  .rc-ara-sonuc { min-width: 0; }
+  .rc-toast-kap { top: 10px; left: 10px; right: 10px; }
+  .rc-toast { min-width: 0; max-width: none; }
+}
+/* Dokunmatik: parmakla rahat basılabilir hedefler (≥44px). Yerleşim değişmez. */
+@media (pointer: coarse) {
+  .rc-ic-btn, .rc-header-ic, .rc-avatar { width: 44px; height: 44px; }
+  .rc-ara { height: 44px; }
+  .rc-link { padding: 13px 12px; }
+  .rc-acilir-oge { padding: 13px 12px; }
+  .rs-btn { min-height: 44px; }
+  .rs-sec { padding: 12px 10px; }
+  .rc-sayfa { min-width: 44px; height: 44px; }
+}
+/* iOS Safari 16px altı yazı alanına odaklanınca sayfayı büyütür; yalnız iOS dokunmatikte 16px. */
+@supports (-webkit-touch-callout: none) {
+  @media (pointer: coarse) {
+    input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), select, textarea { font-size: 16px !important; }
+  }
 }
 
 /* Sube seciciyi butona cevirince arka plan oku cift gorunmesin. */
@@ -316,7 +363,6 @@ html, body { margin: 0; padding: 0; }
   padding: 2px 7px; border-radius: 999px; background: rgba(92, 0, 142, .08); color: #7b43b8; white-space: nowrap; }
 .rc-link .rc-yakinda { display: none; }
 .rc-sidebar:hover .rc-yakinda, .rc-sabit .rc-yakinda { display: inline-block; }
-@media (max-width: 860px) { .rc-sidebar .rc-yakinda { display: inline-block; } }
 
 /* ── Ortak sayfalama + yükleniyor (v2-ortak.js sayfalamaCiz) — ekran CSS'lerinde kopyalanmaz ── */
 .rc-sayfalama { display: flex; gap: 6px; margin-top: 18px; justify-content: center; align-items: center; flex-wrap: wrap; }
@@ -394,6 +440,50 @@ html, body { margin: 0; padding: 0; }
   .rc-dt-ara { flex-basis: auto; }
   .rc-tablo thead th, .rc-tablo tbody td { padding: 11px 12px; }
 }
+/* Telefon KART görünümü (v2-tablo.js kartEtiketle: data-etiket + data-mobil). Masaüstü/tablet etkilenmez.
+   Sıralanabilir başlıklar kartların üstünde kaydırılabilir çip satırı olarak kalır. */
+@media (max-width: 600px) {
+  .rc-tablo-sar:has(> .rc-kartli) { overflow: visible; border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+  .rc-tablo.rc-kartli { min-width: 0 !important; display: block; }
+  .rc-kartli thead, .rc-kartli tbody { display: block; }
+  .rc-kartli thead tr { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
+  .rc-kartli thead tr:not(:has(.rc-siralanir)) { display: none; }
+  .rc-kartli thead th { display: none; }
+  .rc-tablo.rc-kartli thead th.rc-siralanir {
+    display: inline-flex; align-items: center; flex: 0 0 auto; position: static; padding: 8px 12px; min-height: 36px;
+    border: 1px solid #e2e2ee; border-radius: 999px; background: #fff; text-transform: none; letter-spacing: 0; font-size: 12.5px;
+  }
+  .rc-tablo.rc-kartli thead th.rc-siralanir.aktif { border-color: #c9a7f0; background: var(--rc-t-mor, #f2ecfb); }
+  .rc-kartli tbody tr {
+    display: block; background: #fff; border: 1px solid #ebebf3; border-radius: 14px; padding: 6px 14px;
+    margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+  }
+  .rc-kartli tbody tr[hidden] { display: none; } /* açılır detay satırları (seans vb.) kapalı kalsın */
+  .rc-tablo.rc-kartli tbody td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 8px 0; border: 0; text-align: right; white-space: normal; min-width: 0;
+  }
+  .rc-tablo.rc-kartli tbody tr:nth-child(n) td { background: transparent; } /* zebra/hover kartta yok */
+  .rc-kartli tbody td + td { border-top: 1px dashed #f0f0f6 !important; }
+  .rc-kartli tbody td[data-etiket]::before {
+    content: attr(data-etiket); flex: 0 0 auto; max-width: 45%; text-align: left;
+    font-size: 12px; font-weight: 600; color: #8a8a9a;
+  }
+  .rc-tablo.rc-kartli tbody td[data-mobil="baslik"] { display: block; text-align: left; font-size: 14.5px; font-weight: 600; padding: 10px 0; }
+  .rc-tablo.rc-kartli tbody td[data-mobil="etiketsiz"] { display: block; text-align: left; }
+  .rc-tablo.rc-kartli tbody td[data-mobil="alt"] { justify-content: flex-end; }
+  .rc-kartli tbody td[data-mobil="baslik"]::before, .rc-kartli tbody td[data-mobil="etiketsiz"]::before,
+  .rc-kartli tbody td[data-mobil="alt"]::before { content: none; }
+  .rc-tablo.rc-kartli tbody td[data-mobil="gizle"], .rc-kartli tbody td:empty { display: none; }
+  .rc-tablo.rc-kartli tbody td.rc-bos { display: block; text-align: center; padding: 24px 8px; }
+  .rc-kartli tbody tr:has(> td.rc-bos) { padding: 0; }
+  .rc-kartli .rc-islemler { display: inline-flex; gap: 8px; }
+}
+@media (max-width: 600px) and (prefers-color-scheme: dark) {
+  .rc-tablo.rc-kartli thead th.rc-siralanir { background: #22222e; border-color: #34344c; }
+  .rc-kartli tbody tr { background: #22222e; border-color: #34344c; }
+  .rc-kartli tbody td + td { border-top-color: #2c2c3c !important; }
+}
 
 /* ───────────────── Header rozetleri: kalan SMS + WhatsApp + softphone (header-araclar.js) ─────────────────
    .rc-header-araclar altında KAPSAMLI: global .rc-rozet (v2-bilesen.css durum rozeti) ile çakışmasın. */
@@ -460,7 +550,7 @@ html, body { margin: 0; padding: 0; }
   .rc-rozet-wa .rc-rozet-metin { display: none; }
 }
 @media (max-width: 860px) {
-  .rc-rozet-sms, .rc-rozet-wa { display: none; }
+  .rc-header-araclar .rc-rozet-sms, .rc-header-araclar .rc-rozet-wa { display: none; }
   .rc-header-araclar .rc-rozet { padding: 0 10px; }
   .rc-sp-panel { position: fixed; top: calc(var(--rc-header-y) + 6px); right: 10px; left: 10px; width: auto; }
 }

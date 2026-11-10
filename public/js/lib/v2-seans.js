@@ -14,7 +14,7 @@
  * Veri GET/POST/PATCH/PUT /api/v2/seans* (Flutter ile aynı uçlar). Stil: css/seans-v2.css.
  */
 import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
 import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';

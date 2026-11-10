@@ -1,6 +1,6 @@
 /** Ekip & Roller: liste, ekle/duzenle modali, pasif etme, rol izinleri. Roller ve yazma yetkisi API'den. */
 import { el, esc, onay, mesaj } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { ekran, syVeri, syYaz } from '/js/lib/v2-sistem.js?v=7';
 import { avatar, rozet, sayfaBaslik, syTablo } from '/js/sistem/ortak.js?v=1';

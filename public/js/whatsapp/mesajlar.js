@@ -3,7 +3,7 @@
  * tablo içi arama mesaj, hata, müşteri ve (yetkiliyse) telefonda. Satıra tık: mesaj detayı.
  */
 import { esc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { durumRozet, mesajDetayAc, tarihSaat } from '/js/whatsapp/ortak.js?v=1';
 
 export async function ciz(kap, ctx) {

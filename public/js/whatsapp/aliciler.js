@@ -4,7 +4,7 @@
  */
 import { esc, mesaj } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc } from '/js/lib/v2-modal.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { durumRozet, tarihSaat } from '/js/whatsapp/ortak.js?v=1';
 
 async function gecmisAc(ctx, a) {

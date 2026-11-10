@@ -11,7 +11,7 @@
  * Yazma uçları MUSTERI_V2_YAZMA_AKTIF kapalıyken 409 döner (toast).
  */
 import { qp, api, el, esc, TL, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { musteriFormuAc, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
 
 const kok = document.getElementById('rc-musteriler');
@@ -70,14 +70,17 @@ function iskelet() {
     bosMesaj: 'Kayıt bulunamadı.',
     kolonlar: kolonlar(null),
     satir: satirCiz,
+    // Satırlar yetki/ayar ile çizilir → cevap satırlardan ÖNCE `son`a yazılır (cizildi'den sonra değil).
     kaynak: (p) => (salonId
       ? api('GET', '/musteri', { params: { ...p, salon_id: salonId, durum } })
+        .then((r) => { if (r.ok && r.govde?.basarili) son = r.govde.veri; return r; })
       : Promise.resolve({ ok: false, kod: 422, govde: { mesaj: 'Şube seçili değil (?sube=... bekleniyor).' } })),
     cizildi: (_, v) => { son = v; ustCiz(); },
   });
 
   el('#muTablo').addEventListener('click', satirTiklama);
   sekmeCiz();
+  tablo.yenile(); // ilk yükleme (önceden yalnız sekme tıklanınca yükleniyordu)
 }
 
 function kolonlar(a) {

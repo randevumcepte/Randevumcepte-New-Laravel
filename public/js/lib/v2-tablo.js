@@ -25,6 +25,15 @@
  *   });
  *   t.yenile();            // filtre değişince (sayfa 1'e döner)
  *   t.kolonlarAyarla([...]) // kolon seti değişince (ör. stüdyo modu)
+ *
+ * Telefon (≤600px) KART görünümü — panel.css .rc-kartli: her satır bir kart, her hücre
+ * "Kolon başlığı ……… değer" olarak çizilir (etiket = kolon.baslik, hücreye data-etiket ile yazılır).
+ * Masaüstü/tablet tablo görünümü değişmez. Kolon rolü (kolon.mobil, opsiyonel):
+ *   'baslik'    → kartın başlığı (etiketsiz, üstte) — varsayılan: ilk anlamlı kolon (#/ID/Sıra atlanır)
+ *   'alt'       → kartın altı (butonlar, sağa yaslı) — varsayılan: başlığı "İşlem…" olan kolon
+ *   'gizle'     → telefonda gösterilmez
+ *   'etiketsiz' → etiket yazılmaz, değer tam satır
+ * Kart istemeyen tablo (matris, çok kolonlu karşılaştırma): opt.mobilKart = false → yatay kaydırma.
  */
 import { el, esc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=7';
 
@@ -66,7 +75,7 @@ export function veriTablosu(kap, opt) {
           <input type="search" placeholder="${esc(o.araIpucu)}" autocomplete="off"></label>
       </div>
       <div class="rc-tablo-sar">
-        <table class="rc-tablo ${esc(o.tabloSinif)}"><thead></thead><tbody></tbody></table>
+        <table class="rc-tablo${o.mobilKart === false ? '' : ' rc-kartli'} ${esc(o.tabloSinif)}"><thead></thead><tbody></tbody></table>
       </div>
       <div class="rc-sayfalama"></div>
     </div>`;
@@ -105,9 +114,32 @@ export function veriTablosu(kap, opt) {
     }).join('') + '</tr>';
   }
 
+  // Kart görünümü için hücrelere kolon etiketi + rolü yazılır (colspan'li hücreler kolon kaydırır).
+  // Kart başlığı: ilk anlamlı kolon (#, ID, Sıra, No gibi sayaç kolonları atlanır).
+  const sayacKolon = (k) => /^(#|id|sıra|no)$/.test(String(k.baslik || '').trim().toLocaleLowerCase('tr'));
+  const kolonRolu = (k, i, baslikIndeksi) => k.mobil
+    || (i === baslikIndeksi ? 'baslik' : /^işlem/.test(String(k.baslik || '').toLocaleLowerCase('tr')) ? 'alt' : '');
+  function kartEtiketle() {
+    if (o.mobilKart === false) return;
+    const baslikIndeksi = kolonlar.some((k) => k.mobil === 'baslik') ? -1
+      : kolonlar.findIndex((k) => k.baslik && !sayacKolon(k));
+    for (const tr of tbody.rows) {
+      let i = 0;
+      for (const td of tr.cells) {
+        // Tüm satırı kaplayan hücre (açılır detay, ara başlık): etiketsiz, tam genişlik.
+        if ((td.colSpan || 1) >= kolonlar.length && kolonlar.length > 1) { td.dataset.mobil ||= 'etiketsiz'; break; }
+        const k = kolonlar[i];
+        if (k?.baslik && !td.hasAttribute('data-etiket')) td.dataset.etiket = k.baslik;
+        const rol = k ? kolonRolu(k, i, baslikIndeksi) : '';
+        if (rol && !td.dataset.mobil) td.dataset.mobil = rol;
+        i += td.colSpan || 1;
+      }
+    }
+  }
+
   function ciz(liste, meta, veri) {
     baslikCiz();
-    if (liste.length) tbody.innerHTML = liste.map((k, i) => o.satir(k, i, liste)).join('');
+    if (liste.length) { tbody.innerHTML = liste.map((k, i) => o.satir(k, i, liste)).join(''); kartEtiketle(); }
     else bilgiSatiri(esc(durum.ara ? `“${durum.ara}” için sonuç bulunamadı.` : o.bosMesaj));
     sayfalamaCiz(sayfaKap, meta, (no) => { durum.page = no; yukle(); }, o.birim);
     if (o.cizildi) o.cizildi(liste, veri);

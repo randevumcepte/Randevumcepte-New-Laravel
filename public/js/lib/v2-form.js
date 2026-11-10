@@ -17,7 +17,7 @@
  */
 import { api, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 import { apiForm } from '/js/lib/v2-dosya.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { formGonderModali, formMusteriSecici, tlBagla, tlOku, tlYaz } from '/js/lib/v2-form-gonder.js?v=7';
 

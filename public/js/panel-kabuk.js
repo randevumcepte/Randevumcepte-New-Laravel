@@ -62,7 +62,7 @@ function headerCiz(veri) {
     el('#rcSalonAd').textContent = veri.salon.ad;
     const g = veri.salon.lisans_gun;
     el('#rcLisansGun').textContent = (g === null || g === undefined) ? '' : g + ' gün kaldı';
-    el('#rcLisans').style.display = 'flex';
+    el('#rcLisans').hidden = false; // inline stil değil: dar ekranda CSS gizleyebilsin
   }
 
   // Ayarlar kısayolu: yalnızca v2 Ayarlar sayfası varsa görünür.
@@ -128,19 +128,20 @@ function acilirBagla() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kapat(); });
 }
 
+// Şube seçici iki yere çizilir: header (masaüstü) + çekmece üstü (telefon/tablet). CSS hangisinin
+// görüneceğini kırılıma göre seçer; çizim ve davranış tek fonksiyonda.
 function subeCiz(subeler) {
-  const kutu = el('#rcSubeSec');
-  if (!subeler.length) { kutu.innerHTML = ''; return; }
-  if (subeler.length === 1) {
-    // Tek şube → seçici yerine sabit etiket göstermeye gerek yok (lisans rozetinde var).
-    kutu.innerHTML = '';
-    return;
-  }
   const opsiyonlar = subeler
     .map((s) => `<option value="${esc(s.id)}"${s.aktif ? ' selected' : ''}>${esc(s.ad)}</option>`)
     .join('');
-  kutu.innerHTML = `<select id="rcSubeSelect" aria-label="İşletme / Şube">${opsiyonlar}</select>`;
-  el('#rcSubeSelect').addEventListener('change', (e) => { if (e.target.value) location.href = subeUrl(e.target.value); });
+  ['#rcSubeSec', '#rcSubeMenu'].forEach((sec) => {
+    const kutu = el(sec);
+    if (!kutu) return;
+    // Tek şube → seçici gerekmez (lisans rozetinde var).
+    if (subeler.length < 2) { kutu.innerHTML = ''; return; }
+    kutu.innerHTML = `<select aria-label="İşletme / Şube">${opsiyonlar}</select>`;
+    el('select', kutu).addEventListener('change', (e) => { if (e.target.value) location.href = subeUrl(e.target.value); });
+  });
 }
 
 // Aynı v2 sayfasında şube değiştir: liste sayfalarında (/v2/x/20) path'teki şube atılır,
@@ -184,6 +185,16 @@ function aramaBagla() {
   girdi.closest('.rc-ara').appendChild(kutu);
   let zaman, no = 0;
   const kapat = () => { kutu.hidden = true; };
+  // Telefonda arama kutusu ikon olarak durur (panel.css ≤600px); dokununca header boyunca açılır.
+  const ara = girdi.closest('.rc-ara');
+  const daraltilmis = () => window.matchMedia('(max-width: 600px)').matches;
+  ara.addEventListener('click', () => {
+    if (!daraltilmis() || ara.classList.contains('acik')) return;
+    ara.classList.add('acik');
+    girdi.focus();
+  });
+  const daralt = () => { if (!girdi.value) ara.classList.remove('acik'); };
+  girdi.addEventListener('blur', () => setTimeout(daralt, 150)); // sonuç linkine dokunma önce işlensin
   girdi.addEventListener('input', () => {
     clearTimeout(zaman);
     const q = girdi.value.trim();
@@ -199,16 +210,19 @@ function aramaBagla() {
       kutu.hidden = false;
     }, 300);
   });
-  girdi.addEventListener('keydown', (e) => { if (e.key === 'Escape') kapat(); });
-  document.addEventListener('click', (e) => { if (!e.target.closest('.rc-ara')) kapat(); });
+  girdi.addEventListener('keydown', (e) => { if (e.key === 'Escape') { kapat(); girdi.value = ''; girdi.blur(); } });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.rc-ara')) { kapat(); ara.classList.remove('acik'); } });
 }
 
 /* ───────────── Sidebar aç/kapa (masaüstü daralt + mobil çekmece) ───────────── */
+// panel.css "çekmece" kırılımıyla AYNI metin: dar pencere ya da dokunmatik cihaz (tablet dahil).
+const CEKMECE_SORGU = '(max-width: 860px), (hover: none) and (pointer: coarse)';
+const cekmeceModu = () => window.matchMedia(CEKMECE_SORGU).matches;
+
 function etkilesimBagla() {
   const tetik = el('#rcMenuTetik');
-  const mobil = () => window.matchMedia('(max-width: 860px)').matches;
   tetik.addEventListener('click', () => {
-    if (mobil()) {
+    if (cekmeceModu()) {
       document.body.classList.toggle('rc-ac-menu');
       el('#rcOverlay').classList.toggle('acik', document.body.classList.contains('rc-ac-menu'));
     } else {
@@ -221,7 +235,8 @@ function etkilesimBagla() {
     document.body.classList.remove('rc-ac-menu');
     el('#rcOverlay').classList.remove('acik');
   });
-  if (localStorage.getItem('rc_menu_sabit') === '1') document.body.classList.add('rc-sabit');
+  // Sabit menü yalnız fareli masaüstünde anlamlı; dokunmatikte çekmece kullanılır.
+  if (localStorage.getItem('rc_menu_sabit') === '1' && !cekmeceModu()) document.body.classList.add('rc-sabit');
 }
 
 // Dışa açılan kanca: sayfa salon'u sonradan öğrenirse kabuğu tazele + ortak UI.

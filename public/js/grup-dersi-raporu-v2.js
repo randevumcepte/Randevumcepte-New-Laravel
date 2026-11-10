@@ -3,7 +3,7 @@
  * doluluk/katılım/no-show kartları, eğitmen ve ders bazlı tablolar. Hesap sunucuda (Domain\Ders\DersRaporu).
  */
 import { qp, api, el, esc, tarihStr, mesaj } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { alan, tarihBagla } from '/js/lib/v2-ongorusme.js?v=8';
 import '/js/lib/v2-ders.js?v=7'; // ortak stil

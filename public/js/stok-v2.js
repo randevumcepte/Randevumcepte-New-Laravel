@@ -13,7 +13,7 @@
  */
 
 import { qp, api, el, esc, TL, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=7';

@@ -4,7 +4,7 @@
  * (yeni_sube_url sunucudan). Uç: GET /ayar/subeler.
  */
 import { api, el, esc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 
 const trTarih = (ymd) => (ymd ? ymd.split('-').reverse().join('.') : '—');
 

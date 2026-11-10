@@ -3,7 +3,7 @@
  * Soru tipleri, hazır şablon ve varsayılanlar API'den (form-verisi); içerik kuralları sunucuda (422 → toast).
  */
 import { el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
-import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
+import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
 import { alan } from '/js/lib/v2-ongorusme.js?v=8';
