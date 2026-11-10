@@ -66,6 +66,9 @@ class SiteController extends Controller
     public function personel(Request $request, string $isletmeAdi, int $isletmeId, int $personelId)
     {
         $salonId = $this->kokSalonu($request, $isletmeId);
+        if ($kapali = $this->hizmetDisi($salonId)) {
+            return $kapali;
+        }
         $detay = $this->vitrin->personelDetay($salonId, $personelId);
         abort_unless($detay !== null, 404);
         $v = $this->vitrin->vitrin($salonId);
@@ -89,6 +92,9 @@ class SiteController extends Controller
 
     private function vitrinSayfasi(Request $request, int $salonId, ?string $terim = null, ?int $terimId = null)
     {
+        if ($kapali = $this->hizmetDisi($salonId)) {
+            return $kapali;
+        }
         $v = $this->vitrin->vitrin($salonId);
         $kendiDomaini = $this->kendiDomaini($request, $v['salon']['domain'] ?? null);
         if ($kendiDomaini) {
@@ -115,6 +121,9 @@ class SiteController extends Controller
 
     public function hesap(Request $request, int $salonId, string $sayfa)
     {
+        if ($kapali = $this->hizmetDisi($salonId)) {
+            return $kapali;
+        }
         $salon = $this->kapi->salon($salonId);
         $gorunum = (object) [
             'id' => (int) $salon->id, 'salon_adi' => $salon->salon_adi, 'logo' => EskiPanelLinki::mutlak($salon->logo), 'tema_seed' => $salon->tema_seed,
@@ -140,6 +149,22 @@ class SiteController extends Controller
                 'gizlilik'   => EskiPanelLinki::mutlak('kullanim-ve-gizlik-kosullari'),
             ],
         ];
+    }
+
+    /**
+     * Üyelik süresi bitmiş salonun sitesi (eski SalonSiteHizmetKontrol): sayfa yerine "hizmet dışı" ekranı, 503. Bitiş
+     * günü dahil açık; tarihi boş salon açık. Online randevu zaten OnlineSalonKapisi::randevuyaAcikMi ile kapalı.
+     */
+    private function hizmetDisi(int $salonId): ?\Symfony\Component\HttpFoundation\Response
+    {
+        $salon = $this->kapi->salon($salonId);
+        if ($this->kapi->lisansAktif($salon)) {
+            return null;
+        }
+
+        return response()->view('site.hizmet-disi', ['salon' => $salon], 503)
+            ->header('Retry-After', '86400')
+            ->header('X-Rc-Kasitli', '1'); // hata izleme bu 503'u sunucu hatasi saymaz
     }
 
     /** İsteğin alan adının salonu; alan adı bir salona ait değilse ya da beklenen salon değilse 404. */

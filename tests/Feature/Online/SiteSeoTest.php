@@ -122,6 +122,14 @@ class SiteSeoTest extends TestCase
             ->assertSee('<h1 class="slp-hero__title">Lotus Güzellik</h1>', false);
     }
 
+    public function test_suresi_bitmis_salonun_sitesi_hizmet_disi(): void
+    {
+        $this->get('http://suresi-bitmis.test/')->assertStatus(503)
+            ->assertSee('Web sitemiz hizmet dışıdır')
+            ->assertHeader('X-Rc-Kasitli', '1');
+        $this->get('http://suresi-bitmis.test/giris')->assertStatus(503);
+    }
+
     public function test_onizleme_indekslenmez(): void
     {
         $this->get(self::PANEL.'/site/'.self::SALON)->assertOk()
