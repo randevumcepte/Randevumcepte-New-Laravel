@@ -13,7 +13,7 @@
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
       <link rel="stylesheet" href="{{ asset('site/css/modern-profile.css') }}?v=1">
       {!! $tema_css !!}
-      <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;max-width:130px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
+      <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;width:92px;max-width:92px;font-size:13px;padding-left:6px;padding-right:4px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
    </head>
    <body data-salon-id="{{ $salon->id }}" data-ana="{{ $linkler['ana'] }}" data-giris="{{ $linkler['giris'] }}" data-randevularim="{{ $linkler['randevular'] }}" data-sayfa="{{ $aktif }}">
       <div id="preloader"><div id="loaderstatus">&nbsp;</div></div>
@@ -62,7 +62,7 @@
             </div>
          </footer>
       </div>
-      <script type="module" src="/js/telefon-ulke.js?v=1"></script>
+      <script type="module" src="/js/telefon-ulke.js?v=2"></script>
       <script type="module" src="{{ asset('js/site/hesap.js') }}?v=3"></script>
    </body>
 </html>

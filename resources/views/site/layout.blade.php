@@ -36,7 +36,7 @@
       <link rel="stylesheet" href="{{ asset('site/css/randevu-luxe.css') }}?v=1">
       <link rel="stylesheet" href="{{ asset('site/css/salon-landing.css') }}?v=4">
       {!! $tema_css !!}
-      <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;max-width:130px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
+      <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;width:92px;max-width:92px;font-size:13px;padding-left:6px;padding-right:4px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
       <script type="application/ld+json">{!! json_encode($seo['ld_json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
    </head>
@@ -70,12 +70,12 @@
       <script src="{{ asset('site/js/popper.min.js') }}"></script>
       <script src="{{ asset('site/bootstrap/js/bootstrap.min.js') }}"></script>
       <script src="{{ asset('site/js/icheck.min.js') }}"></script>
-      <script type="module" src="/js/telefon-ulke.js?v=1"></script>
+      <script type="module" src="/js/telefon-ulke.js?v=2"></script>
       {{-- Personel sayfasi gibi vitrin olmayan sayfalar vitrinBetikleri=false verir. --}}
       @if($vitrinBetikleri ?? true)
       <script src="{{ asset('js/site/vitrin-sayfa.js') }}?v=1"></script>
       <script src="{{ asset('js/site/vitrin-personel.js') }}?v=1"></script>
-      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=4"></script>
+      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=5"></script>
       @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=2"></script>@endif
       @endif
       @stack('sayfa')

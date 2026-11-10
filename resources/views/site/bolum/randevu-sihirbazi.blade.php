@@ -148,8 +148,8 @@
                      </label>
 
                      <button type="submit" id="rdv-direkt-submit" class="rdv-direkt-btn">
-                        <i class="fa fa-paper-plane"></i>
-                        <span>KOD GÖNDER</span>
+                        <span>DEVAM ET</span>
+                        <i class="fa fa-chevron-right"></i>
                      </button>
                      <div id="rdv-direkt-hata"></div>
                   </form>

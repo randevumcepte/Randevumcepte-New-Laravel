@@ -135,9 +135,9 @@ async function butonluIs(buton, yaziMetni, is) {
 }
 
 // Giris yapmamis musteri tek kullanimlik kodla girer (kullanici 2026-11-10: loginsiz randevu yok, numarayi bilen
-// giris yapamaz). Adim 1 "Kod Gönder", adim 2 ayni dugme "Giriş Yap ve Devam Et"; kod yeni numaraya hesap da acar.
+// giris yapamaz). Adim 1 "Devam Et" (kod gider), adim 2 ayni dugme "Doğrula ve Devam Et"; kod yeni numaraya hesap da acar.
 let kodGonderildi = false;
-const gonderDugmesi = (metin, ikon) => { $('rdv-direkt-submit').innerHTML = `<i class="fa ${ikon}"></i> <span>${esc(metin)}</span>`; };
+const gonderDugmesi = (metin) => { $('rdv-direkt-submit').innerHTML = `<span>${esc(metin)}</span> <i class="fa fa-chevron-right"></i>`; };
 function kodBilgi(mesaj, tur = '') {
     const bilgi = $('rdv-kod-bilgi');
     bilgi.textContent = mesaj;
@@ -152,7 +152,7 @@ async function kodIste() {
     kodGonderildi = true;
     $('rdv-kod-grup').style.display = 'block';
     kodBilgi('Kod telefonunuza gönderildi (WhatsApp ya da SMS). 10 dakika geçerlidir.', 'ok');
-    gonderDugmesi('GİRİŞ YAP VE DEVAM ET', 'fa-check-circle');
+    gonderDugmesi('DOĞRULA VE DEVAM ET');
     $('rdv_kod').focus();
 }
 
@@ -162,7 +162,7 @@ async function kodIste() {
     kodGonderildi = false;
     $('rdv-kod-grup').style.display = 'none';
     $('rdv_kod').value = '';
-    gonderDugmesi('KOD GÖNDER', 'fa-paper-plane');
+    gonderDugmesi('DEVAM ET');
 }));
 
 form.addEventListener('submit', (e) => {

@@ -306,7 +306,7 @@ html, body { margin: 0; padding: 0; }
 /* Ulke secimi duz <select>; butonu/listeyi arama-select.js cizer (.rs-btn.tel-ulke). */
 .tel-grup { display: flex; gap: 6px; min-width: 0; }
 .tel-grup .tel-num { flex: 1 1 auto; min-width: 0; width: 100%; }
-.tel-grup .rs-btn.tel-ulke { flex: 0 0 auto; width: 118px; height: auto; min-height: 40px; }
+.tel-grup .rs-btn.tel-ulke { flex: 0 0 auto; width: 92px; height: auto; min-height: 40px; font-size: 13px; padding-left: 8px; padding-right: 6px; }
 .tel-grup.tel-hatali .tel-num { border-color: var(--rc-kirmizi); }
 
 /* v2 karşılığı olmayan menü öğesi: tıklanamaz, eski panele gitmez. */

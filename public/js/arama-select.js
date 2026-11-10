@@ -46,7 +46,7 @@ function etiketYenile(sel) {
   const btn = sel._rsBtn;
   if (!btn) return;
   const o = sel.options[INDEKS.get.call(sel)];
-  btn.querySelector('.rs-etiket').textContent = o ? o.textContent.trim() : '';
+  btn.querySelector('.rs-etiket').textContent = o ? (o.dataset.kisa || o.textContent.trim()) : ''; // data-kisa: kapali dugmede kisa yazi
   btn.disabled = sel.disabled;
   btn.classList.toggle('rs-bos', !o || o.value === '');
 }
@@ -98,12 +98,13 @@ function ac(sel) {
     let sonGrup = null;
     [...sel.options].forEach((o, i) => {
       if (o.hidden) return;
-      if (q && !normal(o.textContent).includes(q)) return;
+      const yazi = o.dataset.tam || o.textContent; // data-tam: listede tam yazi (ör. telefon ülke adı)
+      if (q && !normal(yazi).includes(q)) return;
       const grup = o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : null;
       if (grup && grup !== sonGrup) { html += `<div class="rs-grup">${grup.replace(/</g, '&lt;')}</div>`; }
       sonGrup = grup;
       const secili = i === INDEKS.get.call(sel);
-      html += `<div class="rs-sec${secili ? ' secili' : ''}${o.disabled ? ' pasif' : ''}" data-i="${i}" role="option" aria-selected="${secili}">${o.textContent.trim().replace(/</g, '&lt;') || '&nbsp;'}</div>`;
+      html += `<div class="rs-sec${secili ? ' secili' : ''}${o.disabled ? ' pasif' : ''}" data-i="${i}" role="option" aria-selected="${secili}">${yazi.trim().replace(/</g, '&lt;') || '&nbsp;'}</div>`;
       if (!o.disabled) gorunen.push(i);
     });
     liste.innerHTML = html || '<div class="rs-yok">Sonuç yok</div>';

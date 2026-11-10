@@ -83,7 +83,27 @@ function bicimle(d, u) {
 /** Sunucuya giden deger: TR → 10 hane, yabanci → +KOD + numara. */
 const birlestir = (u, numara) => (!numara ? '' : trMi(u) ? numara : `+${u.kod}${numara}`);
 
-const secenek = (u) => `<option value="${u.iso}">${bayrak(u.iso)} +${u.kod}  ${esc(u.ad)}</option>`;
+// Kapali seçicide yalniz bayrak + kod (data-kisa), acik listede ulke adiyla (data-tam). Kullanici 2026-11-10.
+const secenek = (u) => {
+  const kisa = `${bayrak(u.iso)} +${u.kod}`;
+  const tam = `${kisa}  ${u.ad}`;
+  return `<option value="${u.iso}" data-kisa="${esc(kisa)}" data-tam="${esc(tam)}">${esc(tam)}</option>`;
+};
+/**
+ * Duz (arama-select'e donusmemis) <select>: kapaliyken secili satir kisa yazilir, acilinca tum satirlar tam ad.
+ * arama-select donusturduyse dugme data-kisa, liste data-tam okur; burada bir sey yapilmaz.
+ */
+function kisaGoster(sec) {
+  if (sec._rsBtn) return;
+  for (const o of sec.options) {
+    const yazi = o.selected ? o.dataset.kisa : o.dataset.tam;
+    if (yazi && o.textContent !== yazi) o.textContent = yazi;
+  }
+}
+function tamGoster(sec) {
+  if (sec._rsBtn) return;
+  for (const o of sec.options) if (o.dataset.tam && o.textContent !== o.dataset.tam) o.textContent = o.dataset.tam;
+}
 const SECENEKLER = `<optgroup label="Sık kullanılan">${(veri?.sik_kullanilan || []).map((i) => ISO[i]).filter(Boolean).map(secenek).join('')}</optgroup>
   <optgroup label="Tüm ülkeler">${ULKELER.map(secenek).join('')}</optgroup>`;
 
@@ -125,6 +145,7 @@ function gelistir(inp) {
   function etiket() {
     sec.value = t.ulke.iso;
     sec.title = t.ulke.ad;
+    if (document.activeElement !== sec) kisaGoster(sec);
     num.placeholder = trMi(t.ulke) ? '5XX XXX XX XX' : t.ulke.maske.replace(/#/g, 'X');
   }
 
@@ -149,6 +170,8 @@ function gelistir(inp) {
     inp.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  ['focus', 'mousedown', 'touchstart'].forEach((o) => sec.addEventListener(o, () => tamGoster(sec), { passive: true }));
+  sec.addEventListener('blur', () => kisaGoster(sec));
   sec.addEventListener('change', () => {
     const u = ISO[sec.value];
     if (!u || u === t.ulke) return;
@@ -159,6 +182,7 @@ function gelistir(inp) {
     num.value = bicimle(ulusal(d, u), u);
     yaz();
     num.focus();
+    kisaGoster(sec);
   });
 
   num.addEventListener('focus', () => { kap.classList.remove('tel-hatali'); if (t.maskeli) num.select(); });
