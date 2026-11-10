@@ -3024,3 +3024,40 @@ body.slp-drawer-open .slp-wa {
     .ps-modal-name { font-size: 22px; }
     .ps-stat { min-width: 110px; padding: 12px 18px; }
 }
+
+/* ==========================================================================
+   RANDEVU PENCERESI — kaydirma performansi (eski sitede de kasiyordu)
+   - Arka sayfa bulaniklastirilmaz: animasyonlu sayfanin ustunde blur her karede yeniden hesaplanir.
+   - Pencere acikken arka sayfadaki sonsuz animasyonlar durur.
+   - Pencere icindeki cam (backdrop-filter) efektleri kalkar; ayni renk duz arka planla verilir.
+   - Kaydirma pencerede kalir (overscroll-behavior), boyama pencereyle sinirlanir (contain).
+   ========================================================================== */
+.slp-drawer__backdrop {
+    background: rgba(10, 5, 24, 0.82);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.slp-drawer__panel {
+    overscroll-behavior: contain;
+    contain: layout paint;
+}
+.slp-drawer__panel *,
+.slp-drawer__panel *::before,
+.slp-drawer__panel *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.slp-drawer__panel #randevuozetbolumu .secilenhizmetlertablo {
+    background: #fff !important;
+}
+.slp-drawer__panel .lx-progress { background: rgba(255, 255, 255, 0.1); }
+/* Dekor isik lekeleri: filter:blur yerine yumusak gradyan (gorunum ayni, maliyet yok) */
+.slp-drawer__panel .lx-hero::before,
+.slp-drawer__panel .lx-hero::after {
+    filter: none;
+}
+body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *),
+body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::before,
+body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::after {
+    animation-play-state: paused !important;
+}
