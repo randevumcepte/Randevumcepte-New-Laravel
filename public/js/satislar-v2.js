@@ -98,8 +98,9 @@ function iskeletCiz() {
           </div>
           <div class="s-f-grup s-f-ek" id="sFaturaGizleGrup" style="display:none">
             <label>&nbsp;</label>
-            <button type="button" class="s-fatura-gizle" id="sFaturaGizle" title="Faturasız işlemleri gizle / göster">
-              <i class="bi bi-file-earmark-text"></i> <span>Faturasızları gizle</span>
+            <!-- Eski sistemdeki gibi yazısız: yalnız simge, açıkken renkli (kullanıcı 2026-11-10). -->
+            <button type="button" class="s-fatura-gizle" id="sFaturaGizle" aria-label="Görünüm">
+              <i class="bi bi-file-earmark-text"></i>
             </button>
           </div>
         </div>
@@ -346,7 +347,6 @@ async function faturasizGizleTikla() {
     toast((r.govde && r.govde.mesaj) || `İşlem başarısız (${r.kod})`, 'hata');
     return;
   }
-  toast(r.govde.veri.faturasiz_gizle ? 'Faturasız işlemler gizlendi' : 'Faturasız işlemler gösteriliyor', 'ok');
   yukle();
 }
 
@@ -358,7 +358,6 @@ function ekKontrollerCiz(v) {
   el('#sFaturaGizleGrup').style.display = y.faturasiz_gizle ? '' : 'none';
   const btn = el('#sFaturaGizle');
   btn.classList.toggle('aktif', !!v.faturasiz_gizle_aktif);
-  btn.querySelector('span').textContent = v.faturasiz_gizle_aktif ? 'Faturasızlar gizli' : 'Faturasızları gizle';
 }
 
 // Liste cevabıyla ekranın tablo DIŞI kısımları (kartlar, sekmeler, filtre seçenekleri).

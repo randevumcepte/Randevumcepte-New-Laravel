@@ -203,7 +203,7 @@ class SatisController extends V2Controller
 
         $sonuc = $this->islem->faturasizGizle($salonId);
         if ($mobil) {
-            AktiviteLog::yaz($salonId, (int) $user->id, 'faturasiz_gizle_toggle', 'salon', $salonId, null, 'Faturasiz gizle modu degistirildi', $sonuc);
+            AktiviteLog::yaz($salonId, (int) $user->id, 'faturasiz_gizle_toggle', 'salon', $salonId, null, 'Görünüm ayarı değiştirildi', $sonuc);
         }
 
         return ApiCevap::basarili($sonuc);
