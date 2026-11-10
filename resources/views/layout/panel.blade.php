@@ -113,7 +113,7 @@
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
     <script type="module" src="/js/hizli-ekle.js?v=8"></script>
-    <script type="module" src="/js/panel-kabuk.js?v=11"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=12"></script>
     @stack('betik')
 </body>
 </html>

@@ -152,8 +152,12 @@ function subeUrl(subeId) {
   return temel + '?sube=' + encodeURIComponent(subeId);
 }
 
+let _istekNo = 0;
 async function yukle(salonId) {
+  // Yalniz son istegin cevabi cizilir: varsayilan salonun gec gelen cevabi secili subenin ustune yazmasin.
+  const no = ++_istekNo;
   const { ok, kod, govde } = await kabukGetir(salonId);
+  if (no !== _istekNo) return;
   if (kod === 401) { girisSayfasinaGit(); return; }
   if (!ok || !govde || !govde.veri) {
     el('#rcMenu').innerHTML = '<div class="rc-menu-iskele">Menü yüklenemedi</div>';
@@ -239,4 +243,8 @@ impersonationBandi();
 etkilesimBagla();
 aramaBagla();
 acilirBagla();
-yukle(null); // önce varsayılan salon; sayfa isterse salonAyarla ile tazeler
+// İlk yükleme adresteki ?sube= (ya da sayfanın data-salon'u) ile; yoksa varsayılan salon. Sayfa sonradan
+// salonAyarla ile başka salon bildirirse kabuk tazelenir.
+_aktifSalon = parseInt(new URLSearchParams(location.search).get('sube'), 10)
+  || parseInt(document.querySelector('[data-salon]')?.dataset.salon, 10) || null;
+yukle(_aktifSalon);
