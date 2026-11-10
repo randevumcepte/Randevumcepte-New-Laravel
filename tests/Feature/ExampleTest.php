@@ -2,18 +2,27 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
+/** Kök adres: salona ait olmayan alan adı (panel) girişe yönlenir; boş Laravel sayfası yoktur. */
 class ExampleTest extends TestCase
 {
-    /**
-     * A basic test example.
-     */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_salona_ait_olmayan_kok_adres_girise_yonlenir(): void
     {
-        $response = $this->get('/');
+        config([
+            'database.default' => 'kok_sqlite',
+            'database.connections.kok_sqlite' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => ''],
+        ]);
+        DB::purge('kok_sqlite');
+        Schema::create('salonlar', function (Blueprint $t) {
+            $t->id();
+            $t->string('domain')->nullable();
+        });
 
-        $response->assertStatus(200);
+        $this->get('http://panel.randevumcepte.com.tr/')->assertRedirect('/v2/giris');
+        $this->get('http://panel.randevumcepte.com.tr/randevularim')->assertNotFound();
     }
 }
