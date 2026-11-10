@@ -77,4 +77,14 @@ class RaporDonemiTest extends TestCase
         $this->assertSame(7.0, $k['diger']);
         $this->assertSame(0.0, $k['havale']);
     }
+
+    public function test_kullanilmayan_online_ve_diger_listelenmez_tutari_varsa_listelenir(): void
+    {
+        $kodlar = fn (array $l) => array_column($l, 'kod');
+
+        $this->assertSame(['nakit', 'kredikarti', 'havale', 'online', 'diger'], $kodlar(OdemeKovasi::liste()));
+        $this->assertSame(['nakit', 'kredikarti', 'havale'], $kodlar(OdemeKovasi::liste(OdemeKovasi::sifir())));
+        $this->assertSame(['nakit', 'kredikarti', 'havale', 'diger'],
+            $kodlar(OdemeKovasi::liste(['diger' => 7.0] + OdemeKovasi::sifir())), 'tutari olan secmeli kova kalir, toplam tutar');
+    }
 }

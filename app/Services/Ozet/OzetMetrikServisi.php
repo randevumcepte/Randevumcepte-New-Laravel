@@ -70,7 +70,7 @@ class OzetMetrikServisi
 
         return [
             'kovalar'          => $kova,
-            'odeme_etiketleri' => OdemeKovasi::liste(),
+            'odeme_etiketleri' => OdemeKovasi::liste($kova),
             'toplam'           => round(array_sum($kova), 2),
             'son7_gun'         => $cizgi,
             'personel_kapsami' => $personelId !== null,

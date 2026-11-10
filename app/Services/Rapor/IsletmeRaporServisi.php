@@ -47,7 +47,7 @@ class IsletmeRaporServisi
             'satis_net'        => round($topla(fn () => true, 'net'), 2),
             'toplam_gelir'     => round(array_sum($kova), 2),
             'odeme_yontemleri' => $kova,
-            'odeme_etiketleri' => OdemeKovasi::liste(),
+            'odeme_etiketleri' => OdemeKovasi::liste($kova),
             'donem'            => $d->dizi(),
         ];
     }

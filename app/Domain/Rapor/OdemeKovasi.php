@@ -64,9 +64,18 @@ enum OdemeKovasi: string
         return $kova;
     }
 
-    /** UI etiket listesi: [{kod, ad}] (sabit liste UI'da tutulmaz). */
-    public static function liste(): array
+    /**
+     * UI etiket listesi: [{kod, ad}] (sabit liste UI'da tutulmaz). Kova tutarlari verilirse kullanilmayan
+     * Online Ödeme ve Diğer yalniz tutari varsa listelenir (kullanici 2026-11-10: "kullanilmiyor"); boylece kutular
+     * toplamla hep tutar. Nakit, Kart ve Havale her zaman listelenir.
+     *
+     * @param  array<string,float>|null  $kova
+     */
+    public static function liste(?array $kova = null): array
     {
-        return array_map(fn (self $k) => ['kod' => $k->value, 'ad' => $k->etiket()], self::cases());
+        $secmeli = [self::Online, self::Diger];
+        $kovalar = array_filter(self::cases(), fn (self $k) => $kova === null || ! in_array($k, $secmeli, true) || (float) ($kova[$k->value] ?? 0) != 0.0);
+
+        return array_values(array_map(fn (self $k) => ['kod' => $k->value, 'ad' => $k->etiket()], $kovalar));
     }
 }

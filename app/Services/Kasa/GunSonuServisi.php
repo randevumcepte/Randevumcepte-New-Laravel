@@ -84,7 +84,8 @@ class GunSonuServisi
             'masraf_toplam'         => $masrafToplam,
             'net'                   => $net,
             'net_toplam'            => round($gelirToplam - $masrafToplam, 2),
-            'odeme_etiketleri'      => OdemeKovasi::liste(),
+            // Kullanilmayan yontem (gelirde de giderde de 0) satiri cikmaz.
+            'odeme_etiketleri'      => OdemeKovasi::liste(array_map(fn ($k) => abs($gelir[$k] ?? 0) + abs($masraf[$k] ?? 0), array_combine(array_keys($gelir), array_keys($gelir)))),
             'islem_say'             => $islemSay,
             'musteri_say'           => $satis->pluck('user_id')->filter()->unique()->count(),
             'ort_sepet'             => $islemSay > 0 ? round($gercekGelir / $islemSay, 2) : 0.0,
