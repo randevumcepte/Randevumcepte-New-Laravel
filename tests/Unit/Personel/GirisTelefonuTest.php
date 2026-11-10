@@ -22,6 +22,9 @@ class GirisTelefonuTest extends TestCase
         $this->assertNull(G::baglamaEngeli([20, 20], 20), 'ayni salonun eski personeli');
         $this->assertSame(G::BASKA_ISLETMEDE, G::baglamaEngeli([30], 20));
         $this->assertSame(G::BASKA_ISLETMEDE, G::baglamaEngeli([20, '30'], 20));
+        // Ayni sahibin subeleri: baglanir (subeler arasi gecis); grup disinda bir salon varsa engel.
+        $this->assertNull(G::baglamaEngeli([30, 31], 20, [20, 30, 31]), 'ayni sahibin subeleri');
+        $this->assertSame(G::BASKA_ISLETMEDE, G::baglamaEngeli([30, 99], 20, [20, 30]), 'grup disi salon');
     }
 
     public function test_baska_salonlarda_kayitli_hesabin_telefonu_yalniz_kendisi(): void
@@ -30,5 +33,7 @@ class GirisTelefonuTest extends TestCase
         $this->assertNull(G::degisimEngeli([], 20, false));
         $this->assertSame(G::DEGISIM_YALNIZ_KENDISI, G::degisimEngeli([20, 30], 20, false));
         $this->assertNull(G::degisimEngeli([20, 30], 20, true), 'kendisi');
+        $this->assertNull(G::degisimEngeli([20, 30], 20, false, [20, 30]), 'ayni sahibin subesi');
+        $this->assertSame(G::DEGISIM_YALNIZ_KENDISI, G::degisimEngeli([20, 30, 99], 20, false, [20, 30]));
     }
 }

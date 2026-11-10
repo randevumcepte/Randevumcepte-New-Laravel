@@ -210,4 +210,17 @@ class HesapSahibiKorumasiAkisTest extends TestCase
         $this->duzenle(self::PERSONEL_P, ['cep_telefon' => '5330 *** ** 33', 'yapan_id' => self::SAHIP]);
         $this->assertSame('5330001133', DB::table('isletmeyetkilileri')->where('id', 3)->value('gsm1'));
     }
+
+    public function test_ayni_sahibin_subesindeki_personel_telefonla_baglanir_subeler_arasi_gecis(): void
+    {
+        // Salon 31 de ayni hesap sahibinin (SAHIP) subesi; oradaki personelin hesabi bu salona baglanir.
+        DB::table('model_has_roles')->insert(['role_id' => 1, 'model_type' => 'App\\IsletmeYetkilileri', 'model_id' => self::SAHIP, 'salon_id' => 31]);
+        DB::table('isletmeyetkilileri')->insert(['id' => 8, 'gsm1' => '5331239999', 'name' => 'Sube Personeli']);
+        DB::table('salon_personelleri')->insert(['yetkili_id' => 8, 'salon_id' => 31, 'role_id' => 5, 'aktif' => 1, 'personel_adi' => 'Sube Personeli']);
+
+        $s = $this->ekle('5331239999');
+
+        $this->assertFalse($s['yeni_hesap']);
+        $this->assertSame('8', (string) DB::table('salon_personelleri')->where('id', $s['personel_id'])->value('yetkili_id'));
+    }
 }

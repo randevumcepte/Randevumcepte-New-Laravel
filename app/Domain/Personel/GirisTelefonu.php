@@ -9,10 +9,11 @@ namespace App\Domain\Personel;
  * olgulari (numara kimde, hesap hangi salonlarda) servis DB'den cozer. Engel mesaji doner (servis 422), yoksa null.
  *
  *  - NUMARA   : bir hesabin gsm1'i, baska bir hesapta kayitli numaraya cevrilemez (cift giris kimligi olmasin).
- *  - BAGLAMA  : personel satiri telefonla bulunan MEVCUT bir hesaba yalniz o hesap bu salondan baska hicbir salonda
- *               personel / rol satirina sahip degilse baglanir (ayni salonun eski/arsivli personelini ya da
- *               salonsuz hesabi yeniden baglamak mesru; baska isletmenin sahibini/personelini baglamak degil).
- *  - DEGISIM  : baska salonlarda da kayitli bir hesabin giris telefonunu bu salondan yalniz hesabin kendisi
+ *  - BAGLAMA  : personel satiri telefonla bulunan MEVCUT bir hesaba yalniz o hesabin kayitli oldugu salonlarin hepsi
+ *               bu salonun SAHIP GRUBUNDAYSA (ayni hesap sahibinin subeleri) baglanir. Boylece ayni sahibin subelerinde
+ *               tek giris hesabiyla calisilir ve subeler arasinda gecilir (eski sistem gibi); baska isletmenin
+ *               sahibini/personelini baglamak engellenir.
+ *  - DEGISIM  : sahip grubu disindaki salonlarda da kayitli bir hesabin giris telefonunu yalniz hesabin kendisi
  *               degistirebilir (aksi halde sifre sifirlamayla hesap devralinir).
  */
 final class GirisTelefonu
@@ -34,26 +35,32 @@ final class GirisTelefonu
 
     /**
      * @param  int[]  $hesapSalonlari  bulunan hesabin personel + rol satiri olan salonlari (pasif/arsiv dahil)
+     * @param  int[]  $sahipGrubu      bu salonla ayni hesap sahibine ait salonlar (bu salon dahil olabilir)
      */
-    public static function baglamaEngeli(array $hesapSalonlari, int $salonId): ?string
+    public static function baglamaEngeli(array $hesapSalonlari, int $salonId, array $sahipGrubu = []): ?string
     {
-        return self::baskaSalonVar($hesapSalonlari, $salonId) ? self::BASKA_ISLETMEDE : null;
+        return self::grupDisiVar($hesapSalonlari, $salonId, $sahipGrubu) ? self::BASKA_ISLETMEDE : null;
     }
 
     /**
      * @param  int[]  $hesapSalonlari  telefonu degisecek hesabin personel + rol satiri olan salonlari
      * @param  bool   $kendisi         islemi yapan hesabin kendisi
+     * @param  int[]  $sahipGrubu      bu salonla ayni hesap sahibine ait salonlar
      */
-    public static function degisimEngeli(array $hesapSalonlari, int $salonId, bool $kendisi): ?string
+    public static function degisimEngeli(array $hesapSalonlari, int $salonId, bool $kendisi, array $sahipGrubu = []): ?string
     {
-        return ! $kendisi && self::baskaSalonVar($hesapSalonlari, $salonId) ? self::DEGISIM_YALNIZ_KENDISI : null;
+        return ! $kendisi && self::grupDisiVar($hesapSalonlari, $salonId, $sahipGrubu) ? self::DEGISIM_YALNIZ_KENDISI : null;
     }
 
-    /** @param  int[]  $salonlar */
-    private static function baskaSalonVar(array $salonlar, int $salonId): bool
+    /**
+     * @param  int[]  $salonlar
+     * @param  int[]  $sahipGrubu
+     */
+    private static function grupDisiVar(array $salonlar, int $salonId, array $sahipGrubu): bool
     {
+        $grup = array_map('intval', $sahipGrubu);
         foreach ($salonlar as $s) {
-            if ((int) $s !== $salonId) {
+            if ((int) $s !== $salonId && ! in_array((int) $s, $grup, true)) {
                 return true;
             }
         }
