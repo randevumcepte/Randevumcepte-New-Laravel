@@ -1,9 +1,9 @@
 /**
  * v2 FORM ARŞİVİ bileşeni — TEK KAYNAK. Form Yönetimi sayfası (formlar-v2.js) ve müşteri
  * detay "Sözleşmeler/Belgeler" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=10';
+ * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=11';
  *
- * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Harici Belgeler),
+ * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Sözleşmeler & Harici Belgeler),
  * Form Gönder, Sözleşme Oluştur, Belge Ekle modalları. İş kuralları SUNUCUDA: satırın
  * durumu/rozeti/izinli işlemleri (`durum_bilgi`, `aksiyonlar`), form başına ek alanlar
  * (`ek_alanlar`), taksit planı ve belge linkleri API'den hazır gelir — web ve Flutter aynı
@@ -26,7 +26,7 @@ const SEKMELER = [
   { ad: 'onayli', etiket: 'Onaylananlar', ikon: 'bi-check-circle' },
   { ad: 'beklenen', etiket: 'Beklenenler', ikon: 'bi-clock' },
   { ad: 'iptal', etiket: 'İptal Edilenler', ikon: 'bi-x-circle' },
-  { ad: 'harici', etiket: 'Harici Belgeler', ikon: 'bi-file-earmark' },
+  { ad: 'harici', etiket: 'Sözleşmeler & Harici Belgeler', ikon: 'bi-file-earmark' },
 ];
 
 /** flatpickr (layout yükler) — görünüm d.m.Y, değer dataset.iso (Y-m-d). */

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * ArsivDurum'dan gelir. Hiçbir şey YAZMAZ.
  *
  * Sekmeler eski web arsiv_liste_getir ile aynı (kullanıcı 2026-11-10): "Beklenenler" bekleyen FORMLAR
- * (form_id != 0), "Harici Belgeler" form_id = 0 olan bekleyen kayıtların hepsi — hizmet sözleşmeleri ve
+ * (form_id != 0), "Sözleşmeler & Harici Belgeler" form_id = 0 olan bekleyen kayıtların hepsi — hizmet sözleşmeleri ve
  * yüklenen belgeler. Web ve mobil aynı sekmeyi görür.
  */
 class ArsivListeServisi

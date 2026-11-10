@@ -19,7 +19,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=8';
-import { formArsivi } from '/js/lib/v2-form.js?v=10';
+import { formArsivi } from '/js/lib/v2-form.js?v=11';
 import { randevuTablosu } from '/js/lib/v2-randevu.js?v=10';
 import { musteriDersSekmesi } from '/js/lib/v2-ders.js?v=7';
 
