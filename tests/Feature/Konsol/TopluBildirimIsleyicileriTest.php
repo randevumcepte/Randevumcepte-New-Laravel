@@ -557,11 +557,11 @@ class SahteFcm extends FcmIstemcisi
     /** @var array<string, \Throwable> token → firlatilacak hata */
     public array $hatalar = [];
 
-    public function gonder(string $dosya, array $mesaj): void
+    public function gonder(string $dosya, array $mesaj, float $zamanAsimi = 10): void
     {
         if (isset($this->hatalar[$mesaj['token']])) {
             throw $this->hatalar[$mesaj['token']];
         }
-        $this->gelen[] = ['dosya' => $dosya, 'mesaj' => $mesaj];
+        $this->gelen[] = ['dosya' => $dosya, 'mesaj' => $mesaj, 'zaman_asimi' => $zamanAsimi];
     }
 }
