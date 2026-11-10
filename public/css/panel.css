@@ -463,19 +463,24 @@ html, body { margin: 0; padding: 0; }
     margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
   }
   .rc-kartli tbody tr[hidden] { display: none; } /* açılır detay satırları (seans vb.) kapalı kalsın */
+  /* Hücre blok akışında: etiket sola yüzer, değer sağa yaslı akar. (flex değil — çok parçalı
+     içerik ayrı esnek öğelere bölünüp taşıyordu.) */
   .rc-tablo.rc-kartli tbody td {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 8px 0; border: 0; text-align: right; white-space: normal; min-width: 0;
+    display: block; padding: 8px 0; border: 0; text-align: right; white-space: normal; min-width: 0;
+    overflow-wrap: anywhere;
   }
+  .rc-kartli tbody td::after { content: ''; display: table; clear: both; }
   .rc-tablo.rc-kartli tbody tr:nth-child(n) td { background: transparent; } /* zebra/hover kartta yok */
   .rc-kartli tbody td + td { border-top: 1px dashed #f0f0f6 !important; }
   .rc-kartli tbody td[data-etiket]::before {
-    content: attr(data-etiket); flex: 0 0 auto; max-width: 45%; text-align: left;
-    font-size: 12px; font-weight: 600; color: #8a8a9a;
+    content: attr(data-etiket); float: left; max-width: 45%; margin-right: 12px; text-align: left;
+    font-size: 12px; font-weight: 600; color: #8a8a9a; line-height: 1.6; overflow-wrap: normal;
   }
   .rc-tablo.rc-kartli tbody td[data-mobil="baslik"] { display: block; text-align: left; font-size: 14.5px; font-weight: 600; padding: 10px 0; }
   .rc-tablo.rc-kartli tbody td[data-mobil="etiketsiz"] { display: block; text-align: left; }
-  .rc-tablo.rc-kartli tbody td[data-mobil="alt"] { justify-content: flex-end; }
+  .rc-tablo.rc-kartli tbody td[data-mobil="alt"] { display: flex; justify-content: flex-end; flex-wrap: wrap; }
+  /* Çok butonlu işlem satırı sığmazsa alt satıra sarar (taşma yok) */
+  .rc-kartli tbody td[data-mobil="alt"] > * { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 100%; }
   .rc-kartli tbody td[data-mobil="baslik"]::before, .rc-kartli tbody td[data-mobil="etiketsiz"]::before,
   .rc-kartli tbody td[data-mobil="alt"]::before { content: none; }
   .rc-tablo.rc-kartli tbody td[data-mobil="gizle"], .rc-kartli tbody td:empty { display: none; }

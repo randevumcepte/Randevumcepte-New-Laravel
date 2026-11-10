@@ -19,7 +19,7 @@ const randevuIslem = {};   // salon başına tek çekmece
 
 const EYLEMLER = {
   randevu: {
-    css: '/css/takvim-v2.css?v=17',
+    css: '/css/takvim-v2.css?v=18',
     async ac({ salon }) {
       const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=12');
       randevuIslem[salon.id] ||= randevuIslemleri({ salonId: salon.id });

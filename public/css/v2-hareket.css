@@ -53,3 +53,7 @@
   .hk-kaynak-mobil { background: #262a4a; color: #a5b4fc; }
   .hk-detay pre { background: #1b1b26; border-color: #34344c; color: #ededf5; }
 }
+/* Telefon kart görünümü: kategori şeridi metnin üstüne binmesin */
+@media (max-width: 600px) {
+  .rc-tablo.rc-kartli tbody td.hk-zaman[data-mobil] { padding-left: 14px; }
+}

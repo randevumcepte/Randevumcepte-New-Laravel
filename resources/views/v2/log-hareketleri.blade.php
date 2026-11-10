@@ -4,7 +4,7 @@
 @section('aktif', 'log-hareketleri')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/v2-hareket.css?v=1">
+    <link rel="stylesheet" href="/css/v2-hareket.css?v=2">
 @endpush
 
 @section('icerik')

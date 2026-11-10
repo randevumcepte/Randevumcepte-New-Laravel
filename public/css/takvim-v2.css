@@ -416,6 +416,7 @@
     border-radius: 3px; background: #d9dbe6;
   }
   .t-cekmece.acik { transform: translateY(0); }
+  .t-cekmece:not(.acik) { box-shadow: none; } /* kapalıyken ekran altında gölge şeridi kalmasın */
   .t-ck-aks { grid-template-columns: 1fr 1fr; }
   .t-form { grid-template-columns: 1fr; }
 }
