@@ -131,6 +131,8 @@ class SiteController extends Controller
             'studyo_modu' => (bool) ($salon->studyo_modu ?? false), 'grup_dersi_aktif' => (bool) ($salon->grup_dersi_aktif ?? false),
         ];
 
+        abort_unless(MusteriPaneli::acikMi($sayfa, $gorunum), 404);
+
         return view('site.hesap.'.$sayfa, ['salon' => $gorunum, 'aktif' => $sayfa, 'menu' => MusteriPaneli::menu($gorunum)]
             + $this->ortak($salonId, $gorunum, $this->kendiDomaini($request, $salon->domain ?? null)));
     }

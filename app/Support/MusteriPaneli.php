@@ -38,18 +38,34 @@ final class MusteriPaneli
     /** Salona göre menü: [anahtar, başlık, ikon, yol][]. */
     public static function menu(object $salon): array
     {
-        $studyo = (bool) ($salon->studyo_modu ?? false);
-        $grup = (bool) ($salon->grup_dersi_aktif ?? false);
         $menu = [];
         foreach (self::SAYFALAR as $yol => [$anahtar, $baslik, $ikon, $menude, $kosul]) {
-            $gorunur = match ($kosul) {
-                'studyo' => $studyo, 'studyo_degil' => ! $studyo, 'grup_dersi' => $grup, default => true,
-            };
-            if ($menude && $gorunur) {
+            if ($menude && self::kosulTutar($kosul, $salon)) {
                 $menu[] = ['anahtar' => $anahtar, 'baslik' => $baslik, 'ikon' => $ikon, 'yol' => $yol];
             }
         }
 
         return $menu;
+    }
+
+    /** Sayfa bu salonda açılabilir mi (menüde gizli sayfa adres yazılarak da açılmaz). */
+    public static function acikMi(string $anahtar, object $salon): bool
+    {
+        foreach (self::SAYFALAR as [$a, , , , $kosul]) {
+            if ($a === $anahtar) {
+                return self::kosulTutar($kosul, $salon);
+            }
+        }
+
+        return false;
+    }
+
+    private static function kosulTutar(?string $kosul, object $salon): bool
+    {
+        $studyo = (bool) ($salon->studyo_modu ?? false);
+
+        return match ($kosul) {
+            'studyo' => $studyo, 'studyo_degil' => ! $studyo, 'grup_dersi' => (bool) ($salon->grup_dersi_aktif ?? false), default => true,
+        };
     }
 }

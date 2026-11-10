@@ -13,6 +13,7 @@
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
       <link rel="stylesheet" href="{{ asset('site/css/modern-profile.css') }}?v=1">
       {!! $tema_css !!}
+      <link rel="stylesheet" href="{{ asset('site/css/hesap-ortak.css') }}?v=1">
       @stack('stil')
       <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;width:92px;max-width:92px;font-size:13px;padding-left:6px;padding-right:4px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
    </head>
@@ -66,7 +67,7 @@
          </footer>
       </div>
       <script type="module" src="/js/telefon-ulke.js?v=2"></script>
-      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=4"></script>
+      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=5"></script>
       {{-- Sayfaya özel modül (yeni panel sayfaları kendi dosyasını ekler: public/js/site/hesap-*.js) --}}
       @stack('betik')
    </body>

@@ -1,0 +1,57 @@
+/* Müşteri paneli ORTAK stilleri — tek kaynak (layout her sayfada yükler). public/js/site/hesap-ortak.js'in
+   ürettiği parçalar: sayfalama, <dialog> pencere, onay penceresi + düğmeler, örtü pencere, bilgi notu. */
+
+/* hidden özniteliği sınıfın display değerine yenilmesin (ör. .profile-action-btn inline-flex) */
+.profile-main-container [hidden] { display: none !important; }
+
+/* Sayfalama */
+.hs-sayfalama { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 18px; }
+.hs-sayfa-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(92, 0, 142, 0.10); background: #fff; color: var(--primary-purple);
+    box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.hs-sayfa-btn:disabled { color: #d1d5db; box-shadow: none; cursor: default; }
+.hs-sayfa-no { padding: 8px 14px; border-radius: 999px; background: rgba(92, 0, 142, 0.10); color: var(--primary-purple); font-size: 12px; font-weight: 700; }
+
+/* Küçük sayaç rozeti */
+.hs-sayac { padding: 2px 8px; border-radius: 999px; background: rgba(92, 0, 142, 0.10); color: var(--primary-purple); font-size: 11px; font-weight: 700; }
+
+/* Detay penceresi (<dialog>, pencereAc) */
+.hs-pencere { border: none; padding: 0; border-radius: 24px; width: min(560px, calc(100vw - 32px)); max-height: 88vh; max-height: 88dvh; box-shadow: var(--shadow-xl); }
+.hs-pencere::backdrop { background: rgba(17, 24, 39, 0.45); }
+.hs-pencere-ic { position: relative; padding: 22px 20px 24px; }
+.hs-pencere-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: none; background: #f3f4f6; color: #4b5563; cursor: pointer; }
+
+/* Düğmeler */
+.hb-dugme {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: 12px; border: none;
+    background: var(--primary-purple); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none;
+}
+.hb-dugme:hover, .hb-dugme:focus { color: #fff; text-decoration: none; filter: brightness(1.05); }
+.hb-dugme--ikincil { background: #f3f4f6; color: #374151; }
+.hb-dugme--ikincil:hover, .hb-dugme--ikincil:focus { color: #111827; }
+.hb-dugme--tehlike { background: #dc2626; }
+.hb-dugme--tam { display: flex; width: 100%; margin-top: 16px; }
+.hb-dugme--pasif { background: #e5e7eb; color: #6b7280; cursor: default; }
+.hb-dugme--pasif:hover { color: #6b7280; filter: none; }
+
+/* Onay penceresi */
+.hb-onay { width: min(460px, calc(100vw - 32px)); }
+.hb-onay-baslik { margin: 0 40px 10px 0; font-size: 17px; font-weight: 800; color: #1f2937; }
+.hb-onay-metin { margin: 0 0 14px; color: #4b5563; font-size: 14px; line-height: 1.5; }
+.hb-onay-alan { width: 100%; resize: vertical; margin-bottom: 12px; }
+.hb-onay-hata { margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fef2f2; color: #dc2626; font-size: 13px; font-weight: 600; }
+.hb-onay-dugmeler { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.hb-onay-dugmeler .hb-dugme { flex: 1 1 0; }
+.hb-uyari-kutu { padding: 14px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; margin-bottom: 14px; }
+.hb-uyari-kutu strong { display: block; color: #dc2626; font-size: 15px; margin-bottom: 6px; }
+.hb-uyari-kutu p { margin: 0; color: #374151; font-size: 14px; line-height: 1.5; }
+.hb-onay-kutu { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 12px; cursor: pointer; }
+.hb-onay-kutu input { margin-top: 3px; flex: 0 0 auto; }
+
+/* Örtü pencere (pencere) + bilgi notu (toast) */
+.hh-perde { position: fixed; inset: 0; z-index: 2000; background: rgba(17,24,39,.5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.hh-perde[hidden] { display: none; }
+.hh-toast { position: fixed; left: 50%; bottom: 24px; z-index: 2100; max-width: calc(100% - 32px); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; padding: 12px 18px; border-radius: 12px; background: #1f2937; color: #fff; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.2); transition: all .25s ease; }
+.hh-toast.acik { opacity: 1; transform: translate(-50%, 0); }
+.hh-toast--basarili { background: #16a34a; }

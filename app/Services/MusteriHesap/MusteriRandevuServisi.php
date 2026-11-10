@@ -52,7 +52,7 @@ class MusteriRandevuServisi
 
     public function iptal(int $userId, int $randevuId): array
     {
-        $r = DB::table('randevular')->where('id', $randevuId)->where('user_id', $userId)->first(['id', 'salon_id', 'tarih', 'saat', 'durum']);
+        $r = DB::table('randevular')->where('id', $randevuId)->where('user_id', $userId)->first(['id', 'salon_id', 'tarih', 'saat', 'durum', 'tahsilat_eklendi']);
         if (! $r) {
             throw new BulunamadiException('Randevu bulunamadı');
         }
@@ -67,9 +67,11 @@ class MusteriRandevuServisi
         return ['randevu_id' => $randevuId, 'durum' => Randevular::KABUL_EDILMEDI];
     }
 
+    /** Tahsilati eklenmis randevu musteri tarafindan iptal edilemez (mobil ve web ekranda gizliyordu, sunucu da denetler). */
     private function iptalEdilebilir(object $r): bool
     {
-        return (int) $r->durum < Randevular::IPTAL_EDILDI && strtotime($r->tarih.' '.$r->saat) > time();
+        return (int) $r->durum < Randevular::IPTAL_EDILDI && strtotime($r->tarih.' '.$r->saat) > time()
+            && ! (bool) ($r->tahsilat_eklendi ?? false);
     }
 
     private function kalemler(array $randevuIdler): array

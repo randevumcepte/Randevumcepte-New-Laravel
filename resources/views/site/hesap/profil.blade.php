@@ -1,5 +1,8 @@
 @extends('site.hesap.layout')
 @section('baslik', 'Profilim')
+@push('stil')
+<link rel="stylesheet" href="{{ asset('site/css/hesap-belgeler.css') }}?v=1">
+@endpush
 @section('content')
 <form class="form" id="profilFormu">
    <div class="row">
@@ -40,6 +43,12 @@
                      <input name="dogum_tarihi" type="text" class="modern-form-control" id="dogum_tarihi" placeholder="GG.AA.YYYY" inputmode="numeric" maxlength="10">
                   </div>
                </div>
+               <div class="profile-form-row">
+                  <div class="modern-form-group">
+                     <label for="meslek"><i class="fa fa-briefcase"></i> Meslek</label>
+                     <input name="meslek" type="text" class="modern-form-control" id="meslek" placeholder="Örn. Mühendis" maxlength="100">
+                  </div>
+               </div>
             </div>
          </div>
       </div>
@@ -74,4 +83,14 @@
       </div>
    </div>
 </form>
+{{-- Mobil profil ekranındaki "Hesabımı Sil" satırı (hesapkaldirma.dart); onay penceresi hesap.js'te --}}
+<div class="profile-card hb-tehlike-kart">
+   <div class="profile-card-body">
+      <button type="button" id="hesapSil" class="hb-tehlike-satir">
+         <span class="hb-tehlike-ikon"><i class="fa fa-user-times"></i></span>
+         <span class="hb-tehlike-metin"><strong>Hesabımı Sil</strong><small>Hesabınızı kalıcı olarak kaldırın</small></span>
+         <i class="fa fa-chevron-right"></i>
+      </button>
+   </div>
+</div>
 @endsection
