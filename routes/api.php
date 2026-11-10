@@ -147,7 +147,7 @@ Route::prefix('v2')->middleware('throttle:'.AppServiceProvider::GENEL_SINIR)->gr
         Route::post('/adisyon', [SatisKalemController::class, 'adisyonAc']);
         Route::post('/adisyon/{adisyon}/kalem', [SatisKalemController::class, 'ekle'])->whereNumber('adisyon');
         Route::patch('/kalem/urun/{id}', [SatisKalemController::class, 'urunAdet'])->whereNumber('id');
-        Route::patch('/kalem/hizmet/{id}/seans', [SatisKalemController::class, 'seans'])->whereNumber('id');
+        Route::patch('/kalem/{tip}/{id}/seans', [SatisKalemController::class, 'seans'])->whereIn('tip', ['hizmet', 'paket'])->whereNumber('id');
         Route::patch('/kalem/{tip}/{id}/fiyat', [SatisKalemController::class, 'fiyat'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
         Route::patch('/kalem/{tip}/{id}/personel', [SatisKalemController::class, 'personel'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');
         Route::delete('/kalem/{tip}/{id}', [SatisKalemController::class, 'sil'])->where('tip', 'hizmet|urun|paket')->whereNumber('id');

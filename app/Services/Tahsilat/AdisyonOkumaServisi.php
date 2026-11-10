@@ -139,6 +139,9 @@ class AdisyonOkumaServisi
                 'fiyat'          => $p->fiyat,
                 'indirim_tutari' => $p->indirim_tutari,
                 'hediye'         => (int) ($p->hediye ?? 0),
+                // Satış düzenlemede seans kutusu (eski paketseansdegistir); sınırsızda kutu yok.
+                'seans_sayisi'   => $p->seans_sayisi !== null ? (int) $p->seans_sayisi : null,
+                'sinirsiz'       => (int) ($p->sinirsiz ?? 0) === 1,
                 // "Yükseltildi (eski paket)" rozeti; ek alan (Flutter yok sayar). Toplu okuma, satır başı sorgu yok.
                 'yukseltme_kaynak' => $yukseltmeKaynaklari[(int) $p->id] ?? null,
             ])->values(),

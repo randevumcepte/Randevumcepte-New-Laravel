@@ -333,6 +333,38 @@ class KalemServisi
         });
     }
 
+    /**
+     * Paket satışının seans sayısını değiştir (eski paketseansdegistir, Satış & Tahsilat Düzenleme): bölge başına hak;
+     * bekleyen = yeni − (kullanılan + kullanılmayan). Eskiden farklı: kullanılmış seansın altına inilmez, sınırsız pakette
+     * seans sayısı yoktur (değiştirilemez).
+     */
+    public function paketSeansGuncelle(int $kalemId, $girilen): array
+    {
+        if (! is_numeric($girilen) || (int) $girilen != $girilen || (int) $girilen < 1 || (int) $girilen > 1000) {
+            throw new GecersizIslemException('Geçersiz seans sayısı');
+        }
+        $seans = (int) $girilen;
+
+        return DB::transaction(function () use ($kalemId, $seans) {
+            $k = AdisyonPaketler::where('id', $kalemId)->lockForUpdate()->first();
+            if (! $k) {
+                throw new BulunamadiException('Kalem bulunamadı');
+            }
+            if ((int) ($k->sinirsiz ?? 0) === 1) {
+                throw new GecersizIslemException('Sınırsız pakette seans sayısı değiştirilemez');
+            }
+            $kullanilan = (int) $k->kullanilan_seans + (int) $k->kullanilmayan_seans;
+            if ($seans < $kullanilan) {
+                throw new CakismaException('Seans sayısı kullanılmış seansın ('.$kullanilan.') altına inemez');
+            }
+            $k->seans_sayisi = $seans;
+            $k->bekleyen_seans = $seans - $kullanilan;
+            $k->save();
+
+            return ['kalem_id' => $kalemId, 'seans_sayisi' => $seans, 'adisyon_id' => (int) $k->adisyon_id];
+        });
+    }
+
     /** Kalemin personelini (hizmet veren / satıcı) değiştir (eski adisyonhizmetpersonelguncelle; tahsilatlı kalemde de serbest). */
     public function personelGuncelle(string $tip, int $kalemId, ?int $personelId): array
     {

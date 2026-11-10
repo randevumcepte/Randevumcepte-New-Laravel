@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Paket;
 
+use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Services\Paket\PaketSatisServisi;
@@ -198,6 +199,34 @@ class PaketSatisYukseltTest extends TestCase
     // ───────────────────────── kurulum ─────────────────────────
 
     /** @param  array<int,array{0:int,1:int,2:float}>  $hizmetler  [hizmet_id, seans, fiyat] */
+    public function test_satistaki_paketin_seans_sayisi_degisir_bekleyen_yeniden_hesaplanir(): void
+    {
+        $ap = $this->satilmis($this->paket('Lazer', [[1, 8, 1000]]), 1000, 0);
+        DB::table('adisyon_paketler')->where('id', $ap)->update(['kullanilan_seans' => 2, 'kullanilmayan_seans' => 1]);
+        $servis = app(KalemServisi::class);
+
+        $servis->paketSeansGuncelle($ap, '12');
+        $this->assertSame([12, 9], [(int) DB::table('adisyon_paketler')->where('id', $ap)->value('seans_sayisi'), (int) DB::table('adisyon_paketler')->where('id', $ap)->value('bekleyen_seans')]);
+
+        // Kullanilmis seansin (3) altina inilmez; gecersiz sayi ve sinirsiz paket reddedilir.
+        $this->assertHata(fn () => $servis->paketSeansGuncelle($ap, '2'), CakismaException::class);
+        $this->assertHata(fn () => $servis->paketSeansGuncelle($ap, '0'), GecersizIslemException::class);
+        $this->assertHata(fn () => $servis->paketSeansGuncelle($ap, 'abc'), GecersizIslemException::class);
+        DB::table('adisyon_paketler')->where('id', $ap)->update(['sinirsiz' => 1]);
+        $this->assertHata(fn () => $servis->paketSeansGuncelle($ap, '20'), GecersizIslemException::class);
+        $this->assertSame(12, (int) DB::table('adisyon_paketler')->where('id', $ap)->value('seans_sayisi'));
+    }
+
+    private function assertHata(callable $is, string $sinif): void
+    {
+        try {
+            $is();
+            $this->fail($sinif.' bekleniyordu');
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf($sinif, $e);
+        }
+    }
+
     private function paket(string $ad, array $hizmetler, int $aktif = 1): int
     {
         $id = DB::table('paketler')->insertGetId([

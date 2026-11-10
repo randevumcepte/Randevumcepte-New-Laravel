@@ -114,19 +114,26 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Fiyat güncellendi.');
     }
 
-    /** PATCH /api/v2/kalem/hizmet/{id}/seans  body: {seans} — boş/≤1 tekil hizmet, 2+ paket satışı. */
-    public function seans(Request $request, int $id)
+    /**
+     * PATCH /api/v2/kalem/{hizmet|paket}/{id}/seans  body: {seans}
+     *   hizmet: boş/≤1 tekil hizmet, 2+ paket satışı; paket: bölge başına seans hakkı (eski paketseansdegistir).
+     */
+    public function seans(Request $request, string $tip, int $id)
     {
         $user = $this->kullanici();
         $this->yazmaAcikMi();
 
-        $salonId = $this->servis->kalemSalonId('hizmet', $id);
+        $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
 
-        return ApiCevap::basarili($this->servis->hizmetSeansGuncelle($id, $request->input('seans')), 'Seans güncellendi.');
+        $sonuc = $tip === 'paket'
+            ? $this->servis->paketSeansGuncelle($id, $request->input('seans'))
+            : $this->servis->hizmetSeansGuncelle($id, $request->input('seans'));
+
+        return ApiCevap::basarili($sonuc, 'Seans güncellendi.');
     }
 
     /** PATCH /api/v2/kalem/{tip}/{id}/personel  body: {personel_id} — hizmet veren / satıcı değiştir. */

@@ -263,7 +263,7 @@ function kalemlerGoster() {
   const ortak = (x) => ({ id: x.id, fiyat: x.fiyat, indirim: x.indirim_tutari, personel_id: x.personel_id, personel_adi: x.personel_adi });
   const k = [
     ...(v.hizmetler || []).map((h) => ({ ...ortak(h), tip: 'hizmet', ad: h.ad || 'Hizmet #' + h.hizmet_id, seans: h.seans_sayisi, seansli: h.seansli, randevudan: h.randevudan })),
-    ...(v.paketler || []).map((p) => ({ ...ortak(p), tip: 'paket', ad: p.ad || 'Paket #' + p.paket_id, yukseltme: p.yukseltme_kaynak })),
+    ...(v.paketler || []).map((p) => ({ ...ortak(p), tip: 'paket', ad: p.ad || 'Paket #' + p.paket_id, yukseltme: p.yukseltme_kaynak, seans: p.seans_sayisi, sinirsiz: p.sinirsiz })),
     ...(v.urunler || []).map((u) => ({ ...ortak(u), tip: 'urun', ad: u.ad || 'Ürün #' + u.urun_id, adet: u.adet })),
   ];
   yerelTablo('t-kalemler', {
@@ -308,10 +308,15 @@ function fiyatHucre(tip, id, fiyat) {
 // Seanslı hizmet paket satışı sayılır (karar API'de: seansli).
 const turAd = (x) => (x.seansli ? TUR_AD.paket : TUR_AD[x.tip]);
 
-// Üründe adet, randevudan gelmeyen hizmette opsiyonel seans; paket seansı katalogdan.
+// Üründe adet, randevudan gelmeyen hizmette opsiyonel seans, pakette bölge başına seans (sınırsızda yok).
 function miktarHucre(x) {
   if (x.tip === 'urun') return `<input type="number" min="1" value="${x.adet || 1}" class="t-adet-inp" data-id="${x.id}" title="Adet" aria-label="Adet">`;
-  if (x.tip === 'hizmet' && !x.randevudan) return `<input type="number" min="0" value="${x.seans || ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-id="${x.id}" title="Boş: tek hizmet · 2 ve üzeri: paket satışı" aria-label="Seans sayısı">`;
+  if (x.tip === 'paket') {
+    return x.sinirsiz
+      ? '<span class="t-seans-yok" title="Sınırsız paket">Sınırsız</span>'
+      : `<input type="number" min="1" value="${x.seans ?? ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-tip="paket" data-id="${x.id}" title="Bölge başına seans hakkı" aria-label="Seans sayısı">`;
+  }
+  if (x.tip === 'hizmet' && !x.randevudan) return `<input type="number" min="0" value="${x.seans || ''}" placeholder="Seans" class="t-adet-inp t-seans-inp" data-tip="hizmet" data-id="${x.id}" title="Boş: tek hizmet · 2 ve üzeri: paket satışı" aria-label="Seans sayısı">`;
   if (x.tip === 'hizmet') return '<span class="t-seans-yok" title="Randevudan gelen hizmet — seans paket satışı sayılmadığı için değiştirilemez">—</span>';
   return '—';
 }
@@ -612,7 +617,7 @@ async function adetDegistir(kalemId, adet) {
 }
 
 async function seansDegistir(i) {
-  const { ok, kod, govde } = await api('PATCH', `/kalem/hizmet/${i.dataset.id}/seans`, { body: { seans: i.value } });
+  const { ok, kod, govde } = await api('PATCH', `/kalem/${i.dataset.tip || 'hizmet'}/${i.dataset.id}/seans`, { body: { seans: i.value } });
   if (ok) mesaj('Seans güncellendi.', 'ok');
   else mesaj(`Seans güncellenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata');
   await adisyonYukle();
