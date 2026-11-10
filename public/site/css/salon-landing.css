@@ -3131,3 +3131,40 @@ body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::after {
 }
 .slp-drawer__panel #tarihtablosu .input-radio label,
 .slp-drawer__panel .tarihler .input-radio label { height: 58px !important; border-radius: 12px !important; font-size: 14px !important; }
+
+/* ==========================================================================
+   RANDEVU PENCERESI — ust bant ve Randevu Ozeti sabit (kullanici 2026-11-10)
+   Pencere kendi icinde kayar; bant ustte, ozet bandin altinda sabit kalir.
+   ========================================================================== */
+.slp-drawer__panel .lx-hero {
+    position: sticky !important;
+    top: 0;
+    z-index: 60;
+}
+.slp-drawer__panel #randevuozetbolumu {
+    position: sticky !important;
+    top: calc(var(--lx-hero-h, 120px) + 8px) !important;
+    z-index: 40;
+    align-self: start;
+}
+/* Bantla ozet arasinda kayan icerik gorunmesin */
+.slp-drawer__panel .lx-hero { box-shadow: 0 -16px 0 0 #fff, 0 8px 16px -10px rgba(26, 11, 46, .35) !important; }
+
+/* Telefon: bant yalniz adim cubugu; ozet bandin altinda tek satirlik serit (yalniz secilenler) */
+@media (max-width: 767px) {
+    .slp-drawer__panel .lx-hero { padding: 10px 12px !important; border-radius: 12px !important; }
+    .slp-drawer__panel .lx-hero__left { display: none; }
+    .slp-drawer__panel .lx-progress { padding: 6px 8px 4px; }
+    .slp-drawer__panel .lx-progress__labels { font-size: 9px; }
+    .slp-drawer__panel #randevuozetbolumu { top: calc(var(--lx-hero-h, 80px) + 6px) !important; }
+    .slp-drawer__panel #randevuozetbolumu .baslik { padding: 8px 12px !important; font-size: 13px !important; }
+    .slp-drawer__panel #randevuozetbolumu .baslik::before { width: 22px; height: 22px; font-size: 11px; }
+    .slp-drawer__panel #randevuozetbolumu .randevuozet { padding: 0 12px 4px !important; }
+    .slp-drawer__panel #randevuozetbolumu .randevuozet tr td { padding: 5px 0 !important; font-size: 12px !important; }
+    .slp-drawer__panel #randevuozetbolumu .randevuozet tr td:first-child { width: 78px !important; font-size: 9px !important; }
+    .slp-drawer__panel #randevuozetbolumu .randevuozet ul { margin: 0; padding-left: 16px; }
+    /* Bos satirlar ("Henuz ... secmediniz") telefonda yer kaplamasin */
+    .slp-drawer__panel #randevuozetbolumu tr:has(#secilenhizmetlistebos:not([style*="none"])),
+    .slp-drawer__panel #randevuozetbolumu tr:has(#personellistebos:not([style*="none"])) { display: none; }
+    .slp-drawer__close { position: absolute; top: 8px; right: 8px; margin: 0; z-index: 70; }
+}

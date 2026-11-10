@@ -34,7 +34,7 @@
       <link rel="stylesheet" href="{{ asset('site/css/style.css') }}?v=1">
       <link rel="stylesheet" href="{{ asset('site/css/user.css') }}">
       <link rel="stylesheet" href="{{ asset('site/css/randevu-luxe.css') }}?v=1">
-      <link rel="stylesheet" href="{{ asset('site/css/salon-landing.css') }}?v=3">
+      <link rel="stylesheet" href="{{ asset('site/css/salon-landing.css') }}?v=4">
       {!! $tema_css !!}
       <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;max-width:130px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
@@ -75,7 +75,7 @@
       @if($vitrinBetikleri ?? true)
       <script src="{{ asset('js/site/vitrin-sayfa.js') }}?v=1"></script>
       <script src="{{ asset('js/site/vitrin-personel.js') }}?v=1"></script>
-      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=2"></script>
+      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=3"></script>
       @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=1"></script>@endif
       @endif
       @stack('sayfa')

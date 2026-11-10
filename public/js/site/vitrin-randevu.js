@@ -33,16 +33,23 @@ async function bekle(is) {
     } finally { yukleniyor(false); }
 }
 
+// Seçili hizmetler özet kutusuna işaretlendiği anda yazılır (eski sitede de anlıktı).
+function hizmetOzeti() {
+    durum.hizmetler = [...document.querySelectorAll('input[name="randevuhizmet[]"]:checked')].map((c) => ({ id: Number(c.value), ad: c.dataset.ad }));
+    const var_ = durum.hizmetler.length > 0;
+    $('secilenhizmetlistebos').style.display = var_ ? 'none' : '';
+    $('secilenhizmetliste').style.display = var_ ? 'block' : 'none';
+    $('secilenhizmetliste').innerHTML = var_ ? '<ul>' + durum.hizmetler.map((h) => `<li>${esc(h.ad)}</li>`).join('') + '</ul>' : '';
+}
+document.addEventListener('change', (e) => { if (e.target.matches?.('input[name="randevuhizmet[]"]')) hizmetOzeti(); });
+
 // ── 1 → 2: hizmet → personel ──
 $('personelsecimadiminagec').addEventListener('click', async (e) => {
     e.preventDefault();
-    durum.hizmetler = [...document.querySelectorAll('input[name="randevuhizmet[]"]:checked')].map((c) => ({ id: Number(c.value), ad: c.dataset.ad }));
+    hizmetOzeti();
     if (!durum.hizmetler.length) { window.alert('Devam etmek için en az bir tane hizmet seçiniz!'); return; }
     const liste = await bekle(() => Promise.all(durum.hizmetler.map((h) => api(`/vitrin/${SALON}/personeller`, { sorgu: { hizmet_id: h.id } }))));
     if (!liste) return;
-    $('secilenhizmetlistebos').style.display = 'none';
-    $('secilenhizmetliste').style.display = 'block';
-    $('secilenhizmetliste').innerHTML = '<ul>' + durum.hizmetler.map((h) => `<li>${esc(h.ad)}</li>`).join('') + '</ul>';
     $('personelsecimbolumu').innerHTML = personelBolumu(liste);
     adimaGit(1);
 });
