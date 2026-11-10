@@ -62,7 +62,7 @@ class SalonHatirlatmaServisi
                 ->get(['am.id', 'am.saat', 'u.name']);
             $notlar = $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'musteri.not_yaz') ? $this->sonNotlar($kayitlar->pluck('id')->all()) : [];
 
-            return $kayitlar->map(function ($k) use ($maskele, $notlar) {
+            return $kayitlar->map(function ($k) use ($maskele, $notlar, $salonId) {
                 $ad = $maskele ? KvkkMaske::adSoyad($k->name) : $k->name;
                 $not = $notlar[$k->id] ?? '';
 
@@ -72,6 +72,7 @@ class SalonHatirlatmaServisi
                     'mesaj'    => $ad.' isimli müşteriniz aramanızı bekliyor.',
                     'altMesaj' => substr($k->saat, 0, 5).' için planlandı.'.($not !== '' ? ' Önceki not: '.mb_substr($not, 0, 80) : ''),
                     'cta_text' => 'Hemen Ara', 'aksiyon' => 'arama_baslat', 'aranacak_musteri_id' => (int) $k->id, 'sayac' => 1,
+                    'link' => GenelHatirlatmalar::yol('cagri-merkezi', $salonId, ['p' => 'takvim']),
                 ];
             })->all();
         } catch (\Throwable $e) {

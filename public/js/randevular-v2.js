@@ -43,6 +43,8 @@ async function baslat() {
       ${secim('rlHizmet', 'Hizmet', 'Tüm Hizmetler', s.hizmetler)}
     </div>
     <div id="rlTablo"></div>`;
+  // Bağlantıyla gelen durum filtresi (ör. hatırlatma kartı ?durum=beklemede).
+  if ([...el('#rlDurum').options].some((o) => o.value === qp.get('durum'))) el('#rlDurum').value = qp.get('durum');
 
   let liste = null;
   const donem = donemSecici(el('#rlDonem'), {

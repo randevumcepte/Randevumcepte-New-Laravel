@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/satislar-v2.js?v=13"></script>
+    <script type="module" src="/js/satislar-v2.js?v=14"></script>
 @endpush

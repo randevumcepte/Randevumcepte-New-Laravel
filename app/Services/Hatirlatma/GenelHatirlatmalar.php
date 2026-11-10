@@ -45,7 +45,7 @@ class GenelHatirlatmalar
 
         return $sayi > 0 ? self::kart('geldi_gelmedi', 3, 'kirmizi-uyari', '🚨', 'Saati Geçen Randevular',
             $sayi.' randevunun saati geçti, durumu hâlâ işaretlenmemiş.',
-            'Geldiyse işlem yapın, gelmediyse veya iptalse lütfen iptal edin — gün sonu raporunuz doğru çıksın.', 'Randevulara Git', $sayi) : null;
+            'Geldiyse işlem yapın, gelmediyse veya iptalse lütfen iptal edin — gün sonu raporunuz doğru çıksın.', 'Randevulara Git', $sayi, self::yol('takvim', $salonId)) : null;
     }
 
     private function yeniMusteriler(int $salonId): ?array
@@ -61,7 +61,7 @@ class GenelHatirlatmalar
 
         return self::kart('yeni_musteri', 2, 'konfeti-parti', '🎉', 'Yeni Müşteri Geldi! 🎊',
             $sayi === 1 ? "Son 24 saatte $isim portföyünüze eklendi." : "Son 24 saatte $sayi yeni müşteri portföyünüze eklendi.",
-            'Tıkla → "Yeni Eklenen Müşteriler" listesini aç (en yeniler üstte), hoş geldin SMS\'i at.', 'Yeni Müşterileri Gör', $sayi);
+            'Tıkla → "Yeni Eklenen Müşteriler" listesini aç (en yeniler üstte), hoş geldin SMS\'i at.', 'Yeni Müşterileri Gör', $sayi, self::yol('musteriler', $salonId, ['filtre' => 'yeni']));
     }
 
     /** Önceki ayın maaş ödemesi kaydı olmayan personel: yalnız ad ve sayı, tutar dönmez. */
@@ -85,7 +85,7 @@ class GenelHatirlatmalar
         $adListesi = $dolu->take(4)->implode(', ').($dolu->count() > 4 ? ' +'.($dolu->count() - 4) : '');
 
         return self::kart('personel_odeme', 3, 'altin-yagmur', '💸', $ay.' '.date('Y', $oncekiAy).' Maaş Ödemeleri',
-            $sayi.' personelin '.$ay.' ayı maaş ödemesi hâlâ kayıtlı değil.', 'Kayıtlı değil: '.$adListesi, 'Maaş & Prim', $sayi, 'personel_odeme_'.$donem);
+            $sayi.' personelin '.$ay.' ayı maaş ödemesi hâlâ kayıtlı değil.', 'Kayıtlı değil: '.$adListesi, 'Maaş & Prim', $sayi, self::yol('personel', $salonId), 'personel_odeme_'.$donem);
     }
 
     private function bekleyenRandevular(int $salonId): ?array
@@ -93,7 +93,7 @@ class GenelHatirlatmalar
         $sayi = DB::table('randevular')->where('salon_id', $salonId)->where('durum', 0)->where('tarih', date('Y-m-d'))->count();
 
         return $sayi > 0 ? self::kart('bekleyen_randevu', 2, 'mavi-cinglir', '🔔', 'Onay Bekleyen Randevu',
-            'Bugün '.$sayi.' randevu hâlâ onayınızı bekliyor.', 'Cevapsız bırakırsan müşteri başka kapı çalar, hadi onayla!', 'Randevular', $sayi) : null;
+            'Bugün '.$sayi.' randevu hâlâ onayınızı bekliyor.', 'Cevapsız bırakırsan müşteri başka kapı çalar, hadi onayla!', 'Randevular', $sayi, self::yol('randevular', $salonId, ['durum' => 'beklemede'])) : null;
     }
 
     private function acikAdisyonlar(int $salonId): ?array
@@ -117,7 +117,7 @@ class GenelHatirlatmalar
         $sayi = count(array_filter($kalan, fn ($t) => $t > 0.01));
 
         return $sayi > 0 ? self::kart('acik_adisyon', 2, 'turuncu-kasa', '🧾', 'Açık Adisyon Birikti!',
-            $sayi.' adisyon dünden kalmış, hâlâ tahsilat bekliyor.', 'Açık adisyon = sahipsiz para. Tahsilatı kapatmayı unutma!', 'Adisyonlara Git', $sayi) : null;
+            $sayi.' adisyon dünden kalmış, hâlâ tahsilat bekliyor.', 'Açık adisyon = sahipsiz para. Tahsilatı kapatmayı unutma!', 'Adisyonlara Git', $sayi, self::yol('satislar', $salonId, ['durum' => 'acik'])) : null;
     }
 
     private function gecikenAlacaklar(int $salonId): ?array
@@ -126,7 +126,7 @@ class GenelHatirlatmalar
             ->whereNotNull('planlanan_odeme_tarihi')->where('planlanan_odeme_tarihi', '<', date('Y-m-d'))->count();
 
         return $sayi > 0 ? self::kart('geciken_alacak', 2, 'kirmizi-uyari', '⏰', 'Geciken Alacaklar',
-            $sayi.' alacağın planlanan ödeme tarihi geçti.', 'Müşteriyi nazikçe ara, takip etmeyen unutulur!', 'Alacaklara Git', $sayi) : null;
+            $sayi.' alacağın planlanan ödeme tarihi geçti.', 'Müşteriyi nazikçe ara, takip etmeyen unutulur!', 'Alacaklara Git', $sayi, self::yol('satislar', $salonId, ['durum' => 'acik'])) : null;
     }
 
     /** silindi kolonu her kurulumda yok. */
@@ -135,9 +135,15 @@ class GenelHatirlatmalar
         return Sema::kolonVar($tablo, 'silindi') ? $sorgu->whereRaw('IFNULL(silindi,0) = 0') : $sorgu;
     }
 
-    private static function kart(string $tip, int $oncelik, string $tema, string $emoji, string $baslik, string $mesaj, string $altMesaj, string $cta, int $sayac, ?string $id = null): array
+    /** Kartın açtığı yeni panel sayfası (eski /isletmeyonetim/... linklerinin v2 karşılığı). Mobil link alanını yok sayar. */
+    public static function yol(string $sayfa, int $salonId, array $sorgu = []): string
+    {
+        return '/v2/'.$sayfa.'?'.http_build_query(['sube' => $salonId] + $sorgu);
+    }
+
+    private static function kart(string $tip, int $oncelik, string $tema, string $emoji, string $baslik, string $mesaj, string $altMesaj, string $cta, int $sayac, string $link, ?string $id = null): array
     {
         return ['id' => $id ?? $tip, 'tip' => $tip, 'oncelik' => $oncelik, 'tema' => $tema, 'emoji' => $emoji,
-            'baslik' => $baslik, 'mesaj' => $mesaj, 'altMesaj' => $altMesaj, 'cta_text' => $cta, 'sayac' => $sayac];
+            'baslik' => $baslik, 'mesaj' => $mesaj, 'altMesaj' => $altMesaj, 'cta_text' => $cta, 'sayac' => $sayac, 'link' => $link];
     }
 }

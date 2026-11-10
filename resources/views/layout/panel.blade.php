@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="/css/panel.css?v=20">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=3">
+    {{-- Sağ alt hatırlatma kartları (eski partials/hatirlatma_popup) --}}
+    <link rel="stylesheet" href="/css/hatirlatma-kartlari.css?v=1">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
@@ -109,6 +111,7 @@
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
     <script type="module" src="/js/header-araclar.js?v=4"></script>
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
+    <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
     <script type="module" src="/js/hizli-ekle.js?v=8"></script>
     <script type="module" src="/js/panel-kabuk.js?v=11"></script>
     @stack('betik')

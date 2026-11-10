@@ -21,7 +21,7 @@ if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 // Ekran filtreleri. Arama / sayfa / sayfa boyu / sıralama ortak tablo bileşeninde.
 // musteri_id yalnız URL'den (?musteri=) — müşteri kartından gelen bağlantılar için.
-const durum = { tur: 0, satisDurumu: '', personelId: '', musteriId: qp.get('musteri') || '', tarih1: '', tarih2: '' };
+const durum = { tur: 0, satisDurumu: qp.get('durum') || '', personelId: '', musteriId: qp.get('musteri') || '', tarih1: '', tarih2: '' };
 let sonVeri = null;   // son liste cevabı (yetkiler/studyo için)
 let studyo = false;
 
