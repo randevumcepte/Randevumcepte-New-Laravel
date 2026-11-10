@@ -1,37 +1,33 @@
-@php
-   $_baslik = ucwords($arama_terimleri[0] ?? '');
-   $_tamBaslik = trim($_baslik.' | '.$salon->salon_adi, ' |');
-   $_siteUrl = 'https://'.($salon->domain ?: request()->getHost());
-   $_gorsel = $kapak_gorseli ?: \App\Support\EskiPanelLinki::mutlak('public/img/randevumcepte.jpg');
-   $_ldJson = array_filter([
-      '@context' => 'https://schema.org', '@type' => 'LocalBusiness', 'name' => $salon->salon_adi,
-      'description' => $salon->meta_description, 'url' => $_siteUrl, 'telephone' => $salon->telefon_1,
-      'address' => ['@type' => 'PostalAddress', 'streetAddress' => $salon->adres, 'addressCountry' => 'TR'],
-      'image' => $kapak_gorseli, 'sameAs' => array_values(array_filter([$salon->facebook_sayfa, $salon->instagram_sayfa])) ?: null,
-   ]);
-@endphp
+{{-- Baslik, aciklama, h1, canonical ve JSON-LD sayfaya gore App\Support\SiteSeo'dan ($seo) gelir. --}}
 <!doctype html>
 <html lang="tr">
    <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-      <meta name="robots" content="{{ $indekslenebilir ? 'index, follow' : 'noindex, nofollow' }}">
-      <title>{{ $_tamBaslik }}</title>
-      <meta name="description" content="{{ $salon->meta_description }}">
-      @if($arama_terimleri)<meta name="keywords" content="{{ implode(',', $arama_terimleri) }}">@endif
-      <link rel="canonical" href="{{ $_siteUrl }}">
+      @if($indekslenebilir)
+      <meta name="robots" content="index, follow">
+      <meta name="googlebot" content="index, follow">
+      <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
+      @else
+      <meta name="robots" content="noindex, nofollow">
+      @endif
+      <title>{{ $seo['baslik'] }}</title>
+      <meta name="description" content="{{ $seo['aciklama'] }}">
+      @if($seo['anahtar_kelimeler'])<meta name="keywords" content="{{ implode(',', $seo['anahtar_kelimeler']) }}">@endif
+      <link rel="canonical" href="{{ $seo['canonical'] }}">
       <meta property="og:locale" content="tr_TR">
       <meta property="og:site_name" content="{{ $salon->salon_adi }}">
-      <meta property="og:url" content="{{ $_siteUrl }}">
-      <meta property="og:type" content="website">
-      <meta property="og:title" content="{{ $_tamBaslik }}">
-      <meta property="og:description" content="{{ $salon->meta_description }}">
-      <meta property="og:image" content="{{ $_gorsel }}">
+      <meta property="og:url" content="{{ $seo['canonical'] }}">
+      <meta property="og:type" content="{{ $seo['og_tur'] }}">
+      <meta property="og:title" content="{{ $seo['baslik'] }}">
+      <meta property="og:description" content="{{ $seo['aciklama'] }}">
+      <meta property="og:image" content="{{ $seo['gorsel'] }}">
       <meta property="og:image:width" content="1200">
       <meta property="og:image:height" content="630">
       <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:title" content="{{ $_tamBaslik }}">
-      <meta name="twitter:description" content="{{ $salon->meta_description }}">
+      <meta name="twitter:title" content="{{ $seo['baslik'] }}">
+      <meta name="twitter:description" content="{{ $seo['aciklama'] }}">
+      <meta name="twitter:image" content="{{ $seo['gorsel'] }}">
       <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700|Varela+Round" rel="stylesheet">
       <link rel="stylesheet" href="{{ asset('site/bootstrap/css/bootstrap.css') }}">
       <link rel="stylesheet" href="{{ asset('site/fonts/font-awesome.css') }}">
@@ -42,7 +38,7 @@
       {!! $tema_css !!}
       <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;max-width:130px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
-      <script type="application/ld+json">{!! json_encode($_ldJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+      <script type="application/ld+json">{!! json_encode($seo['ld_json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
    </head>
    <body data-salon-id="{{ $salon->id }}" data-randevularim="{{ $linkler['randevular'] }}" data-ana="{{ $linkler['ana'] }}">
       <div id="preloader"><div id="loaderstatus">&nbsp;</div></div>
@@ -75,10 +71,13 @@
       <script src="{{ asset('site/bootstrap/js/bootstrap.min.js') }}"></script>
       <script src="{{ asset('site/js/icheck.min.js') }}"></script>
       <script type="module" src="/js/telefon-ulke.js?v=1"></script>
+      {{-- Personel sayfasi gibi vitrin olmayan sayfalar vitrinBetikleri=false verir. --}}
+      @if($vitrinBetikleri ?? true)
       <script src="{{ asset('js/site/vitrin-sayfa.js') }}?v=1"></script>
       <script src="{{ asset('js/site/vitrin-personel.js') }}?v=1"></script>
       <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=2"></script>
       @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=1"></script>@endif
+      @endif
       @stack('sayfa')
    </body>
 </html>

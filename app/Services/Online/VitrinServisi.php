@@ -19,6 +19,7 @@ class VitrinServisi
     private const ANKET_YORUM_LIMIT = 30;
     private const ANKET_MIN_NPS = 9;
     private const ANKET_MIN_CSAT = 4.5;
+    private const DIGER_PERSONEL = 8;
 
     /** Yanlislikla yuklenip vitrinden cikarilan gorseller (eski blade'deki liste). */
     private const GIZLI_GORSEL_PARCALARI = ['685e8dd97888b'];
@@ -189,17 +190,50 @@ class VitrinServisi
         ];
     }
 
-    /** Sayfa acilis kaydi (eski IsletmeZiyaretciler). Tarayici disi istemciler sayilmaz. */
-    public function ziyaretYaz(int $salonId, string $ip, string $tarayici): void
+    /**
+     * Sayfa acilis kaydi (eski IsletmeZiyaretciler). Tarayici disi istemciler sayilmaz. Arama terimi sayfasinda o
+     * terim, digerlerinde salonun ilk terimi yazilir (eski salonDetay_altsayfa / salonDetay).
+     */
+    public function ziyaretYaz(int $salonId, string $ip, string $tarayici, ?int $aramaTerimiId = null): void
     {
         if ($tarayici === '' || preg_match('/bot|crawl|spider|slurp|facebookexternalhit/i', $tarayici)) {
             return;
         }
         DB::table('isletme_ziyaretciler')->insert([
             'salon_id' => $salonId, 'ipadres' => $ip, 'browser' => mb_substr($tarayici, 0, 255),
-            'arama_terimi_id' => DB::table('arama_terimleri')->where('salon_id', $salonId)->orderBy('id')->value('id'),
+            'arama_terimi_id' => $aramaTerimiId ?? DB::table('arama_terimleri')->where('salon_id', $salonId)->orderBy('id')->value('id'),
             'created_at' => now(), 'updated_at' => now(),
         ]);
+    }
+
+    /** Arama terimi acilis sayfasinin terimi; terim bu salona ait degilse (ya da bossa) null. */
+    public function aramaTerimi(int $salonId, int $terimId): ?string
+    {
+        $terim = trim((string) DB::table('arama_terimleri')->where('id', $terimId)->where('salon_id', $salonId)->value('arama_terimi'));
+
+        return $terim !== '' ? $terim : null;
+    }
+
+    /**
+     * Personel tanitim sayfasi (eski personelDetayPublic): vitrinde gorunen (aktif, takvimde) personel, sundugu
+     * hizmetler ve ekipten en fazla 8 kisi. Personel vitrinde yoksa null.
+     */
+    public function personelDetay(int $salonId, int $personelId): ?array
+    {
+        $tum = $this->secenek->personeller($salonId);
+        $personel = collect($tum)->firstWhere('id', $personelId);
+        if (! $personel) {
+            return null;
+        }
+        $hizmetler = DB::table('personel_sunulan_hizmetler as ph')->join('hizmetler as h', 'h.id', '=', 'ph.hizmet_id')
+            ->where('ph.personel_id', $personelId)->orderBy('h.hizmet_adi')->pluck('h.hizmet_adi')
+            ->map(fn ($a) => trim((string) $a))->filter()->unique()->values()->all();
+
+        return [
+            'personel'  => $personel,
+            'hizmetler' => $hizmetler,
+            'digerleri' => array_slice(array_values(array_filter($tum, fn ($p) => $p['id'] !== $personelId)), 0, self::DIGER_PERSONEL),
+        ];
     }
 
     private function marka(object $s): array

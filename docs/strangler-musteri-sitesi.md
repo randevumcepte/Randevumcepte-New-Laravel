@@ -95,15 +95,31 @@ Tasarım: `resources/views/site/*` eski `salondetaylari` ve `layout_salondetay`'
 |---|---|
 | Çarkıfelek bandı + popup (`/cark/*`) | Sayfada yok; müşteri API'si gerekli |
 | Sadakat sekmesi (`/sadakat`, ödüllerim) | Panelde yok; müşteri API'si gerekli |
-| Salon domain → yeni uygulama yönlendirmesi | Geçiş kararı bekliyor; `sitemap`, `robots`, `/personel/{id}` o zaman |
+| Salon domain → yeni uygulama yönlendirmesi | Geçiş kararı bekliyor (DNS/nginx); SEO uçları hazır, aşağıda |
 | Grup dersi mini-site sayfası | API var (`/musteri-uygulama/grup-dersleri`), sayfa eski monolitte |
 | Giriş sayfası tasarımı | Panel kartı stilinde; eski `auth/login` görünümü taşınmadı |
 
 Bilinçli çıkarılanlar (ölü/çalışmayan): favoriler, fırsatlarım, galeri admin sil butonu (görsel silme panelden), `/randevuyorumlapuanla`, `/kampanyafirastbildirimackapa`.
+
+## SEO (eski adresler birebir)
+
+`SiteHaritaController` + `SiteHaritaServisi`, sayfa meta'sı `App\Support\SiteSeo` (başlık, açıklama, h1, canonical, JSON-LD tek kaynak).
+
+| Adres | Host | Davranış |
+|---|---|---|
+| `/sitemap.xml` | Salon alan adı | Yalnız kök (eskisi gibi); başka host 404 |
+| `/robots.txt` | Her host | Salon: hesap sayfaları + API kapalı, `Sitemap: /sitemap.xml`. Panel: `/v2/`, `/api/` kapalı, `Sitemap: /salonlar-sitemap.xml`. `public/robots.txt` silindi (nginx statik verirdi) |
+| `/salonlar-sitemap.xml`, `/salonlar-dizini` | Panel (salon olmayan) host | Lisansı süren, alan adlı salonlar; salon alan adında 404 |
+| `/{ad}-{id}` | Salon alan adı | Vitrin; id bu alan adının salonu değilse 404; canonical kök |
+| `/{tür}/{il}/{ilçe}/{id}/{ad}/{terim}/{terim_id}` | Salon alan adı | Vitrin; başlık/h1/açıklama terime göre, ziyaret o terimle yazılır; terim salona ait değilse 404; canonical kök |
+| `/{ad}-{id}/personel/{pid}` | Salon alan adı | Personel tanıtımı (site düzeni); canonical kendisi |
+
+Eskiden farklar: alt sayfa her host'ta açılıyordu, artık yalnız salonun alan adında. Terim yoksa başlık "Salon | Tür - İlçe/İl", açıklama boşsa salon bilgisinden üretilir. JSON-LD'ye çalışma saatleri, puan, ilçe/il eklendi. Önizlemede (`/site/{id}`) `noindex`, googlebot ve sitemap linki yok.
 
 ## Sunucuda doğrulama
 
 ```
 php artisan route:clear
 php artisan test --filter=OnlineMusaitlikTest
+php artisan test --filter=SiteSeoTest
 ```

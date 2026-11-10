@@ -9,7 +9,7 @@
             <div class="slp-team-grid">
                @foreach($personeller as $per)
                      @php
-                        $_perResim = $per['profil_resmi'] ?: \App\Support\EskiPanelLinki::mutlak($per['cinsiyet'] == 0 ? 'public/img/author0.jpg' : 'public/img/author1.jpg');
+                        $_perResim = \App\Support\SiteSeo::personelResmi($per);
                         $_perName = $per['personel_adi'];
                         $_perSpecialty = ! empty($per['uzmanlik']) ? $per['uzmanlik'] : ($per['unvan'] ?? '');
                      @endphp

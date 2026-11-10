@@ -36,7 +36,7 @@
       <div class="slp-hero__inner container">
          <div class="slp-hero__left">
             <span class="slp-hero__eyebrow"><i class="fa fa-bolt"></i> {{$salon->salon_turu_adi ?? 'Güzellik & Bakım'}}</span>
-            <h1 class="slp-hero__title">{{$salon->salon_adi}}</h1>
+            <h1 class="slp-hero__title">{{ $seo['h1'] ?? $salon->salon_adi }}</h1>
             <p class="slp-hero__sub">
                @if(!empty($salon->meta_description))
                   {{ \Illuminate\Support\Str::limit($salon->meta_description, 160) }}

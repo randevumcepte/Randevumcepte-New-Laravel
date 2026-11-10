@@ -250,3 +250,20 @@ Route::prefix('/site/{salonId}')->whereNumber('salonId')->group(function () {
 foreach (['giris' => 'giris', 'profilim' => 'profil', 'randevularim' => 'randevular', 'sifrem' => 'sifre'] as $yol => $sayfa) {
     Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'kokHesap'])->defaults('sayfa', $sayfa);
 }
+
+/*
+ | Arama motoru dosyaları + eski SEO adresleri (eski HomeController; adres biçimleri birebir). docs/strangler-musteri-sitesi.md
+ | /sitemap.xml ve sayfalar yalnız salonun kendi alan adında (aksi 404); /robots.txt her host'ta (public/robots.txt yok:
+ | nginx statik dosyayı Laravel'den önce verirdi). Merkezi /salonlar-sitemap.xml ve /salonlar-dizini panel host'unda.
+ | /{ad}-{id} kalıbı tek parçalı her "-sayı" ile biten yolu yakalar: bu blok dosyanın SONUNDA kalmalı.
+ */
+Route::get('/sitemap.xml', [\App\Http\Controllers\SiteHaritaController::class, 'sitemap']);
+Route::get('/robots.txt', [\App\Http\Controllers\SiteHaritaController::class, 'robots']);
+Route::get('/salonlar-sitemap.xml', [\App\Http\Controllers\SiteHaritaController::class, 'salonlarSitemap']);
+Route::get('/salonlar-dizini', [\App\Http\Controllers\SiteHaritaController::class, 'salonlarDizini']);
+Route::get('/{isletmeAdi}-{isletmeId}/personel/{personelId}', [\App\Http\Controllers\SiteController::class, 'personel'])
+    ->where(['isletmeAdi' => '[^/]+', 'isletmeId' => '[0-9]+', 'personelId' => '[0-9]+']);
+Route::get('/{isletmeAdi}-{isletmeId}', [\App\Http\Controllers\SiteController::class, 'salonSayfasi'])
+    ->where(['isletmeAdi' => '[^/]+', 'isletmeId' => '[0-9]+']);
+Route::get('/{isletmeTuru}/{il}/{ilce}/{isletmeId}/{isletmeAdi}/{aramaTerimi}/{aramaTerimId}', [\App\Http\Controllers\SiteController::class, 'aramaTerimiSayfasi'])
+    ->where(['isletmeId' => '[0-9]+', 'aramaTerimId' => '[0-9]+']);

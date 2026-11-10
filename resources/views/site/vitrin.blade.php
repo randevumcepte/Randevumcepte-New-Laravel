@@ -85,20 +85,8 @@
        $_hizmetSayisi = count($hizmetler);
    @endphp
    @php
-      $_igRaw = trim($salon->instagram_sayfa ?? '');
-      $_igUrl = '';
-      if (!empty($_igRaw)) {
-          $_igUrl = preg_match('#^https?://#i', $_igRaw)
-              ? $_igRaw
-              : 'https://instagram.com/' . ltrim($_igRaw, '@');
-      }
-      $_fbRaw = trim($salon->facebook_sayfa ?? '');
-      $_fbUrl = '';
-      if (!empty($_fbRaw)) {
-          $_fbUrl = preg_match('#^https?://#i', $_fbRaw)
-              ? $_fbRaw
-              : 'https://facebook.com/' . ltrim($_fbRaw, '@');
-      }
+      $_igUrl = \App\Support\SiteSeo::sosyalUrl($salon->instagram_sayfa ?? null, 'https://instagram.com/') ?? '';
+      $_fbUrl = \App\Support\SiteSeo::sosyalUrl($salon->facebook_sayfa ?? null, 'https://facebook.com/') ?? '';
    @endphp
 
    @include('site.bolum.hero')

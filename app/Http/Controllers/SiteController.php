@@ -6,6 +6,7 @@ use App\Domain\Ayar\SalonTemaPalet;
 use App\Services\Online\OnlineSalonKapisi;
 use App\Services\Online\VitrinServisi;
 use App\Support\EskiPanelLinki;
+use App\Support\SiteSeo;
 use Illuminate\Http\Request;
 
 /**
@@ -33,18 +34,65 @@ class SiteController extends Controller
     /** Salonun kendi alan adında hesap sayfaları (/giris, /profilim, /randevularim, /sifrem). */
     public function kokHesap(Request $request, string $sayfa)
     {
-        $salonId = $this->kapi->domaindenSalonId($request->getHost());
-        abort_unless($salonId, 404);
-
-        return $this->hesap($request, $salonId, $sayfa);
+        return $this->hesap($request, $this->kokSalonu($request), $sayfa);
     }
 
+    /** Önizleme /site/{salonId} (salonun kendi alan adında değilse noindex). */
     public function vitrin(Request $request, int $salonId)
+    {
+        return $this->vitrinSayfasi($request, $salonId);
+    }
+
+    /** Eski /{isletme_adi}-{isletme_id}: kökün varyantı; id bu alan adının salonu değilse 404. Ad kısmına bakılmaz. */
+    public function salonSayfasi(Request $request, string $isletmeAdi, int $isletmeId)
+    {
+        return $this->vitrinSayfasi($request, $this->kokSalonu($request, $isletmeId));
+    }
+
+    /**
+     * Eski arama terimi açılış sayfası /{tür}/{il}/{ilçe}/{id}/{ad}/{terim}/{terim_id}: başlık, açıklama ve h1 terime
+     * göre. Yalnız id ve terim_id okunur (eskisi gibi); salon bu alan adına, terim bu salona ait değilse 404.
+     */
+    public function aramaTerimiSayfasi(Request $request, string $isletmeTuru, string $il, string $ilce, int $isletmeId, string $isletmeAdi, string $aramaTerimi, int $aramaTerimId)
+    {
+        $salonId = $this->kokSalonu($request, $isletmeId);
+        $terim = $this->vitrin->aramaTerimi($salonId, $aramaTerimId);
+        abort_unless($terim !== null, 404);
+
+        return $this->vitrinSayfasi($request, $salonId, $terim, $aramaTerimId);
+    }
+
+    /** Eski /{isletme_adi}-{isletme_id}/personel/{personel_id}: vitrinde görünen personelin tanıtım sayfası. */
+    public function personel(Request $request, string $isletmeAdi, int $isletmeId, int $personelId)
+    {
+        $salonId = $this->kokSalonu($request, $isletmeId);
+        $detay = $this->vitrin->personelDetay($salonId, $personelId);
+        abort_unless($detay !== null, 404);
+        $v = $this->vitrin->vitrin($salonId);
+        $salon = (object) $v['salon'];
+        $kokUrl = $this->kokUrl($request, $salon->domain);
+        $salonYolu = SiteSeo::salonYolu($salonId, $salon->salon_adi);
+        $resim = SiteSeo::personelResmi($detay['personel']);
+
+        return view('site.personel', [
+            'salon'           => $salon,
+            'personel'        => $detay['personel'],
+            'resim'           => $resim,
+            'hizmetler'       => $detay['hizmetler'],
+            'digerleri'       => $detay['digerleri'],
+            'salonYolu'       => $salonYolu,
+            'indekslenebilir' => true,
+            'vitrinBetikleri' => false,
+            'seo'             => SiteSeo::personel($v['salon'], $detay['personel'], $kokUrl.$salonYolu.'/personel/'.$personelId, $kokUrl, $resim),
+        ] + $this->ortak($salonId, $salon, true));
+    }
+
+    private function vitrinSayfasi(Request $request, int $salonId, ?string $terim = null, ?int $terimId = null)
     {
         $v = $this->vitrin->vitrin($salonId);
         $kendiDomaini = $this->kendiDomaini($request, $v['salon']['domain'] ?? null);
         if ($kendiDomaini) {
-            $this->vitrin->ziyaretYaz($salonId, (string) $request->ip(), (string) $request->userAgent());
+            $this->vitrin->ziyaretYaz($salonId, (string) $request->ip(), (string) $request->userAgent(), $terimId);
         }
 
         return view('site.vitrin', [
@@ -61,6 +109,7 @@ class SiteController extends Controller
             'cark'                 => $v['cark'],
             'yorumlar'             => $this->vitrin->yorumlar($salonId, null)['yorumlar'],
             'indekslenebilir'      => $kendiDomaini,
+            'seo'                  => SiteSeo::vitrin($v, $this->kokUrl($request, $v['salon']['domain'] ?? null), $terim),
         ] + $this->ortak($salonId, (object) $v['salon'], $kendiDomaini));
     }
 
@@ -91,6 +140,21 @@ class SiteController extends Controller
                 'gizlilik'   => EskiPanelLinki::mutlak('kullanim-ve-gizlik-kosullari'),
             ],
         ];
+    }
+
+    /** İsteğin alan adının salonu; alan adı bir salona ait değilse ya da beklenen salon değilse 404. */
+    private function kokSalonu(Request $request, ?int $beklenen = null): int
+    {
+        $salonId = $this->kapi->domaindenSalonId($request->getHost());
+        abort_unless($salonId && ($beklenen === null || $salonId === $beklenen), 404);
+
+        return $salonId;
+    }
+
+    /** Canonical ve JSON-LD kökü: salonun alan adı (önizlemede de gerçek adres), yoksa istek host'u. */
+    private function kokUrl(Request $request, ?string $domain): string
+    {
+        return 'https://'.($domain ?: $request->getHost());
     }
 
     private function kendiDomaini(Request $request, ?string $domain): bool
