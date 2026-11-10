@@ -21,7 +21,7 @@ const EYLEMLER = {
   randevu: {
     css: '/css/takvim-v2.css?v=17',
     async ac({ salon }) {
-      const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=11');
+      const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=12');
       randevuIslem[salon.id] ||= randevuIslemleri({ salonId: salon.id });
       randevuIslem[salon.id].randevuFormu({ kaydedildi: ekraniTazele('takvim-v2', 'randevular-liste') });
     },

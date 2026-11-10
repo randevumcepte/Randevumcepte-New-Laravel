@@ -6,6 +6,7 @@ use App\Domain\Randevu\TakvimRenkAyari;
 use App\Models\DersOturumu;
 use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
+use App\Services\Panel\RandevuModulu;
 use App\Support\KvkkMaske;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -29,6 +30,7 @@ class TakvimAyrintiServisi
     public function __construct(
         private RandevuOkumaServisi $okuma,
         private RandevuAyrintiSunumu $sunum,
+        private RandevuModulu $randevuModulu,
     ) {}
 
     public function ekle(array $takvim, int $salonId, ?string $tarih1, ?string $tarih2, ?int $personelId, int $yetkiliId): array
@@ -341,8 +343,10 @@ class TakvimAyrintiServisi
     /** Duzenleme ve tahsilat penceresinin okudugu randevular. Kapali saat bu listede yoktur. */
     private function liste(int $salonId, string $tarih1, string $tarih2, array $yetki): array
     {
-        return $this->sunum->satirlar(Randevular::with('hizmetler')->where('salon_id', $salonId)
+        $q = Randevular::with('hizmetler')->where('salon_id', $salonId)
             ->where('user_id', '!=', Randevular::KAPALI_SAAT_USER_ID)
-            ->where('tarih', '>=', $tarih1)->where('tarih', '<=', $tarih2)->get(), $yetki);
+            ->where('tarih', '>=', $tarih1)->where('tarih', '<=', $tarih2);
+
+        return $this->sunum->satirlar($this->randevuModulu->gecmisiSuz($q, $salonId)->get(), $yetki);
     }
 }

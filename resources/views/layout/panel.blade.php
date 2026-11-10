@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+@php($randevuModulu = app(\App\Services\Panel\RandevuModulu::class)->aktif())
 <html lang="tr">
 <head>
     <meta charset="utf-8">
@@ -68,12 +69,15 @@
             </div>
 
             <div class="rc-header-sag">
-                {{-- Kalan SMS + WhatsApp durumu + WebRTC softphone (header-araclar.js doldurur; kurallar sunucuda) --}}
+                {{-- Kalan SMS + WhatsApp durumu + WebRTC softphone (header-araclar.js doldurur; kurallar sunucuda).
+                     Randevu modülünde (RandevuModulu) yok: SMS/WhatsApp/çağrı merkezi bu panelde kapalı. --}}
+                @unless($randevuModulu)
                 <div class="rc-header-araclar">
                     <div id="rcSmsRozet"></div>
                     <div id="rcWaRozet"></div>
                     <div id="rcSoftphone" class="rc-sp"></div>
                 </div>
+                @endunless
                 {{-- Bildirim zili: rozet + liste bildirim-zil.js ile /api/v2/bildirim'den --}}
                 <div class="rc-acilir rc-zil" id="rcBildirim">
                     <button class="rc-header-ic rc-zil-btn" type="button" data-acilir-tetik title="Bildirimler" aria-label="Bildirimler" aria-haspopup="true" aria-expanded="false">
@@ -111,10 +115,15 @@
     {{-- Telefon: TUM input[type=tel]'lere ulke kodu secici + ulkeye gore bicim (sonradan eklenenler dahil). --}}
     <script type="module" src="/js/telefon-ulke.js?v=2"></script>
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
+    @unless($randevuModulu)
     <script type="module" src="/js/header-araclar.js?v=4"></script>
+    @endunless
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
+    @unless($randevuModulu)
+    {{-- Eski panel: randevu.* domaininde hatırlatma kartları çıkmaz --}}
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
-    <script type="module" src="/js/hizli-ekle.js?v=9"></script>
+    @endunless
+    <script type="module" src="/js/hizli-ekle.js?v=10"></script>
     <script type="module" src="/js/panel-kabuk.js?v=13"></script>
     @stack('betik')
 </body>

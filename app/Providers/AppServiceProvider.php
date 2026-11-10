@@ -25,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
         // Yetki karar motoru — request boyunca tek ornek (cache paylasimi icin singleton).
         $this->app->singleton(\App\Services\Yetki\YetkiServisi::class);
 
+        // Randevu modülü (host'a bağlı kısıtlı panel) — istek başına tek örnek; salon ayarı önbelleği istekle sıfırlanır.
+        $this->app->scoped(\App\Services\Panel\RandevuModulu::class);
+
         // WhatsApp oturum köprüsü sağlayıcısı (servisler arayüze bağlı).
         $this->app->bind(\App\Services\Whatsapp\Kopru\WhatsappKoprusu::class, \App\Services\Whatsapp\Kopru\WhatsmeowKoprusu::class);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Services\Panel\RandevuModulu;
 use App\Services\Randevu\RandevuOkumaServisi;
 use App\Services\Randevu\TakvimAyrintiServisi;
 use App\Services\Yetki\GuvenlikKapisi;
@@ -23,6 +24,7 @@ class RandevuController extends V2Controller
         private TakvimAyrintiServisi $ayrinti,
         private GuvenlikKapisi $kapi,
         private YetkiServisi $yetki,
+        private RandevuModulu $randevuModulu,
     ) {}
 
     /**
@@ -86,6 +88,8 @@ class RandevuController extends V2Controller
 
         $telGor = $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'musteri.telefon_gor');
 
-        return ApiCevap::basarili($this->servis->detay($id, $telGor));
+        // satis_gor: false iken istemci fiyat ve Tahsilat dugmesini gostermez (randevu modulu). Fiyat
+        // alani silinmez — Duzenle formu ayni veriyi kullanir, bos fiyat kayitta 0'a ezerdi.
+        return ApiCevap::basarili($this->servis->detay($id, $telGor) + ['satis_gor' => ! $this->randevuModulu->aktif()]);
     }
 }

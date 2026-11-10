@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=11';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=12';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -89,7 +89,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
     const btn = (islem, ikon, etiket, sinif = '') => `<button class="t-aks ${sinif}" data-islem="${islem}"><i class="bi ${ikon}"></i> ${etiket}</button>`;
     const butonlar = [
       v.durum === 0 ? btn('onayla', 'bi-check2-all', 'Onayla', 'mavi') : '',
-      v.durum === 1 && !v.kapali && !v.on_gorusme_id ? btn('tahsilat', 'bi-cash-coin', 'Tahsilat', 'mavi') : '',
+      v.satis_gor !== false && v.durum === 1 && !v.kapali && !v.on_gorusme_id ? btn('tahsilat', 'bi-cash-coin', 'Tahsilat', 'mavi') : '',
       aktif ? btn('duzenle', 'bi-pencil-square', 'Düzenle') : '',
       aktif && !geldiMi ? btn('geldi', 'bi-check-circle', 'Geldi', 'yesil') : '',
       aktif && !gelmediMi ? btn('gelmedi', 'bi-x-circle', 'Gelmedi', 'kirmizi') : '',
@@ -119,7 +119,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
           <div class="t-ck-kalem">
             <div class="t-ck-kalem-ust">
               <div><b>${esc(og ? 'Ön görüşme' : (h.hizmet_adi || 'Hizmet'))}</b>${h.paket ? ' <span class="t-rozet mor"><i class="bi bi-box-seam"></i> Paket</span>' : ''}<span>${esc(h.personel_adi || '—')}</span></div>
-              <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${h.fiyat != null ? `<b>${TL(h.fiyat)}</b>` : ''}</div>
+              <div class="t-ck-kalem-sag"><span>${esc(String(h.saat || '').slice(0, 5))} · ${esc(h.sure_dk ?? '')} dk</span>${v.satis_gor !== false && h.fiyat != null ? `<b>${TL(h.fiyat)}</b>` : ''}</div>
             </div>
             ${h.telafi_kaynak_rh_id ? '<span class="t-rozet mor"><i class="bi bi-bandaid"></i> Telafi randevusu (ücretsiz)</span>'
               : h.telafi_devir_yapildi ? '<span class="t-rozet gri"><i class="bi bi-check2"></i> Telafi randevusu verildi</span>'

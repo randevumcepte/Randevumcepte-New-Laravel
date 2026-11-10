@@ -2,6 +2,7 @@
 
 namespace App\Services\Oturum;
 
+use App\Services\Panel\RandevuModulu;
 use App\Services\Yetki\KapsamServisi;
 use App\Services\Yetki\YetkiServisi;
 
@@ -29,13 +30,14 @@ class IlkSayfa
         ['/v2/ayarlar', ['ayar.salon_bilgi', 'ayar.cihaz_oda_yonet', 'randevu.online_ayar']],
     ];
 
-    public function __construct(private YetkiServisi $yetki, private KapsamServisi $kapsam) {}
+    public function __construct(private YetkiServisi $yetki, private KapsamServisi $kapsam, private RandevuModulu $randevuModulu) {}
 
     public function coz(int $yetkiliId, int $salonId): string
     {
         $personel = in_array(self::PERSONEL_ROLU, $this->kapsam->salonRolleri($yetkiliId, $salonId), true);
         foreach (self::SIRA as $satir) {
-            if ($personel && ! empty($satir['personele_kapali'])) {
+            // Randevu modülünde kapalı sayfa ilk ekran olamaz (Özet atlanır → Takvim).
+            if (($personel && ! empty($satir['personele_kapali'])) || ! $this->randevuModulu->sayfaIzinli($satir[0])) {
                 continue;
             }
             foreach ($satir[1] as $anahtar) {

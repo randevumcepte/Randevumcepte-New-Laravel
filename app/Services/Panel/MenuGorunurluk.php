@@ -10,11 +10,14 @@ use App\Services\Yetki\YetkiServisi;
  */
 class MenuGorunurluk
 {
-    public function __construct(private YetkiServisi $yetki) {}
+    public function __construct(private YetkiServisi $yetki, private RandevuModulu $randevuModulu) {}
 
-    /** @param array<string,mixed> $m öğe tanımı (yetki, ozellik, studyo_gizle, rol5_gizle) */
+    /** @param array<string,mixed> $m öğe tanımı (yetki, ozellik, studyo_gizle, rol5_gizle, randevu_modulu) */
     public function goster(array $m, int $yetkiliId, int $salonId, object $salon, bool $rol5): bool
     {
+        if (! $this->randevuModulu->ogeGorunur($m)) {
+            return false;
+        }
         if (($m['rol5_gizle'] ?? false) && $rol5) {
             return false;
         }

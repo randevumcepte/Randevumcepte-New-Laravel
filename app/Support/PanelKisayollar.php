@@ -29,12 +29,12 @@ final class PanelKisayollar
         $studyo = (int) ($salon->studyo_modu ?? 0) === 1;
 
         return [
-            ['kod' => 'randevu',   'etiket' => 'Yeni Randevu',     'ikon' => 'bi bi-calendar-plus', 'yetki' => 'randevu.olustur'],
-            ['kod' => 'ongorusme', 'etiket' => 'Yeni Ön Görüşme',  'ikon' => 'bi bi-calendar-event', 'yetki' => 'gorusme.ekle_duzenle'],
-            ['kod' => 'musteri',   'etiket' => 'Yeni '.self::musteriEtiketi($salon), 'ikon' => 'bi bi-person-plus', 'yetki' => 'musteri.ekle_duzenle'],
+            ['kod' => 'randevu',   'etiket' => 'Yeni Randevu',     'ikon' => 'bi bi-calendar-plus', 'yetki' => 'randevu.olustur', 'randevu_modulu' => true],
+            ['kod' => 'ongorusme', 'etiket' => 'Yeni Ön Görüşme',  'ikon' => 'bi bi-calendar-event', 'yetki' => 'gorusme.ekle_duzenle', 'randevu_modulu' => true],
+            ['kod' => 'musteri',   'etiket' => 'Yeni '.self::musteriEtiketi($salon), 'ikon' => 'bi bi-person-plus', 'yetki' => 'musteri.ekle_duzenle', 'randevu_modulu' => true],
             ['kod' => 'satis',     'etiket' => $studyo ? 'Yeni Satış' : 'Yeni Satış & Tahsilat', 'ikon' => 'bi bi-cart-plus', 'v2_rota' => '/v2/yeni-satis', 'yetki' => 'satis.adisyon_olustur', 'ozellik' => 'uyelik_turu_paketli'],
             ['kod' => 'masraf',    'etiket' => 'Yeni Masraf',      'ikon' => 'bi bi-receipt-cutoff', 'yetki' => 'finans.masraf_ekle', 'ozellik' => 'uyelik_turu_paketli', 'studyo_gizle' => true],
-            ['kod' => 'form',      'etiket' => 'Form Gönder',      'ikon' => 'bi bi-send', 'yetki' => ['form.olustur', 'form.gonder'], 'rol5_gizle' => true],
+            ['kod' => 'form',      'etiket' => 'Form Gönder',      'ikon' => 'bi bi-send', 'yetki' => ['form.olustur', 'form.gonder'], 'rol5_gizle' => true, 'randevu_modulu' => true],
         ];
     }
 
@@ -42,9 +42,9 @@ final class PanelKisayollar
     public static function kullanici(): array
     {
         return [
-            ['kod' => 'profil',  'etiket' => 'Profil Bilgileri',    'ikon' => 'bi bi-person',       'v2_rota' => '/v2/profil'],
-            ['kod' => 'hesabim', 'etiket' => 'Hesabım & Faturalar', 'ikon' => 'bi bi-person-vcard', 'v2_rota' => '/v2/hesabim', 'rol5_gizle' => true],
-            ['kod' => 'cikis',   'etiket' => 'Çıkış Yap',           'ikon' => 'bi bi-box-arrow-right', 'url' => '/v2/giris'],
+            ['kod' => 'profil',  'etiket' => 'Profil Bilgileri',    'ikon' => 'bi bi-person',       'v2_rota' => '/v2/profil', 'randevu_modulu' => true],
+            ['kod' => 'hesabim', 'etiket' => 'Hesabım & Faturalar', 'ikon' => 'bi bi-person-vcard', 'v2_rota' => '/v2/hesabim', 'rol5_gizle' => true, 'randevu_modulu' => true],
+            ['kod' => 'cikis',   'etiket' => 'Çıkış Yap',           'ikon' => 'bi bi-box-arrow-right', 'url' => '/v2/giris', 'randevu_modulu' => true],
         ];
     }
 }

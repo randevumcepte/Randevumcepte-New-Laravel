@@ -8,6 +8,7 @@ use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
 use App\Models\Salonlar;
 use App\Services\Ders\DersOturumServisi;
+use App\Services\Panel\RandevuModulu;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Support\Carbon;
@@ -39,6 +40,7 @@ class RandevuOkumaServisi
     public function __construct(
         private YetkiServisi $yetki,
         private DersOturumServisi $dersOturum,
+        private RandevuModulu $randevuModulu,
     ) {}
 
     /** Yalnizca salon_id (kapsam denetimi icin ucuz sorgu). */
@@ -164,6 +166,8 @@ class RandevuOkumaServisi
                     ->where('tarih', '>=', $tarih1)
                     ->where('tarih', '<=', $tarih2)
                     ->where('salon_id', $salonId);
+                // Randevu modulu + "Gecmis randevular gorunmesin": 1 saatten eski randevular takvimde yok.
+                $this->randevuModulu->gecmisiSuz($q, $salonId);
             });
 
         // Rol-5: yalnizca kendi (personel_id) randevulari.

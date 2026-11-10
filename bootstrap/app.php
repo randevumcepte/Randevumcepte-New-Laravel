@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', \App\Http\Middleware\MobilBayrakSuzgeci::class);
         // Suresi biten salonun isletme uclari 402 'lisans_suresi_doldu' (muaf uclar config/lisans.php).
         $middleware->appendToGroup('api', \App\Http\Middleware\LisansKapisi::class);
+        // Randevu modülü host'u (config/panel.php): satış/rapor/çağrı merkezi uçları 403, izinsiz v2 sayfası → takvim.
+        $middleware->appendToGroup('api', \App\Http\Middleware\RandevuModuluApiKapisi::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\RandevuModuluSayfaKapisi::class);
         $middleware->alias(['sistem.rol' => \App\Http\Middleware\SistemRolGerekli::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

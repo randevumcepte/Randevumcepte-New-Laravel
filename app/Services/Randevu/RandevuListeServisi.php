@@ -6,6 +6,7 @@ use App\Models\Randevular;
 use App\Domain\Randevu\RandevuDurumu;
 use App\Domain\Randevu\RandevuZamani;
 use App\Services\Musteri\PortfoyKapsami;
+use App\Services\Panel\RandevuModulu;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ListeIstegi;
 use App\Support\Yetki\YetkiSabitleri;
@@ -31,7 +32,7 @@ class RandevuListeServisi
     /** Olusturma kaynagi filtresi: randevular.<kolon> = 1 (eski: salon / web / uygulama). */
     public const KAYNAKLAR = ['salon' => 'Salon', 'web' => 'Web', 'uygulama' => 'Uygulama'];
 
-    public function __construct(private YetkiServisi $yetki, private PortfoyKapsami $portfoy) {}
+    public function __construct(private YetkiServisi $yetki, private PortfoyKapsami $portfoy, private RandevuModulu $randevuModulu) {}
 
     /**
      * Kullanicinin liste kapsami ve satir yetkileri — TEK yer (Randevular listesi ve
@@ -99,6 +100,8 @@ class RandevuListeServisi
                 ->from('randevu_hizmetler as rk')->whereColumn('rk.randevu_id', 'r.id')
                 ->where('rk.personel_id', $pid)->whereRaw('COALESCE(rk.yardimci_personel,0) != 1')))
             ->when($l->likeDeseni(), fn ($q, $like) => $this->ara($q, $like, (string) $l->ara));
+        // Randevu modulu + "Gecmis randevular gorunmesin" (liste ve musteri karti Randevular sekmesi).
+        $this->randevuModulu->gecmisiSuz($q, $salonId, 'r.');
 
         $toplam = (clone $q)->count();
 

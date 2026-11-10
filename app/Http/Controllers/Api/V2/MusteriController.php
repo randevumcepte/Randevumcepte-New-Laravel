@@ -9,6 +9,7 @@ use App\Http\Requests\Musteri\SaglikIstegi;
 use App\Services\Musteri\MusteriListeServisi;
 use App\Services\Musteri\MusteriOkumaServisi;
 use App\Services\Musteri\MusteriYazServisi;
+use App\Services\Panel\RandevuModulu;
 use App\Services\Randevu\RandevuAyrintiSunumu;
 use App\Services\Randevu\RandevuListeServisi;
 use App\Services\Yetki\KapsamServisi;
@@ -42,6 +43,7 @@ class MusteriController extends MusteriTabanController
         private MusteriListeServisi $liste,
         private MusteriOkumaServisi $okuma,
         private MusteriYazServisi $yaz,
+        private RandevuModulu $randevuModulu,
     ) {}
 
     public function liste(Request $request)
@@ -202,6 +204,8 @@ class MusteriController extends MusteriTabanController
     private function yetkiler(int $uid, int $salonId): array
     {
         $y = fn (string $k) => $this->yetkiVar($uid, $salonId, $k);
+        // Randevu modülü: satış sekmesi, borç/ödenen kartları ve satış/tahsilat düğmeleri yok (eski musteridetay).
+        $satis = ! $this->randevuModulu->aktif();
 
         return [
             'detay_gor'      => $y('musteri.detay_gor') || $y('musteri.not_yaz') || $y('musteri.gecmis_satis_gor'),
@@ -209,12 +213,12 @@ class MusteriController extends MusteriTabanController
             'sil'            => $y('musteri.sil'),
             'telefon_gor'    => $y('musteri.telefon_gor'),
             'not_yaz'        => $y('musteri.not_yaz'),
-            'satis_gor'      => $y('musteri.gecmis_satis_gor'),
+            'satis_gor'      => $satis && $y('musteri.gecmis_satis_gor'),
             'seans_gor'      => $y('paket.seans_takip'),
             'olcum_gor'      => $y('randevu.takvim_gor'),
             'olcum_sil'      => $y('randevu.duzenle_iptal'),
-            'adisyon_olustur' => $y('satis.adisyon_olustur'),
-            'tahsilat_al'    => $y('satis.tahsilat_al'),
+            'adisyon_olustur' => $satis && $y('satis.adisyon_olustur'),
+            'tahsilat_al'    => $satis && $y('satis.tahsilat_al'),
             'anket'          => $y('pazarlama.anket_yonet'),
             'whatsapp'       => $y('pazarlama.whatsapp_gonder'),
         ];
