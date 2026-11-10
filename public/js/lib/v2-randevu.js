@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=10';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=11';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -10,7 +10,7 @@
  * Stil: css/takvim-v2.css (.t-* / .rf-*).
  *
  *   const r = randevuIslemleri({ salonId, cekmece, kaynaklar, gun, yenile, secili });
- *     cekmece   : çekmece öğesi (yoksa body'ye .t-cekmece eklenir, Esc kapatır)
+ *     cekmece   : çekmece öğesi (yoksa body'ye .t-cekmece eklenir, Esc kapatır); dışına tıklamak kapatır
  *     kaynaklar : () => takvim kaynakları (form personel/oda/cihaz + saat kapama)
  *     gun       : () => yeni randevu formunun varsayılan günü (Date)
  *     yenile    : yazma sonrası liste/takvim tazele
@@ -42,6 +42,13 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
   }
   const ck = () => cekmece;
   const acikMi = () => cekmece.classList.contains('acik');
+  // Çekmece dışına (boşluğa) tıklayınca kapanır. Üstte açık pencere/onay varsa (çekmeceden açılan form, kod penceresi)
+  // dokunulmaz; listede ya da takvimde başka randevuya tıklamak çekmeceyi o randevuyla yeniden açar.
+  document.addEventListener('pointerdown', (e) => {
+    if (!acikMi() || cekmece.contains(e.target)) return;
+    if (document.querySelector('.rc-modal-overlay, .rc-onay-overlay') || e.target.closest?.('.rc-toast-kap')) return;
+    cekmeceKapat();
+  });
   /** Yazma sonrası çekmece açıksa tazelensin (listeden yapılan işlemde çekmece açılmaz). */
   const yenidenAc = (id) => { if (acikMi()) cekmeceAc(id); };
   const kaynakBul = (id) => kaynaklar().find((k) => String(k.id) === String(id));

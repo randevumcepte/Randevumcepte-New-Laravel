@@ -109,7 +109,7 @@
     {{-- Header rozetleri 'rc:kabuk' olayini dinler → kabuktan ONCE yuklenir --}}
     <script type="module" src="/js/header-araclar.js?v=4"></script>
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
-    <script type="module" src="/js/hizli-ekle.js?v=7"></script>
+    <script type="module" src="/js/hizli-ekle.js?v=8"></script>
     <script type="module" src="/js/panel-kabuk.js?v=11"></script>
     @stack('betik')
 </body>

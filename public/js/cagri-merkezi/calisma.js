@@ -6,7 +6,7 @@
  * (hatırlatma "Müşteriye git").
  */
 import { esc } from '/js/lib/v2-ortak.js?v=7';
-import { gorusmeKokpiti, sonucRozeti, harf } from '/js/cagri-merkezi/ortak.js?v=9';
+import { gorusmeKokpiti, sonucRozeti, harf } from '/js/cagri-merkezi/ortak.js?v=10';
 
 const SAYFA = 100;
 
