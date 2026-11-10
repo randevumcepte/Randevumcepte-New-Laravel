@@ -83,6 +83,24 @@ final class DilimTipi
         return trim($deger.' '.self::TANIM[$tip][1]);
     }
 
+    /**
+     * Çark üstündeki yazılar (vitrin + uygulama çizimi; eski salon sitesi betiğindeki buildLabel / buildFullLabel):
+     *   etiket      : dilimin iç yazısı — değerli dilimde tipin kısa adı (değer ayrı yazılır), değeri girilmemişse dilim adı
+     *   deger_metni : "%20" · "150₺" · "100"; değersizse '' (çizim tek satır olur)
+     *   tam_etiket  : sonuç ekranı ("%20 Hizmet İnd.", "100 Puan", "Tekrar Dene")
+     *
+     * @return array{etiket:string, deger_metni:string, tam_etiket:string}
+     */
+    public static function carkYazilari(?string $tip, ?float $deger, ?string $ad, ?string $indirimTipi): array
+    {
+        $tip = self::gecerli($tip);
+        $kisa = self::TANIM[$tip][1];
+        $etiket = self::degerliMi($tip) && $deger === null ? (trim((string) $ad) ?: $kisa) : $kisa;
+        $degerMetni = self::degerMetni($tip, $deger, $indirimTipi);
+
+        return ['etiket' => $etiket, 'deger_metni' => $degerMetni, 'tam_etiket' => trim($degerMetni.' '.$etiket)];
+    }
+
     /** Editör / Flutter seçenekleri. */
     public static function sozluk(): array
     {

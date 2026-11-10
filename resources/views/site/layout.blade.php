@@ -78,6 +78,7 @@
       <script src="{{ asset('js/site/vitrin-sayfa.js') }}?v=1"></script>
       <script src="{{ asset('js/site/vitrin-personel.js') }}?v=1"></script>
       <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=2"></script>
+      @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=1"></script>@endif
       @stack('sayfa')
    </body>
 </html>

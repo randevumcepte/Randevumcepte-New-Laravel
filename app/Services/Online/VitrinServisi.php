@@ -2,6 +2,7 @@
 
 namespace App\Services\Online;
 
+use App\Services\MusteriHesap\MusteriCarkServisi;
 use App\Support\EskiPanelLinki;
 use App\Support\KvkkMaske;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class VitrinServisi
     /** Yanlislikla yuklenip vitrinden cikarilan gorseller (eski blade'deki liste). */
     private const GIZLI_GORSEL_PARCALARI = ['685e8dd97888b'];
 
-    public function __construct(private OnlineSalonKapisi $kapi, private OnlineSecenekServisi $secenek) {}
+    public function __construct(private OnlineSalonKapisi $kapi, private OnlineSecenekServisi $secenek, private MusteriCarkServisi $cark) {}
 
     /** Web host'u ya da uygulama paketi → salon(lar) + marka bilgisi (v1 salonAyarlariByBundle). */
     public function coz(?string $domain, ?string $bundle): array
@@ -156,6 +157,8 @@ class VitrinServisi
             'arama_terimleri'=> DB::table('arama_terimleri')->where('salon_id', $salonId)->orderBy('id')->pluck('arama_terimi')->all(),
             'puan'           => $puan,
             'one_cikan_yorumlar' => $this->anketYorumlari($salonId),
+            // Hediye carki: aktif ve en az 2 dilimliyse cizim verisi (olasilik yok), degilse null.
+            'cark'           => $this->cark->vitrinCarki($salonId),
         ];
     }
 

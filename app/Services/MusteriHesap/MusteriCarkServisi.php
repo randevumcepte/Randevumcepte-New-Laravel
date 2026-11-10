@@ -44,10 +44,7 @@ class MusteriCarkServisi
             'aktif'    => true,
             'salon'    => $salonOzet,
             'cark_id'  => (int) $cark->id,
-            'dilimler' => $dilimler->map(fn ($d) => [
-                'id' => (int) $d->id, 'ismi' => $d->dilim_ismi, 'renk' => $d->renk_kodu, 'tip' => $d->tip ?? DilimTipi::BOS,
-                'deger' => $d->deger !== null ? (float) $d->deger : null, 'indirim_tipi' => $d->indirim_tipi ?? DilimTipi::YUZDE, 'sira' => (int) $d->sira,
-            ])->values()->all(),
+            'dilimler' => $this->dilimOzetleri($dilimler),
             'kalanHak'          => $kilitli ? 0 : 1,
             'randevuIdleri'     => [],
             'bugunCevirdi'      => $kilitli,
@@ -57,54 +54,151 @@ class MusteriCarkServisi
         ];
     }
 
+    /**
+     * Kimliksiz vitrinde gosterilen cark (site + uygulama ana sayfasi). Dilim olasiligi ve kazanan bilgisi verilmez.
+     * Aktif cark ya da en az 2 dilim yoksa null.
+     */
+    public function vitrinCarki(int $salonId): ?array
+    {
+        $cark = $this->cark($salonId);
+        $dilimler = $cark ? $this->dilimler($cark) : collect();
+        if ($dilimler->count() < 2) {
+            return null;
+        }
+
+        return ['cark_id' => (int) $cark->id, 'dilimler' => $this->dilimOzetleri($dilimler), 'cevirmeAraligiGun' => $this->aralik($cark)];
+    }
+
     public function cevir(int $userId, int $salonId): array
     {
         $this->kapi->denetle($userId, $salonId);
 
         return DB::transaction(function () use ($userId, $salonId) {
-            $cark = DB::table('carkifelek_sistemi')->where('salon_id', $salonId)->lockForUpdate()->first();
-            if (! $cark || ! $cark->aktifmi) {
-                throw new GecersizIslemException('Çarkıfelek şu an aktif değil.');
-            }
-            $sonraki = $this->sonrakiHak($cark, $salonId, $userId);
-            if ($sonraki !== null && Carbon::today()->lt($sonraki)) {
-                throw new GecersizIslemException($this->aralik($cark) <= 1
-                    ? 'Bugün çarkı çevirdiniz. Yarın tekrar deneyebilirsiniz.'
-                    : 'Çarkı çevirdiniz. Bir sonraki çevirme: '.$sonraki->format('d.m.Y').'.');
-            }
-            $dilimler = $this->dilimler($cark);
-            if ($dilimler->count() < 2) {
-                throw new GecersizIslemException('Çark henüz hazırlanmamış.');
-            }
+            [$cark, $dilimler] = $this->hakliCark($salonId, $userId);
             $secilen = $this->sec($dilimler) ?? throw new GecersizIslemException('Dilim seçilemedi.');
-            $baslik = CarkOdulBasligi::uret((string) $secilen->tip, $secilen->deger !== null ? (float) $secilen->deger : null, $secilen->dilim_ismi, $secilen->indirim_tipi ?? null);
 
-            $logId = (int) DB::table('carkifelek_cevirme_loglari')->insertGetId([
-                'cark_id' => $cark->id, 'salon_id' => $salonId, 'user_id' => $userId, 'randevu_id' => null, 'dilim_id' => $secilen->id,
-                'tip' => $secilen->tip, 'deger' => $secilen->deger, 'dilim_ismi' => $secilen->dilim_ismi, 'created_at' => now(), 'updated_at' => now(),
-            ]);
-            $kupon = null;
-            if ($secilen->tip === DilimTipi::PUAN && $secilen->deger) {
-                $this->puanEkle($salonId, $userId, (float) $secilen->deger);
-            } elseif (in_array($secilen->tip, self::INDIRIM_TIPLERI, true) && $secilen->deger) {
-                $kupon = $this->kuponYaz([
-                    'log_id' => $logId, 'salon_id' => $salonId, 'user_id' => $userId, 'tip' => $secilen->tip, 'deger' => $secilen->deger, 'baslik' => $baslik,
-                    'gecerlilik_tarihi' => $this->kuponBitisi($cark, 'kupon_cark_gecerlilik_gun'),
-                    'indirim_tipi' => ($secilen->indirim_tipi ?? null) === DilimTipi::TUTAR ? DilimTipi::TUTAR : DilimTipi::YUZDE,
-                    'gecerli_salonlar' => $cark->gecerli_salonlar ?: json_encode([$salonId]),
-                ]);
+            return $this->yaz($cark, $dilimler, $secilen, $userId, $salonId);
+        });
+    }
+
+    /**
+     * Misafir cevirmesi (vitrin): kazanan secilir, HICBIR SEY YAZILMAZ. Odul varsa cagiran taslak saklar; telefon
+     * dogrulaninca dilimUygula ile uyeninkiyle ayni kuralla yazilir.
+     *
+     * @return array{cark_id:int, dilim_id:int, tip:string, odullu:bool, aralik:int, sonuc:array}
+     */
+    public function misafirSec(int $salonId): array
+    {
+        $cark = $this->cark($salonId) ?? throw new GecersizIslemException('Çarkıfelek şu an aktif değil.');
+        $dilimler = $this->dilimler($cark);
+        if ($dilimler->count() < 2) {
+            throw new GecersizIslemException('Çark henüz hazırlanmamış.');
+        }
+        $secilen = $this->sec($dilimler) ?? throw new GecersizIslemException('Dilim seçilemedi.');
+
+        return [
+            'cark_id' => (int) $cark->id,
+            'dilim_id' => (int) $secilen->id,
+            'tip' => (string) $secilen->tip,
+            'odullu' => DilimTipi::degerliMi((string) $secilen->tip) && (float) $secilen->deger > 0,
+            'aralik' => $this->aralik($cark),
+            'sonuc' => $this->sonuc($dilimler, $secilen),
+        ];
+    }
+
+    /**
+     * Onceden secilmis dilimi (misafir taslagi) kullaniciya yazar: uye cevirmesiyle ayni aralik kurali, ayni log, puan ve
+     * kupon yazimi. Cark bu arada degistiyse (pasif, baska cark, dilim silindi) reddedilir. Portfoy kaydi cagiranin
+     * isidir (hesap ayni islemde acilir). Cevap cevir() ile aynidir.
+     */
+    public function dilimUygula(int $userId, int $salonId, int $carkId, int $dilimId): array
+    {
+        return DB::transaction(function () use ($userId, $salonId, $carkId, $dilimId) {
+            [$cark, $dilimler] = $this->hakliCark($salonId, $userId);
+            $secilen = (int) $cark->id === $carkId ? $dilimler->first(fn ($d) => (int) $d->id === $dilimId) : null;
+            if (! $secilen) {
+                throw new GecersizIslemException('Çark güncellendi. Lütfen çarkı yeniden çevirin.');
             }
+
+            return $this->yaz($cark, $dilimler, $secilen, $userId, $salonId);
+        });
+    }
+
+    /**
+     * Satir kilidi altinda aktif cark, kullanicinin aralik kurali ve en az 2 dilim. Transaction icinde cagrilir.
+     *
+     * @return array{0:object, 1:\Illuminate\Support\Collection}
+     */
+    private function hakliCark(int $salonId, int $userId): array
+    {
+        $cark = DB::table('carkifelek_sistemi')->where('salon_id', $salonId)->lockForUpdate()->first();
+        if (! $cark || ! $cark->aktifmi) {
+            throw new GecersizIslemException('Çarkıfelek şu an aktif değil.');
+        }
+        $sonraki = $this->sonrakiHak($cark, $salonId, $userId);
+        if ($sonraki !== null && Carbon::today()->lt($sonraki)) {
+            throw new GecersizIslemException($this->aralik($cark) <= 1
+                ? 'Bugün çarkı çevirdiniz. Yarın tekrar deneyebilirsiniz.'
+                : 'Çarkı çevirdiniz. Bir sonraki çevirme: '.$sonraki->format('d.m.Y').'.');
+        }
+        $dilimler = $this->dilimler($cark);
+        if ($dilimler->count() < 2) {
+            throw new GecersizIslemException('Çark henüz hazırlanmamış.');
+        }
+
+        return [$cark, $dilimler];
+    }
+
+    /** Cevirme logu + odul (puan ya da kupon). Uye cevirmesi ve misafir taslagi AYNI yazimdan gecer. */
+    private function yaz(object $cark, $dilimler, object $secilen, int $userId, int $salonId): array
+    {
+        $logId = (int) DB::table('carkifelek_cevirme_loglari')->insertGetId([
+            'cark_id' => $cark->id, 'salon_id' => $salonId, 'user_id' => $userId, 'randevu_id' => null, 'dilim_id' => $secilen->id,
+            'tip' => $secilen->tip, 'deger' => $secilen->deger, 'dilim_ismi' => $secilen->dilim_ismi, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $kupon = null;
+        if ($secilen->tip === DilimTipi::PUAN && $secilen->deger) {
+            $this->puanEkle($salonId, $userId, (float) $secilen->deger);
+        } elseif (in_array($secilen->tip, self::INDIRIM_TIPLERI, true) && $secilen->deger) {
+            $kupon = $this->kuponYaz([
+                'log_id' => $logId, 'salon_id' => $salonId, 'user_id' => $userId, 'tip' => $secilen->tip, 'deger' => $secilen->deger, 'baslik' => $this->baslik($secilen),
+                'gecerlilik_tarihi' => $this->kuponBitisi($cark, 'kupon_cark_gecerlilik_gun'),
+                'indirim_tipi' => ($secilen->indirim_tipi ?? null) === DilimTipi::TUTAR ? DilimTipi::TUTAR : DilimTipi::YUZDE,
+                'gecerli_salonlar' => $cark->gecerli_salonlar ?: json_encode([$salonId]),
+            ]);
+        }
+
+        return $this->sonuc($dilimler, $secilen) + ['odulKodu' => $kupon['kod'] ?? null, 'kalanHak' => 0] + $this->subeBilgisi($kupon, $salonId);
+    }
+
+    /** Istemcinin carki durdurdugu dilim ve odul basligi (uye ve misafir cevabi ortak). */
+    private function sonuc($dilimler, object $secilen): array
+    {
+        return [
+            'dilimIndex' => (int) $dilimler->search(fn ($d) => $d->id === $secilen->id),
+            'dilim' => [
+                'id' => (int) $secilen->id, 'ismi' => $secilen->dilim_ismi, 'tip' => $secilen->tip,
+                'deger' => $secilen->deger !== null ? (float) $secilen->deger : null, 'baslik' => $this->baslik($secilen),
+            ],
+        ];
+    }
+
+    private function baslik(object $d): string
+    {
+        return CarkOdulBasligi::uret((string) $d->tip, $d->deger !== null ? (float) $d->deger : null, $d->dilim_ismi, $d->indirim_tipi ?? null);
+    }
+
+    /** Cizim icin herkese acik dilim alanlari; olasilik (kazanan) disari verilmez. */
+    private function dilimOzetleri($dilimler): array
+    {
+        return $dilimler->map(function ($d) {
+            $deger = $d->deger !== null ? (float) $d->deger : null;
 
             return [
-                'dilimIndex' => (int) $dilimler->search(fn ($d) => $d->id === $secilen->id),
-                'dilim' => [
-                    'id' => (int) $secilen->id, 'ismi' => $secilen->dilim_ismi, 'tip' => $secilen->tip,
-                    'deger' => $secilen->deger !== null ? (float) $secilen->deger : null, 'baslik' => $baslik,
-                ],
-                'odulKodu' => $kupon['kod'] ?? null,
-                'kalanHak' => 0,
-            ] + $this->subeBilgisi($kupon, $salonId);
-        });
+                'id' => (int) $d->id, 'ismi' => $d->dilim_ismi, 'renk' => $d->renk_kodu, 'tip' => $d->tip ?? DilimTipi::BOS,
+                'deger' => $deger, 'indirim_tipi' => $d->indirim_tipi ?? DilimTipi::YUZDE, 'sira' => (int) $d->sira,
+            ] + DilimTipi::carkYazilari($d->tip, $deger, $d->dilim_ismi, $d->indirim_tipi ?? null);
+        })->values()->all();
     }
 
     public function odullerim(int $userId, ?string $bundle): array

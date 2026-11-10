@@ -27,6 +27,10 @@ return [
     'randevu_ip_saatlik'     => 5,
     'randevu_musteri_gunluk' => 3,
 
+    // Vitrin carki, misafir: IP basina salon basina cevirme hakki, carkin cevirme araligi boyunca ("tekrar dene"
+    // sayilmaz). Eskisi oturum cerezine bagliydi (cerez silinerek sinirsiz); paylasimli IP (mobil hat) icin 1'den fazla.
+    'cark_misafir_ip' => 3,
+
     // Musteri profilinde telefon degistirme denemesi (numara taramasi siniri), kullanici basina gunde.
     'telefon_degisim_gunluk' => 5,
 ];

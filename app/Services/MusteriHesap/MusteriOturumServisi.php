@@ -74,17 +74,43 @@ class MusteriOturumServisi
 
         $salonId = (int) $g['salon_id'];
         $this->kapi->salon($salonId);
-        $userId = DB::transaction(function () use ($g, $tel, $salonId) {
+        $userId = $this->hesapAc((string) $g['ad_soyad'], $tel, $salonId);
+
+        return ['sifre_gerekli' => false] + $this->oturumAc($userId, $salonId);
+    }
+
+    /**
+     * Telefonu kodla dogrulanmis misafir (vitrin carki hediyesi; kod oncesi kayitKapisi'ndan gecer). Numara yeniyse
+     * kayit() ile ayni hesap acilir; kayitliysa yalniz salon portfoyu garantilenir. Oturum VERMEZ: cagiran isini bitirince
+     * yeni hesaba oturumAc ile verir; kayitli numaraya web'de kodla giris yoktur (sifreyle girer).
+     *
+     * @return array{user_id:int, yeni:bool}
+     */
+    public function dogrulanmisMusteri(string $adSoyad, string $tel, int $salonId): array
+    {
+        $this->kapi->salon($salonId);
+        $mevcut = $this->hesap->telefonlaBul($tel);
+        if ($mevcut !== null) {
+            $this->portfoy->garantile($salonId, $mevcut);
+
+            return ['user_id' => $mevcut, 'yeni' => false];
+        }
+
+        return ['user_id' => $this->hesapAc($adSoyad, $tel, $salonId), 'yeni' => true];
+    }
+
+    /** Sifresiz yeni musteri hesabi + salon portfoyu (hizli kayit ve dogrulanmis misafir ortak). */
+    private function hesapAc(string $adSoyad, string $tel, int $salonId): int
+    {
+        return DB::transaction(function () use ($adSoyad, $tel, $salonId) {
             $id = (int) DB::table('users')->insertGetId([
-                'name' => trim((string) $g['ad_soyad']), 'cep_telefon' => $tel,
+                'name' => trim($adSoyad), 'cep_telefon' => $tel,
                 'password' => Hash::make(Str::random(32)), 'created_at' => now(), 'updated_at' => now(),
             ]);
             $this->portfoy->garantile($salonId, $id);
 
             return $id;
         });
-
-        return ['sifre_gerekli' => false] + $this->oturumAc($userId, $salonId);
     }
 
     /**
@@ -124,10 +150,13 @@ class MusteriOturumServisi
     }
 
     /**
-     * Iki kayit yolunun ortak kapisi: bot + IP siniri, numara siniri; deneme kayitli numarada da sayilir.
-     * Numara gunluk sinira ulasinca kayitli/kayitsiz ayni 429'u alir.
+     * Kayit yollarinin ortak kapisi (hizli kayit, uygulama kaydi, vitrin carki misafir kaydi): bot + IP siniri, numara
+     * siniri; deneme kayitli numarada da sayilir. Numara gunluk sinira ulasinca kayitli/kayitsiz ayni 429'u alir.
+     *
+     * @param  array{cep_telefon:string, _hp?:?string, form_sure_sn?:int|string|null}  $g
+     * @return string kanonik telefon
      */
-    private function kayitKapisi(array $g, string $ip): string
+    public function kayitKapisi(array $g, string $ip): string
     {
         $this->botKapisi($g, $ip);
         $tel = $this->telefon($g['cep_telefon']);
@@ -184,7 +213,7 @@ class MusteriOturumServisi
         $this->hesap->sifreGuncelle($userId, $yeniSifre);
     }
 
-    private function oturumAc(int $userId, ?int $salonId): array
+    public function oturumAc(int $userId, ?int $salonId): array
     {
         if ($salonId) {
             $this->kapi->salon($salonId);

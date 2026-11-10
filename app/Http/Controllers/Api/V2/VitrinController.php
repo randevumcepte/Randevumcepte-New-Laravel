@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
  *   GET /vitrin/marka?app_bundle=            uygulama acilisi: randevu dugmesi, lisans, marka adi
  *   GET /vitrin/surum?app_bundle=            magaza surumu
  *   GET /vitrin/marka-yorumlari?app_bundle=  markanin tum yorumlari (token varsa kendi yorumu isaretli)
- *   GET /vitrin/{salonId}
+ *   GET /vitrin/{salonId}                     'cark': hediye carki cizim verisi ya da null (misafir cevirme: VitrinCarkController)
  *   GET /vitrin/{salonId}/yorumlar?page=
  *   GET /vitrin/{salonId}/randevu-secenekleri
  *   GET /vitrin/{salonId}/personeller?hizmet_id=&mobil=

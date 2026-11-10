@@ -102,6 +102,7 @@
    @endphp
 
    @include('site.bolum.hero')
+   @include('site.bolum.cark')
    @include('site.bolum.randevu-sihirbazi')
    @include('site.bolum.yuzen-araclar')
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V2\MusteriOturumController;
+use App\Http\Controllers\Api\V2\VitrinCarkController;
 use App\Http\Controllers\Api\V2\VitrinController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,14 @@ Route::prefix('vitrin')->middleware('throttle:120,1')->group(function () {
     Route::get('/{salonId}/randevu-secenekleri', [VitrinController::class, 'randevuSecenekleri'])->whereNumber('salonId');
     Route::get('/{salonId}/personeller', [VitrinController::class, 'personeller'])->whereNumber('salonId');
     Route::get('/{salonId}/saatler', [VitrinController::class, 'saatler'])->whereNumber('salonId');
+
+    // Hediye carki, misafir yolu (cark verisi GET /vitrin/{salonId} 'cark' alaninda). Ayri onekli siki sinir; servis
+    // ayrica IP, numara ve kod sinirlari uygular. Giris yapmis musteri /musteri-uygulama/cark uclarini kullanir.
+    Route::prefix('/{salonId}/cark')->whereNumber('salonId')->middleware('throttle:10,1,vitrin-cark')->group(function () {
+        Route::post('/cevir', [VitrinCarkController::class, 'cevir']);
+        Route::post('/kod', [VitrinCarkController::class, 'kodGonder']);
+        Route::post('/dogrula', [VitrinCarkController::class, 'kodDogrula']);
+    });
 });
 
 Route::prefix('musteri-oturum')->middleware('throttle:20,1')->group(function () {

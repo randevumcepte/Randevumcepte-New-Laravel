@@ -58,6 +58,7 @@ class SiteController extends Controller
             'arama_terimleri'      => $v['arama_terimleri'],
             'puan'                 => $v['puan'],
             'one_cikan_yorumlar'   => $v['one_cikan_yorumlar'],
+            'cark'                 => $v['cark'],
             'yorumlar'             => $this->vitrin->yorumlar($salonId, null)['yorumlar'],
             'indekslenebilir'      => $kendiDomaini,
         ] + $this->ortak($salonId, (object) $v['salon'], $kendiDomaini));
