@@ -40,20 +40,20 @@ class OnlineSecenekServisi
     /**
      * Hizmeti yapabilen personel; o hizmete kimse atanmamissa tum uygun personel (eski kural).
      *
-     * @param  bool  $mobil  imzali mobil token'li musteri (kimliksiz istekte bayrak silinir): takvimde gizli personel de
-     *                       secilebilir, ad personel kaydindaki addir, sira id
+     * @param  bool  $mobil  imzali mobil token'li musteri (kimliksiz istekte bayrak silinir): ad personel kaydindaki addir,
+     *                       sira id. Hangi personelin secilebilecegi web ve mobilde aynidir (aktifPersonelSorgusu).
      */
     public function hizmetPersonelleri(int $salonId, int $hizmetId, bool $mobil = false): array
     {
-        $idler = $this->uygunPersonelIdleri($salonId, $hizmetId, $mobil);
+        $idler = $this->uygunPersonelIdleri($salonId, $hizmetId);
 
         return array_values(array_filter($this->personeller($salonId, $mobil), fn ($p) => in_array($p['id'], $idler, true)));
     }
 
     /** @return int[] */
-    public function uygunPersonelIdleri(int $salonId, int $hizmetId, bool $mobil = false): array
+    public function uygunPersonelIdleri(int $salonId, int $hizmetId): array
     {
-        $tum = $this->aktifPersonelSorgusu($salonId, $mobil)->orderBy('id')->pluck('id')->map(fn ($x) => (int) $x)->all();
+        $tum = $this->aktifPersonelSorgusu($salonId)->orderBy('id')->pluck('id')->map(fn ($x) => (int) $x)->all();
         $atanan = DB::table('personel_sunulan_hizmetler')->where('hizmet_id', $hizmetId)->whereIn('personel_id', $tum)
             ->pluck('personel_id')->map(fn ($x) => (int) $x)->all();
 
@@ -63,7 +63,7 @@ class OnlineSecenekServisi
     /** Musteriye gosterilebilir alanlar (acik liste). */
     public function personeller(int $salonId, bool $mobil = false): array
     {
-        return $this->aktifPersonelSorgusu($salonId, $mobil)
+        return $this->aktifPersonelSorgusu($salonId)
             ->leftJoin('isletmeyetkilileri as y', 'y.id', '=', 'sp.yetkili_id')
             ->when(! $mobil, fn ($q) => $q->orderBy('sp.takvim_sirasi'))->orderBy('sp.id')
             ->get(['sp.id', 'sp.personel_adi', 'sp.unvan', 'sp.cinsiyet', 'sp.uzmanlik', 'sp.yillik_tecrube', 'sp.instagram', 'sp.aciklama', 'y.name as yetkili_adi', 'y.profil_resim'])
@@ -80,9 +80,14 @@ class OnlineSecenekServisi
             ])->all();
     }
 
-    private function aktifPersonelSorgusu(int $salonId, bool $mobil = false)
+    /**
+     * Online randevuda secilebilen personel: aktif, takvimde gorunen, arsivlenmemis. Web ve mobil ayni (kullanici
+     * 2026-11-10); eskiden mobil uygulama takvimde gizli personeli de gosteriyordu.
+     */
+    private function aktifPersonelSorgusu(int $salonId)
     {
         return DB::table('salon_personelleri as sp')->where('sp.salon_id', $salonId)->where('sp.aktif', 1)
-            ->when(! $mobil, fn ($q) => $q->where('sp.takvimde_gorunsun', 1));
+            ->where('sp.takvimde_gorunsun', 1)
+            ->where(fn ($q) => $q->where('sp.arsivli', 0)->orWhereNull('sp.arsivli'));
     }
 }

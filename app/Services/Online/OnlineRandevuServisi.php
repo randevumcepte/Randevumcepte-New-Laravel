@@ -60,11 +60,10 @@ class OnlineRandevuServisi
     private function yaz(object $salon, int $userId, array $g): array
     {
         $salonId = (int) $salon->id;
-        $mobil = ! empty($g['mobil']);
-        DB::table('salon_personelleri')->whereIn('id', $this->musaitlik->adayPersoneller($salonId, $g['kalemler'], $mobil))
+        DB::table('salon_personelleri')->whereIn('id', $this->musaitlik->adayPersoneller($salonId, $g['kalemler']))
             ->orderBy('id')->lockForUpdate()->pluck('id');
 
-        $yerlesim = $this->musaitlik->yerlesim($salon, $g['tarih'], $g['saat'], $g['kalemler'], $mobil);
+        $yerlesim = $this->musaitlik->yerlesim($salon, $g['tarih'], $g['saat'], $g['kalemler']);
         if ($yerlesim === null) {
             throw new CakismaException('Seçtiğiniz saat artık uygun değil. Lütfen başka bir saat seçiniz.');
         }

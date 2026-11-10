@@ -90,6 +90,6 @@ class VitrinController extends Controller
             'kalemler.*.personel_id' => ['nullable', 'integer'],
         ]);
 
-        return ApiCevap::basarili($musaitlik->saatler($salonId, $g['tarih'], $g['kalemler'], $request->boolean('mobil')));
+        return ApiCevap::basarili($musaitlik->saatler($salonId, $g['tarih'], $g['kalemler']));
     }
 }

@@ -138,6 +138,18 @@ class SiteSeoTest extends TestCase
             ->assertDontSee('rel="sitemap"', false);
     }
 
+    public function test_online_randevuda_yalniz_aktif_takvimde_ve_arsivsiz_personel_web_ve_mobilde(): void
+    {
+        DB::table('salon_personelleri')->insert(['id' => 6, 'salon_id' => self::SALON, 'aktif' => 1, 'takvimde_gorunsun' => 1, 'arsivli' => 1, 'personel_adi' => 'Arşivli']);
+        DB::table('salon_personelleri')->insert(['id' => 7, 'salon_id' => self::SALON, 'aktif' => 0, 'takvimde_gorunsun' => 1, 'personel_adi' => 'Pasif']);
+        $s = app(\App\Services\Online\OnlineSecenekServisi::class);
+
+        foreach ([false, true] as $mobil) {
+            $this->assertSame([3, 4], array_column($s->personeller(self::SALON, $mobil), 'id'), $mobil ? 'mobil' : 'web');
+        }
+        $this->assertSame([3, 4], $s->uygunPersonelIdleri(self::SALON, 99), 'hizmete atanan yoksa uygun personel');
+    }
+
     public function test_personel_sayfasi(): void
     {
         $this->get(self::HOST.'/lotus-guzellik-'.self::SALON.'/personel/3')->assertOk()
@@ -201,7 +213,7 @@ class SiteSeoTest extends TestCase
         Schema::create('salon_personelleri', function (Blueprint $t) {
             $t->id();
             $t->integer('salon_id');
-            foreach (['aktif', 'takvimde_gorunsun', 'takvim_sirasi', 'cinsiyet', 'yetkili_id'] as $k) {
+            foreach (['aktif', 'takvimde_gorunsun', 'takvim_sirasi', 'cinsiyet', 'yetkili_id', 'arsivli'] as $k) {
                 $t->integer($k)->nullable();
             }
             foreach (['personel_adi', 'unvan', 'uzmanlik', 'yillik_tecrube', 'instagram', 'aciklama'] as $k) {

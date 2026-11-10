@@ -24,15 +24,15 @@ class OnlineMusaitlikServisi
     public function __construct(private OnlineSalonKapisi $kapi, private OnlineSecenekServisi $secenek) {}
 
     /**
-     * @param  bool  $mobil  musteri uygulamasi: takvimde gizli personel de secilebilir; online/lisans kapisi her yolda gecerli
+     * Online/lisans kapisi her yolda gecerli; secilebilen personel web ve mobilde ayni (OnlineSecenekServisi).
      * @return array{saatler:array<int,array{saat:string,dolu:string}>,mesaj:?string} v1 alan adlari
      */
-    public function saatler(int $salonId, string $tarih, array $kalemGirdi, bool $mobil = false): array
+    public function saatler(int $salonId, string $tarih, array $kalemGirdi): array
     {
         $salon = $this->kapi->randevuyaAcikSalon($salonId);
         $this->tarihDogrula($tarih);
 
-        $hazirlik = $this->hazirla($salon, $tarih, $kalemGirdi, $mobil);
+        $hazirlik = $this->hazirla($salon, $tarih, $kalemGirdi);
         if ($hazirlik === null) {
             return ['saatler' => [], 'mesaj' => self::KAPALI_MESAJ];
         }
@@ -67,14 +67,14 @@ class OnlineMusaitlikServisi
      * Secilen saatin yerlesimi (kayit ani). Musteri tarafinda sert kural: sigmiyorsa null.
      * Gunluk seyreltme burada uygulanmaz; o yalniz sunulacak saatleri azaltir.
      */
-    public function yerlesim(object $salon, string $tarih, string $saat, array $kalemGirdi, bool $mobil = false): ?array
+    public function yerlesim(object $salon, string $tarih, string $saat, array $kalemGirdi): ?array
     {
         $this->tarihDogrula($tarih);
         $t = HizmetZinciri::dakika($saat);
         if ($tarih === date('Y-m-d') && $t < HizmetZinciri::dakika(date('H:i'))) {
             return null;
         }
-        $hazirlik = $this->hazirla($salon, $tarih, $kalemGirdi, $mobil);
+        $hazirlik = $this->hazirla($salon, $tarih, $kalemGirdi);
         if ($hazirlik === null || ! OnlineSaatKurali::izinliMi($this->onlinePencereler($salon, $tarih), $t)) {
             return null;
         }
@@ -83,10 +83,10 @@ class OnlineMusaitlikServisi
     }
 
     /** Kilitlenecek personel id'leri (es zamanli kayit icin). */
-    public function adayPersoneller(int $salonId, array $kalemGirdi, bool $mobil = false): array
+    public function adayPersoneller(int $salonId, array $kalemGirdi): array
     {
         $idler = [];
-        foreach ($this->kalemler($salonId, $kalemGirdi, $mobil) as $k) {
+        foreach ($this->kalemler($salonId, $kalemGirdi) as $k) {
             array_push($idler, ...$k['adaylar']);
         }
         $idler = array_values(array_unique($idler));
@@ -116,7 +116,7 @@ class OnlineMusaitlikServisi
     }
 
     /** @return array{0:array,1:array}|null salon o gun kapaliysa null */
-    private function hazirla(object $salon, string $tarih, array $kalemGirdi, bool $mobil = false): ?array
+    private function hazirla(object $salon, string $tarih, array $kalemGirdi): ?array
     {
         $salonId = (int) $salon->id;
         $gun = (int) date('N', strtotime($tarih));
@@ -124,25 +124,25 @@ class OnlineMusaitlikServisi
         if (! $calisma || ! $calisma->baslangic_saati || ! $calisma->bitis_saati) {
             return null;
         }
-        $kalemler = $this->kalemler($salonId, $kalemGirdi, $mobil);
+        $kalemler = $this->kalemler($salonId, $kalemGirdi);
         $personeller = array_values(array_unique(array_merge(...array_column($kalemler, 'adaylar'))));
 
         return [$kalemler, $this->takvim($salonId, $tarih, $gun, $calisma, $personeller)];
     }
 
-    private function kalemler(int $salonId, array $girdi, bool $mobil = false): array
+    private function kalemler(int $salonId, array $girdi): array
     {
         if (! $girdi) {
             throw new GecersizIslemException('En az bir hizmet seçin.');
         }
         $detay = $this->hizmetDetaylari($salonId, array_map(fn ($k) => (int) ($k['hizmet_id'] ?? 0), $girdi));
 
-        return array_map(function ($k) use ($salonId, $detay, $mobil) {
+        return array_map(function ($k) use ($salonId, $detay) {
             $hizmetId = (int) ($k['hizmet_id'] ?? 0);
             if (! isset($detay[$hizmetId])) {
                 throw new GecersizIslemException('Seçilen hizmet bu işletmede sunulmuyor.');
             }
-            $uygun = $this->secenek->uygunPersonelIdleri($salonId, $hizmetId, $mobil);
+            $uygun = $this->secenek->uygunPersonelIdleri($salonId, $hizmetId);
             $personel = (int) ($k['personel_id'] ?? 0);
             if ($personel && ! in_array($personel, $uygun, true)) {
                 throw new GecersizIslemException('Seçilen personel bu hizmeti vermiyor.');
