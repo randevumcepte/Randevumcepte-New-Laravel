@@ -9,8 +9,8 @@ use App\Domain\Kampanya\MesajMetni;
 use App\Domain\Kampanya\SablonKimligi;
 use App\Domain\Kampanya\Senaryo;
 use App\Exceptions\GecersizIslemException;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Kampanya MESAJI — şablon kataloğu, şablon metni, kayıt metni, önizleme.
@@ -40,7 +40,7 @@ class KampanyaMesajServisi
             ->map(fn ($s) => ['value' => 'sablon-'.$s->id, 'label' => (string) $s->baslik, 'tur' => SablonKimligi::TASLAK,
                 'kanal' => null, 'duzenlenebilir' => true]);
 
-        $kanalKolonu = Schema::hasColumn('kampanya_sablonlari', 'gorev_turu');
+        $kanalKolonu = Sema::kolonVar('kampanya_sablonlari', 'gorev_turu');
         $sistem = DB::table('kampanya_sablonlari')->orderBy('baslik')->get(array_merge(['id', 'baslik'], $kanalKolonu ? ['gorev_turu'] : []))
             ->map(fn ($s) => ['value' => (string) $s->id, 'label' => (string) $s->baslik, 'tur' => SablonKimligi::SISTEM,
                 'kanal' => $kanalKolonu && $s->gorev_turu ? (int) $s->gorev_turu : null, 'duzenlenebilir' => false]);

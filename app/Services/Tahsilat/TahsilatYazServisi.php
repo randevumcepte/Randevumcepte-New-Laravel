@@ -19,9 +19,9 @@ use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
 use App\Models\TaksitVadeleri;
+use App\Support\Sema;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Tahsilat YAZMA servisi — DRY-RUN (planla) ve GERÇEK (yaz, flag arkasında).
@@ -304,7 +304,7 @@ class TahsilatYazServisi
                 $t = new Tahsilat();
                 $t->adisyon_id = $adisyonId;
                 $t->tutar = $plan['parent_tahsilat']['tutar'];
-                if (Schema::hasColumn('tahsilatlar', 'komisyon_tutari')) {
+                if (Sema::kolonVar('tahsilatlar', 'komisyon_tutari')) {
                     $t->komisyon_tutari = $plan['parent_tahsilat']['komisyon_tutari'];
                 }
                 $t->user_id = $adisyon->user_id ?? null;
@@ -541,7 +541,7 @@ class TahsilatYazServisi
         $bankaKat = MasrafKategorisi::firstOrCreate(['kategori' => 'Banka Ödemeleri']);
         $m = new Masraf();
         $m->salon_id = $salonId;
-        if (Schema::hasColumn('masraflar', 'adisyon_id')) {
+        if (Sema::kolonVar('masraflar', 'adisyon_id')) {
             $m->adisyon_id = $adisyonId;
         }
         $m->harcayan_id = $olusturanId;
@@ -615,8 +615,8 @@ class TahsilatYazServisi
     {
         try {
             if (! $adisyonId
-                || ! Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tutar')
-                || ! Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu')) {
+                || ! Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_tutar')
+                || ! Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu')) {
                 return [0.0, []];
             }
             $rows = DB::table('kampanya_katilimcilari')

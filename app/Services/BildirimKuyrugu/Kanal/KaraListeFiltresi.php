@@ -2,9 +2,9 @@
 
 namespace App\Services\BildirimKuyrugu\Kanal;
 
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Merkezi kara liste suzgeci; eski KaraListeServisi ile birebir. musteri_portfoy.kara_liste=1 olan musteriye SMS, WhatsApp
@@ -35,7 +35,7 @@ class KaraListeFiltresi
             return self::$salonAktif[$salonId];
         }
         try {
-            if (! Schema::hasColumn('salonlar', 'kara_liste_aktif')) {
+            if (! Sema::kolonVar('salonlar', 'kara_liste_aktif')) {
                 return self::$salonAktif[$salonId] = true;
             }
             $v = DB::table('salonlar')->where('id', $salonId)->value('kara_liste_aktif');

@@ -5,8 +5,8 @@ namespace App\Services\Afis;
 use App\Domain\Afis\AfisIcerigi;
 use App\Domain\Afis\MagazaLinkleri;
 use App\Exceptions\BulunamadiException;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Salon kaydından afiş içeriğini + mağaza linklerini okur (SALT OKUMA). Veri kaynağı bilgisi
@@ -20,7 +20,7 @@ class AfisIcerikServisi
         // NOT: salonlar'da 'isletme_adi' kolonu YOK (eski kod Eloquent'te null'a düşüp salon_adi
         // kullanıyordu); seçilirse "Unknown column" → 500. Huawei linki opsiyonel kolon.
         $kolonlar = ['id', 'salon_adi', 'logo', 'android_uygulama', 'ios_uygulama'];
-        if (Schema::hasColumn('salonlar', 'huawei_uygulama')) {
+        if (Sema::kolonVar('salonlar', 'huawei_uygulama')) {
             $kolonlar[] = 'huawei_uygulama';
         }
         $salon = DB::table('salonlar')->where('id', $salonId)->first($kolonlar);

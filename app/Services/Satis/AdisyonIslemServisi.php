@@ -7,8 +7,8 @@ use App\Exceptions\BulunamadiException;
 use App\Models\Salonlar;
 use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -105,10 +105,10 @@ class AdisyonIslemServisi
             }
 
             $guncelle = [];
-            if (Schema::hasColumn('adisyonlar', 'odendi')) {
+            if (Sema::kolonVar('adisyonlar', 'odendi')) {
                 $guncelle['odendi'] = $alindi ? 1 : 0;
             }
-            if (Schema::hasColumn('adisyonlar', 'odendi_tarihi')) {
+            if (Sema::kolonVar('adisyonlar', 'odendi_tarihi')) {
                 $guncelle['odendi_tarihi'] = $alindi ? now() : null;
             }
             if ($guncelle) {

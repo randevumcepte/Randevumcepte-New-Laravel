@@ -10,8 +10,8 @@ use App\Models\AdisyonPaketler;
 use App\Services\Satis\KalemServisi;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * "Paketi Yukselt" — satilmis paketi YERINDE kapsayan (ust kume) bir katalog paketine donusturur.
@@ -150,7 +150,7 @@ class PaketYukseltServisi
     {
         static $var = null;
 
-        return $var ??= Schema::hasColumn('adisyon_paketler', 'yukseltme_kaynak_paket_id');
+        return $var ??= Sema::kolonVar('adisyon_paketler', 'yukseltme_kaynak_paket_id');
     }
 
     /**

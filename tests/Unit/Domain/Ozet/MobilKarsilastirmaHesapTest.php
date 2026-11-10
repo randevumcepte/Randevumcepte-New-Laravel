@@ -54,7 +54,8 @@ class MobilKarsilastirmaHesapTest extends TestCase
         $this->assertSame('prime', $a['hours'][0]['level']);
         $this->assertSame('empty', $a['hours'][1]['level']);
         $this->assertSame('morning', $a['gaps'][0]['key']);
-        $this->assertSame(15, $a['gaps'][0]['suggestedDiscount']);
+        // Sabah 10-12: (10/10 + 1/10) / 2 = 0.55 -> 'Normal', oneri yok (eski dashboardKarsilastirma esikleri).
+        $this->assertSame(0, $a['gaps'][0]['suggestedDiscount']);
         $this->assertSame(40, $a['gaps'][1]['suggestedDiscount']);
         $this->assertSame('Bu Ay', $a['periodLabel']);
     }

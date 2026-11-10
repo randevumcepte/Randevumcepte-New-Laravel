@@ -3,9 +3,9 @@
 namespace App\Services\Deneme;
 
 use App\Models\FormTaslaklari;
+use App\Support\Sema;
 use App\Support\ZamanliKayit;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Sablon salonun form ve hizmetlerini ayni turdeki yeni salona kopyalar (eski varsayilanFormlariKopyala,
@@ -41,7 +41,7 @@ class VarsayilanKopyalayici
         if (! $this->ayniTur($kaynak, $salonTuruId)) {
             return;
         }
-        $aktifVar = Schema::hasColumn('salon_sunulan_hizmetler', 'aktif');
+        $aktifVar = Sema::kolonVar('salon_sunulan_hizmetler', 'aktif');
         $hizmetler = DB::table('salon_sunulan_hizmetler')->where('salon_id', $kaynak)
             ->get(['hizmet_id', 'hizmet_kategori_id', 'baslangic_fiyat', 'son_fiyat', 'bolum'])
             ->unique('hizmet_id');

@@ -21,6 +21,8 @@ class BildirimMetinleriTest extends TestCase
         $this->assertSame('adınız:5321234567 Şifreniz:***** Uygulamamızı', SifreMaskesi::uygula('adınız:5321234567 Şifreniz:aB3xY Uygulamamızı'));
         $this->assertSame('ŞİFRENİZ: *****.', SifreMaskesi::uygula('ŞİFRENİZ: 1234.'));
         $this->assertSame('Şifreniz değiştirildi', SifreMaskesi::uygula('Şifreniz değiştirildi'));
+        // Iletim raporundaki eski ayrac ('\n', iki karakter) maskeye girmez.
+        $this->assertSame('Şifreniz:*****\n', SifreMaskesi::uygula('Şifreniz:aB3xY\n'));
         $this->assertSame('x şifreniz : *****', SifreMaskesi::uygula(SifreMaskesi::uygula('x şifreniz : AB12CD')));
     }
 }

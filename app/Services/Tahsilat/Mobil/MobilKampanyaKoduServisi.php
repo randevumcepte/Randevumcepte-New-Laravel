@@ -16,9 +16,9 @@ use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /** Eski mobil kampanya indirim kodu: kodlar, kod-kullan (kod yakilir, indirim adisyona o an yazilir), adisyon durumu. */
 class MobilKampanyaKoduServisi
@@ -45,7 +45,7 @@ class MobilKampanyaKoduServisi
 
     public function adisyonDurumu(int $salonId, int $adisyonId): array
     {
-        if (! $adisyonId || ! Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_adisyon_id')) {
+        if (! $adisyonId || ! Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_adisyon_id')) {
             return ['basarili' => true, 'uygulanmis' => false];
         }
         $r = DB::table('kampanya_katilimcilari as k')->join('kampanya_yonetimi as y', 'y.id', '=', 'k.kampanya_id')
@@ -109,7 +109,7 @@ class MobilKampanyaKoduServisi
         }
 
         $guncelle = ['indirim_kodu_kullanildi' => 1, 'indirim_kodu_kullanim_tarihi' => now()];
-        if (Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_adisyon_id') && $adisyonId) {
+        if (Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_adisyon_id') && $adisyonId) {
             $guncelle['indirim_kodu_adisyon_id'] = $adisyonId;
         }
         DB::table('kampanya_katilimcilari')->where('id', $k->id)->update($guncelle);
@@ -119,9 +119,9 @@ class MobilKampanyaKoduServisi
                 $yazili = $this->adisyonaIndirimYaz($adisyonId, $yuzde, $hedef);
                 if ($yazili > 0) {
                     $indirimTutar = $yazili;
-                    if (Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tutar')) {
+                    if (Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_tutar')) {
                         DB::table('kampanya_katilimcilari')->where('id', $k->id)->update(['indirim_kodu_tutar' => $yazili]
-                            + ($dusulmus && Schema::hasColumn('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu') ? ['indirim_kodu_tahsilata_dusuldu' => 1] : []));
+                            + ($dusulmus && Sema::kolonVar('kampanya_katilimcilari', 'indirim_kodu_tahsilata_dusuldu') ? ['indirim_kodu_tahsilata_dusuldu' => 1] : []));
                     }
                 }
             } catch (\Throwable $e) {

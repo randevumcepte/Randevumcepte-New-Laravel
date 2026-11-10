@@ -3,6 +3,7 @@
 namespace App\Services\BildirimKuyrugu;
 
 use App\Domain\Bildirim\SifreMaskesi;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -34,7 +35,7 @@ class SifreMaskelemeServisi
      */
     public function gecmis(): array
     {
-        $personel = Schema::hasColumn('salon_personelleri', 'sifre')
+        $personel = Sema::kolonVar('salon_personelleri', 'sifre')
             ? DB::table('salon_personelleri')->whereNotNull('sifre')->update(['sifre' => null])
             : 0;
 

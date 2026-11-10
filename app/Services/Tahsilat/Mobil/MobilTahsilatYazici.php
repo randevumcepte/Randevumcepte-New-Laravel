@@ -7,8 +7,8 @@ use App\Models\Masraf;
 use App\Models\MasrafKategorisi;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
+use App\Support\Sema;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Mobil para yazicilarinin ortak satirlari: tahsilat, komisyon cifti ve adisyon paketi. Eski ApiController'da
@@ -29,7 +29,7 @@ class MobilTahsilatYazici
         $t = new Tahsilat();
         $t->adisyon_id = $s['adisyon_id'] ?: null;
         $t->tutar = $s['tutar'];
-        if (($s['komisyon'] ?? null) !== null && Schema::hasColumn('tahsilatlar', 'komisyon_tutari')) {
+        if (($s['komisyon'] ?? null) !== null && Sema::kolonVar('tahsilatlar', 'komisyon_tutari')) {
             $t->komisyon_tutari = $s['komisyon'];
         }
         $t->user_id = $s['musteri_id'];
@@ -69,7 +69,7 @@ class MobilTahsilatYazici
             $kategori = MasrafKategorisi::firstOrCreate(['kategori' => 'Banka Ödemeleri']);
             $m = new Masraf();
             $m->salon_id = $s['salon_id'];
-            if (Schema::hasColumn('masraflar', 'adisyon_id')) {
+            if (Sema::kolonVar('masraflar', 'adisyon_id')) {
                 $m->adisyon_id = $s['adisyon_id'] ?: null;
             }
             $m->harcayan_id = $personelId;

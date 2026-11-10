@@ -335,7 +335,7 @@ class LisansKapisiTest extends TestCase
 
     public function test_kapi_api_grubuna_kayitli(): void
     {
-        $this->assertContains(LisansKapisi::class, app('router')->getMiddlewareGroups()['api']);
+        $this->assertContains(LisansKapisi::class, app(\Illuminate\Contracts\Http\Kernel::class)->getMiddlewareGroups()['api'] ?? []);
     }
 
     public function test_yardimci_kurallar(): void

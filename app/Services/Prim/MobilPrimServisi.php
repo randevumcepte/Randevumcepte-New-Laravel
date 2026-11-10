@@ -6,9 +6,9 @@ use App\Domain\Rapor\MobilPrimHesap;
 use App\Domain\Rapor\PrimOdemeKurali;
 use App\Domain\Satis\KalemTuru;
 use App\Models\PersonelPrimOrani;
+use App\Support\Sema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Personel prim okuma — eski ApiController personelPrimHesaplaAyYil, primHakedisTopluApi, primOdemeListesiApi karsiligi.
@@ -40,7 +40,7 @@ class MobilPrimServisi
         $bit = substr($d['bitis'], 0, 10);
 
         $gunluk = collect();
-        if ($d['gun'] && Schema::hasColumn('personel_maas_odemeleri', 'prim_gun')) {
+        if ($d['gun'] && Sema::kolonVar('personel_maas_odemeleri', 'prim_gun')) {
             $gunluk = DB::table('personel_maas_odemeleri')->where('salon_id', $salonId)->where('odeme_tipi', 'prim')
                 ->whereDate('prim_gun', $d['gun'])->get()->groupBy('personel_id');
         }

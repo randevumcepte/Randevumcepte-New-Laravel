@@ -9,8 +9,8 @@ use App\Models\RandevuHizmetler;
 use App\Models\Randevular;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * TELAFI RANDEVUSU (A tipi): ucretsiz duzeltme/garanti randevusu olustur ve
@@ -278,7 +278,7 @@ class TelafiRandevuServisi
             $kaynak = ['kaynak_randevu_id' => $yeniRandevuId]
                 + array_intersect_key($h, array_flip(['kaynak_adisyon_hizmet_id', 'kaynak_adisyon_paket_id']));
             foreach ($kaynak as $k => $v) {
-                if (Schema::hasColumn('personel_prim_hareketleri', $k)) {
+                if (Sema::kolonVar('personel_prim_hareketleri', $k)) {
                     $veri[$k] = $v;
                 }
             }

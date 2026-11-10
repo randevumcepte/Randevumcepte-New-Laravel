@@ -11,9 +11,9 @@ use App\Exceptions\CakismaException;
 use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Kontör bakiyesi + paket kataloğu + satın alma talebi. Bakiye, mesajların gerçekte düştüğü
@@ -48,7 +48,7 @@ class WhatsappKontorServisi
         if ($adet === 0) {
             throw new GecersizIslemException('Geçersiz kontör miktarı.');
         }
-        if (! Schema::hasColumn('salonlar', 'whatsapp_kontor')) {
+        if (! Sema::kolonVar('salonlar', 'whatsapp_kontor')) {
             throw new CakismaException('Kontör kolonu bu kurulumda henüz yok.');
         }
 
@@ -64,7 +64,7 @@ class WhatsappKontorServisi
     /** Eski KontorServisi::yeterliMi. $oturum: mesajın gittiği salonun satırı. Deneme süresinde ya da kolon yoksa engel yok. */
     public function gonderimIcinYeterliMi(object $oturum, int $adet = 1): bool
     {
-        if (! WhatsappDurumu::kontorluDonemMi($oturum->whatsapp_deneme_bitis ?? null, date('Y-m-d')) || ! Schema::hasColumn('salonlar', 'whatsapp_kontor')) {
+        if (! WhatsappDurumu::kontorluDonemMi($oturum->whatsapp_deneme_bitis ?? null, date('Y-m-d')) || ! Sema::kolonVar('salonlar', 'whatsapp_kontor')) {
             return true;
         }
 

@@ -9,10 +9,10 @@ use App\Domain\Musteri\Segment;
 use App\Exceptions\BulunamadiException;
 use App\Models\Salonlar;
 use App\Support\ListeIstegi;
+use App\Support\Sema;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Musteri SALT-OKUMA servisi — liste ve detayin ORTAK tabani (tek sorgu + tek DTO).
@@ -74,7 +74,7 @@ class MusteriOkumaServisi
     {
         $saglik = array_values(array_filter(
             [...array_keys(MusteriSozluk::SAGLIK_SORULARI), ...MusteriSozluk::SAGLIK_METINLERI, 'cilt_tipi'],
-            fn ($k) => Schema::hasColumn('users', $k),
+            fn ($k) => Sema::kolonVar('users', $k),
         ));
 
         $row = $this->satirSorgusu($salonId, $kisitPersonel)->where('mp.user_id', $userId)
@@ -225,7 +225,7 @@ class MusteriOkumaServisi
     {
         $kolonlar = array_values(array_filter(
             ['salon_turu_id', 'studyo_modu', 'grup_dersi_aktif', 'kara_liste_aktif', 'sadik_musteri_indirim_yuzde', 'aktif_musteri_indirim_yuzde'],
-            fn ($k) => Schema::hasColumn('salonlar', $k),
+            fn ($k) => Sema::kolonVar('salonlar', $k),
         ));
         $s = DB::table('salonlar')->where('id', $salonId)->first($kolonlar);
 

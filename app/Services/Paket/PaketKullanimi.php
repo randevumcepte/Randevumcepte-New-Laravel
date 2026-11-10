@@ -4,8 +4,8 @@ namespace App\Services\Paket;
 
 use App\Domain\Paket\PaketGecerlilik;
 use App\Models\AdisyonPaketler;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Satilmis paketin sure / gunluk limit durumu — kural PaketGecerlilik'te, burada yalniz veri.
@@ -20,7 +20,7 @@ class PaketKullanimi
     /** Sema eski monolitte; kolonlar henuz yoksa eski davranis (uygulama patlamasin). */
     public static function kolonVar(): bool
     {
-        return self::$kolonVar ??= Schema::hasColumn('adisyon_paketler', 'sinirsiz');
+        return self::$kolonVar ??= Sema::kolonVar('adisyon_paketler', 'sinirsiz');
     }
 
     /** AdisyonPaketler::saving — paket_id yazildiginda (satis / yukseltme) katalog kopyalanir. */

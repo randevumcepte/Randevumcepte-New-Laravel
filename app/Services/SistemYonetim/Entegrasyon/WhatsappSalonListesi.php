@@ -7,8 +7,8 @@ use App\Domain\Whatsapp\GonderimDurumu;
 use App\Models\SistemYoneticisi;
 use App\Services\SistemYonetim\SalonKapsami;
 use App\Support\ListeIstegi;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * WhatsApp kullanmis salonlar (eski salonlarData). Eski ekran tum salonlari ceker tarayicida suzerdi; burada sayfalama
@@ -31,8 +31,8 @@ class WhatsappSalonListesi
 
     public function liste(array $l, ?string $durum, SistemYoneticisi $yonetici): array
     {
-        $kopruVar = Schema::hasColumn('salonlar', 'whatsapp_bridge_tipi');
-        $kontorVar = Schema::hasColumn('salonlar', 'whatsapp_kontor');
+        $kopruVar = Sema::kolonVar('salonlar', 'whatsapp_bridge_tipi');
+        $kontorVar = Sema::kolonVar('salonlar', 'whatsapp_kontor');
 
         $q = $this->kapsam->sorguyaUygula($this->kullananlar(), $yonetici);
         if ($durum !== null && $durum !== '') {

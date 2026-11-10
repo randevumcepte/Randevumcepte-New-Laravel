@@ -49,8 +49,9 @@ class AfisDomainTest extends TestCase
         $this->assertTrue($qr->koyuMu(8, $n - 8));        // sabit koyu modül
 
         $this->assertSame(10, QrKodlayici::kodla(str_repeat('a', 213))->surum);
+        $this->assertSame(13, QrKodlayici::kodla(str_repeat('a', 331))->surum); // tablo surum 13'e kadar
         $this->expectException(\LengthException::class);
-        QrKodlayici::kodla(str_repeat('a', 214));
+        QrKodlayici::kodla(str_repeat('a', 332));
     }
 
     public function test_magaza_linkleri_hazir_kurali(): void

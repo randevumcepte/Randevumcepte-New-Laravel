@@ -4,8 +4,8 @@ namespace App\Services\Musteri;
 
 use App\Domain\Musteri\Vki;
 use App\Exceptions\BulunamadiException;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Vucut olcumu (studyo modu) — eski StoreAdminController::musteri_olcum_* ve Flutter
@@ -19,7 +19,7 @@ class OlcumServisi
 
     public function liste(int $salonId, int $userId): array
     {
-        $saat = Schema::hasColumn('musteri_olcumleri', 'olcum_saati');
+        $saat = Sema::kolonVar('musteri_olcumleri', 'olcum_saati');
 
         return DB::table('musteri_olcumleri')->where('salon_id', $salonId)->where('user_id', $userId)
             ->orderByDesc('olcum_tarihi')->when($saat, fn ($q) => $q->orderByDesc('olcum_saati'))->orderByDesc('id')
@@ -29,7 +29,7 @@ class OlcumServisi
     /** Danisanin kendi olcumleri: grafik icin ARTAN tarih; salon verilmezse tum isletmeler. */
     public function danisanListe(int $userId, ?int $salonId): array
     {
-        $saat = Schema::hasColumn('musteri_olcumleri', 'olcum_saati');
+        $saat = Sema::kolonVar('musteri_olcumleri', 'olcum_saati');
 
         return DB::table('musteri_olcumleri')->where('user_id', $userId)->when($salonId, fn ($q) => $q->where('salon_id', $salonId))
             ->orderBy('olcum_tarihi')->orderBy('id')
@@ -38,7 +38,7 @@ class OlcumServisi
 
     public function ekle(int $salonId, int $userId, array $g, ?int $olcenPersonelId): array
     {
-        $saat = Schema::hasColumn('musteri_olcumleri', 'olcum_saati');
+        $saat = Sema::kolonVar('musteri_olcumleri', 'olcum_saati');
         $kayit = ['salon_id' => $salonId, 'user_id' => $userId, 'olcum_tarihi' => $g['olcum_tarihi'] ?? date('Y-m-d')];
         foreach (self::ALANLAR as $k) {
             $kayit[$k] = isset($g[$k]) && $g[$k] !== '' ? $g[$k] : null;

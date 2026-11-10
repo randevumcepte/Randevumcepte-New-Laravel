@@ -479,9 +479,10 @@ class OturumApiTest extends TestCase
         $this->assertArrayHasKey('personeller', $satir['salonlar']);
     }
 
-    public function test_web_giris_ekrani_kod_ve_sifre_formlarini_icerir(): void
+    public function test_web_giris_ekrani_yalniz_sifre_formunu_icerir(): void
     {
-        $this->get('/v2/giris')->assertOk()->assertSee('id="kodIsteFormu"', false)->assertSee('id="kodGirisFormu"', false)->assertSee('id="girisFormu"', false);
+        $this->get('/v2/giris')->assertOk()->assertSee('id="girisFormu"', false)
+            ->assertDontSee('id="kodIsteFormu"', false)->assertDontSee('id="kodGirisFormu"', false);
     }
 
     /** @param  array<int,string>  $kanallar  cagrilan kanallar buraya yazilir */

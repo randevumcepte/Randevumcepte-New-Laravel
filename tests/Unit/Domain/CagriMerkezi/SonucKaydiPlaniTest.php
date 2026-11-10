@@ -59,7 +59,7 @@ class SonucKaydiPlaniTest extends TestCase
 
     public function test_tamamla_damgasiz_takvim_kolonlarina_dokunmaz(): void
     {
-        $k = SonucKaydiPlani::tamamla(AramaSonucu::RANDEVU_OLUSTURULDU, null, self::SIMDI, false);
+        $k = P::tamamla(AramaSonucu::RANDEVU_OLUSTURULDU, null, self::SIMDI, false);
 
         $this->assertSame(8, $k['durum']);
         $this->assertSame(self::SIMDI, $k['son_arama_zamani']);

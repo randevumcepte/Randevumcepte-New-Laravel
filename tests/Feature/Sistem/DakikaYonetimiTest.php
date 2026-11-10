@@ -60,7 +60,7 @@ class DakikaYonetimiTest extends TestCase
         $this->getJson(self::KOK)->assertOk()
             ->assertJsonPath('veri.izinler.yaz', false)
             ->assertJsonPath('veri.data.0.salon_id', 2)->assertJsonPath('veri.data.0.yuzde', 95)
-            ->assertJsonPath('veri.data.1.salon_id', 1)->assertJsonPath('veri.data.1.kullanilan', 100.0)
+            ->assertJsonPath('veri.data.1.salon_id', 1)->assertJsonPath('veri.data.1.kullanilan', 100)
             ->assertJsonPath('veri.ozet.tanimli', 1100)->assertJsonPath('veri.total', 2);
     }
 

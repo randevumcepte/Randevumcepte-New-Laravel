@@ -3,8 +3,8 @@
 namespace App\Services\MusteriHesap;
 
 use App\Support\AktiviteLog;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /** Eski musteriYorumlariAdmin + musteriYorumSil: bildirilen yorum uste gelir, puan yalniz 1-5 yildiz satirindan. */
 class MusteriYorumYonetimServisi
@@ -13,7 +13,7 @@ class MusteriYorumYonetimServisi
 
     public function liste(int $salonId): array
     {
-        $bildirim = Schema::hasColumn(self::TABLO, 'bildirilen_sayisi');
+        $bildirim = Sema::kolonVar(self::TABLO, 'bildirilen_sayisi');
         $q = DB::table(self::TABLO)->where(self::TABLO.'.salon_id', $salonId)
             ->leftJoin('users', self::TABLO.'.user_id', '=', 'users.id')
             ->select(self::TABLO.'.*', 'users.name as kullanici_adi');

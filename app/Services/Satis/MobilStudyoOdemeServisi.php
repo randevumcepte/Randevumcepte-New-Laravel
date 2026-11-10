@@ -10,8 +10,8 @@ use App\Models\Tahsilat;
 use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Mobil "Odeme Alindi / Geri Al" — eski `Adisyonlar::tamOde` ve `odemeGeriAl` ile ayni satirlar:
@@ -56,7 +56,7 @@ class MobilStudyoOdemeServisi
             'odeme_yontemi_id' => DB::table('odeme_yontemleri')->orderBy('id')->value('id') ?: 1,
             'tutar'            => $toplam,
         ];
-        if (Schema::hasColumn('tahsilatlar', 'yapilan_odeme')) {
+        if (Sema::kolonVar('tahsilatlar', 'yapilan_odeme')) {
             $baslik['yapilan_odeme'] = $toplam;
         }
         $tahsilat = Tahsilat::create($baslik);
@@ -81,10 +81,10 @@ class MobilStudyoOdemeServisi
 
     private function odendiYaz(Adisyonlar $a, int $odendi, ?string $tarih): void
     {
-        if (Schema::hasColumn('adisyonlar', 'odendi')) {
+        if (Sema::kolonVar('adisyonlar', 'odendi')) {
             $a->odendi = $odendi;
         }
-        if (Schema::hasColumn('adisyonlar', 'odendi_tarihi')) {
+        if (Sema::kolonVar('adisyonlar', 'odendi_tarihi')) {
             $a->odendi_tarihi = $tarih;
         }
         $a->save();

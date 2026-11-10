@@ -12,9 +12,9 @@ use App\Services\Randevu\KvkkOnayKodu;
 use App\Support\AktiviteLog;
 use App\Support\BildirimKuyrugu;
 use App\Support\Metin;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -148,7 +148,7 @@ class MusteriYazServisi
                 $guncel[$k] = $t === '' ? null : mb_substr($t, 0, 2000);
             }
         }
-        $guncel = array_filter($guncel, fn ($_, $k) => Schema::hasColumn('users', $k), ARRAY_FILTER_USE_BOTH);
+        $guncel = array_filter($guncel, fn ($_, $k) => Sema::kolonVar('users', $k), ARRAY_FILTER_USE_BOTH);
 
         if ($guncel) {
             DB::table('users')->where('id', $userId)->update($guncel + ['updated_at' => now()]);

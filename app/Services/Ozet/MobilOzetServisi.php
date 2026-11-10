@@ -7,8 +7,8 @@ use App\Exceptions\BulunamadiException;
 use App\Services\Santral\SantralIstemcisi;
 use App\Services\Sms\Bakiye\SmsBakiyeServisi;
 use App\Services\Yetki\YetkiServisi;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Mobil ana ekran ozeti — eski ApiController::ozetsayfasi cevabinin birebir karsiligi. Kimlik token'dan, salon
@@ -183,7 +183,7 @@ class MobilOzetServisi
     /** Studyoda acik/kapali odendi bayragindan, digerlerinde kalandan belirlenir (eski SQL). */
     private function yalnizAcik($q, ?int $kapsam, ?object $salon): void
     {
-        if (Schema::hasColumn('adisyonlar', 'odendi') && (int) ($salon->studyo_modu ?? 0) === 1) {
+        if (Sema::kolonVar('adisyonlar', 'odendi') && (int) ($salon->studyo_modu ?? 0) === 1) {
             $q->whereRaw('COALESCE(adisyonlar.odendi,0) <> 1');
 
             return;

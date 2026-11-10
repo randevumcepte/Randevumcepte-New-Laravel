@@ -49,7 +49,7 @@ class AiKrediTest extends TestCase
         $this->girisYap('izleyici');
 
         $this->getJson(self::KOK)->assertOk()->assertJsonPath('veri.tablo_yok', true)
-            ->assertJsonPath('veri.ayar.kur', 40.0)->assertJsonPath('veri.ayar.esik_usd', 1.0)
+            ->assertJsonPath('veri.ayar.kur', 40)->assertJsonPath('veri.ayar.esik_usd', 1)
             ->assertJsonPath('veri.kredi.girildi', false)->assertJsonPath('veri.izinler.yaz', false);
     }
 

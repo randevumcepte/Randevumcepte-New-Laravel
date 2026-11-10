@@ -6,10 +6,10 @@ use App\Domain\Whatsapp\WhatsappDurumu;
 use App\Services\Whatsapp\Kopru\WhatsmeowKoprusu;
 use App\Services\Whatsapp\WhatsappKontorServisi;
 use App\Services\Whatsapp\WhatsappOturumServisi;
+use App\Support\Sema;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * WhatsApp gonderimi; eski App\Services\WhatsAppService ile birebir: paylasilan oturum, kara liste, gunluk tavan, mesai,
@@ -273,10 +273,10 @@ class WhatsappKanali
             'salon_id' => $salonId, 'user_id' => $userId, 'randevu_id' => $randevuId, 'telefon' => $telefon, 'mesaj' => $mesaj,
             'durum' => 0, 'created_at' => now(), 'updated_at' => now(),
         ];
-        if (Schema::hasColumn('whatsapp_gonderim_loglari', 'provider')) {
+        if (Sema::kolonVar('whatsapp_gonderim_loglari', 'provider')) {
             $satir['provider'] = $saglayici;
         }
-        if ($gonderimTipi !== null && Schema::hasColumn('whatsapp_gonderim_loglari', 'gonderim_tipi')) {
+        if ($gonderimTipi !== null && Sema::kolonVar('whatsapp_gonderim_loglari', 'gonderim_tipi')) {
             $satir['gonderim_tipi'] = $gonderimTipi;
         }
 

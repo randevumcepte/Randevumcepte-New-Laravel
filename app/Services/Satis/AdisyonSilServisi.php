@@ -4,8 +4,8 @@ namespace App\Services\Satis;
 
 use App\Exceptions\BulunamadiException;
 use App\Support\AktiviteLog;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Adisyon SİLME — eski `StoreAdminController@adisyon_sil` (web) kaskadının
@@ -106,7 +106,7 @@ class AdisyonSilServisi
             }
 
             DB::table('alacaklar')->where('adisyon_id', $adisyonId)->delete();
-            if (Schema::hasColumn('masraflar', 'adisyon_id')) {
+            if (Sema::kolonVar('masraflar', 'adisyon_id')) {
                 DB::table('masraflar')->where('adisyon_id', $adisyonId)->delete();
             }
 

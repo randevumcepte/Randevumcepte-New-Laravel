@@ -2,10 +2,10 @@
 
 namespace App\Services\BildirimKuyrugu\Kanal;
 
+use App\Support\Sema;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Tek noktadan FCM gonderimi + bildirimler tablosu + token bakimi; eski App\Services\NotificationService ile birebir.
@@ -472,7 +472,7 @@ class PushBildirimi
                 'extra_data'  => json_encode($this->ekstra, JSON_UNESCAPED_UNICODE),
             ];
             $simdi = now();
-            DB::table('bildirimler')->insert(array_filter($alanlar, fn ($kolon) => Schema::hasColumn('bildirimler', $kolon), ARRAY_FILTER_USE_KEY)
+            DB::table('bildirimler')->insert(array_filter($alanlar, fn ($kolon) => Sema::kolonVar('bildirimler', $kolon), ARRAY_FILTER_USE_KEY)
                 + ['created_at' => $simdi, 'updated_at' => $simdi]);
         } catch (\Throwable $e) {
             Log::warning('Bildirim log yazılamadı: '.$e->getMessage());

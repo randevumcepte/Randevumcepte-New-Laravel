@@ -105,8 +105,8 @@ class IzlemeOkumaTest extends IzlemeTestTabani
 
         $this->getJson(self::KOK.'/performans?gun=30')->assertOk()
             ->assertJsonPath('veri.genel.toplam', 2)
-            ->assertJsonPath('veri.genel.cozum_orani', 50.0)
-            ->assertJsonPath('veri.genel.ort_yanit_dk', 60.0)
+            ->assertJsonPath('veri.genel.cozum_orani', 50)
+            ->assertJsonPath('veri.genel.ort_yanit_dk', 60)
             ->assertJsonPath('veri.data.0.ad', 'Ayse')
             ->assertJsonPath('veri.data.0.toplam', 2)
             ->assertJsonPath('veri.data.0.cozulen', 1)

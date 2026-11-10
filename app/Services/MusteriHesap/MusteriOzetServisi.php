@@ -3,8 +3,8 @@
 namespace App\Services\MusteriHesap;
 
 use App\Domain\Musteri\MusteriKategorisi;
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Musteri ana sayfasi ozeti (v1 musteriozet): okunmamis bildirim, kategori, sadakat puani. Kapsam markanin
@@ -30,7 +30,7 @@ class MusteriOzetServisi
     /** @param  int[]  $salonlar */
     private function odemeSayisi(int $userId, array $salonlar): int
     {
-        $studyo = Schema::hasColumn('adisyonlar', 'odendi')
+        $studyo = Sema::kolonVar('adisyonlar', 'odendi')
             ? DB::table('salonlar')->whereIn('id', $salonlar)->where('studyo_modu', 1)->pluck('id')->map(fn ($x) => (int) $x)->all()
             : [];
         $normal = array_values(array_diff($salonlar, $studyo));

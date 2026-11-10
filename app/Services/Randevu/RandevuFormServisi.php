@@ -6,6 +6,7 @@ use App\Services\Paket\PaketKullanimi;
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\Randevular;
+use App\Support\Sema;
 use App\Support\Yetki\YetkiSabitleri;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -132,8 +133,8 @@ class RandevuFormServisi
         }
 
         // Paket satislari (bolge = paketteki hizmet)
-        $phSure = Schema::hasColumn('paket_hizmetler', 'sure');
-        $pSure = Schema::hasColumn('paketler', 'sure');
+        $phSure = Sema::kolonVar('paket_hizmetler', 'sure');
+        $pSure = Sema::kolonVar('paketler', 'sure');
         $q = DB::table('adisyon_paketler as ap')->join('adisyonlar as a', 'a.id', '=', 'ap.adisyon_id')->join('paketler as p', 'p.id', '=', 'ap.paket_id')
             ->where('a.user_id', $userId)->where('a.salon_id', $salonId)->where('ap.seans_sayisi', '>', 0);
         $aplar = RandevuOrtak::otomatikRandevuDegil($q, 'ap')->orderBy('a.tarih')->orderBy('ap.id')

@@ -2,9 +2,9 @@
 
 namespace App\Services\Hatirlatma;
 
+use App\Support\Sema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Salon geneli hatırlatma kartları: her tetikleyici ya tek kart ya null döner. Tutar taşımaz, yalnız sayı.
@@ -132,7 +132,7 @@ class GenelHatirlatmalar
     /** silindi kolonu her kurulumda yok. */
     private static function silinmemis($sorgu, string $tablo)
     {
-        return Schema::hasColumn($tablo, 'silindi') ? $sorgu->whereRaw('IFNULL(silindi,0) = 0') : $sorgu;
+        return Sema::kolonVar($tablo, 'silindi') ? $sorgu->whereRaw('IFNULL(silindi,0) = 0') : $sorgu;
     }
 
     private static function kart(string $tip, int $oncelik, string $tema, string $emoji, string $baslik, string $mesaj, string $altMesaj, string $cta, int $sayac, ?string $id = null): array
