@@ -3061,3 +3061,73 @@ body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::before,
 body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::after {
     animation-play-state: paused !important;
 }
+
+/* ==========================================================================
+   RANDEVU PENCERESI — SADE / KOMPAKT (kullanici 2026-11-10: "elemanlar cok yer kapliyor")
+   Yalniz pencere icinde gecerli; secim mantigi ve adimlar degismez.
+   ========================================================================== */
+/* Ust bant: tek satir — baslik solda, adim cubugu sagda; aciklama ve rozetler kalkar */
+.slp-drawer__panel .lx-hero { padding: 16px 22px !important; margin: 0 0 14px !important; border-radius: 16px !important; box-shadow: none !important; }
+.slp-drawer__panel .lx-hero__grid { grid-template-columns: auto 1fr; gap: 24px; }
+.slp-drawer__panel .lx-hero__eyebrow { margin-bottom: 4px; font-size: 10px; }
+.slp-drawer__panel .lx-hero__title { font-size: 20px; margin: 0; }
+.slp-drawer__panel .lx-hero__sub,
+.slp-drawer__panel .lx-hero__meta { display: none !important; }
+.slp-drawer__panel .lx-progress { padding: 10px 16px 8px; }
+.slp-drawer__panel .lx-progress__track { margin-top: 8px !important; }
+.slp-drawer__close { top: 10px; width: 38px; height: 38px; font-size: 14px; }
+
+/* Iki sutun: ozet daha dar */
+.slp-drawer__panel .rdv-luxe-bookingrow { grid-template-columns: 260px 1fr !important; gap: 16px !important; margin-top: 0 !important; }
+
+/* Adim kutulari */
+.slp-drawer__panel #hizmetsecimbolumu,
+.slp-drawer__panel #personelsecimbolumu,
+.slp-drawer__panel #tarihsaatsecimbolumu,
+.slp-drawer__panel #onaybolumu { padding: 14px 16px !important; margin-bottom: 12px; box-shadow: none; animation: none; }
+.slp-drawer__panel #randevusistemi p[style*="font-weight:bold"],
+.slp-drawer__panel #randevusistemi p[style*="font-weight: bold"] { font-size: 15px !important; margin: 2px 0 10px !important; }
+
+/* Bolum sekmeleri */
+.slp-drawer__panel #randevusistemi .nav-tabs { margin-bottom: 10px !important; padding: 3px; }
+.slp-drawer__panel #randevusistemi .nav-tabs .nav-link { padding: 6px 14px !important; font-size: 13px; }
+
+/* Kategori basliklari */
+.slp-drawer__panel .accordion { padding: 10px 44px 10px 14px !important; font-size: 14px !important; margin: 6px 0 !important; border-radius: 10px !important; box-shadow: none !important; }
+.slp-drawer__panel .accordion::after { width: 24px !important; height: 24px !important; right: 12px !important; font-size: 11px !important; }
+.slp-drawer__panel .accordion:hover { transform: none; }
+.slp-drawer__panel .panel_accordion { padding: 2px 8px !important; margin-top: -6px !important; margin-bottom: 8px !important; border-radius: 0 0 10px 10px !important; }
+
+/* Hizmet satirlari: tek satir, ince */
+.slp-drawer__panel .hizmettablo { border-spacing: 0 2px !important; }
+.slp-drawer__panel .hizmettablo tr td { padding: 7px 8px !important; height: auto !important; font-size: 13.5px !important; }
+.slp-drawer__panel .hizmettablo tr td:first-child { padding-left: 8px !important; width: 34px !important; }
+.slp-drawer__panel .hizmettablo tr td:last-child { padding-right: 8px !important; width: auto !important; white-space: nowrap; }
+.slp-drawer__panel .checkboxcontainer { width: 20px; height: 20px; }
+.slp-drawer__panel .checkmark { width: 20px !important; height: 20px !important; border-radius: 6px !important; }
+.slp-drawer__panel .checkmark::after { left: 6px !important; top: 2px !important; width: 5px !important; height: 10px !important; border-width: 0 2px 2px 0 !important; }
+.slp-drawer__panel .hizmettablo .btn.btn-primary.btn-rounded { width: auto !important; padding: 3px 10px !important; font-size: 11.5px !important; margin: 0 !important; }
+
+/* Devam / geri dugmeleri */
+.slp-drawer__panel #personelsecimadiminagec,
+.slp-drawer__panel #onayadiminagec { padding: 10px !important; font-size: 14px !important; margin: 8px 0 !important; }
+
+/* Ozet kutusu */
+.slp-drawer__panel #randevuozetbolumu .secilenhizmetlertablo { box-shadow: none !important; border-radius: 14px !important; }
+.slp-drawer__panel #randevuozetbolumu .baslik { padding: 12px 14px !important; font-size: 15px !important; box-shadow: none; }
+.slp-drawer__panel #randevuozetbolumu .baslik::before { width: 28px; height: 28px; font-size: 13px; }
+.slp-drawer__panel #randevuozetbolumu .randevuozet { padding: 2px 14px 10px !important; }
+.slp-drawer__panel #randevuozetbolumu .randevuozet tr td { padding: 9px 0 !important; font-size: 12.5px !important; }
+.slp-drawer__panel #randevuozetbolumu .randevuozet tr td:first-child { width: 84px !important; }
+
+/* Tarih ve saat kutucuklari */
+.slp-drawer__panel #tarihtablosu .input-radio label,
+.slp-drawer__panel .tarihler .input-radio label { padding: 8px 10px !important; min-width: 64px !important; font-size: 12.5px !important; }
+.slp-drawer__panel #saatsecimtablosu .input-radio label { padding: 7px 10px !important; font-size: 13px !important; }
+
+@media (max-width: 991px) {
+    .slp-drawer__panel .rdv-luxe-bookingrow { grid-template-columns: 1fr !important; }
+    .slp-drawer__panel .lx-hero__grid { grid-template-columns: 1fr; gap: 10px; }
+}
+.slp-drawer__panel #tarihtablosu .input-radio label,
+.slp-drawer__panel .tarihler .input-radio label { height: 58px !important; border-radius: 12px !important; font-size: 14px !important; }
