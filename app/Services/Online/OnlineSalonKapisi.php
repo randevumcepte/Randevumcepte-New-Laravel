@@ -26,6 +26,18 @@ class OnlineSalonKapisi
         return $salon;
     }
 
+    /** İsteğin geldiği alan adının salonu (eski salonDetay: salonlar.domain, "www." yok sayılır). */
+    public function domaindenSalonId(string $host): ?int
+    {
+        $host = preg_replace('/^www\./i', '', mb_strtolower(trim($host)));
+        if ($host === '') {
+            return null;
+        }
+        $id = DB::table('salonlar')->whereIn('domain', [$host, 'www.'.$host])->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     public function randevuyaAcikSalon(int $salonId): object
     {
         $salon = $this->salon($salonId);

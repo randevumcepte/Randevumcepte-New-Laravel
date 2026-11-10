@@ -2,9 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Kök: salonun kendi alan adındaysa o salonun sitesi, değilse panel girişi (SiteController::kok).
+Route::get('/', [\App\Http\Controllers\SiteController::class, 'kok']);
 
 /*
  | Giris, sifremi unuttum, ucretsiz deneme — kabuksuz sayfalar; tum is /api/v2/oturum + /api/v2/deneme.
@@ -247,3 +246,7 @@ Route::prefix('/site/{salonId}')->whereNumber('salonId')->group(function () {
         Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'hesap'])->defaults('sayfa', $sayfa);
     }
 });
+// Aynı sayfalar salonun kendi alan adında kökten; alan adı salona ait değilse 404.
+foreach (['giris' => 'giris', 'profilim' => 'profil', 'randevularim' => 'randevular', 'sifrem' => 'sifre'] as $yol => $sayfa) {
+    Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'kokHesap'])->defaults('sayfa', $sayfa);
+}
