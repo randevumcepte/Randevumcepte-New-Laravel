@@ -34,7 +34,7 @@
       <link rel="stylesheet" href="{{ asset('site/css/style.css') }}?v=1">
       <link rel="stylesheet" href="{{ asset('site/css/user.css') }}">
       <link rel="stylesheet" href="{{ asset('site/css/randevu-luxe.css') }}?v=1">
-      <link rel="stylesheet" href="{{ asset('site/css/salon-landing.css') }}?v=4">
+      <link rel="stylesheet" href="{{ asset('site/css/salon-landing.css') }}?v=5">
       {!! $tema_css !!}
       <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;width:92px;max-width:92px;font-size:13px;padding-left:6px;padding-right:4px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">

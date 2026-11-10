@@ -3168,3 +3168,39 @@ body.slp-drawer-open :not(.slp-drawer):not(.slp-drawer *)::after {
     .slp-drawer__panel #randevuozetbolumu tr:has(#personellistebos:not([style*="none"])) { display: none; }
     .slp-drawer__close { position: absolute; top: 8px; right: 8px; margin: 0; z-index: 70; }
 }
+
+/* ==========================================================================
+   RANDEVU PENCERESI — "Devam Et" dugmeleri pencerenin altinda sabit; telefonda pencere ekrana sigar
+   (kullanici 2026-11-10). Dugme kendi adim kutusunun sonunda; sticky ile pencere altina yapisir.
+   ========================================================================== */
+.slp-drawer__panel #personelsecimadiminagec,
+.slp-drawer__panel #tarihsaatsecimadiminagec,
+.slp-drawer__panel #onayadiminagec,
+.slp-drawer__panel #rdv-direkt-submit {
+    position: sticky !important;
+    bottom: 8px;
+    z-index: 30;
+    box-shadow: 0 10px 0 0 #fff, 0 -6px 18px -6px rgba(26, 11, 46, .25) !important;
+}
+
+@media (max-width: 767px) {
+    /* 100vh mobil tarayicida adres cubugu dahil olcer, pencere tasar; gorunur yukseklik (dvh) kullanilir */
+    .slp-drawer__panel {
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        width: 100%;
+        max-width: 100%;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+    .slp-drawer__body { padding: 0 10px; }
+    .slp-drawer__panel .rdv-luxe-bookingrow,
+    .slp-drawer__panel #randevusistemi,
+    .slp-drawer__panel #hizmetsecimbolumu { min-width: 0; max-width: 100%; }
+    .slp-drawer__panel .hizmettablo tr td:nth-child(2) { word-break: break-word; }
+    .slp-drawer__panel #personelsecimadiminagec,
+    .slp-drawer__panel #tarihsaatsecimadiminagec,
+    .slp-drawer__panel #onayadiminagec,
+    .slp-drawer__panel #rdv-direkt-submit { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+}
