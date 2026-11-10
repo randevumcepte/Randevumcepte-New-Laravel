@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\DB;
  * Burada TEK sorgu + sekme filtresi; satırın tür/durum/aksiyon kararları saf
  * ArsivDurum'dan gelir. Hiçbir şey YAZMAZ.
  *
- * Sekmeler (bilinçli düzeltme): bekleyen SÖZLEŞME eskide web'de "Harici Belgeler"
- * sekmesine, Flutter'da hiçbir sekmeye düşmüyordu; burada "Beklenenler"dedir.
+ * Sekmeler eski web arsiv_liste_getir ile aynı (kullanıcı 2026-11-10): "Beklenenler" bekleyen FORMLAR
+ * (form_id != 0), "Harici Belgeler" form_id = 0 olan bekleyen kayıtların hepsi — hizmet sözleşmeleri ve
+ * yüklenen belgeler. Web ve mobil aynı sekmeyi görür.
  */
 class ArsivListeServisi
 {
@@ -107,13 +108,11 @@ class ArsivListeServisi
     /** SQL karşılığı — ArsivDurum::tur/durum kurallarıyla aynı ayrım. */
     private function sekmeFiltresi($q, string $sekme)
     {
-        $harici = fn ($w) => $w->where('a.form_id', 0)->where(fn ($x) => $x->whereNull('a.is_sozlesme')->orWhere('a.is_sozlesme', '!=', 1));
-
         return match ($sekme) {
             'onayli'   => $q->where('a.durum', 1),
             'iptal'    => $q->where('a.durum', 0),
-            'beklenen' => $q->whereNull('a.durum')->where(fn ($w) => $w->where('a.form_id', '!=', 0)->orWhere('a.is_sozlesme', 1)),
-            'harici'   => $q->whereNull('a.durum')->where($harici),
+            'beklenen' => $q->whereNull('a.durum')->where('a.form_id', '!=', 0),
+            'harici'   => $q->whereNull('a.durum')->where('a.form_id', 0),
             default    => $q,
         };
     }
@@ -124,8 +123,8 @@ class ArsivListeServisi
         $r = $q->selectRaw('COUNT(*) as tumu')
             ->selectRaw('SUM(a.durum = 1) as onayli')
             ->selectRaw('SUM(a.durum = 0) as iptal')
-            ->selectRaw('SUM(a.durum IS NULL AND (a.form_id != 0 OR a.is_sozlesme = 1)) as beklenen')
-            ->selectRaw('SUM(a.durum IS NULL AND a.form_id = 0 AND COALESCE(a.is_sozlesme, 0) != 1) as harici')
+            ->selectRaw('SUM(a.durum IS NULL AND a.form_id != 0) as beklenen')
+            ->selectRaw('SUM(a.durum IS NULL AND a.form_id = 0) as harici')
             ->first();
 
         return array_map(fn ($a) => (int) ($r->{$a} ?? 0), array_combine(ArsivDurum::SEKMELER, ArsivDurum::SEKMELER));
