@@ -3,13 +3,11 @@
 namespace Tests\Feature\Yetki;
 
 use App\Domain\Oturum\TokenTipi;
-use App\Exceptions\CakismaException;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Exceptions\OnayKoduGerekliException;
 use App\Models\Randevular;
 use App\Services\Oturum\MobilBayraklar;
-use App\Services\Oturum\MobilKodGirisi;
 use App\Services\Randevu\KvkkOnayKodu;
 use App\Services\Randevu\MusteriDogrulamaKodu;
 use App\Services\Yetki\HesapSahibiOnayi;
@@ -205,10 +203,12 @@ class KodluIslemTest extends TestCase
         $this->assertStringContainsString('adisyon #60 için alınan 1.250,50 ₺ tutarındaki ödemeyi geri almak', $mesaj['message']);
         $this->onay()->odemeGeriAlma(self::SALON, self::PERSONEL, 60, $kod);
 
-        // Mobil token: kod girisi yok → 409.
+        // Mobil token: web ile ayni 428 sozlesmesi; kod uretilir ve hesap sahibine gider.
         $this->mobilIstek();
-        $this->expectException(CakismaException::class);
-        $this->onay()->tahsilatAzaltma(self::SALON, self::PERSONEL, 50, 10.0, null);
+        $this->travel(61)->seconds();
+        [$mesaj, $kod] = $this->kodIstendi(fn () => $this->onay()->tahsilatAzaltma(self::SALON, self::PERSONEL, 50, 10.0, null));
+        $this->assertSame(self::SAHIP_TEL, $mesaj['to']);
+        $this->onay()->tahsilatAzaltma(self::SALON, self::PERSONEL, 50, 10.0, $kod);
     }
 
     public function test_hesap_sahibi_telefonu_yoksa_islem_acik_hata_verir(): void
@@ -397,7 +397,7 @@ class KodluIslemTest extends TestCase
         $this->assertFalse(OnayKodu::dogrula('test', self::SALON, 1, $kod, ['k' => 1]));
     }
 
-    // ───────── Mobilde kod girisi yok: kod uretilmez, 409 ─────────
+    // ───────── Mobil token: web ile ayni 428 sozlesmesi (kod uretilir, gonderilir) ─────────
 
     private function mobilIstek(): void
     {
@@ -406,29 +406,42 @@ class KodluIslemTest extends TestCase
         $this->app->instance('request', $istek);
     }
 
-    public function test_mobil_tokende_kod_gerekiyorsa_kod_uretilmez_409(): void
+    public function test_mobil_tokende_kod_gerekiyorsa_428_ve_kod_gonderilir(): void
     {
         $this->ayar(HesapSahibiOnayi::SMS_AYARI, 'personel');
         $this->ayar(MusteriDogrulamaKodu::SMS_AYARI, 'musteri');
         $this->mobilIstek();
 
-        foreach ([
-            fn () => $this->sil(null),
-            fn () => $this->onay()->adisyonSilme(self::SALON, self::PERSONEL, 60, null),
-            fn () => (new MusteriDogrulamaKodu())->seansGeldi(self::SALON, 80, ['seans' => 5], null),
-        ] as $islem) {
-            try {
-                $islem();
-                $this->fail('409 bekleniyordu');
-            } catch (CakismaException $e) {
-                $this->assertSame(409, $e->durumKodu);
-                $this->assertSame(MobilKodGirisi::MESAJ, $e->getMessage());
-            }
-        }
-        $this->assertSame(0, DB::table('v2_bildirim_kuyrugu')->count(), 'mesaj gonderilmez');
-        $this->assertFalse(OnayKodu::bekliyorMu('hesap_sahibi_silme', self::SALON, self::PERSONEL), 'kod uretilmez');
+        // Silme: hesap sahibine kod; ayni istek `onay_kodu` ile tekrarlaninca islem gecer.
+        [$mesaj, $kod] = $this->kodIstendi(fn () => $this->sil(null));
+        $this->assertSame(self::SAHIP_TEL, $mesaj['to']);
+        $this->sil($kod);
 
-        // Hesap sahibi kendi silmesinde kod gerekmez: mobilde de islem acik.
+        $this->travel(61)->seconds();
+        [$mesaj, $kod] = $this->kodIstendi(fn () => $this->onay()->adisyonSilme(self::SALON, self::PERSONEL, 60, null));
+        $this->assertSame(self::SAHIP_TEL, $mesaj['to']);
+        $this->onay()->adisyonSilme(self::SALON, self::PERSONEL, 60, $kod);
+
+        // Seans geldi: musteriye kod; `dogrulama_kodu` ile tekrar.
+        $servis = new MusteriDogrulamaKodu();
+        [$mesaj, $kod] = $this->kodIstendi(fn () => $servis->seansGeldi(self::SALON, 80, ['seans' => 5], null));
+        $this->assertSame(self::MUSTERI_TEL, $mesaj['to']);
+        $servis->seansGeldi(self::SALON, 80, ['seans' => 5], $kod);
+
+        // Yanlis kod: 428, yeni kod gitmez.
+        $this->travel(61)->seconds();
+        $this->kodIstendi(fn () => $this->sil(null));
+        $once = DB::table('v2_bildirim_kuyrugu')->count();
+        try {
+            $this->sil('0000');
+            $this->fail('yanlis kodda 428 bekleniyordu');
+        } catch (OnayKoduGerekliException $e) {
+            $this->assertSame(428, $e->durumKodu);
+            $this->assertFalse($e->kodGonderildi);
+        }
+        $this->assertSame($once, DB::table('v2_bildirim_kuyrugu')->count(), 'yanlis kodda mesaj gitmez');
+
+        // Hesap sahibi kendi silmesinde kod gerekmez.
         $this->onay()->tahsilatSilme(self::SALON, self::SAHIP, 50, null);
     }
 

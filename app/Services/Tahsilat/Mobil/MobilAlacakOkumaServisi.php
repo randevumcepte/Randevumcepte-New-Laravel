@@ -3,6 +3,7 @@
 namespace App\Services\Tahsilat\Mobil;
 
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
+use App\Services\Paket\PaketYukseltServisi;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -103,8 +104,22 @@ class MobilAlacakOkumaServisi
             'taksit'        => $this->planlar('taksitli_tahsilatlar', $salonId, $musteriId, 'taksitli_tahsilat_id', 'taksit_vadeleri'),
             'adisyon_hizmet' => $this->acikKalemler($adisyonlar, 'adisyon_hizmetler', 'tahsilat_hizmetler', 'adisyon_hizmet_id', 'hizmetler', 'hizmet_id', 'hizmet_adi', 'hizmet'),
             'adisyon_urun'  => $this->acikKalemler($adisyonlar, 'adisyon_urunler', 'tahsilat_urunler', 'adisyon_urun_id', 'urunler', 'urun_id', 'urun_adi', 'urun'),
-            'adisyon_paket' => $this->acikKalemler($adisyonlar, 'adisyon_paketler', 'tahsilat_paketler', 'adisyon_paket_id', 'paketler', 'paket_id', 'paket_adi', 'paket'),
+            'adisyon_paket' => $this->yukseltmeKaynakli($this->acikKalemler($adisyonlar, 'adisyon_paketler', 'tahsilat_paketler', 'adisyon_paket_id', 'paketler', 'paket_id', 'paket_adi', 'paket')),
         ];
+    }
+
+    /**
+     * Paket kalemine "Yukseltildi (eski paket)" kaynagi: web adisyon cevabiyla ayni alan (`yukseltme_kaynak`),
+     * ayni ortak sorgu (PaketYukseltServisi::kaynaklar, toplu). Yukseltilmemis kalemde null.
+     *
+     * @param  list<array<string,mixed>>  $paketler
+     * @return list<array<string,mixed>>
+     */
+    private function yukseltmeKaynakli(array $paketler): array
+    {
+        $kaynak = PaketYukseltServisi::kaynaklar(array_map(fn ($p) => (int) $p['id'], $paketler));
+
+        return array_map(fn ($p) => $p + ['yukseltme_kaynak' => $kaynak[(int) $p['id']] ?? null], $paketler);
     }
 
     /** Odenmemis (ya da hediye) ve plana baglanmamis kalemler; fiyat alani KALAN tutardir. */

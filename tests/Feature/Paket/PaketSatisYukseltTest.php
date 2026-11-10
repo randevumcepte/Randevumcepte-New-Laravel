@@ -7,6 +7,7 @@ use App\Exceptions\YetkisizErisimException;
 use App\Services\Paket\PaketSatisServisi;
 use App\Services\Paket\PaketYukseltServisi;
 use App\Services\Satis\KalemServisi;
+use App\Services\Tahsilat\Mobil\MobilAlacakOkumaServisi;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -158,6 +159,42 @@ class PaketSatisYukseltTest extends TestCase
         app(PaketYukseltServisi::class)->yukselt($ap, self::SALON, $buyuk, null, ['yetkili_id' => 1, 'fiyat_degistirebilir' => true], 'y4');
     }
 
+    public function test_mobil_adisyon_cevabinda_yukseltme_kaynagi_web_ile_ayni_alan(): void
+    {
+        // Mobil tahsilat / adisyon duzenleme ekranlarinin okudugu uc (tum-alacaklar) icin ek tablolar.
+        foreach (['adisyon_hizmetler', 'adisyon_urunler'] as $tablo) {
+            Schema::create($tablo, function (Blueprint $t) {
+                $t->id();
+                $t->integer('adisyon_id');
+            });
+        }
+        foreach (['senetler', 'taksitli_tahsilatlar'] as $tablo) {
+            Schema::create($tablo, function (Blueprint $t) {
+                $t->id();
+                $t->integer('salon_id');
+                $t->integer('user_id');
+            });
+        }
+        $kucuk = $this->paket('Lazer 2', [[1, 8, 1000], [2, 8, 1000]]);
+        $buyuk = $this->paket('Lazer 3', [[1, 8, 1000], [2, 8, 1000], [3, 8, 1000]]);
+        $ap = $this->satilmis($kucuk, 2000, 0);
+        $digerAp = $this->satilmis($kucuk, 2000, 0);
+        DB::table('tahsilat_paketler')->insert(['adisyon_paket_id' => $ap, 'tutar' => 500]);
+        app(PaketYukseltServisi::class)->yukselt($ap, self::SALON, $buyuk, null, ['yetkili_id' => 1, 'fiyat_degistirebilir' => false], 'y5');
+
+        $servis = app(MobilAlacakOkumaServisi::class);
+        $adisyonId = (int) DB::table('adisyon_paketler')->where('id', $ap)->value('adisyon_id');
+        $satir = $servis->tumAlacaklar(self::SALON, 7, $adisyonId)['adisyon_paket'];
+
+        $this->assertCount(1, $satir);
+        $this->assertSame(['paket_id' => $kucuk, 'paket_adi' => 'Lazer 2'], $satir[0]['yukseltme_kaynak']);
+        $this->assertSame(2500.0, $satir[0]['fiyat']); // mobil alani kalan tutardir (degismedi)
+        $this->assertSame('Lazer 3', $satir[0]['paket']->paket_adi);
+
+        $digerAdisyon = (int) DB::table('adisyon_paketler')->where('id', $digerAp)->value('adisyon_id');
+        $this->assertNull($servis->tumAlacaklar(self::SALON, 7, $digerAdisyon)['adisyon_paket'][0]['yukseltme_kaynak']);
+    }
+
     // ───────────────────────── kurulum ─────────────────────────
 
     /** @param  array<int,array{0:int,1:int,2:float}>  $hizmetler  [hizmet_id, seans, fiyat] */
@@ -242,7 +279,7 @@ class PaketSatisYukseltTest extends TestCase
         Schema::create('adisyon_paketler', function (Blueprint $t) use ($zaman) {
             $t->id();
             foreach (['adisyon_id', 'paket_id', 'personel_id', 'seans_sayisi', 'bekleyen_seans', 'kullanilan_seans', 'kullanilmayan_seans',
-                'senet_id', 'taksitli_tahsilat_id', 'sinirsiz', 'gecerlilik_sayi', 'gunluk_limit', 'yukseltme_kaynak_paket_id'] as $k) {
+                'senet_id', 'taksitli_tahsilat_id', 'sinirsiz', 'gecerlilik_sayi', 'gunluk_limit', 'yukseltme_kaynak_paket_id', 'hediye'] as $k) {
                 $t->integer($k)->nullable();
             }
             $t->string('gecerlilik_birim')->nullable();
@@ -255,6 +292,10 @@ class PaketSatisYukseltTest extends TestCase
             $t->integer('adisyon_paket_id')->nullable();
             $t->integer('hizmet_id')->nullable();
             $t->date('seans_tarih')->nullable();
+            $t->string('seans_saat')->nullable();
+            $t->integer('seans_no')->nullable();
+            $t->integer('randevu_id')->nullable();
+            $t->integer('personel_id')->nullable();
             $t->integer('geldi')->nullable();
             $zaman($t);
         });

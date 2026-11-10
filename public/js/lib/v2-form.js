@@ -1,7 +1,7 @@
 /**
  * v2 FORM ARŞİVİ bileşeni — TEK KAYNAK. Form Yönetimi sayfası (formlar-v2.js) ve müşteri
  * detay "Sözleşmeler/Belgeler" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=8';
+ * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=9';
  *
  * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Harici Belgeler),
  * Form Gönder, Sözleşme Oluştur, Belge Ekle modalları. İş kuralları SUNUCUDA: satırın
@@ -175,11 +175,14 @@ export async function formArsivi(kap, { salonId, musteri = null, aksiyonKap = nu
     const b = e.target.closest('button[data-aksiyon]');
     if (!b) return;
     const id = b.dataset.id;
-    if (b.dataset.aksiyon === 'gonder') {
-      const tamam = await onay('Form müşteriye yeni bir onay koduyla tekrar gönderilecek. Onaylı ya da iptal edilmiş form yeniden "bekleyen" olur.',
-        { baslik: 'Formu Tekrar Gönder', tamam: 'Müşteriye Gönder', tehlike: false });
-      if (!tamam) return;
-    }
+    // Onay penceresi gereken işlemler: geri alınamaz iptal ve yeniden gönderim (Flutter: formIptalOnayi aynı metinler).
+    const ONAYLI = {
+      iptal: ['Bu işlem geri alınamaz.', { baslik: 'Emin misiniz?', tamam: 'İptal Et', iptal: 'Vazgeç' }],
+      gonder: ['Form müşteriye yeni bir onay koduyla tekrar gönderilecek. Onaylı ya da iptal edilmiş form yeniden "bekleyen" olur.',
+        { baslik: 'Formu Tekrar Gönder', tamam: 'Müşteriye Gönder', tehlike: false }],
+    };
+    const sor = ONAYLI[b.dataset.aksiyon];
+    if (sor && !(await onay(...sor))) return;
     b.disabled = true;
     const r = await api('POST', `/form/arsiv/${id}/${b.dataset.aksiyon}`);
     if (yazSonuc(r, r.govde?.mesaj || 'İşlem Başarılı')) arsivTablo.yenile(false);

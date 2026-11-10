@@ -336,7 +336,7 @@ class SatisController extends V2Controller
 
     /**
      * "Ödeme alınmadı" adisyonun tahsilatlarini siler: SMS ayari 23 hesap sahibi onayi (HesapSahibiOnayi tahsilat
-     * azaltma kapisi; mobil token'da kod girisi yok → 409, MobilKodGirisi). Web ve mobil yol ayni cagri.
+     * azaltma kapisi; kod gerekiyorsa 428, istemci `onay_kodu` ile tekrarlar). Web ve mobil yol ayni cagri.
      */
     private function odemeGeriAlmaOnayi(Request $request, int $adisyonId, int $yetkiliId, int $salonId, bool $alindi): void
     {

@@ -5,7 +5,6 @@ namespace App\Services\Randevu;
 use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Models\Randevular;
-use App\Services\Oturum\MobilKodGirisi;
 use App\Support\BildirimKuyrugu;
 use App\Support\KayitKodKapisi;
 use App\Support\KodGonderimSiniri;
@@ -56,7 +55,6 @@ class MusteriDogrulamaKodu
         if (! $this->gerekli($salonId)) {
             return;
         }
-        MobilKodGirisi::reddet(); // mobilde kod girisi yok: kod uretilmez, 409
         if (! $musteriId) {
             throw new GecersizIslemException('Satışın müşterisi bulunamadı; doğrulama kodu gönderilemiyor.');
         }

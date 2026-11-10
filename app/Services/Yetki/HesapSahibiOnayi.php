@@ -4,7 +4,6 @@ namespace App\Services\Yetki;
 
 use App\Domain\Tahsilat\TahsilatNet;
 use App\Exceptions\GecersizIslemException;
-use App\Services\Oturum\MobilKodGirisi;
 use App\Support\BildirimKuyrugu;
 use App\Support\OnayKodu;
 use App\Support\SmsAyari;
@@ -116,7 +115,6 @@ class HesapSahibiOnayi
 
     private function kodla(int $salonId, int $yetkiliId, array $baglam, ?string $kod, string $islem): void
     {
-        MobilKodGirisi::reddet(); // mobilde kod girisi yok: kod uretilmez, 409
         OnayKodu::zorunlu(self::AMAC, $salonId, $yetkiliId, $baglam, $kod, function (string $yeni) use ($salonId, $yetkiliId, $islem) {
             $sahipTel = $this->sahipTelefonu($salonId);
             if ($sahipTel === '') {
