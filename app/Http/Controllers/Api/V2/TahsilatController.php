@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Tahsilat\TahsilatNet;
+use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
@@ -10,6 +11,7 @@ use App\Services\Ayar\MusteriIndirimServisi;
 use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\TahsilatSilServisi;
 use App\Services\Tahsilat\TahsilatYazServisi;
+use App\Services\Tahsilat\TaksitServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\HesapSahibiOnayi;
 use App\Support\ApiCevap;
@@ -59,6 +61,8 @@ class TahsilatController extends V2Controller
 
         // Kapsam + yetki.
         $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+        $this->vadelerSalonun($salonId, (array) $request->input('taksit_vade_id', []), 'taksit_vadeleri', 'taksitli_tahsilatlar', 'taksitli_tahsilat_id');
+        $this->vadelerSalonun($salonId, (array) $request->input('senet_vade_id', []), 'senet_vadeleri', 'senetler', 'senet_id');
 
         // GERÇEK YAZMA yolu — yalnızca dry_run=false iken.
         if (! $request->boolean('dry_run')) {
@@ -98,6 +102,58 @@ class TahsilatController extends V2Controller
         ]));
 
         return ApiCevap::basarili($plan, 'DRY-RUN: hiçbir şey yazılmadı.');
+    }
+
+    /**
+     * Ödenecek vadeler bu işletmenin planına ait ve ödenmemiş olmalı. Denetim yokken başka salonun vadesi kapatılabilir,
+     * ödenmiş vade ikinci kez dağıtılabilirdi.
+     */
+    private function vadelerSalonun(int $salonId, array $ham, string $vadeTablo, string $planTablo, string $fk): void
+    {
+        $idler = array_values(array_unique(array_filter(array_map('intval', $ham))));
+        if (! $idler) {
+            return;
+        }
+        $gecerli = DB::table($vadeTablo.' as v')->join($planTablo.' as p', 'p.id', '=', 'v.'.$fk)
+            ->whereIn('v.id', $idler)->where('p.salon_id', $salonId)->where(fn ($q) => $q->where('v.odendi', 0)->orWhereNull('v.odendi'))
+            ->count();
+        if ($gecerli !== count($idler)) {
+            throw new GecersizIslemException('Seçilen vade bulunamadı ya da zaten ödenmiş.');
+        }
+    }
+
+    /**
+     * POST /api/v2/adisyon/{id}/taksit — "Taksit Yap" (eski taksitekleguncelle): ön ödeme (isteğe bağlı) normal tahsilat
+     * olarak yazılır, adisyonun kalan borcu aylık taksitlere bölünür. Yetki eskisi gibi satis.senet_olustur; ön ödeme
+     * alınıyorsa satis.tahsilat_al da gerekir.
+     */
+    public function taksit(Request $request, int $id, TaksitServisi $taksit)
+    {
+        $user = $this->kullanici();
+        $salonId = $this->adisyonServisi->salonIdGetir($id);
+        if (! $salonId) {
+            return ApiCevap::hata('Adisyon bulunamadı', 404);
+        }
+        $onOdeme = (float) $request->input('on_odeme', 0);
+        $this->kapi->denetle($user->id, $salonId, ['satis.senet_olustur']);
+        if ($onOdeme > 0) {
+            $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+        }
+        $this->yazmaAcikMi();
+        if ($onOdeme > 0 && ! $request->filled('on_odeme_yontemi_id')) {
+            return ApiCevap::hata('Ön ödeme türü seçin', 422);
+        }
+        if (! $request->filled('idempotency_key')) {
+            return ApiCevap::hata('idempotency_key zorunlu', 422);
+        }
+
+        $olusturanId = Personeller::where('salon_id', $salonId)->where('yetkili_id', $user->id)->value('id');
+        $sonuc = $taksit->adisyonTaksiti($id,
+            $request->only(['on_odeme', 'on_odeme_yontemi_id', 'odeme_tarihi', 'vade', 'vade_baslangic_tarihi', 'notlar', 'idempotency_key']),
+            ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]);
+        $sonuc['hesap'] = $this->adisyonServisi->getir($id)['hesap'];
+
+        return ApiCevap::basarili($sonuc, $sonuc['replay'] ? 'Bu istek zaten işlenmişti.' : 'Taksitli alacak kayıtları oluşturuldu.');
     }
 
     /**

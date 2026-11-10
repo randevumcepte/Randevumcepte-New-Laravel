@@ -40,6 +40,7 @@ final class MobilTutarKontrolleri
         '/harici-tahsilat-ekle kalem paylari' => 'bilincli fark: web kurali (kurus-kesin)',
         '/stok/hizli-satis ve /cagri-merkezi/hizli-satis kalem satirlari' => 'bilincli fark: web kurali (satir tutari iki hane, toplam kurus-kesin)',
         '/taksitekleguncelle on odeme paylari' => 'bilincli fark: web kurali (tek havuz, kurus artigi en buyuk kaleme)',
+        '/taksitekleguncelle vade tutar ve tarihleri' => 'bilincli fark: TaksitPlani (vadelerin toplami plana esit, artik kurus ilk vadelere; tarih ay sonuna kirpilir; eski: 1000/3 = 3 x 333.33, 31 Ocak sonrasi 3 Mart)',
     ];
 
     public static function yazmaYoluMu(string $yol): bool

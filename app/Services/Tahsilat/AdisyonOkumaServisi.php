@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\DB;
  */
 class AdisyonOkumaServisi
 {
+    public function __construct(private AlacakServisi $alacak, private TahsilatYazServisi $yazma) {}
+
     /** Yalnizca salon_id (kapsam denetimi icin ucuz sorgu). */
     public function salonIdGetir(int $adisyonId): ?int
     {
@@ -152,17 +154,10 @@ class AdisyonOkumaServisi
                 'odeme_yontemi_id' => $t->odeme_yontemi_id !== null ? (int) $t->odeme_yontemi_id : null,
                 'odeme_tarihi'     => $t->odeme_tarihi,
             ])->values(),
-            // Planlanan alacaklar (bu adisyona bagli; minimal).
-            'alacaklar' => DB::table('alacaklar')
-                ->where('adisyon_id', $adisyonId)
-                ->orderBy('planlanan_odeme_tarihi')
-                ->get(['id', 'tutar', 'planlanan_odeme_tarihi', 'aciklama'])
-                ->map(fn ($a) => [
-                    'id'                     => (int) $a->id,
-                    'tutar'                  => $a->tutar,
-                    'planlanan_odeme_tarihi' => $a->planlanan_odeme_tarihi,
-                    'aciklama'               => $a->aciklama,
-                ])->values(),
+            // Planlanan alacaklar (bu adisyona bagli; minimal). Liste kurali AlacakServisi'nde.
+            'alacaklar' => $this->alacak->listele($adisyonId),
+            // "Taksit Yap" formu: taksitsiz/senetsiz kalemlerin kalanı (TaksitServisi ile aynı hesap).
+            'taksitlenebilir' => AdisyonHesap::kurusToTl(array_sum(array_column($this->yazma->acikKalanlar($adisyonId), 'kalan_kurus'))),
             'hesap' => $ozet,
         ];
     }

@@ -11,6 +11,7 @@ use App\Models\Adisyonlar;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
+use App\Models\Alacaklar;
 use App\Models\Masraf;
 use App\Models\MasrafKategorisi;
 use App\Models\SenetVadeleri;
@@ -412,6 +413,7 @@ class TahsilatYazServisi
                 $yeni->odendi = 0;
                 $yeni->save();
                 $vade->tutar = $vg['paid_tutar'];
+                $this->vadeAlacaginiBol($vg['tip'] === 'taksit' ? 'taksit_vade_id' : 'senet_vade_id', (int) $vade->id, $yeni);
             }
             $vade->odendi = $vg['odendi'] ? 1 : 0;
             if ($vg['odeme_yontemi_id'] !== null) {
@@ -419,6 +421,49 @@ class TahsilatYazServisi
             }
             $vade->save();
         }
+    }
+
+    /**
+     * Kısmi ödenen vadenin alacağı da bölünür: ödenen kısım eski vadede kalır (vade ödendi, alacak listeden düşer),
+     * kalan kısım yeni vadenin alacağı olur. Bölünmezse kalan borç planlanan alacaklarda görünmezdi.
+     */
+    private function vadeAlacaginiBol(string $kolon, int $vadeId, $yeniVade): void
+    {
+        $alacak = Alacaklar::where($kolon, $vadeId)->first();
+        if (! $alacak) {
+            return;
+        }
+        $yeni = $alacak->replicate();
+        $yeni->{$kolon} = $yeniVade->id;
+        $yeni->tutar = $yeniVade->tutar;
+        $yeni->save();
+        $alacak->tutar = AdisyonHesap::kurusToTl(AdisyonHesap::tlToKurus($alacak->tutar) - AdisyonHesap::tlToKurus($yeniVade->tutar));
+        $alacak->save();
+    }
+
+    /**
+     * Adisyonun taksitsiz ve senetsiz kalemlerinden kalanı olanlar (indirim ve önceki tahsilat düşülmüş, kuruş).
+     * Taksit planı bu kalemleri bağlar.
+     *
+     * @return list<array{model:class-string, id:int, kalan_kurus:int}>
+     */
+    public function acikKalanlar(int $adisyonId): array
+    {
+        $sonuc = [];
+        foreach ([[AdisyonHizmetler::class, 'tahsilat_hizmetler', 'adisyon_hizmet_id'],
+            [AdisyonPaketler::class, 'tahsilat_paketler', 'adisyon_paket_id'],
+            [AdisyonUrunler::class, 'tahsilat_urunler', 'adisyon_urun_id']] as [$model, $tablo, $fk]) {
+            $kalemler = $this->kalemGetir($model, $adisyonId, []);
+            $onceki = $this->oncekiTahsilat($tablo, $fk, $kalemler->pluck('id')->all());
+            foreach ($kalemler as $k) {
+                $kalan = $this->kalanKurus($k, $onceki[$k->id] ?? 0);
+                if ($kalan > 0) {
+                    $sonuc[] = ['model' => $model, 'id' => (int) $k->id, 'kalan_kurus' => $kalan];
+                }
+            }
+        }
+
+        return $sonuc;
     }
 
     // ------------------------------------------------------------------

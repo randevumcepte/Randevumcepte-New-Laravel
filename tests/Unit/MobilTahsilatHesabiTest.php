@@ -74,8 +74,9 @@ class MobilTahsilatHesabiTest extends TestCase
 
     public function test_vade_tutari_ve_tarihleri(): void
     {
-        $this->assertSame('333.33', H::vadeTutari('1.000,00', 3));
-        $this->assertSame(['2026-01-31', '2026-03-03', '2026-04-03'], H::vadeTarihleri('2026-01-31', 3));
+        // Taksit vadeleri artik TaksitPlani'nda: toplam kurusu kurusuna, ay sonu kirpilir (eski: 3 x 333.33, 3 Mart).
+        $this->assertSame([33334, 33333, 33333], \App\Domain\Tahsilat\TaksitPlani::tutarlar(100000, 3));
+        $this->assertSame(['2026-01-31', '2026-02-28', '2026-03-31'], \App\Domain\Tahsilat\TaksitPlani::tarihler('2026-01-31', 3));
         $this->assertSame(['2026-01-01', '2026-01-08'], H::seansTarihleri('2026-01-01', 2, 7));
     }
 

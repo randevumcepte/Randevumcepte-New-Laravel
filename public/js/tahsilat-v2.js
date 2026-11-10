@@ -62,7 +62,7 @@ let indirimManuel = false;      // kullanıcı İndirim'e elle yazdı mı?
 /* ───────────── Datepicker (flatpickr, TR) ───────────── */
 function datepickerBagla() {
   if (!window.flatpickr) return;
-  ['#t-tarih', '#t-alacak-tarih', '#t-studyo-tarih', '#t-satis-tarih'].forEach((sel) => {
+  ['#t-tarih', '#t-alacak-tarih', '#t-taksit-tarih', '#t-studyo-tarih', '#t-satis-tarih'].forEach((sel) => {
     const i = el(sel);
     if (i && !i._fp) i._fp = flatpickr(i, { dateFormat: 'Y-m-d', locale: 'tr', allowInput: true, disableMobile: true });
   });
@@ -458,8 +458,8 @@ function alacakGoster() {
           <td class="rc-sag" style="font-weight:700">${TL(x.tutar)}</td>
           <td class="rc-sag t-islem">
             <button class="t-tahsil" data-alt="${x.id}" title="Tahsil Et"><i class="bi bi-cash-coin"></i></button>
-            <button class="t-duzen" data-ald="${x.id}" title="Düzenle"><i class="bi bi-pencil"></i></button>
-            <button class="t-sil"   data-al="${x.id}"  title="İptal"><i class="bi bi-trash"></i></button>
+            ${x.taksit_vade_id ? '' : `<button class="t-duzen" data-ald="${x.id}" title="Düzenle"><i class="bi bi-pencil"></i></button>
+            <button class="t-sil"   data-al="${x.id}"  title="İptal"><i class="bi bi-trash"></i></button>`}
           </td></tr>`,
     cizildi: () => {
       document.querySelectorAll('#t-alacaklar .t-tahsil[data-alt]').forEach((b) => (b.onclick = () => alacakTahsilEkle(parseInt(b.dataset.alt, 10))));
@@ -641,6 +641,8 @@ const tahsilAlacaklar = new Map(); // alacak_id → alacak
 function alacakTahsilEkle(id) {
   const a = (adisyon.alacaklar || []).find((x) => x.id === id);
   if (!a || duzenlenenTahsilat) return;
+  // Taksit vadesi vade ödemesiyle, serbest alacak kalem tahsilatıyla kapanır: aynı tahsilatta karışmaz.
+  for (const [k, v] of tahsilAlacaklar) if (!!v.taksit_vade_id !== !!a.taksit_vade_id) tahsilAlacaklar.delete(k);
   tahsilAlacaklar.set(id, a);
   tahsilAlacakCiz();
   el('#t-tutar').focus();
@@ -667,8 +669,10 @@ function tahsilAlacakCiz() {
 }
 
 function girdi(dryRun) {
+  const secilen = [...tahsilAlacaklar.values()];
   return {
-    alacak_id: [...tahsilAlacaklar.keys()],
+    alacak_id: secilen.filter((a) => !a.taksit_vade_id).map((a) => a.id),
+    taksit_vade_id: secilen.filter((a) => a.taksit_vade_id).map((a) => a.taksit_vade_id),
     salon_id: salonId, adisyon_id: adisyonId,
     tutar: parseFloat(el('#t-tutar').value || '0'),
     indirim: parseFloat(el('#t-indirim').value || '0'),
@@ -773,6 +777,7 @@ function alacakFormAc() {
   if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
   const f = el('#t-alacak-form');
   if (!f.hidden) { alacakFormKapat(); return; }
+  el('#t-taksit-form').hidden = true;
   duzenlenenAlacak = null;
   el('#t-alacak-kaydet').textContent = 'Alacağı Kaydet';
   f.hidden = false;
@@ -819,6 +824,49 @@ async function alacakSil(alacakId) {
   const { ok, kod, govde } = await api('DELETE', '/alacak/' + alacakId);
   if (!ok) { mesaj(`Alacak iptal edilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   mesaj('Alacak iptal edildi.', 'ok');
+  await adisyonYukle();
+}
+
+/* ───────────── Taksit Yap (eski "Yeni Taksitli Tahsilat"): ön ödeme + kalan aylık taksit ───────────── */
+function taksitKalan() {
+  const on = parseFloat(el('#t-taksit-on').value || '0') || 0;
+  const k = Math.round(((Number(adisyon?.taksitlenebilir) || 0) - on) * 100) / 100;
+  el('#t-taksit-kalan').value = k > 0 ? k : 0;
+}
+function taksitFormAc() {
+  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
+  const f = el('#t-taksit-form');
+  if (!f.hidden) { f.hidden = true; return; }
+  if (!(Number(adisyon?.taksitlenebilir) > 0)) { mesaj('Taksitlendirilecek kalan borç yok.', 'bilgi'); return; }
+  alacakFormKapat();
+  f.hidden = false;
+  el('#t-taksit-on').value = 0;
+  el('#t-taksit-sayi').value = '';
+  tarihAyarla('#t-taksit-tarih', new Date().toISOString().slice(0, 10));
+  taksitKalan();
+}
+let taksitKey = null;
+async function taksitKaydet() {
+  const vade = parseInt(el('#t-taksit-sayi').value, 10);
+  if (!(vade >= 1)) { mesaj('Taksit sayısını girin', 'hata'); return; }
+  const baslangic = tarihDeger('#t-taksit-tarih');
+  if (!baslangic) { mesaj('Ödeme başlangıç tarihini girin', 'hata'); return; }
+  const btn = el('#t-taksit-kaydet');
+  btn.disabled = true;
+  taksitKey ||= uuid();
+  const { ok, kod, govde } = await api('POST', `/adisyon/${adisyonId}/taksit`, { body: {
+    on_odeme: parseFloat(el('#t-taksit-on').value || '0') || 0,
+    on_odeme_yontemi_id: parseInt(el('#t-taksit-yontem').value, 10),
+    odeme_tarihi: tarihDeger('#t-tarih') || null,
+    vade, vade_baslangic_tarihi: baslangic,
+    notlar: el('#t-not').value || null,
+    idempotency_key: taksitKey,
+  } });
+  btn.disabled = false;
+  if (!ok) { mesaj(`Taksit oluşturulamadı (${kod}): ${govde?.mesaj || ''}`, 'hata'); if (kod >= 400 && kod < 500 && kod !== 409) taksitKey = null; return; }
+  taksitKey = null;
+  mesaj('Taksitli alacak kayıtları oluşturuldu.', 'ok');
+  el('#t-taksit-form').hidden = true;
   await adisyonYukle();
 }
 
@@ -917,6 +965,19 @@ function iskelet() {
             <input id="t-alacak-not" type="text" placeholder="örn. 2. taksit">
             <button id="t-alacak-kaydet" class="t-btn mor">Alacağı Kaydet</button>
           </div>
+
+          <!-- Taksit Yap: ön ödeme + kalan aylık taksit -->
+          <button id="t-taksit-ac" class="t-btn ikincil"><i class="bi bi-calendar3-range"></i> Taksit Yap</button>
+          <div id="t-taksit-form" class="t-alacak-form" hidden>
+            <div class="grid">
+              <div><label>Ön Ödeme Tutarı (₺)</label><input id="t-taksit-on" type="number" step="0.01" min="0" value="0"></div>
+              <div><label>Ön Ödeme Türü</label><select id="t-taksit-yontem"><option value="1">Nakit</option><option value="2">Kredi Kartı</option><option value="3">Havale/EFT</option></select></div>
+              <div><label>Kalan Ödeme Tutarı (₺)</label><input id="t-taksit-kalan" type="number" disabled></div>
+              <div><label>Taksit Sayısı (Ay)</label><input id="t-taksit-sayi" type="number" min="1" max="60" step="1"></div>
+              <div><label>Ödeme Başlangıç Tarihi</label><input id="t-taksit-tarih" type="text" class="t-date" placeholder="GG.AA.YYYY"></div>
+            </div>
+            <button id="t-taksit-kaydet" class="t-btn mor">Taksitleri Oluştur</button>
+          </div>
         </div>
         <div class="t-mesaj" id="t-mesaj"></div>
         <div id="t-plan"></div>
@@ -942,6 +1003,9 @@ function iskelet() {
   document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
   el('#t-alacak-ac').onclick = alacakFormAc;
   el('#t-alacak-kaydet').onclick = alacakKaydet;
+  el('#t-taksit-ac').onclick = taksitFormAc;
+  el('#t-taksit-on').oninput = taksitKalan;
+  el('#t-taksit-kaydet').onclick = taksitKaydet;
 }
 
 iskelet();

@@ -2,18 +2,17 @@
 
 namespace App\Services\Tahsilat\Mobil;
 
+use App\Domain\Tahsilat\AdisyonHesap;
 use App\Domain\Tahsilat\MobilTahsilatHesabi as Hesap;
 use App\Models\AdisyonHizmetler;
 use App\Models\AdisyonPaketler;
 use App\Models\AdisyonUrunler;
-use App\Models\Alacaklar;
 use App\Models\TahsilatHizmetler;
 use App\Models\TahsilatPaketler;
 use App\Models\TahsilatUrunler;
-use App\Models\TaksitVadeleri;
+use App\Services\Tahsilat\TaksitServisi;
 use App\Support\AktiviteLog;
 use App\Support\Idempotency;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Eski mobil taksitekleguncelle. Mobil yalniz yeni taksit acar (taksitli_tahsilat_id, adisyon_id, vade idleri
@@ -26,7 +25,7 @@ use Illuminate\Support\Facades\DB;
  */
 class MobilTaksitServisi
 {
-    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici) {}
+    public function __construct(private MobilKapsam $kapsam, private MobilTahsilatYazici $yazici, private TaksitServisi $taksit) {}
 
     public function ekle(int $salonId, int $yetkiliId, array $g): array
     {
@@ -53,30 +52,8 @@ class MobilTaksitServisi
         MobilTahsilatServisi::satisTarihi($g, ['hizmet' => $hizmetIdleri, 'urun' => $urunIdleri, 'paket' => $paketIdleri]);
 
         $musteriId = $g['tahsilat_musteri_id'];
-        $vade = $g['vade'] ?? 0;
-        $taksitId = (int) DB::table('taksitli_tahsilatlar')->insertGetId([
-            'user_id' => $musteriId, 'vade_sayisi' => $vade, 'salon_id' => $salonId, 'olusturan_id' => $yetkiliId,
-            'created_at' => now(), 'updated_at' => now(),
-        ]);
-
-        foreach (Hesap::vadeTarihleri((string) ($g['vade_baslangic_tarihi'] ?? ''), $vade) as $tarih) {
-            $v = new TaksitVadeleri();
-            $v->taksitli_tahsilat_id = $taksitId;
-            $v->vade_tarih = $tarih;
-            $v->odendi = false;
-            $v->tutar = Hesap::vadeTutari($g['taksit_tutar'] ?? '0', $vade);
-            $v->save();
-
-            $a = new Alacaklar();
-            $a->salon_id = $salonId;
-            $a->tutar = $v->tutar;
-            $a->taksitli_tahsilat_id = $taksitId;
-            $a->taksit_vade_id = $v->id;
-            $a->planlanan_odeme_tarihi = $v->vade_tarih;
-            $a->olusturan_id = $yetkiliId;
-            $a->user_id = $musteriId;
-            $a->save();
-        }
+        $taksitId = $this->taksit->planYaz($salonId, (int) $musteriId, null, (string) ($g['vade_baslangic_tarihi'] ?? ''),
+            (int) ($g['vade'] ?? 0), AdisyonHesap::tlToKurus(Hesap::tlSayi($g['taksit_tutar'] ?? '0')), $yetkiliId);
 
         $kalemSayisi = AdisyonHizmetler::whereIn('id', $hizmetIdleri)->whereNull('indirim_tutari')->count()
             + AdisyonUrunler::whereIn('id', $urunIdleri)->whereNull('indirim_tutari')->count()

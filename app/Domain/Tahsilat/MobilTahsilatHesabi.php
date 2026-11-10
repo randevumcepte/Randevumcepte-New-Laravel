@@ -97,30 +97,6 @@ final class MobilTahsilatHesabi
         return preg_match('/%\s*(\d+)/u', $metin, $m) ? [(int) $m[1], 'yuzde'] : [0, 'xalyode'];
     }
 
-    /** Taksit vade tutari: toplam / vade, iki hane. */
-    public static function vadeTutari(mixed $toplam, int|string $vade): string
-    {
-        return number_format(self::tlSayi($toplam) / (int) $vade, 2, '.', '');
-    }
-
-    /**
-     * Vade tarihleri: ilki verilen gun, sonrakiler bir oncekine +1 ay (strtotime; ay sonu tasmasi aynen).
-     *
-     * @return list<string>
-     */
-    public static function vadeTarihleri(string $baslangic, int|string $vade): array
-    {
-        $tarihler = [];
-        $tarih = $baslangic;
-        for ($i = 1; $i <= (int) $vade; $i++) {
-            if ($i > 1) {
-                $tarih = date('Y-m-d', strtotime('+1 month', strtotime($tarih)));
-            }
-            $tarihler[] = $tarih;
-        }
-
-        return $tarihler;
-    }
 
     /** Seans tarihleri: ilki verilen gun, sonrakiler bir oncekine +aralik gun. */
     public static function seansTarihleri(?string $baslangic, int $seansSayisi, int|string $aralik): array

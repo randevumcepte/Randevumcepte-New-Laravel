@@ -53,6 +53,23 @@ trait TahsilatTestKurulumu
                 $t->timestamps();
             });
         }
+        Schema::create('taksitli_tahsilatlar', function (Blueprint $t) {
+            $t->id();
+            foreach (['user_id', 'adisyon_id', 'vade_sayisi', 'salon_id', 'olusturan_id'] as $k) {
+                $t->integer($k)->nullable();
+            }
+            $t->timestamps();
+        });
+        Schema::create('alacaklar', function (Blueprint $t) {
+            $t->id();
+            foreach (['adisyon_id', 'salon_id', 'user_id', 'taksitli_tahsilat_id', 'taksit_vade_id', 'senet_vade_id', 'olusturan_id'] as $k) {
+                $t->integer($k)->nullable();
+            }
+            $t->decimal('tutar', 10, 2)->nullable();
+            $t->date('planlanan_odeme_tarihi')->nullable();
+            $t->string('aciklama')->nullable();
+            $t->timestamps();
+        });
         Schema::create('kampanya_katilimcilari', function (Blueprint $t) {
             $t->id();
             $t->integer('indirim_kodu_adisyon_id')->nullable();

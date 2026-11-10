@@ -4,6 +4,7 @@ namespace App\Services\Tahsilat;
 
 use App\Domain\Tahsilat\AdisyonHesap;
 use App\Exceptions\BulunamadiException;
+use App\Exceptions\GecersizIslemException;
 use App\Models\Adisyonlar;
 use App\Models\Alacaklar;
 use Illuminate\Support\Facades\DB;
@@ -75,18 +76,32 @@ class AlacakServisi
         return $sonuc;
     }
 
-    /** Bu adisyon için planlanan alacakları listele (minimum alan). */
+    /**
+     * Bu adisyonun planlanan alacakları (minimum alan). Ödenmiş taksit/senet vadesinin alacağı listelenmez (acikSorgu ile
+     * aynı kural). taksit_vade_id doluysa satır taksit vadesidir: vade ödemesiyle kapanır, tek başına düzenlenmez.
+     */
     public function listele(int $adisyonId): array
     {
         return Alacaklar::where('adisyon_id', $adisyonId)
-            ->orderBy('planlanan_odeme_tarihi')
-            ->get(['id', 'tutar', 'planlanan_odeme_tarihi', 'aciklama'])
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM taksit_vadeleri tv WHERE tv.id = alacaklar.taksit_vade_id AND tv.odendi = 1)')
+            ->whereRaw('NOT EXISTS (SELECT 1 FROM senet_vadeleri sv WHERE sv.id = alacaklar.senet_vade_id AND sv.odendi = 1)')
+            ->orderBy('planlanan_odeme_tarihi')->orderBy('id')
+            ->get(['id', 'tutar', 'planlanan_odeme_tarihi', 'aciklama', 'taksit_vade_id'])
             ->map(fn ($a) => [
                 'id'                     => (int) $a->id,
                 'tutar'                  => $a->tutar,
                 'planlanan_odeme_tarihi' => $a->planlanan_odeme_tarihi,
                 'aciklama'               => $a->aciklama,
+                'taksit_vade_id'         => $a->taksit_vade_id !== null ? (int) $a->taksit_vade_id : null,
             ])->all();
+    }
+
+    /** Taksit/senet vadesine bağlı alacak buradan değişmez; vade planının parçasıdır. */
+    private function vadeliOlamaz(Alacaklar $a): void
+    {
+        if ($a->taksit_vade_id !== null || $a->senet_vade_id !== null) {
+            throw new GecersizIslemException('Taksit vadesine bağlı alacak tek başına düzenlenemez veya silinemez.');
+        }
     }
 
     /**
@@ -123,6 +138,7 @@ class AlacakServisi
         if (! $a) {
             throw new BulunamadiException('Alacak bulunamadı');
         }
+        $this->vadeliOlamaz($a);
         $a->tutar = $tutar;
         $a->planlanan_odeme_tarihi = $planlananTarih ?: null;
         $a->aciklama = $aciklama ?: null;
@@ -146,6 +162,7 @@ class AlacakServisi
         if (! $a) {
             throw new BulunamadiException('Alacak bulunamadı');
         }
+        $this->vadeliOlamaz($a);
         $adisyonId = (int) $a->adisyon_id;
         $a->delete();
 

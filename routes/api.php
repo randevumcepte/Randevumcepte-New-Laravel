@@ -141,6 +141,8 @@ Route::prefix('v2')->middleware('throttle:'.AppServiceProvider::GENEL_SINIR)->gr
         Route::patch('/tahsilat/{id}', [TahsilatController::class, 'guncelle'])->whereNumber('id');
         // IADE/SILME — flag korumali (satis.tahsilat_sil).
         Route::delete('/tahsilat/{id}', [TahsilatController::class, 'sil'])->whereNumber('id');
+        // TAKSİT YAP (eski taksitekleguncelle): ön ödeme + kalan borç aylık taksitlere — satis.senet_olustur.
+        Route::post('/adisyon/{id}/taksit', [TahsilatController::class, 'taksit'])->whereNumber('id');
 
         // SATIS KALEM yonetimi (Satis & Tahsilat Duzenleme) — flag korumali.
         // YENİ SATIŞ: müşteri + ilk kalemle adisyon açar (boş adisyon yok) — satis.adisyon_olustur.
