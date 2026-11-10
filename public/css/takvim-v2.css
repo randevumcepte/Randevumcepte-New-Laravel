@@ -420,6 +420,37 @@
   .t-form { grid-template-columns: 1fr; }
 }
 
+/* Telefon: takvime yer aç — araç çubuğu 3 sıkı satır, lejant tek satır kayar,
+   "Randevu Oluştur" sağ altta yüzen buton (başparmak erişimi, kaydırınca kaybolmaz). */
+@media (max-width: 600px) {
+  .t-kabuk { gap: 10px; }
+  .t-baslik-ikon { width: 38px; height: 38px; font-size: 18px; border-radius: 12px; }
+  .t-baslik h1 { font-size: 19px; }
+  .t-yeni-btn {
+    position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 50;
+    width: 58px; height: 58px; padding: 0; justify-content: center; border-radius: 50%;
+    font-size: 0; box-shadow: 0 8px 22px rgba(43, 182, 115, .4);
+  }
+  .t-yeni-btn i { font-size: 26px; }
+  .t-arac { gap: 8px; padding: 8px; }
+  .t-sec, .t-sec-tur { flex: 1 1 0; min-width: 0; max-width: none; }
+  .t-nav { order: 1; }
+  .t-tarih { min-width: 0; padding: 0 8px; }
+  .t-yenile, .t-bugun { padding: 0 10px; }
+  .t-yenile { flex: 1 1 auto; justify-content: center; order: 2; }
+  .t-zoom { order: 3; }
+  .t-zoom span { display: none; }
+  .t-lejant { flex-wrap: nowrap; overflow-x: auto; gap: 12px; font-size: 12px; padding-bottom: 2px; scrollbar-width: none; }
+  .t-lejant::-webkit-scrollbar { display: none; }
+  .t-lejant span { flex: 0 0 auto; }
+  .t-kaynak { padding: 6px 2px 4px; gap: 3px; }
+  .t-av { width: 30px; height: 30px; }
+  .t-av-harf { font-size: 13px; }
+  .t-av-ikon { font-size: 15px; }
+  .t-sayi { min-width: 17px; height: 17px; font-size: 10px; top: -5px; left: -9px; }
+  .t-kaynak-ad { font-size: 11px; }
+}
+
 @media (prefers-color-scheme: dark) { .t-baslik h1 { color: #f0ecff; } }
 
 /* Ön görüşme sonucu (çekmece) */

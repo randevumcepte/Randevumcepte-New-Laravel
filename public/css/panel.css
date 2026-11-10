@@ -300,6 +300,10 @@ html, body { margin: 0; padding: 0; }
   .rc-toast-kap { top: 10px; left: 10px; right: 10px; }
   .rc-toast { min-width: 0; max-width: none; }
 }
+/* Dokunmatik tablet (yatay dahil): header'a sığmayan lisans kutusu ve kullanıcı adı gizlenir (avatar menüsü kalır). */
+@media (pointer: coarse) and (max-width: 1280px) {
+  .rc-lisans, .rc-kullanici-ad, .rc-kullanici-ok { display: none; }
+}
 /* Dokunmatik: parmakla rahat basılabilir hedefler (≥44px). Yerleşim değişmez. */
 @media (pointer: coarse) {
   .rc-ic-btn, .rc-header-ic, .rc-avatar { width: 44px; height: 44px; }

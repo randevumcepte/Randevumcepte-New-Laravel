@@ -114,7 +114,7 @@
     <script type="module" src="/js/header-araclar.js?v=4"></script>
     <script type="module" src="/js/bildirim-zil.js?v=1"></script>
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
-    <script type="module" src="/js/hizli-ekle.js?v=8"></script>
+    <script type="module" src="/js/hizli-ekle.js?v=9"></script>
     <script type="module" src="/js/panel-kabuk.js?v=13"></script>
     @stack('betik')
 </body>

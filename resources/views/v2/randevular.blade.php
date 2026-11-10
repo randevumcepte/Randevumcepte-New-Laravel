@@ -6,7 +6,7 @@
 @push('stil')
     {{-- Filtre çubuğu + zaman seçici rapor ekranlarıyla ortak; çekmece/form takvimle ortak. --}}
     <link rel="stylesheet" href="/css/rapor-v2.css?v=1">
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=16">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=17">
     <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=2">
 @endpush
 

@@ -289,7 +289,8 @@ function takvimKur() {
     slotDuration: '00:15',
     slotHeight: slotYuksekligi(durum.zoom),
     slotLabelInterval: '00:30',
-    height: 'calc(100vh - 280px)',
+    // Telefonda araç çubuğu sığdırıldığı için takvim görünür alanın çoğunu alır (dvh: tarayıcı çubukları hariç).
+    height: window.matchMedia('(max-width: 600px)').matches ? 'calc(100dvh - 130px)' : 'calc(100vh - 280px)',
     // Sutun en az 100px (buyutecle 200'e kadar); genis ekranda esit yayilir, dar ekranda yatay kaydirma.
     columnWidth: sutunGenisligi(durum.zoom),
     datesAboveResources: true,
