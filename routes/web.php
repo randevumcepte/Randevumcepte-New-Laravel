@@ -242,12 +242,12 @@ Route::get('/v2/hesabim/{sube?}', fn ($sube = null) => view('v2.hesabim', ['salo
  */
 Route::prefix('/site/{salonId}')->whereNumber('salonId')->group(function () {
     Route::get('/', [\App\Http\Controllers\SiteController::class, 'vitrin']);
-    foreach (['giris' => 'giris', 'profilim' => 'profil', 'randevularim' => 'randevular', 'sifrem' => 'sifre'] as $yol => $sayfa) {
+    foreach (\App\Support\MusteriPaneli::yollar() as $sayfa => $yol) {
         Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'hesap'])->defaults('sayfa', $sayfa);
     }
 });
 // Aynı sayfalar salonun kendi alan adında kökten; alan adı salona ait değilse 404.
-foreach (['giris' => 'giris', 'profilim' => 'profil', 'randevularim' => 'randevular', 'sifrem' => 'sifre'] as $yol => $sayfa) {
+foreach (\App\Support\MusteriPaneli::yollar() as $sayfa => $yol) {
     Route::get('/'.$yol, [\App\Http\Controllers\SiteController::class, 'kokHesap'])->defaults('sayfa', $sayfa);
 }
 

@@ -81,3 +81,15 @@ export async function oturumCiz() {
     if (ben.profil_resim) document.querySelectorAll('[data-musteri-resim]').forEach((e) => { e.src = ben.profil_resim; });
     return ben;
 }
+
+// ───────── Musteri paneli sayfa modulleri (hesap-*.js) ─────────
+// hesap.js oturumu bir kez cozer ve musteriyi yayinlar; sayfa modulu musteriHazir ile alir (yukleme sirasi onemsiz).
+let _musteri = null;
+export function musteriYayinla(ben) {
+    _musteri = ben;
+    document.dispatchEvent(new CustomEvent('rc:musteri', { detail: ben }));
+}
+export function musteriHazir(fn) {
+    if (_musteri) fn(_musteri);
+    else document.addEventListener('rc:musteri', (e) => fn(e.detail), { once: true });
+}

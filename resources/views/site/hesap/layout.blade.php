@@ -13,9 +13,10 @@
       <link rel="stylesheet" href="{{ asset('site/css/navigationmobilemenu.css') }}">
       <link rel="stylesheet" href="{{ asset('site/css/modern-profile.css') }}?v=1">
       {!! $tema_css !!}
+      @stack('stil')
       <style>.tel-grup{display:flex;gap:8px}.tel-grup .tel-ulke{flex:0 0 auto;width:92px;max-width:92px;font-size:13px;padding-left:6px;padding-right:4px}.tel-grup .tel-num{flex:1 1 auto;min-width:0}</style>
    </head>
-   <body data-salon-id="{{ $salon->id }}" data-ana="{{ $linkler['ana'] }}" data-giris="{{ $linkler['giris'] }}" data-randevularim="{{ $linkler['randevular'] }}" data-sayfa="{{ $aktif }}">
+   <body data-salon-id="{{ $salon->id }}" data-ana="{{ $linkler['ana'] }}" data-giris="{{ $linkler['giris'] }}" data-randevularim="{{ $linkler['randevular'] }}" data-hesabim="{{ $linkler['hesabim'] }}" data-sayfa="{{ $aktif }}" data-studyo="{{ $salon->studyo_modu ? 1 : 0 }}">
       <div id="preloader"><div id="loaderstatus">&nbsp;</div></div>
       <div class="page home-page">
          <header class="customer-app-header">
@@ -30,6 +31,7 @@
                      <i class="fa fa-chevron-down customer-user-caret"></i>
                   </button>
                   <div class="customer-user-menu" id="customerUserMenu">
+                     <a href="{{ $linkler['hesabim'] }}" class="customer-user-item"><i class="fa fa-th-large"></i> Hesabım</a>
                      <a href="{{ $linkler['profil'] }}" class="customer-user-item"><i class="fa fa-user"></i> Profilim</a>
                      <a href="{{ $linkler['ana'] }}#randevu-al" class="customer-user-item primary"><i class="fa fa-calendar-plus-o"></i> Randevu Al</a>
                      <hr class="customer-user-divider">
@@ -40,11 +42,12 @@
          </header>
          <section class="content">
             @unless($aktif === 'giris')
+            {{-- Menü sayfa kaydından (App\Support\MusteriPaneli; mobil müşteri menüsüyle aynı sayfalar ve koşullar) --}}
             <div class="modern-nav-pills">
                <a href="{{ $linkler['ana'] }}" class="nav-pill-item"><i class="fa fa-home"></i><span>Anasayfa</span></a>
-               <a href="{{ $linkler['profil'] }}" class="nav-pill-item {{ $aktif === 'profil' ? 'active' : '' }}"><i class="fa fa-user"></i><span>Profilim</span></a>
-               <a href="{{ $linkler['randevular'] }}" class="nav-pill-item {{ $aktif === 'randevular' ? 'active' : '' }}"><i class="fa fa-calendar"></i><span>Randevularım</span></a>
-               <a href="{{ $linkler['sifre'] }}" class="nav-pill-item {{ $aktif === 'sifre' ? 'active' : '' }}"><i class="fa fa-lock"></i><span>Şifrem</span></a>
+               @foreach($menu as $m)
+               <a href="{{ $linkler[$m['anahtar']] }}" class="nav-pill-item {{ $aktif === $m['anahtar'] ? 'active' : '' }}"><i class="fa {{ $m['ikon'] }}"></i><span>{{ $m['baslik'] }}</span></a>
+               @endforeach
             </div>
             @endunless
             <section class="profile-main-container">
@@ -63,6 +66,8 @@
          </footer>
       </div>
       <script type="module" src="/js/telefon-ulke.js?v=2"></script>
-      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=3"></script>
+      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=4"></script>
+      {{-- Sayfaya özel modül (yeni panel sayfaları kendi dosyasını ekler: public/js/site/hesap-*.js) --}}
+      @stack('betik')
    </body>
 </html>

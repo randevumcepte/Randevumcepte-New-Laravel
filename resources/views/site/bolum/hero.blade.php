@@ -20,6 +20,8 @@
                         <i class="fa fa-caret-down" style="margin-left:4px; font-size:11px;"></i>
                      </button>
                      <div class="slp-hero__menu" id="slpUserMenu" role="menu">
+                        <a href="{{ $linkler['hesabim'] }}" role="menuitem"><i class="fa fa-th-large"></i> Hesabım</a>
+                        <a href="{{ $linkler['randevular'] }}" role="menuitem"><i class="fa fa-calendar"></i> Randevularım</a>
                         <a href="{{ $linkler['profil'] }}" role="menuitem"><i class="fa fa-user"></i> Profilim</a>
                         <hr>
                         <a href="#" role="menuitem" data-musteri-cikis><i class="fa fa-sign-out"></i> Çıkış Yap</a>

@@ -6,6 +6,7 @@ use App\Domain\Ayar\SalonTemaPalet;
 use App\Services\Online\OnlineSalonKapisi;
 use App\Services\Online\VitrinServisi;
 use App\Support\EskiPanelLinki;
+use App\Support\MusteriPaneli;
 use App\Support\SiteSeo;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,7 @@ class SiteController extends Controller
         return $salonId ? $this->vitrin($request, $salonId) : redirect('/v2/giris');
     }
 
-    /** Salonun kendi alan adında hesap sayfaları (/giris, /profilim, /randevularim, /sifrem). */
+    /** Salonun kendi alan adında müşteri paneli sayfaları (MusteriPaneli::SAYFALAR, ör. /giris, /randevularim). */
     public function kokHesap(Request $request, string $sayfa)
     {
         return $this->hesap($request, $this->kokSalonu($request), $sayfa);
@@ -127,9 +128,10 @@ class SiteController extends Controller
         $salon = $this->kapi->salon($salonId);
         $gorunum = (object) [
             'id' => (int) $salon->id, 'salon_adi' => $salon->salon_adi, 'logo' => EskiPanelLinki::mutlak($salon->logo), 'tema_seed' => $salon->tema_seed,
+            'studyo_modu' => (bool) ($salon->studyo_modu ?? false), 'grup_dersi_aktif' => (bool) ($salon->grup_dersi_aktif ?? false),
         ];
 
-        return view('site.hesap.'.$sayfa, ['salon' => $gorunum, 'aktif' => $sayfa]
+        return view('site.hesap.'.$sayfa, ['salon' => $gorunum, 'aktif' => $sayfa, 'menu' => MusteriPaneli::menu($gorunum)]
             + $this->ortak($salonId, $gorunum, $this->kendiDomaini($request, $salon->domain ?? null)));
     }
 
@@ -138,15 +140,13 @@ class SiteController extends Controller
     {
         $taban = $kendiDomaini ? '' : '/site/'.$salonId;
 
+        // Müşteri paneli linkleri sayfa kaydından (MusteriPaneli): anahtar => adres.
+        $hesap = array_map(fn ($yol) => $taban.'/'.$yol, MusteriPaneli::yollar());
+
         return [
             'tema_css' => SalonTemaPalet::cssOverride($salon->tema_seed ?? null),
-            'linkler'  => [
-                'ana'        => $taban ?: '/',
-                'giris'      => $taban.'/giris',
-                'profil'     => $taban.'/profilim',
-                'randevular' => $taban.'/randevularim',
-                'sifre'      => $taban.'/sifrem',
-                'gizlilik'   => EskiPanelLinki::mutlak('kullanim-ve-gizlik-kosullari'),
+            'linkler'  => ['ana' => $taban ?: '/'] + $hesap + [
+                'gizlilik' => EskiPanelLinki::mutlak('kullanim-ve-gizlik-kosullari'),
             ],
         ];
     }

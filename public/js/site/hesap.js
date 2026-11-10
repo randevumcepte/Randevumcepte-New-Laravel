@@ -1,5 +1,6 @@
-// Musteri paneli (giris, profil, randevularim, sifre) — tum veri /api/v2/musteri-uygulama.
-import { api, salonId, tokenYaz, girisliMi, oturumCiz, yukleniyor, esc } from './musteri-api.js';
+// Musteri paneli ortak acilisi + giris, profil, randevularim, sifre — tum veri /api/v2/musteri-uygulama.
+// Diger sayfalar kendi modulunde (public/js/site/hesap-*.js); oturum ve musteri bilgisi burada bir kez cozulur.
+import { api, salonId, tokenYaz, girisliMi, oturumCiz, yukleniyor, esc, musteriYayinla } from './musteri-api.js';
 
 const $ = (id) => document.getElementById(id);
 const SALON = salonId();
@@ -29,7 +30,7 @@ async function calistir(is) {
 
 // ───────── Giris / Kayit / Sifre yenileme ─────────
 function girisSayfasi() {
-    if (girisliMi()) { location.href = document.body.dataset.randevularim; return; }
+    if (girisliMi()) { location.href = document.body.dataset.hesabim; return; }
     const acilis = Date.now();
     let mod = 'giris';
 
@@ -50,7 +51,7 @@ function girisSayfasi() {
     if (location.hash === '#kayit') modKur('kayit');
 
     const telefon = () => $('cep_telefon').value.trim();
-    const girildi = (sonuc) => { tokenYaz(sonuc.token); location.href = document.body.dataset.randevularim; };
+    const girildi = (sonuc) => { tokenYaz(sonuc.token); location.href = document.body.dataset.hesabim; };
 
     $('modDegistir').addEventListener('click', (e) => { e.preventDefault(); modKur(mod === 'giris' ? 'kayit' : 'giris'); });
     $('sifremiUnuttum').addEventListener('click', (e) => {
@@ -199,6 +200,7 @@ if (sayfa === 'giris') {
 } else {
     oturumCiz().then((ben) => {
         if (!ben) { location.href = document.body.dataset.giris; return; }
-        ({ profil: () => profilSayfasi(ben), randevular: randevularSayfasi, sifre: sifreSayfasi })[sayfa]();
+        musteriYayinla(ben); // yeni panel sayfalari (hesap-*.js) musteriHazir ile alir; /ben ikinci kez istenmez
+        ({ profil: () => profilSayfasi(ben), randevular: randevularSayfasi, sifre: sifreSayfasi })[sayfa]?.();
     });
 }
