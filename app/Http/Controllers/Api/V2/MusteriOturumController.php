@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Exceptions\GecersizIslemException;
 use App\Http\Controllers\Controller;
 use App\Services\MusteriHesap\MusteriOturumServisi;
 use App\Services\MusteriHesap\MusteriTokenYenilemeServisi;
@@ -13,8 +14,9 @@ use Illuminate\Http\Request;
  * Musteri girisi / hizli kayit / sifre sifirlama — kimliksiz uclar (throttle arkasinda).
  *
  *   POST /musteri-oturum/giris {cep_telefon, password, salon_id?}          → {token, user_type, musteri}
- *   POST /musteri-oturum/kayit {ad_soyad, cep_telefon, kvkk, salon_id, _hp?, form_sure_sn?}
- *        → {sifre_gerekli:true} ya da {sifre_gerekli:false, token, user_type, musteri}
+ *   POST /musteri-oturum/kod {ad_soyad, cep_telefon, kvkk, salon_id, _hp?, form_sure_sn?} → null (sitede kodla giris/kayit:
+ *        kod WhatsApp oncelikli gider; numara kayitli olsa da olmasa da ayni cevap)
+ *   POST /musteri-oturum/kodla-giris {cep_telefon, salon_id, kod, ad_soyad} → {yeni, token, user_type, musteri}
  *   POST /musteri-oturum/sifre-kodu {cep_telefon, salon_id}
  *   POST /musteri-oturum/sifre-sifirla {cep_telefon, salon_id, kod, yeni_sifre}
  *   POST /musteri-oturum/kayit {sifre_gonder:true, app_bundle?, ...}      → {sms_gonderildi} (uygulama: yeni numaraya sifre, kayitli numaraya
@@ -49,9 +51,39 @@ class MusteriOturumController extends Controller
             'app_bundle'   => ['nullable', 'string', 'max:190'],
         ]);
 
-        return $request->boolean('sifre_gonder')
-            ? ApiCevap::basarili($this->servis->sifreyleKayit($g, (string) $request->ip()), 'Numaranıza SMS gönderildi.')
-            : ApiCevap::basarili($this->servis->kayit($g, (string) $request->ip()));
+        // Kodsuz hizli kayit (dogrulamasiz hesap + oturum) kapali: sitede kayit /kod + /kodla-giris ile olur.
+        if (! $request->boolean('sifre_gonder')) {
+            throw new GecersizIslemException('Telefonunuza gelen kodla devam edin.');
+        }
+
+        return ApiCevap::basarili($this->servis->sifreyleKayit($g, (string) $request->ip()), 'Numaranıza SMS gönderildi.');
+    }
+
+    public function kod(Request $request)
+    {
+        $g = $request->validate([
+            'ad_soyad'     => ['required', 'string', 'min:2', 'max:100'],
+            'cep_telefon'  => ['required', 'string', 'max:30'],
+            'kvkk'         => ['accepted'],
+            'salon_id'     => ['required', 'integer'],
+            '_hp'          => ['nullable', 'string'],
+            'form_sure_sn' => ['nullable', 'integer'],
+        ]);
+        $this->servis->girisKoduGonder($g, (string) $request->ip());
+
+        return ApiCevap::basarili(null, 'Doğrulama kodu telefonunuza gönderildi.');
+    }
+
+    public function kodlaGiris(Request $request)
+    {
+        $g = $request->validate([
+            'cep_telefon' => ['required', 'string', 'max:30'],
+            'salon_id'    => ['required', 'integer'],
+            'kod'         => ['required', 'string', 'max:10'],
+            'ad_soyad'    => ['required', 'string', 'min:2', 'max:100'],
+        ]);
+
+        return ApiCevap::basarili($this->servis->kodlaGiris($g['cep_telefon'], (int) $g['salon_id'], $g['kod'], $g['ad_soyad']));
     }
 
     public function sifreGonder(Request $request, SifreSifirlamaServisi $sifre)

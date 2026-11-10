@@ -4,6 +4,7 @@ namespace Tests\Feature\Oturum;
 
 use App\Domain\Telefon\TelefonNumarasi;
 use App\Services\Deneme\DemoHesapKurServisi;
+use App\Services\MusteriHesap\MusteriProfilServisi;
 use App\Services\Oturum\ErisimTokenServisi;
 use App\Services\Oturum\IlkSayfa;
 use App\Services\Oturum\PlatformSms;
@@ -306,13 +307,65 @@ class OturumApiTest extends TestCase
     {
         $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
         DB::table('users')->insert(['name' => 'Kayitli', 'cep_telefon' => self::TEL, 'password' => Hash::make('x')]);
-        $g = ['ad_soyad' => 'Deneme', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon];
+        $g = ['ad_soyad' => 'Deneme', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon, 'form_sure_sn' => 10];
 
         foreach (range(1, 3) as $i) {
-            $this->postJson('/api/v2/musteri-oturum/kayit', $g + ['form_sure_sn' => 10])->assertOk()->assertJsonPath('veri.sifre_gerekli', true);
+            $this->travel(2)->minutes(); // kod yeniden gonderim beklemesi (60 sn) gecsin; numara siniri gunluk
+            $this->postJson('/api/v2/musteri-oturum/kod', $g)->assertOk();
         }
-        // Numara basina gunluk 3: kayitli numarayla sinirsiz "kayitli mi" sorgusu yapilamaz.
-        $this->postJson('/api/v2/musteri-oturum/kayit', $g + ['form_sure_sn' => 10])->assertStatus(429);
+        // Numara basina gunluk 3: kayitli numarayla sinirsiz "kayitli mi" sorgusu ya da kod bombardimani yapilamaz.
+        $this->postJson('/api/v2/musteri-oturum/kod', $g)->assertStatus(429);
+    }
+
+    public function test_kodsuz_web_kaydi_kapali(): void
+    {
+        $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
+
+        $this->postJson('/api/v2/musteri-oturum/kayit', ['ad_soyad' => 'Yeni Kisi', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon, 'form_sure_sn' => 10])
+            ->assertStatus(422);
+        $this->assertSame(0, DB::table('users')->count());
+    }
+
+    public function test_kodla_giris_yeni_numaraya_hesap_acar(): void
+    {
+        $this->profilSahte();
+        $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
+        $this->postJson('/api/v2/musteri-oturum/kod', ['ad_soyad' => 'Yeni Kisi', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon, 'form_sure_sn' => 10])
+            ->assertOk();
+        $this->assertSame(0, DB::table('users')->count(), 'kod dogrulanmadan hesap acilmaz');
+
+        $this->postJson('/api/v2/musteri-oturum/kodla-giris', ['cep_telefon' => self::TEL, 'salon_id' => $salon, 'kod' => $this->sonKod(), 'ad_soyad' => 'Yeni Kisi'])
+            ->assertOk()->assertJsonPath('veri.token', 'test-token')->assertJsonPath('veri.yeni', true);
+        $this->assertSame('Yeni Kisi', DB::table('users')->where('cep_telefon', self::TEL)->value('name'));
+        $this->assertTrue(DB::table('musteri_portfoy')->where('salon_id', $salon)->exists());
+    }
+
+    public function test_kodla_giris_kayitli_numara_yanlis_kodla_girmez(): void
+    {
+        $this->profilSahte();
+        $salon = DB::table('salonlar')->insertGetId(['salon_adi' => 'Salon', 'sms_secret' => 'GIZLI']);
+        DB::table('users')->insert(['name' => 'Eski Ad', 'cep_telefon' => self::TEL, 'password' => Hash::make('x')]);
+        $this->postJson('/api/v2/musteri-oturum/kod', ['ad_soyad' => 'Baska Ad', 'cep_telefon' => self::TEL, 'kvkk' => true, 'salon_id' => $salon, 'form_sure_sn' => 10])
+            ->assertOk();
+        $kod = $this->sonKod();
+
+        $this->postJson('/api/v2/musteri-oturum/kodla-giris', ['cep_telefon' => self::TEL, 'salon_id' => $salon, 'kod' => $kod === '0000' ? '1111' : '0000', 'ad_soyad' => 'Baska Ad'])
+            ->assertStatus(422);
+        $this->postJson('/api/v2/musteri-oturum/kodla-giris', ['cep_telefon' => self::TEL, 'salon_id' => $salon, 'kod' => $kod, 'ad_soyad' => 'Baska Ad'])
+            ->assertOk()->assertJsonPath('veri.yeni', false);
+        $this->assertSame(1, DB::table('users')->count());
+        $this->assertSame('Eski Ad', DB::table('users')->value('name'), 'kayitli hesabin adi degismez');
+        // Kod tek kullanimlik.
+        $this->postJson('/api/v2/musteri-oturum/kodla-giris', ['cep_telefon' => self::TEL, 'salon_id' => $salon, 'kod' => $kod, 'ad_soyad' => 'Baska Ad'])
+            ->assertStatus(422);
+    }
+
+    /** Oturum cevabindaki profil okumasi bu testin semasi disinda. */
+    private function profilSahte(): void
+    {
+        $profil = Mockery::mock(MusteriProfilServisi::class);
+        $profil->shouldReceive('goster')->andReturnUsing(fn ($id) => ['id' => $id]);
+        $this->app->instance(MusteriProfilServisi::class, $profil);
     }
 
     public function test_kimliksiz_sifre_gonder_isletme_hesabina_dokunmaz(): void

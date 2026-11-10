@@ -28,6 +28,11 @@
                   <label for="yeni_sifre" class="required"><i class="fa fa-lock"></i> Yeni Şifre</label>
                   <input id="yeni_sifre" type="password" class="modern-form-control" placeholder="En az 6 karakter" autocomplete="new-password">
                </div>
+               {{-- Uye Ol: telefona gelen tek kullanimlik kodla kayit/giris (kod istenince gorunur) --}}
+               <div class="modern-form-group" id="kayitKodGrup" hidden>
+                  <label for="kayit_kod" class="required"><i class="fa fa-key"></i> Doğrulama Kodu</label>
+                  <input id="kayit_kod" type="text" inputmode="numeric" maxlength="6" class="modern-form-control" autocomplete="one-time-code">
+               </div>
                <label data-kayit-alani hidden style="display:block;margin-bottom:12px;">
                   <input type="checkbox" id="kvkk"> <a href="{{ $linkler['gizlilik'] }}" target="_blank" rel="noopener">Kullanım ve gizlilik koşulları</a>nı okudum, kabul ediyorum.
                </label>

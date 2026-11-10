@@ -27,7 +27,7 @@
 
    {{-- ============ CARKIFELEK POPUP (SVG cark + tek tikla cevirme) ============ --}}
    <div class="cark-popup" id="carkPopup" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="carkPopupTitle"
-        data-giris="{{ $linkler['giris'] }}" data-gizlilik="{{ $linkler['gizlilik'] }}">
+        data-gizlilik="{{ $linkler['gizlilik'] }}">
       <div class="cark-popup__backdrop" data-cark-close></div>
       <div class="cark-popup__panel">
          <button type="button" class="cark-popup__close" data-cark-close aria-label="Kapat">

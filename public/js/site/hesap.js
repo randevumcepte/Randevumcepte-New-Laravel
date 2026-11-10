@@ -42,7 +42,11 @@ function girisSayfasi() {
         document.querySelectorAll('[data-giris-alani]').forEach((e) => { e.hidden = mod !== 'giris'; });
         document.querySelectorAll('[data-yenile-alani]').forEach((e) => { e.hidden = mod !== 'yenile'; });
         $('modDegistir').textContent = mod === 'giris' ? 'Üye Ol' : 'Giriş Yap';
+        kodIstendi = false;
+        $('kayitKodGrup').hidden = true;
     };
+    // Uye Ol iki adim: once kod istenir, sonra kodla giris (kodsuz hesap acilmaz; kullanici 2026-11-10).
+    let kodIstendi = false;
     if (location.hash === '#kayit') modKur('kayit');
 
     const telefon = () => $('cep_telefon').value.trim();
@@ -62,13 +66,20 @@ function girisSayfasi() {
         calistir(async () => {
             if (mod === 'giris') {
                 girildi(await api('/musteri-oturum/giris', { yontem: 'POST', govde: { cep_telefon: telefon(), password: $('sifre').value, salon_id: SALON } }));
-            } else if (mod === 'kayit') {
-                const sonuc = await api('/musteri-oturum/kayit', { yontem: 'POST', govde: {
+            } else if (mod === 'kayit' && !kodIstendi) {
+                await api('/musteri-oturum/kod', { yontem: 'POST', govde: {
                     ad_soyad: $('ad_soyad').value, cep_telefon: telefon(), kvkk: $('kvkk').checked, salon_id: SALON,
                     _hp: e.target.elements._hp.value, form_sure_sn: Math.floor((Date.now() - acilis) / 1000),
                 } });
-                if (sonuc.sifre_gerekli) { modKur('giris'); bildir('Devam etmek için şifrenizle giriş yapın ya da "Şifremi unuttum" ile SMS kodu isteyin.'); return; }
-                girildi(sonuc);
+                kodIstendi = true;
+                $('kayitKodGrup').hidden = false;
+                $('girisButon').textContent = 'Doğrula ve Devam Et';
+                $('kayit_kod').focus();
+                bildir('Doğrulama kodu telefonunuza gönderildi (WhatsApp ya da SMS).', true);
+            } else if (mod === 'kayit') {
+                girildi(await api('/musteri-oturum/kodla-giris', { yontem: 'POST', govde: {
+                    cep_telefon: telefon(), salon_id: SALON, kod: $('kayit_kod').value.trim(), ad_soyad: $('ad_soyad').value,
+                } }));
             } else {
                 await api('/musteri-oturum/sifre-sifirla', { yontem: 'POST', govde: { cep_telefon: telefon(), salon_id: SALON, kod: $('sifre_kod').value, yeni_sifre: $('yeni_sifre').value } });
                 modKur('giris');

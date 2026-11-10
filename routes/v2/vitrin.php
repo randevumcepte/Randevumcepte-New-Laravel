@@ -32,6 +32,8 @@ Route::prefix('vitrin')->middleware('throttle:120,1')->group(function () {
 Route::prefix('musteri-oturum')->middleware('throttle:20,1')->group(function () {
     Route::post('/giris', [MusteriOturumController::class, 'giris']);
     Route::post('/kayit', [MusteriOturumController::class, 'kayit']);
+    Route::post('/kod', [MusteriOturumController::class, 'kod']);
+    Route::post('/kodla-giris', [MusteriOturumController::class, 'kodlaGiris']);
     Route::post('/sifre-kodu', [MusteriOturumController::class, 'sifreKodu']);
     Route::post('/sifre-sifirla', [MusteriOturumController::class, 'sifreSifirla']);
     Route::post('/sifre-gonder', [MusteriOturumController::class, 'sifreGonder']);

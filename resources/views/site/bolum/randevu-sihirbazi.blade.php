@@ -110,7 +110,7 @@
                <div id="kisiselbilgileralani" class="rdv-kisisel">
                   <button id='tarihsaatseckisminageridon' type="button" class="rdv-back-btn"><i class="fa fa-arrow-left"></i> Geri Dön</button>
                   <h3 class="rdv-kisisel-baslik">Son Adım — İletişim Bilgileri</h3>
-                  <p class="rdv-kisisel-aciklama">Adınız ve telefonunuzla randevunuzu hemen oluşturun. Şifre veya SMS gerekmez.</p>
+                  <p class="rdv-kisisel-aciklama">Adınızı ve telefonunuzu girin; telefonunuza gelen tek kullanımlık kodla giriş yapıp randevunuzu onaylayın.</p>
 
                   <form id="rdv-direkt-form" autocomplete="on">
                                           {{-- Honeypot - bot'lar dolduracak, biz reddedecegiz (gozle gorunmez) --}}
@@ -130,30 +130,16 @@
                         <small class="rdv-input-hint">Telefonunuz randevu bildirimleri için kullanılır. Sizinle paylaşılmaz.</small>
                      </div>
 
-                     {{-- Kayitli numara icin sifre alani — backend 401+needs_password donunce JS gosterir --}}
-                     <div class="rdv-input-grup" id="rdv-sifre-grup" style="display:none;">
-                        <label for="rdv_sifre"><i class="fa fa-lock"></i> Randevumcepte Şifreniz</label>
+                     {{-- Tek kullanimlik kod: "Kod Gönder" sonrasi gorunur (giris yapmamis musteri kodla girer) --}}
+                     <div class="rdv-input-grup" id="rdv-kod-grup" style="display:none;">
+                        <label for="rdv_kod"><i class="fa fa-key"></i> Doğrulama Kodu</label>
                         <div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;">
-                           <input type="password" name="sifre" id="rdv_sifre"
-                                  placeholder="Mevcut şifreniz"
-                                  autocomplete="current-password"
-                                  style="flex:1;min-width:180px;">
-                           <button type="button" id="rdv-sifremi-unuttum" class="btn btn-light" style="white-space:nowrap;background:#f3f0fa;border:1px solid #d9d1ee;color:var(--slp-brand);font-weight:600;">
-                              <i class="fa fa-paper-plane"></i> Şifremi unuttum
+                           <input type="text" id="rdv_kod" inputmode="numeric" maxlength="6" placeholder="• • • •" autocomplete="one-time-code" style="flex:0 0 140px;letter-spacing:6px;font-weight:700;text-align:center;">
+                           <button type="button" id="rdv-kod-tekrar" class="btn btn-light" style="white-space:nowrap;background:#f3f0fa;border:1px solid #d9d1ee;color:var(--slp-brand);font-weight:600;">
+                              <i class="fa fa-repeat"></i> Kodu tekrar gönder
                            </button>
                         </div>
-                        <small class="rdv-input-hint" id="rdv-sifre-bilgi">Bu numara sistemde kayıtlı. Mevcut şifrenizi girin ya da "Şifremi unuttum" ile SMS kodu isteyin.</small>
-                     </div>
-
-                     <div class="rdv-input-grup" id="rdv-sifre-yenile-grup" style="display:none;">
-                        <label for="rdv_sifre_kod"><i class="fa fa-key"></i> SMS Kodu ve Yeni Şifre</label>
-                        <div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;">
-                           <input type="text" id="rdv_sifre_kod" inputmode="numeric" maxlength="6" placeholder="SMS kodu" autocomplete="one-time-code" style="flex:0 0 120px;">
-                           <input type="password" id="rdv_yeni_sifre" placeholder="Yeni şifreniz (en az 6 karakter)" autocomplete="new-password" style="flex:1;min-width:180px;">
-                           <button type="button" id="rdv-sifre-yenile" class="btn btn-light" style="white-space:nowrap;background:#f3f0fa;border:1px solid #d9d1ee;color:var(--slp-brand);font-weight:600;">
-                              <i class="fa fa-check"></i> Şifreyi Yenile
-                           </button>
-                        </div>
+                        <small class="rdv-input-hint" id="rdv-kod-bilgi">Telefonunuza gelen kodu girin.</small>
                      </div>
 
                      <label class="rdv-kvkk-check">
@@ -162,8 +148,8 @@
                      </label>
 
                      <button type="submit" id="rdv-direkt-submit" class="rdv-direkt-btn">
-                        <i class="fa fa-check-circle"></i>
-                        <span>RANDEVUYU OLUŞTUR</span>
+                        <i class="fa fa-paper-plane"></i>
+                        <span>KOD GÖNDER</span>
                      </button>
                      <div id="rdv-direkt-hata"></div>
                   </form>

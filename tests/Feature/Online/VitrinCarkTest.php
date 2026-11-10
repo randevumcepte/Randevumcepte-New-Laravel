@@ -250,7 +250,7 @@ class VitrinCarkTest extends TestCase
         $this->assertSame(0, DB::table('carkifelek_cevirme_loglari')->count());
     }
 
-    public function test_kayitli_numaraya_puan_yazilir_oturum_verilmez(): void
+    public function test_kayitli_numaraya_puan_yazilir_ve_kodla_oturum_acilir(): void
     {
         $this->dilimler('puan', 50);
         $mevcut = (int) DB::table('users')->insertGetId(['name' => 'Eski Müşteri', 'cep_telefon' => self::TEL]);
@@ -261,7 +261,7 @@ class VitrinCarkTest extends TestCase
             ->assertOk()->json('veri');
 
         $this->assertFalse($sonuc['yeniUye']);
-        $this->assertNull($sonuc['oturum']);
+        $this->assertSame('test-token', $sonuc['oturum']['token']);
         $this->assertNull($sonuc['odulKodu']);
         $this->assertSame(1, DB::table('users')->count());
         $this->assertSame('Eski Müşteri', DB::table('users')->where('id', $mevcut)->value('name'));

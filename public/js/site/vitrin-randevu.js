@@ -124,13 +124,6 @@ function hataGoster(mesaj) {
 }
 const hataTemizle = () => { $('rdv-direkt-hata').innerHTML = ''; $('rdv-direkt-hata').style.display = 'none'; };
 
-function sifreBilgi(mesaj, tur = '') {
-    $('rdv-sifre-grup').style.display = 'block';
-    const bilgi = $('rdv-sifre-bilgi');
-    if (mesaj) { bilgi.textContent = mesaj; bilgi.style.color = tur === 'ok' ? '#0a7c3a' : tur === 'err' ? '#b91c1c' : ''; }
-    $('rdv_sifre').focus();
-}
-
 /** Deger ortak telefon bileseninden; bicim kurali sunucuda (TelefonNumarasi). */
 const telefonOku = () => $('rdv_telefon').value.trim() || null;
 
@@ -141,56 +134,65 @@ async function butonluIs(buton, yaziMetni, is) {
     try { return await is(); } finally { buton.disabled = false; buton.innerHTML = eski; }
 }
 
+// Giris yapmamis musteri tek kullanimlik kodla girer (kullanici 2026-11-10: loginsiz randevu yok, numarayi bilen
+// giris yapamaz). Adim 1 "Kod Gönder", adim 2 ayni dugme "Giriş Yap ve Devam Et"; kod yeni numaraya hesap da acar.
+let kodGonderildi = false;
+const gonderDugmesi = (metin, ikon) => { $('rdv-direkt-submit').innerHTML = `<i class="fa ${ikon}"></i> <span>${esc(metin)}</span>`; };
+function kodBilgi(mesaj, tur = '') {
+    const bilgi = $('rdv-kod-bilgi');
+    bilgi.textContent = mesaj;
+    bilgi.style.color = tur === 'ok' ? '#0a7c3a' : tur === 'err' ? '#b91c1c' : '';
+}
+
+async function kodIste() {
+    await api('/musteri-oturum/kod', { yontem: 'POST', govde: {
+        ad_soyad: $('rdv_adsoyad').value, cep_telefon: telefonOku(), kvkk: true, salon_id: SALON,
+        _hp: $('_hp').value, form_sure_sn: Math.floor((Date.now() - durum.acilis) / 1000),
+    } });
+    kodGonderildi = true;
+    $('rdv-kod-grup').style.display = 'block';
+    kodBilgi('Kod telefonunuza gönderildi (WhatsApp ya da SMS). 10 dakika geçerlidir.', 'ok');
+    gonderDugmesi('GİRİŞ YAP VE DEVAM ET', 'fa-check-circle');
+    $('rdv_kod').focus();
+}
+
+// Numara ya da ad degisirse kod yeniden istenir.
+['rdv_telefon', 'rdv_adsoyad'].forEach((id) => $(id).addEventListener('input', () => {
+    if (!kodGonderildi) return;
+    kodGonderildi = false;
+    $('rdv-kod-grup').style.display = 'none';
+    $('rdv_kod').value = '';
+    gonderDugmesi('KOD GÖNDER', 'fa-paper-plane');
+}));
+
 form.addEventListener('submit', (e) => {
     e.preventDefault();
     hataTemizle();
-    const telefon = telefonOku();
-    if (!telefon) { hataGoster('Geçerli bir telefon numarası girin.'); return; }
+    if (!telefonOku()) { hataGoster('Geçerli bir telefon numarası girin.'); return; }
+    if ($('rdv_adsoyad').value.trim().length < 2) { hataGoster('Adınızı ve soyadınızı girin.'); return; }
     if (!$('rdv_kvkk').checked) { hataGoster('Devam etmek için kullanım ve gizlilik koşullarını onaylayın.'); return; }
 
     butonluIs($('rdv-direkt-submit'), 'İşleniyor...', async () => {
         try {
-            const sifre = $('rdv_sifre').value;
-            const sonuc = sifre
-                ? await api('/musteri-oturum/giris', { yontem: 'POST', govde: { cep_telefon: telefon, password: sifre, salon_id: SALON } })
-                : await api('/musteri-oturum/kayit', { yontem: 'POST', govde: {
-                    ad_soyad: $('rdv_adsoyad').value, cep_telefon: telefon, kvkk: true, salon_id: SALON,
-                    _hp: $('_hp').value, form_sure_sn: Math.floor((Date.now() - durum.acilis) / 1000),
-                } });
-            if (sonuc.sifre_gerekli) { sifreBilgi('Devam etmek için şifrenizi girin ya da "Şifremi unuttum" ile SMS kodu isteyin.'); return; }
+            if (!kodGonderildi) { await kodIste(); return; }
+            const kod = $('rdv_kod').value.trim();
+            if (!kod) { kodBilgi('Telefonunuza gelen kodu girin.', 'err'); return; }
+            const sonuc = await api('/musteri-oturum/kodla-giris', { yontem: 'POST', govde: {
+                cep_telefon: telefonOku(), salon_id: SALON, kod, ad_soyad: $('rdv_adsoyad').value,
+            } });
             tokenYaz(sonuc.token);
             durum.musteri = sonuc.musteri;
             ozetiGoster();
         } catch (hata) {
-            if (hata.kod === 401) sifreBilgi(hata.message, 'err');
+            if (kodGonderildi) kodBilgi(hata.message, 'err');
             else hataGoster(hata.message);
         }
     });
 });
 
-$('rdv-sifremi-unuttum').addEventListener('click', () => {
-    const telefon = telefonOku();
-    if (!telefon) { sifreBilgi('Önce telefon numaranızı doğru girin.', 'err'); return; }
-    butonluIs($('rdv-sifremi-unuttum'), 'Gönderiliyor...', async () => {
-        try {
-            await api('/musteri-oturum/sifre-kodu', { yontem: 'POST', govde: { cep_telefon: telefon, salon_id: SALON } });
-            $('rdv-sifre-yenile-grup').style.display = 'block';
-            sifreBilgi('Numaranız kayıtlıysa SMS ile kod gönderildi. Kodu ve yeni şifrenizi aşağıya girin.', 'ok');
-            $('rdv_sifre_kod').focus();
-        } catch (hata) { sifreBilgi(hata.message, 'err'); }
-    });
-});
-
-$('rdv-sifre-yenile').addEventListener('click', () => {
-    const telefon = telefonOku();
-    const yeni = $('rdv_yeni_sifre').value;
-    butonluIs($('rdv-sifre-yenile'), 'Kaydediliyor...', async () => {
-        try {
-            await api('/musteri-oturum/sifre-sifirla', { yontem: 'POST', govde: { cep_telefon: telefon, salon_id: SALON, kod: $('rdv_sifre_kod').value, yeni_sifre: yeni } });
-            $('rdv_sifre').value = yeni;
-            $('rdv-sifre-yenile-grup').style.display = 'none';
-            sifreBilgi('Şifreniz güncellendi. "Randevuyu Oluştur" ile devam edebilirsiniz.', 'ok');
-        } catch (hata) { sifreBilgi(hata.message, 'err'); }
+$('rdv-kod-tekrar').addEventListener('click', () => {
+    butonluIs($('rdv-kod-tekrar'), 'Gönderiliyor...', async () => {
+        try { await kodIste(); } catch (hata) { kodBilgi(hata.message, 'err'); }
     });
 });
 

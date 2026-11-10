@@ -136,7 +136,8 @@ class VitrinCarkServisi
 
         return $sonuc['odul'] + [
             'yeniUye' => $sonuc['yeni'],
-            'oturum'  => $sonuc['yeni'] ? $this->oturum->oturumAc($sonuc['user_id'], $salonId) : null,
+            // Telefon kodla dogrulandi: kayitli musteri de giris yapar (kullanici 2026-11-10, sitede kodla giris).
+            'oturum'  => $this->oturum->oturumAc($sonuc['user_id'], $salonId),
         ];
     }
 

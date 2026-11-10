@@ -75,8 +75,8 @@
       @if($vitrinBetikleri ?? true)
       <script src="{{ asset('js/site/vitrin-sayfa.js') }}?v=1"></script>
       <script src="{{ asset('js/site/vitrin-personel.js') }}?v=1"></script>
-      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=3"></script>
-      @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=1"></script>@endif
+      <script type="module" src="{{ asset('js/site/vitrin-randevu.js') }}?v=4"></script>
+      @if(!empty($cark))<script type="module" src="{{ asset('js/site/vitrin-cark.js') }}?v=2"></script>@endif
       @endif
       @stack('sayfa')
    </body>

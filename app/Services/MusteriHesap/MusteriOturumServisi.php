@@ -30,6 +30,9 @@ use Illuminate\Support\Str;
 class MusteriOturumServisi
 {
     private const SIFRE_KOD_AMAC = 'musteri_sifre';
+
+    /** Sitede kodla giris/kayit; kod numaraya baglidir (amac:telefon). */
+    private const GIRIS_KOD_AMAC = 'musteri_site_giris';
     private const UYGULAMA_SIFRE_UZUNLUK = 6;
 
     public function __construct(
@@ -60,29 +63,36 @@ class MusteriOturumServisi
     }
 
     /**
-     * Hizli kayit (eski randevuonaylaDirekt): numara yeniyse hesap acar ve oturum verir;
-     * numara kayitliysa sifre_gerekli doner, istemci sifre sorup giris'e gecer (mini site akisi geregi).
-     * Numara taramasina karsi IP (saatte 5) ve numara (gunde 3) siniri kayitli numarada da islenir:
-     * eskiden kayitli numara hic sayilmiyordu, sinirsiz "bu numara kayitli mi" sorgusu yapilabiliyordu.
+     * Sitede kodla giris, adim 1 (kullanici karari 2026-11-10: "loginsiz randevu olmamali, numarayi bilen giris
+     * yapamamali"). Kayit yollarinin ortak kapisindan gecer (bot, IP, numara siniri); kod WhatsApp oncelikli gider.
+     * Numara kayitli olsa da olmasa da ayni cevap: hesap varligi sizdirilmaz. Eski kodsuz hizli kayit (yeni numaraya
+     * dogrulamasiz hesap + oturum) kaldirildi.
      */
-    public function kayit(array $g, string $ip): array
+    public function girisKoduGonder(array $g, string $ip): void
     {
         $tel = $this->kayitKapisi($g, $ip);
-        if ($this->hesap->telefonlaBul($tel) !== null) {
-            return ['sifre_gerekli' => true];
-        }
-
         $salonId = (int) $g['salon_id'];
-        $this->kapi->salon($salonId);
-        $userId = $this->hesapAc((string) $g['ad_soyad'], $tel, $salonId);
+        $salon = $this->kapi->salon($salonId);
+        OnayKodu::uretVeGonder(self::GIRIS_KOD_AMAC.':'.$tel, $salonId, 0, [], fn (string $kod) => $this->mesajGonder(
+            $tel, $salon->salon_adi.' giriş kodunuz: '.$kod.'. Kod 10 dakika geçerlidir.', 'Dogrulama', $salonId));
+    }
 
-        return ['sifre_gerekli' => false] + $this->oturumAc($userId, $salonId);
+    /** Adim 2: kod dogruysa musteri bulunur ya da acilir (ad yalniz yeni hesapta kullanilir) ve oturum verilir. */
+    public function kodlaGiris(string $telefonHam, int $salonId, string $kod, string $adSoyad): array
+    {
+        $tel = $this->telefon($telefonHam);
+        if (! OnayKodu::dogrulaSinirli(self::GIRIS_KOD_AMAC.':'.$tel, $salonId, 0, $kod)) {
+            throw new GecersizIslemException('Kod hatalı veya süresi dolmuş.');
+        }
+        $musteri = $this->dogrulanmisMusteri($adSoyad, $tel, $salonId);
+
+        return ['yeni' => $musteri['yeni']] + $this->oturumAc($musteri['user_id'], $salonId);
     }
 
     /**
-     * Telefonu kodla dogrulanmis misafir (vitrin carki hediyesi; kod oncesi kayitKapisi'ndan gecer). Numara yeniyse
-     * kayit() ile ayni hesap acilir; kayitliysa yalniz salon portfoyu garantilenir. Oturum VERMEZ: cagiran isini bitirince
-     * yeni hesaba oturumAc ile verir; kayitli numaraya web'de kodla giris yoktur (sifreyle girer).
+     * Telefonu kodla dogrulanmis musteri (sitede kodla giris, vitrin carki hediyesi; kod oncesi kayitKapisi'ndan gecer).
+     * Numara yeniyse hesap acilir; kayitliysa yalniz salon portfoyu garantilenir. Oturum VERMEZ: cagiran isini bitirince
+     * oturumAc ile verir.
      *
      * @return array{user_id:int, yeni:bool}
      */
@@ -99,7 +109,7 @@ class MusteriOturumServisi
         return ['user_id' => $this->hesapAc($adSoyad, $tel, $salonId), 'yeni' => true];
     }
 
-    /** Sifresiz yeni musteri hesabi + salon portfoyu (hizli kayit ve dogrulanmis misafir ortak). */
+    /** Sifresiz yeni musteri hesabi + salon portfoyu (telefonu kodla dogrulanmis musteri). */
     private function hesapAc(string $adSoyad, string $tel, int $salonId): int
     {
         return DB::transaction(function () use ($adSoyad, $tel, $salonId) {
@@ -150,7 +160,7 @@ class MusteriOturumServisi
     }
 
     /**
-     * Kayit yollarinin ortak kapisi (hizli kayit, uygulama kaydi, vitrin carki misafir kaydi): bot + IP siniri, numara
+     * Kayit yollarinin ortak kapisi (sitede kodla giris, uygulama kaydi, vitrin carki misafir kaydi): bot + IP siniri, numara
      * siniri; deneme kayitli numarada da sayilir. Numara gunluk sinira ulasinca kayitli/kayitsiz ayni 429'u alir.
      *
      * @param  array{cep_telefon:string, _hp?:?string, form_sure_sn?:int|string|null}  $g

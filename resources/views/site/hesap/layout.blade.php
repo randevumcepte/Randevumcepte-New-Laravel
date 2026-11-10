@@ -63,6 +63,6 @@
          </footer>
       </div>
       <script type="module" src="/js/telefon-ulke.js?v=1"></script>
-      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=2"></script>
+      <script type="module" src="{{ asset('js/site/hesap.js') }}?v=3"></script>
    </body>
 </html>

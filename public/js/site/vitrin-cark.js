@@ -235,8 +235,6 @@ if (pop && veri) {
         }
         taslak = null;
         if (data.oturum && data.oturum.token) tokenYaz(data.oturum.token);
-        // Kayitli numara: odul hesaba yazildi, web'de kodla oturum acilmaz (musteri sifresiyle girer).
-        const giris = data.yeniUye ? '' : `<a href="${esc(pop.dataset.giris)}" style="display:block; text-align:center; margin:4px 0 10px; font-size:13px; color:#fff; text-decoration:underline;">Hediyeniz hesabınıza eklendi — görmek için giriş yapın</a>`;
         const baslik = data.yeniUye ? '🎉 Hesabın Hazır' : '🎉 Hediyen Hesabında';
         if (data.odulKodu) {
             content.innerHTML = `
@@ -244,14 +242,12 @@ if (pop && veri) {
                <h2 class="cark-popup__title" style="font-size:22px;">Kupon Kodunuz</h2>
                <div style="margin:14px 0; padding:14px 22px; background:#fef3c7; color:#92400e; border-radius:12px; font-family:monospace; font-size:26px; font-weight:800; letter-spacing:5px; border:2px dashed #f59e0b; display:inline-block;">${esc(data.odulKodu)}</div>
                <p class="cark-popup__sub" style="font-size:13px;">Bu kodu 30 gün içinde salonda kullanabilirsiniz.</p>
-               ${giris}
                <button type="button" class="cark-popup__cta" data-cark-close>Tamam</button>`;
         } else {
             content.innerHTML = `
                <span class="cark-popup__eyebrow">${baslik}</span>
                <h2 class="cark-popup__title" style="font-size:22px;">Puanın eklendi!</h2>
                <p class="cark-popup__sub">Profilinizden puan hediyelerinize göz atabilirsiniz.</p>
-               ${giris}
                <button type="button" class="cark-popup__cta" data-cark-close>Tamam</button>`;
         }
     }
