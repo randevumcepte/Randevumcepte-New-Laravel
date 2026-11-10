@@ -772,49 +772,35 @@ async function tahsilatSil(id) {
   await adisyonYukle();
 }
 
-/* ───────────── Alacak (vade): yeni / düzenle / iptal ───────────── */
-function alacakFormAc() {
-  if (!adisyonId) { mesaj('Önce en az bir kalem ekleyin.', 'bilgi'); return; }
-  const f = el('#t-alacak-form');
-  if (!f.hidden) { alacakFormKapat(); return; }
-  el('#t-taksit-form').hidden = true;
-  duzenlenenAlacak = null;
-  el('#t-alacak-kaydet').textContent = 'Alacağı Kaydet';
-  f.hidden = false;
-  const kalan = adisyon?.hesap?.kalan || 0;
-  el('#t-alacak-tutar').value = kalan > 0 ? kalan : '';
-  el('#t-alacak-not').value = '';
-  tarihAyarla('#t-alacak-tarih', new Date().toISOString().slice(0, 10));
-}
+/* ───────────── Alacak: düzenle / iptal ─────────────
+   Yeni alacak "Taksit Yap" ile açılır (kullanıcı 2026-11-10: ayrı "Alacak (Vade) Oluştur" kaldırıldı). Form yalnız
+   taksite bağlı olmayan eski alacakları düzenlemek için satırdaki kalemle açılır. */
 function alacakFormKapat() {
   el('#t-alacak-form').hidden = true;
   duzenlenenAlacak = null;
-  el('#t-alacak-kaydet').textContent = 'Alacağı Kaydet';
 }
 function alacakDuzenle(id) {
   const x = (adisyon.alacaklar || []).find((a) => a.id === id);
   if (!x) return;
+  el('#t-taksit-form').hidden = true;
   duzenlenenAlacak = id;
   el('#t-alacak-form').hidden = false;
   el('#t-alacak-tutar').value = x.tutar;
   el('#t-alacak-not').value = x.aciklama || '';
   tarihAyarla('#t-alacak-tarih', x.planlanan_odeme_tarihi);
-  el('#t-alacak-kaydet').textContent = 'Değişikliği Kaydet';
   el('#t-alacak-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 async function alacakKaydet() {
+  if (!duzenlenenAlacak) return;
   const tutar = parseFloat(el('#t-alacak-tutar').value || '0');
   if (!(tutar > 0)) { mesaj('Alacak tutarı girin', 'hata'); return; }
-  const body = {
-    salon_id: salonId, adisyon_id: adisyonId, tutar,
+  const { ok, kod, govde } = await api('PATCH', '/alacak/' + duzenlenenAlacak, { body: {
+    tutar,
     planlanan_odeme_tarihi: tarihDeger('#t-alacak-tarih') || null,
     aciklama: el('#t-alacak-not').value || null,
-  };
-  const { ok, kod, govde } = duzenlenenAlacak
-    ? await api('PATCH', '/alacak/' + duzenlenenAlacak, { body })
-    : await api('POST', '/alacak', { body });
+  } });
   if (!ok) { mesaj(`Alacak kaydedilemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
-  mesaj(duzenlenenAlacak ? 'Alacak güncellendi.' : 'Alacak oluşturuldu.', 'ok');
+  mesaj('Alacak güncellendi.', 'ok');
   alacakFormKapat();
   await adisyonYukle();
 }
@@ -954,8 +940,7 @@ function iskelet() {
           <button id="t-onizle" class="t-btn mor">Tahsil Et (Önizle)</button>
           <button id="t-duzen-vazgec" class="t-btn ikincil" hidden>Düzenlemeden Vazgeç</button>
 
-          <!-- Alacak (vade) oluşturma -->
-          <button id="t-alacak-ac" class="t-btn ikincil"><i class="bi bi-wallet2"></i> Alacak (Vade) Oluştur</button>
+          <!-- Alacak düzenleme (satırdaki kalemle açılır) -->
           <div id="t-alacak-form" class="t-alacak-form" hidden>
             <div class="grid">
               <div><label>Alacak Tutarı (₺)</label><input id="t-alacak-tutar" type="number" step="0.01" min="0"></div>
@@ -963,7 +948,7 @@ function iskelet() {
             </div>
             <label>Not (opsiyonel)</label>
             <input id="t-alacak-not" type="text" placeholder="örn. 2. taksit">
-            <button id="t-alacak-kaydet" class="t-btn mor">Alacağı Kaydet</button>
+            <button id="t-alacak-kaydet" class="t-btn mor">Değişikliği Kaydet</button>
           </div>
 
           <!-- Taksit Yap: ön ödeme + kalan aylık taksit -->
@@ -1001,7 +986,6 @@ function iskelet() {
   el('#t-ekle-iptal').onclick = () => { el('#t-ekle-panel').hidden = true; };
   paketSatisBagla(el('#t-ekle-paket'), { paketBul: katalogPaketi, hizmetler: () => katalog?.hizmetler, fiyatAlani: () => el('#t-ekle-fiyat') });
   document.querySelectorAll('.t-ekle-btns [data-tip]').forEach((b) => (b.onclick = () => ekleAc(b.dataset.tip)));
-  el('#t-alacak-ac').onclick = alacakFormAc;
   el('#t-alacak-kaydet').onclick = alacakKaydet;
   el('#t-taksit-ac').onclick = taksitFormAc;
   el('#t-taksit-on').oninput = taksitKalan;
