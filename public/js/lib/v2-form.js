@@ -1,7 +1,7 @@
 /**
  * v2 FORM ARŞİVİ bileşeni — TEK KAYNAK. Form Yönetimi sayfası (formlar-v2.js) ve müşteri
  * detay "Sözleşmeler/Belgeler" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=9';
+ * Import yolu her yerde AYNI olmalı:  import { formArsivi } from '/js/lib/v2-form.js?v=10';
  *
  * Arşiv sekmeleri (Tümü / Onaylananlar / Beklenenler / İptal Edilenler / Harici Belgeler),
  * Form Gönder, Sözleşme Oluştur, Belge Ekle modalları. İş kuralları SUNUCUDA: satırın
@@ -40,24 +40,70 @@ function tarihBagla(kap) {
   });
 }
 
-/** İmza tuvali (fare + dokunmatik, pointer events). */
+/**
+ * İmza tuvali (fare, kalem, dokunmatik). Akıcı çizgi: tarayıcının ara noktaları (getCoalescedEvents) alınır ve noktalar
+ * orta nokta eğrileriyle (quadraticCurveTo) birleştirilir; düz çizgi parçaları köşeli görünürdü. Tuval gerçek boyutuna ve
+ * piksel yoğunluğuna göre kurulur (pencere açılış animasyonunda ölçülse bile çizime başlarken düzeltilir).
+ */
 function imzaAlani(cv) {
   const ctx = cv.getContext('2d');
-  let ciziyor = false, dolu = false;
+  let dolu = false;
+  let noktalar = null;
+  const kalem = () => {
+    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = ctx.fillStyle = '#1f1f2e';
+  };
   const boyutla = () => {
     const r = cv.getBoundingClientRect(), o = window.devicePixelRatio || 1;
-    cv.width = r.width * o; cv.height = r.height * o;
-    ctx.scale(o, o); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1f1f2e';
+    const g = Math.round(r.width * o), y = Math.round(r.height * o);
+    if (!g || !y || (cv.width === g && cv.height === y)) return;
+    const eski = dolu ? cv.toDataURL('image/png') : null; // boyut değişirse çizim korunur
+    cv.width = g; cv.height = y;
+    ctx.setTransform(o, 0, 0, o, 0, 0);
+    kalem();
+    if (eski) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, r.width, r.height); img.src = eski; }
   };
-  requestAnimationFrame(boyutla);
+  if (window.ResizeObserver) new ResizeObserver(boyutla).observe(cv); else requestAnimationFrame(boyutla);
   const nokta = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  cv.addEventListener('pointerdown', (e) => { ciziyor = true; cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.moveTo(...nokta(e)); });
-  cv.addEventListener('pointermove', (e) => { if (!ciziyor) return; ctx.lineTo(...nokta(e)); ctx.stroke(); dolu = true; });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => cv.addEventListener(t, () => { ciziyor = false; }));
+  const orta = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const ciz = () => {
+    const n = noktalar.length;
+    ctx.beginPath();
+    if (n === 1) { ctx.arc(noktalar[0][0], noktalar[0][1], ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill(); return; }
+    if (n === 2) { ctx.moveTo(...noktalar[0]); ctx.lineTo(...orta(noktalar[0], noktalar[1])); ctx.stroke(); return; }
+    const [a, b, c] = noktalar.slice(-3);
+    ctx.moveTo(...orta(a, b));
+    ctx.quadraticCurveTo(b[0], b[1], ...orta(b, c));
+    ctx.stroke();
+  };
+  const bitir = () => {
+    if (noktalar && noktalar.length > 1) { // son orta noktadan kalemin kalktığı noktaya
+      const [a, b] = noktalar.slice(-2);
+      ctx.beginPath(); ctx.moveTo(...orta(a, b)); ctx.lineTo(...b); ctx.stroke();
+    }
+    noktalar = null;
+  };
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    boyutla();
+    cv.setPointerCapture(e.pointerId);
+    noktalar = [nokta(e)];
+    ciz();
+    dolu = true;
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!noktalar) return;
+    const olaylar = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
+    for (const p of (olaylar.length ? olaylar : [e])) { noktalar.push(nokta(p)); ciz(); }
+  });
+  ['pointerup', 'pointercancel'].forEach((t) => cv.addEventListener(t, bitir));
   return {
     dolu: () => dolu,
     veri: () => cv.toDataURL('image/png'),
-    temizle: () => { ctx.clearRect(0, 0, cv.width, cv.height); dolu = false; },
+    temizle: () => {
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.restore();
+      dolu = false; noktalar = null;
+    },
   };
 }
 
