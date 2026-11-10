@@ -33,6 +33,7 @@ class OturumApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['oturum.kod_giris_yalniz_mobil' => false]); // asagidaki kod testleri kurali degil akisi dener
         config([
             'database.default' => 'oturum_sqlite',
             'database.connections.oturum_sqlite' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '', 'foreign_key_constraints' => false],
@@ -575,5 +576,14 @@ class OturumApiTest extends TestCase
 
         $this->postJson('/api/v2/oturum/kod-dogrula', $istek + ['kod' => '123456'])
             ->assertOk()->assertJsonPath('veri.musteri.id', $inceleme);
+    }
+
+    public function test_kodla_giris_yalniz_mobil_web_istegi_reddedilir(): void
+    {
+        config(['oturum.kod_giris_yalniz_mobil' => true]);
+
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL])->assertStatus(422)
+            ->assertJsonPath('mesaj', 'Kodla giriş yalnız mobil uygulamada kullanılabilir. Web panelinde şifrenizle giriş yapın.');
+        $this->postJson('/api/v2/oturum/kod-iste', ['cep_telefon' => self::TEL, 'app_bundle' => self::ANA_BUNDLE])->assertOk();
     }
 }

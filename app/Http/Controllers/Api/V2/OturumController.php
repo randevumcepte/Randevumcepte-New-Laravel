@@ -42,6 +42,9 @@ class OturumController extends V2Controller
 
     public function kodIste(Request $request, TekKullanimlikGirisServisi $servis)
     {
+        if (config('oturum.kod_giris_yalniz_mobil') && ! $request->filled('app_bundle')) {
+            return ApiCevap::hata('Kodla giriş yalnız mobil uygulamada kullanılabilir. Web panelinde şifrenizle giriş yapın.', 422);
+        }
         $g = $this->alanlariDogrula($request, [
             'cep_telefon' => ['required', 'string', 'max:30'],
             'hesap_turu'  => self::HESAP_TURU,

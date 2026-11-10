@@ -14,6 +14,9 @@ return [
     // Tipsiz (eski sistemin 'appToken') token KAPALI (kullanici 2026-11-09): musteri ve yetkili ayni adla uretildigi icin
     // hesap tipi guvenle cozulemez, id cakismasinda guard'lar arasi erisim olur. Eski panel koprusu ('v2-web') etkilenmez.
     // Guncelleme alan mobil kullanici bir kez kodla yeniden giris yapar. Acil geri donus: OTURUM_TIPSIZ_TOKEN_KABUL=true.
+    // Kodla (OTP) giris yalniz mobil uygulamada (kullanici 2026-11-10); web panel sifreyle girer. Mobil istek app_bundle tasir.
+    'kod_giris_yalniz_mobil' => (bool) env('OTURUM_KOD_GIRIS_YALNIZ_MOBIL', true),
+
     'tipsiz_token_kabul' => (bool) env('OTURUM_TIPSIZ_TOKEN_KABUL', false),
     'kopru_token_adi'    => 'v2-web',
 
