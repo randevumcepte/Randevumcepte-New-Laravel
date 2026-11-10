@@ -43,6 +43,8 @@ class RaporSecenekServisi
                 'donemler' => RaporDonemi::secenekListesi(),
                 'varsayilan_donem' => 'ay',
                 'odeme_yontemleri' => DB::table('odeme_yontemleri')->orderBy('id')->get(['id', 'odeme_yontemi'])->all(),
+                // Banka filtresi (eski kasadefteri'nde secici vardi ama baglanmamisti): yalniz gelirleri suzer.
+                'bankalar' => DB::table('bankalar')->orderBy('banka')->get(['id', 'banka'])->all(),
                 'yetkiler' => [
                     'kasa_gor'         => $var('rapor.kasa'),
                     'gun_sonu'         => $var('rapor.kasa'),

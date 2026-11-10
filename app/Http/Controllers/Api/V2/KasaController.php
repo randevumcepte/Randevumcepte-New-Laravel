@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
  * gunsonuraporu, devreden-aylar, kasayaparaekle, kasadanparaal, paracekmeonaykodugonder,
  * tahsilatkaldir kasa dali) ve mobil v1 kasa uclarinin TEK v2 karsiligi.
  *
- *   GET    /kasa/ozet?salon_id=&donem=&baslangic=&bitis=&odeme_yontemi_id=      rapor.kasa
+ *   GET    /kasa/ozet?salon_id=&donem=&baslangic=&bitis=&odeme_yontemi_id=&banka_id=      rapor.kasa (banka yalniz gelir)
  *   GET    /kasa/gelirler?…&ara=&sirala=&yon=&page=&per_page=                     rapor.kasa
  *   GET    /kasa/giderler?…                                                       rapor.kasa + finans.masraf_gor
  *   GET    /kasa/gelir/{id}?salon_id=                                             rapor.kasa
@@ -53,7 +53,7 @@ class KasaController extends RaporTabanController
         }
         [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
-        return ApiCevap::basarili($this->rapor->ozet($salonId, $this->donem($r), $this->odemeYontemi($r)));
+        return ApiCevap::basarili($this->rapor->ozet($salonId, $this->donem($r), $this->odemeYontemi($r), $r->integer('banka_id') ?: null));
     }
 
     public function gelirler(Request $r)
@@ -69,6 +69,7 @@ class KasaController extends RaporTabanController
             $salonId, $this->donem($r), $this->odemeYontemi($r),
             $this->liste($r, KasaRaporServisi::GELIR_SIRALANABILIR, 'odeme_tarihi'),
             $this->yetkiVar($uid, $salonId, 'satis.tahsilat_sil'),
+            $r->integer('banka_id') ?: null,
         ));
     }
 

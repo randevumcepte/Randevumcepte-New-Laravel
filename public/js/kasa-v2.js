@@ -23,7 +23,7 @@ const kok = document.getElementById('rc-kasa');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
-const durum = { odemeYontemi: '' };
+const durum = { odemeYontemi: '', banka: '' };
 let secenek = null;
 let donem = null;
 let gelirTablo = null;
@@ -74,6 +74,8 @@ async function baslat() {
     <div class="rp-filtre">
       <label class="rc-alan"><span class="rp-etiket">Ödeme Yöntemi</span>
         <select id="ksOdeme">${secim(secenek.odeme_yontemleri, 'id', 'odeme_yontemi', '', 'Hepsi')}</select></label>
+      <label class="rc-alan" title="Banka filtresi yalnız gelirlere uygulanır (giderlerde banka bilgisi tutulmaz)."><span class="rp-etiket">Banka</span>
+        <select id="ksBanka">${secim(secenek.bankalar || [], 'id', 'banka', '', 'Hepsi')}</select></label>
       <div id="ksDonem"></div>
       <button class="rc-btn rp-btn-kehribar" id="ksAylik"><i class="bi bi-calendar3"></i> Devreden Aylar</button>
     </div>
@@ -85,12 +87,13 @@ async function baslat() {
 
   donem = donemSecici(el('#ksDonem'), { donemler: secenek.donemler, varsayilan: secenek.varsayilan_donem, onDegis: yenile });
   el('#ksOdeme').onchange = (e) => { durum.odemeYontemi = e.target.value; yenile(); };
+  el('#ksBanka').onchange = (e) => { durum.banka = e.target.value; yenile(); };
   el('#ksAylik').onclick = aylikAc;
   tablolariKur();
   yenile();
 }
 
-const filtre = () => ({ salon_id: salonId, odeme_yontemi_id: durum.odemeYontemi, ...donem.params() });
+const filtre = () => ({ salon_id: salonId, odeme_yontemi_id: durum.odemeYontemi, banka_id: durum.banka, ...donem.params() });
 
 /** Kartlar + tablolar MEVCUT filtreyle (her yazmadan sonra da). */
 function yenile() {
@@ -107,8 +110,8 @@ async function ozetYukle() {
   donem.goster(v.donem);
   const netEtiket = { bugun: 'Günlük Net Kasa', dun: 'Günlük Net Kasa', ay: 'Aylık Net Kasa', gecen_ay: 'Aylık Net Kasa', yil: 'Yıllık Net Kasa', gecen_yil: 'Yıllık Net Kasa' }[v.donem.donem] || 'Dönem Net Kasa';
   el('#ksOzet').innerHTML = ozetKart('bi-arrow-up-circle', 'Gelir', TL(v.gelir), 'turkuaz')
-    + ozetKart('bi-arrow-down-circle', 'Gider', TL(v.gider), 'mor')
-    + ozetKart('bi-wallet2', netEtiket, TL(v.net), 'mavi')
+    + ozetKart('bi-arrow-down-circle', durum.banka ? 'Gider (banka filtresi uygulanmaz)' : 'Gider', TL(v.gider), 'mor')
+    + ozetKart('bi-wallet2', netEtiket, v.net === null ? '—' : TL(v.net), 'mavi')
     + ozetKart('bi-graph-up', 'Toplam Kazanç (Tüm Zamanlar)', TL(v.toplam_kazanc), 'yesil');
 }
 

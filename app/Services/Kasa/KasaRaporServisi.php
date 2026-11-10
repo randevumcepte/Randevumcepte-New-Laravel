@@ -31,11 +31,15 @@ class KasaRaporServisi
 
     public function __construct(private KasaTutar $tutar) {}
 
-    /** Kartlar: donem gelir / gider / net + tum zamanlar "Toplam Kazanc" (filtresiz, eskiyle ayni). */
-    public function ozet(int $salonId, RaporDonemi $d, ?int $odemeYontemiId): array
+    /**
+     * Kartlar: donem gelir / gider / net + tum zamanlar "Toplam Kazanc" (filtresiz, eskiyle ayni).
+     * Banka filtresi yalniz geliri suzer (masraflarda banka tutulmaz); o zaman net verilmez (null): suzulmus gelirden
+     * tum giderleri dusmek yaniltici olur.
+     */
+    public function ozet(int $salonId, RaporDonemi $d, ?int $odemeYontemiId, ?int $bankaId = null): array
     {
         $faturali = $this->tutar->faturaliMi($salonId);
-        $gelir = (float) $this->gelirSorgusu($salonId, $faturali, $d, $odemeYontemiId)->sum(DB::raw(KasaTutar::tutarSql($faturali)));
+        $gelir = (float) $this->gelirSorgusu($salonId, $faturali, $d, $odemeYontemiId, $bankaId)->sum(DB::raw(KasaTutar::tutarSql($faturali)));
         $gider = (float) $this->giderSorgusu($salonId, $d, $odemeYontemiId)->sum('m.tutar');
         $tumGelir = (float) $this->gelirSorgusu($salonId, $faturali)->sum(DB::raw(KasaTutar::tutarSql($faturali)));
         $tumGider = (float) $this->giderSorgusu($salonId)->sum('m.tutar');
@@ -43,7 +47,7 @@ class KasaRaporServisi
         return [
             'gelir'          => round($gelir, 2),
             'gider'          => round($gider, 2),
-            'net'            => round($gelir - $gider, 2),
+            'net'            => $bankaId ? null : round($gelir - $gider, 2),
             'toplam_kazanc'  => round($tumGelir - $tumGider, 2),
             'faturasiz_gizle' => $faturali,
             'donem'          => $d->dizi(),
@@ -56,10 +60,10 @@ class KasaRaporServisi
      *
      * @param  array  $o  ListeIstegi::dizi()
      */
-    public function gelirler(int $salonId, RaporDonemi $d, ?int $odemeYontemiId, array $o, bool $silebilir): array
+    public function gelirler(int $salonId, RaporDonemi $d, ?int $odemeYontemiId, array $o, bool $silebilir, ?int $bankaId = null): array
     {
         $faturali = $this->tutar->faturaliMi($salonId);
-        $q = $this->gelirSorgusu($salonId, $faturali, $d, $odemeYontemiId)
+        $q = $this->gelirSorgusu($salonId, $faturali, $d, $odemeYontemiId, $bankaId)
             ->leftJoin('users as u', 'u.id', '=', 't.user_id')
             ->leftJoin('salon_personelleri as p', 'p.id', '=', 't.olusturan_id')
             ->leftJoin('odeme_yontemleri as oy', 'oy.id', '=', 't.odeme_yontemi_id')
@@ -221,13 +225,14 @@ class KasaRaporServisi
         return ['yil' => $yil, 'aylar' => $aylar, 'toplam_net' => round(array_sum(array_column($aylar, 'net')), 2)];
     }
 
-    /** Salonun tahsilatlari (donem/odeme yontemi opsiyonel; faturasiz gizlemede yalniz faturali kisim). */
-    public function gelirSorgusu(int $salonId, bool $faturali, ?RaporDonemi $d = null, ?int $odemeYontemiId = null): Builder
+    /** Salonun tahsilatlari (donem/odeme yontemi/banka opsiyonel; faturasiz gizlemede yalniz faturali kisim). */
+    public function gelirSorgusu(int $salonId, bool $faturali, ?RaporDonemi $d = null, ?int $odemeYontemiId = null, ?int $bankaId = null): Builder
     {
         return DB::table('tahsilatlar as t')
             ->where('t.salon_id', $salonId)
             ->when($d, fn ($q) => $q->whereBetween('t.odeme_tarihi', [$d->basSaat(), $d->bitSaat()]))
             ->when($odemeYontemiId, fn ($q) => $q->where('t.odeme_yontemi_id', $odemeYontemiId))
+            ->when($bankaId, fn ($q) => $q->where('t.banka_id', $bankaId))
             ->when($faturali, fn ($q) => $q->whereRaw(KasaTutar::faturaliSql().' > 0'));
     }
 
