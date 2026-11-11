@@ -17,7 +17,7 @@ import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { donemSecici, trTarih } from '/js/lib/v2-donem.js?v=7';
 import { masrafModal, personeller, secim, tarihSecici, formOku } from '/js/lib/v2-kasa-form.js?v=7';
-import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=8';
 
 const kok = document.getElementById('rc-kasa');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

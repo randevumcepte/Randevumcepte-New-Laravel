@@ -7,7 +7,7 @@
  * 409 döner; UI toast gösterir.
  */
 import { qp } from '/js/lib/v2-ortak.js?v=7';
-import { seansTakibi } from '/js/lib/v2-seans.js?v=8';
+import { seansTakibi } from '/js/lib/v2-seans.js?v=9';
 
 const kok = document.getElementById('rc-seans-takibi');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

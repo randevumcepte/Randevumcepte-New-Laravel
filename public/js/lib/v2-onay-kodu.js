@@ -1,6 +1,6 @@
 /**
  * Iki adimli KODLU istek — TEK KAYNAK (silmede hesap sahibi onayi, seans "geldi" musteri dogrulama kodu).
- *   import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
+ *   import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=8';
  *
  * Sunucu sozlesmesi (OnayKoduGerekliException): 428 {veri: {dogrulama_gerekli: true, kod_gonderildi}, mesaj}.
  * Kod sorulur, ayni istek kodla (govdede `alan`) tekrarlanir; "Yeni Kod" bos kodla tekrarlar (sunucu yeni kod
@@ -38,6 +38,8 @@ function kodSor(baslik, mesaj) {
     `<button class="rc-btn rc-btn-ikincil" data-islem="vazgec">Vazgeç</button>
       <button class="rc-btn rc-btn-ikincil" data-islem="yeni">Yeni Kod</button>
       <button class="rc-btn rc-btn-birincil" data-islem="onay"><i class="bi bi-check2"></i> Onayla</button>`, { ikon: 'shield-lock', dar: true, sabit: true });
+    // Kisa soru penceresi: tablet/telefonda form pencereleri gibi alttan degil, ortada acilir (v2-bilesen.css .rc-diyalog).
+    el('.rc-modal', ov).classList.add('rc-diyalog');
     // Esc / kapat dugmesi modali DOM'dan siler: vazgecilmis sayilir.
     const gozcu = new MutationObserver(() => { if (!document.body.contains(ov)) bitir(null); });
     gozcu.observe(document.body, { childList: true });

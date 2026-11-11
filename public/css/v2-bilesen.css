@@ -278,3 +278,27 @@
   body .s-ozet > :last-child:nth-child(odd),
   body .rp-hucreler > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
+
+/* ═════════ FORM ALANLARI EŞİT YÜKSEKLİK + ALTTAN AÇILAN PENCERE: tablet + telefon (kullanıcı 2026-11-11) ═════════
+   Yazı kutusu, tarih, select ve aranabilir select düğmesi aynı yükseklikte (40px); textarea serbest.
+   Pencereler tablette de alttan açılır (telefondaki gibi): tam genişlik, üst köşe yuvarlak, kaydet düğmesi altta sabit. */
+@media (pointer: coarse), (max-width: 1024px) {
+  .rc-alan input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  .rc-alan select, .rc-alan .rs-btn,
+  .rc-modal input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+  .rc-modal select, .rc-modal .rs-btn {
+    height: 40px; min-height: 40px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; line-height: 38px;
+  }
+  .rc-modal .rs-btn, .rc-alan .rs-btn { display: flex; align-items: center; }
+
+  .rc-modal-overlay { padding: 0; align-items: flex-end; }
+  .rc-modal, .rc-modal.rc-dar, .rc-modal.rc-genis {
+    max-width: 100%; border-radius: 20px 20px 0 0; animation: rc-modal-yukari .2s ease;
+    max-height: 94vh; max-height: 94dvh;
+  }
+  .rc-modal-alt { position: sticky; bottom: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .rc-modal-alt .rc-btn { flex: 1; }
+  /* Kısa soru pencereleri (onay kodu) ortada kalır; onay/uyarı kutuları zaten ayrı bileşen (rc-onay). */
+  .rc-modal-overlay:has(> .rc-diyalog) { padding: 16px; align-items: center; }
+  .rc-modal.rc-diyalog { max-width: 460px; border-radius: 20px; animation: rc-modal-ac .18s ease; }
+}

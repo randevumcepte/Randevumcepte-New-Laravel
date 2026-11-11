@@ -1,7 +1,7 @@
 /**
  * v2 SEANS TAKİBİ bileşeni — TEK KAYNAK. Seans Takibi sayfası (seans-takibi-v2.js) ve
  * müşteri detay "Seanslar" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=8';
+ * Import yolu her yerde AYNI olmalı:  import { seansTakibi } from '/js/lib/v2-seans.js?v=9';
  *
  * Eski /isletmeyonetim/seanstakip ekranının akışı birebir:
  *   - Satır: Müşteri · Seans Başlangıcı · Paket Adı · Seans Detayı (Toplam/Beklemede/Geldi/
@@ -17,7 +17,7 @@ import { api, el, esc, mesaj, yazSonuc, tarihStr } from '/js/lib/v2-ortak.js?v=7
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { tarihTr } from '/js/lib/v2-musteri.js?v=7';
-import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=7';
+import { kodluIstek } from '/js/lib/v2-onay-kodu.js?v=8';
 
 // SMS ayarı 16: 'geldi' işareti müşteri doğrulama kodu ister (428 → ortak kod penceresi).
 const KOD = { alan: 'dogrulama_kodu', baslik: 'Müşteri Doğrulama Kodu' };
