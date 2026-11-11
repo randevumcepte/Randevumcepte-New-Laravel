@@ -20,6 +20,9 @@ class PersonelTelefonTest extends TestCase
         $this->assertSame('5321234567', Telefon::normalize('0532 (123) 45-67'));
         $this->assertSame('', Telefon::normalize(null));
         $this->assertSame('', Telefon::normalize(''));
+        // Tek kural (TelefonNumarasi::kanonik): yabanci numara "+KOD", 00 oneki ve nokta da temizlenir.
+        $this->assertSame('5321234567', Telefon::normalize('+90 532.123.45.67'));
+        $this->assertSame('+491761234567', Telefon::normalize('0049 176 1234567'));
     }
 
     public function test_maskeli_veya_eksik_haneli_tespit(): void
