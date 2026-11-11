@@ -179,6 +179,36 @@ $PHP artisan v2:test-hesaplari --sil
 
 Personeller panelin arşiv kuralıyla arşivlenir. Gelecek randevusu olan personel atlanır; önce randevuları panelden başka personele aktarın. Test müşterisi portföyden çıkarılır. Giriş şifreleri bilinmeyen bir değere çevrilir. `TEST_*` anahtarları `.env`'den kaldırılır. Kayıtlar veritabanında kalır. Komut yeniden çalıştırılırsa aynı kayıtlar yeniden etkinleşir.
 
+## 7. Uç yetki taraması
+
+Tüm `/api/v2` uçları, test salonunda (20) hiçbir yetkisi olmayan bir personel token'ıyla birer kez çağrılır. Personelin rolü 5'tir ve yetki şablonundaki bütün anahtarlar kapalıdır. Amaç, yetki denetimini unutan ya da veriye denetimden önce dokunan ucu ekranda görmeden bulmaktır. Test bellek içi SQLite kullanır. Yalnız kimlik, kapsam, yetki ve lisans tabloları kurulur. Yetkiye bakmadan bir iş tablosuna giden uç "no such table" hatası alır ve 500 döner.
+
+Her uç iki kipte çağrılır. `web` kipinde işletme token'ı kullanılır. `mobil` kipinde imzalı mobil token kullanılır ve bütün mobil bayraklar 1 olarak gönderilir. Yazma bayrakları (`*_YAZMA_AKTIF`) açıktır, lisans geçerlidir, istek sınırı kapalıdır. Dış servislere (SMS, WhatsApp, FCM, santral) gerçek istek gitmez.
+
+```sh
+$PHP artisan test --filter=UcYetkiTaramasi
+```
+
+Rapor `storage/logs/uc-yetki-raporu.json` dosyasına yazılır. `kirmizi` dizisi düzeltilecek uçları, `uclar` dizisi bütün uçları listeler. Her satırda kip, yöntem, yol, durum kodu, sınıf, hata metni ve uçun dokunduğu tablolar bulunur.
+
+| Sınıf | Anlamı |
+|---|---|
+| `reddetti` | Veriye ulaşmadan reddetti (401, 403, 404, 422). 422 alan bir uçta doğrulama yetkiden önce çalışıyor olabilir; o uçta yetki denetimi görülemez. |
+| `200-denetimsiz` | Yetkisiz personele başarılı cevap verdi. Ya yetki denetimi yok ya da yalnız kapsam denetleniyor. |
+| `500-denetimden-once-veri` | Denetimden önce iş tablosuna gitti. `alt_sinif` alanı ayrıntıyı verir: `id-ile-kayit-okuma` kaydın salonunu id'den bulup sonra denetleyen kalıptır. `eksik-kolon` ise test şemasındaki bir eksikliktir, uçtaki bir açık değildir. |
+| `yan-etki-sonra-reddetti` | Reddetti ama önce veritabanına yazdı ya da dış servise istek attı. |
+| `izinli-acik` | İzin listesindedir: kimliksiz bir uç ya da her kullanıcıya açık olan bir uç. |
+
+Müşteri (`musteri-uygulama`) ve sistem yönetimi uçlarına işletme token'ı girememelidir. Bu uçlar 401 dışında bir cevap verirse test kırmızı olur.
+
+İzin listesi `tests/Feature/Yetki/UcYetkiIzinListesi.php` dosyasındadır ve her girdinin bir gerekçesi vardır. Bekçi testi şu girdileri kırmızı gösterir:
+
+- Hiçbir rotaya uymayan girdi.
+- Kimliksiz listede olduğu halde kimlik isteyen uç.
+- "Kimlik yeter" listesinde olduğu halde zaten 401 ya da 403 veren uç.
+
+Yeni eklenen bir uç ne izin listesindeyse ne de reddediyorsa tarama testi kırmızı olur.
+
 ## Toplu testten sonra
 
 Eski şifre kayıtlarını maskeleme (`v2:sifre-maskele --gecmis`, geri alınamaz), tek adımlı şifre gönderimi, resim ve logo taşıma, Google Takvim, ana ekran notu, aynı telefonda çok kayıt, `ios_profil`, Flutter git bağlantısı.
