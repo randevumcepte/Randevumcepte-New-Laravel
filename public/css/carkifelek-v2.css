@@ -142,7 +142,7 @@
   .ck-izgara > * { min-width: 0; }
   .ck-onizleme { position: static; }
 }
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .ck-ust { flex-direction: column; align-items: flex-start; }
   .ck-deger { margin-left: 0; }
   .ck-dogrula-form { flex-direction: column; }

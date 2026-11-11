@@ -31,7 +31,7 @@
 
 .ua-hata { color: #c0392b; font-size: 14px; }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .ua-kart { padding: 18px 16px; }
   .ua-onizleme { flex-basis: 100%; }
   .ua-link .rc-btn { flex: 1; }

@@ -5,9 +5,9 @@
 
 @push('stil')
     {{-- Kokpit içindeki ortak formlar: randevu formu (takvim-v2.css .t-* / .rf-*), ön görüşme formu (ongorusmeler-v2.css .og-*) --}}
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=18">
-    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=2">
-    <link rel="stylesheet" href="/css/cagri-merkezi-v2.css?v=3">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=19">
+    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=3">
+    <link rel="stylesheet" href="/css/cagri-merkezi-v2.css?v=4">
 @endpush
 
 @section('icerik')

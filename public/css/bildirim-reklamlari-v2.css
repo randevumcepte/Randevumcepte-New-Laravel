@@ -75,7 +75,7 @@
 @media (max-width: 720px) {
   .br-ikili { grid-template-columns: 1fr; }
   .br-chips { grid-template-columns: 1fr; }
-  .br-ara { min-width: 0; flex: 1; }
+  .br-ara { min-width: 0; flex: 1 1 100%; } /* sekmelerin yanına sıkışıp 48px kalmasın, alta sarılsın */
 }
 
 @media (prefers-color-scheme: dark) {

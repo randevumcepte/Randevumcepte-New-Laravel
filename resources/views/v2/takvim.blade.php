@@ -6,8 +6,8 @@
 @push('stil')
     {{-- EventCalendar (vkurko/calendar) — MIT lisansli, ucretsiz; surum SABIT. --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.16.0/dist/event-calendar.min.css">
-    <link rel="stylesheet" href="/css/takvim-v2.css?v=18">
-    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=2">
+    <link rel="stylesheet" href="/css/takvim-v2.css?v=19">
+    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=3">
 @endpush
 
 @section('icerik')

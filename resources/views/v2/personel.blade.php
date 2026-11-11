@@ -4,7 +4,7 @@
 @section('aktif', 'personel-yonetimi')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/personel-v2.css?v=8">
+    <link rel="stylesheet" href="/css/personel-v2.css?v=9">
 @endpush
 
 @section('icerik')

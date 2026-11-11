@@ -48,7 +48,7 @@
   .f-alt-baslik, .f-onay { color: #ededf5; }
   .f-plan-ozet { color: #cfcfe0; }
 }
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .f-eleman { grid-template-columns: 1fr; }
   .f-eleman-tip { padding-top: 0; }
   .f-eleman-yan { flex-direction: row; align-items: center; justify-content: space-between; }

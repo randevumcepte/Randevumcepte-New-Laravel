@@ -326,7 +326,7 @@ html, body { margin: 0; padding: 0; }
 
 /* ───────────── Aranabilir select (arama-select.js) — tum v2 ekranlari ───────────── */
 .rs-gizli { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important;
-  pointer-events: none !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; padding: 0 !important; }
+  pointer-events: none !important; overflow: hidden !important; min-width: 0 !important; /* ekran CSS'indeki min-width gizli select'i büyütüp sayfayı taşırmasın */ clip: rect(0 0 0 0) !important; border: 0 !important; padding: 0 !important; }
 .rs-btn {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; cursor: pointer;
   height: 40px; min-width: 0; max-width: 100%; padding: 0 10px 0 12px; border: 1px solid var(--rc-cizgi); border-radius: 10px;
@@ -439,7 +439,7 @@ html, body { margin: 0; padding: 0; }
   .rc-tablo tbody tr:nth-child(even) td { background: #20202b; }
   .rc-tablo tbody tr:hover td { background: #27273a; }
 }
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .rc-dt-arac { flex-direction: column; align-items: stretch; }
   .rc-dt-ara { flex-basis: auto; }
   .rc-tablo thead th, .rc-tablo tbody td { padding: 11px 12px; }

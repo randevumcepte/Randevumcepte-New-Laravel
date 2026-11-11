@@ -64,7 +64,7 @@ a.mu-ad:hover { color: #7B2FB8; text-decoration: underline; }
 .md-v { font-size: 14px; color: #1f2533; font-weight: 600; word-break: break-word; }
 .md-notlar { max-height: 150px; overflow-y: auto; white-space: pre-line; }
 .md-duzenle { width: 100%; margin-top: 18px; }
-@media (max-width: 575px) { .md-bilgi { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .md-bilgi { grid-template-columns: 1fr; } }
 
 .md-notlar-bas { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .md-notlar-bas h3, .md-kutu h3, .md-olcum-ust h3 { margin: 0; font-size: 18px; font-weight: 800; color: #5C008E; }

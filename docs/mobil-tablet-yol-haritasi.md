@@ -34,8 +34,8 @@ Yeni CSS'te bu değerler dışında kırılım uydurulmaz.
 | 0 | Test düzeneği + kontrol listesi | ✅ |
 | 1 | Kabuk: çekmece (tablet dahil), telefon header'ı, dokunma hedefi, iOS zoom, şube seçici çekmecede | ✅ |
 | 2 | Ortak bileşenler: tablo kartı, modal dvh, select odak | ✅ |
-| 3 | Ekran bazlı düzeltmeler (takvim → randevu → müşteri → satış/tahsilat → raporlar → diğer) | ⏳ |
-| 4 | Dağınık kırılımların sözleşmeye çekilmesi | ⏳ |
+| 3 | Ekran bazlı düzeltmeler: 32 ekran 360/390/600/820/1180 px'te tarandı, taşma yok | ✅ |
+| 4 | Telefon kırılımları (560/575/640) → 600; ara tablet kırılımları istisna olarak kaldı | ✅ |
 
 ## Ekran kontrol listesi (her yeni/değişen ekran için)
 
@@ -56,3 +56,19 @@ Yerelde Laravel çalışmadığı için ekranlar küçük bir Node sunucusuyla a
 `/api/v2/*` sahte JSON ile. Headless Chrome (puppeteer-core) her profil için
 ekran görüntüsü alır; masaüstü görüntüleri `git show HEAD:` sürümüyle
 karşılaştırılır. (Düzenek proje dışında tutulur; gerekirse `scripts/`e alınabilir.)
+
+## Bilinen istisnalar
+
+- 680–820 px arası ekran özel kırılımlar (personel, ayarlar, rapor, özet, çağrı merkezi,
+  reklam) korunuyor: 860'a çekmek iPad dikey görünümünü gereksiz daraltır. Yeni ekranlar
+  bu değerleri kullanmaz; sözleşmedeki dört kırılımla yazılır.
+- ≥900 px kırılımlara dokunulmadı (dar masaüstü pencereleri de etkilenir).
+- 420 px (personel) çok küçük telefon ince ayarı olarak kaldı.
+
+## Tuzaklar (taramada bulunanlar)
+
+- Tek sütuna inen grid'de `1fr` değil `minmax(0, 1fr)`: `1fr` içeriğin en dar genişliğinin
+  altına inmez, telefonu taşırır.
+- Mobil emülasyonda taşma görünmez (tarayıcı sayfayı uzaklaştırır); kontrol `isMobile:false`
+  ile `scrollWidth > innerWidth` ölçülerek yapılır.
+- Gizli `<select>` (`.rs-gizli`) ekran CSS'indeki `min-width`'i almamalı.

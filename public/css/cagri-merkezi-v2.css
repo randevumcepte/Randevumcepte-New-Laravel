@@ -83,7 +83,7 @@
 .cm-script { background: #f7f8fc; border: 1px solid #eef0f5; border-radius: 10px; padding: 11px 13px; margin-top: 10px; font-size: 13.5px; white-space: pre-wrap; line-height: 1.55; }
 .cm-sonuc-izgara { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .cm-hedef-izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-@media (max-width: 560px) { .cm-sonuc-izgara { grid-template-columns: repeat(2, 1fr); } .cm-hedef-izgara { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .cm-sonuc-izgara { grid-template-columns: repeat(2, 1fr); } .cm-hedef-izgara { grid-template-columns: 1fr; } }
 .cm-etiket { font-size: 11.5px; font-weight: 800; color: #8a90a2; text-transform: uppercase; letter-spacing: .4px; margin: 12px 0 7px; }
 .cm-sonuc { --c: #6b7280; border: 1.5px solid color-mix(in srgb, var(--c) 25%, #fff); background: color-mix(in srgb, var(--c) 5%, #fff); color: var(--c); border-radius: 12px; padding: 10px 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .cm-sonuc .bi { font-size: 17px; }

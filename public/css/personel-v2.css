@@ -157,7 +157,7 @@
   .p-tablo { min-width: 760px; }
 }
 /* Telefon: başlık/buton yığılır, modal alt-sayfa (bottom-sheet) olur, hedefler büyür. */
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .p-kabuk { padding: 2px 0 28px; }
   .p-ust { flex-direction: column; align-items: stretch; gap: 12px; }
   .p-yeni-btn { justify-content: center; padding: 13px 20px; }

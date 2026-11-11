@@ -144,7 +144,7 @@
   .t-kolon { grid-template-columns: 1fr; }
   .t-sag { position: static; }
 }
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .t-ozet-serit { grid-template-columns: repeat(2, 1fr); }
   .t-ekle-btns { width: 100%; }
 }

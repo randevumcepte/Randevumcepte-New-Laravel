@@ -4,7 +4,7 @@
 @section('aktif', 'musteriler')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/musteri-v2.css?v=4">
+    <link rel="stylesheet" href="/css/musteri-v2.css?v=5">
 @endpush
 
 @section('icerik')

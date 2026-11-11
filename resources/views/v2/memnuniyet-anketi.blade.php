@@ -4,7 +4,7 @@
 @section('aktif', 'anket-sonuclari')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/rapor-v2.css?v=1">
+    <link rel="stylesheet" href="/css/rapor-v2.css?v=2">
     <link rel="stylesheet" href="/css/anket-v2.css?v=1">
 @endpush
 

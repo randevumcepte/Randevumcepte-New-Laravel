@@ -125,7 +125,7 @@
   .as-ust h1, .as-kart-ust h4, .as-ayar h6, .as-bos h3 { color: #f0ecff; }
   .as-anahtar-iz { background: #3a3a50; }
 }
-@media (max-width: 575.98px) {
+@media (max-width: 600px) {
   .as-sekme { padding: 9px 14px; font-size: 13px; }
   .as-ayar-izgara { grid-template-columns: 1fr; }
   .as-aksiyon { margin-left: 0; width: 100%; }

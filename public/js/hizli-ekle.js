@@ -19,7 +19,7 @@ const randevuIslem = {};   // salon başına tek çekmece
 
 const EYLEMLER = {
   randevu: {
-    css: '/css/takvim-v2.css?v=18',
+    css: '/css/takvim-v2.css?v=19',
     async ac({ salon }) {
       const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=12');
       randevuIslem[salon.id] ||= randevuIslemleri({ salonId: salon.id });
@@ -27,14 +27,14 @@ const EYLEMLER = {
     },
   },
   ongorusme: {
-    css: '/css/ongorusmeler-v2.css?v=1',
+    css: '/css/ongorusmeler-v2.css?v=3',
     async ac({ salon }) {
       const { ongorusmeFormu } = await import('/js/lib/v2-ongorusme.js?v=8');
       ongorusmeFormu({ salonId: salon.id, onKaydet: ekraniTazele('ongorusmeler') });
     },
   },
   musteri: {
-    css: '/css/musteri-v2.css?v=4',
+    css: '/css/musteri-v2.css?v=5',
     async ac({ salon }) {
       const { musteriFormuAc } = await import('/js/lib/v2-musteri.js?v=7');
       musteriFormuAc({
@@ -45,14 +45,14 @@ const EYLEMLER = {
     },
   },
   masraf: {
-    css: '/css/rapor-v2.css?v=1',
+    css: '/css/rapor-v2.css?v=2',
     async ac({ salon }) {
       const { masrafModal } = await import('/js/lib/v2-kasa-form.js?v=7');
       masrafModal({ salonId: salon.id, onKaydet: ekraniTazele('kasadefteri') });
     },
   },
   form: {
-    css: '/css/formlar-v2.css?v=2',
+    css: '/css/formlar-v2.css?v=3',
     async ac({ salon }) {
       const { formGonderModali } = await import('/js/lib/v2-form-gonder.js?v=7');
       formGonderModali({ salonId: salon.id, onGonderildi: ekraniTazele('arsivyonetimi') });

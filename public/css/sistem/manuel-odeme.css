@@ -8,6 +8,6 @@
 .mol-sonuc .baslik { font-weight: 700; color: var(--sy-success); margin-bottom: 8px; font-size: 14px; }
 .mol-link-kutu { display: flex; gap: 8px; }
 .mol-link-kutu .sy-input { flex: 1; }
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .mol-satir, .mol-satir-head { grid-template-columns: 1fr 70px 100px 36px; }
 }

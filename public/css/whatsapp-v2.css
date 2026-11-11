@@ -83,7 +83,7 @@
   .wa-izgara { grid-template-columns: 1fr; }
   .wa-paketler { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .wa-paketler { grid-template-columns: 1fr; }
   .wa-kontor-bant { flex-wrap: wrap; }
   .wa-kontor-rozet { margin-left: 0; }

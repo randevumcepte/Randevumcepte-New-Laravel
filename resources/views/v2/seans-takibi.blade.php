@@ -4,7 +4,7 @@
 @section('aktif', 'seanstakip')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/seans-v2.css?v=5">
+    <link rel="stylesheet" href="/css/seans-v2.css?v=6">
 @endpush
 
 @section('icerik')

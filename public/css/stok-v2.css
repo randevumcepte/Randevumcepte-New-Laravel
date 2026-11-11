@@ -74,4 +74,4 @@
 .st-sayim td { padding: 8px 10px; border-bottom: 1px solid #f1f1f6; }
 .st-sayim input { width: 110px; text-align: center; }
 .st-sayim tr.farkli td { background: #fff8e1; }
-@media (max-width: 560px) { .st-kalem { grid-template-columns: 1fr 1fr; } .st-filtre select { flex: 1; min-width: 0; } }
+@media (max-width: 600px) { .st-kalem { grid-template-columns: 1fr 1fr; } .st-filtre select { flex: 1; min-width: 0; } }

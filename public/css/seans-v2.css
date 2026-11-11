@@ -81,7 +81,7 @@
   .st-bilgi > div, .st-cihaz-bilgi { background: #1b1b26; color: #ededf5; }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 600px) {
   .st-kartlar { grid-template-columns: 1fr; }
   .st-hap { min-width: 44px; padding: 5px 8px; }
 }

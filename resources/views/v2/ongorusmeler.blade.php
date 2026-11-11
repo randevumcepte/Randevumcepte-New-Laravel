@@ -4,7 +4,7 @@
 @section('aktif', 'ongorusmeler')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=2">
+    <link rel="stylesheet" href="/css/ongorusmeler-v2.css?v=3">
 @endpush
 
 @section('icerik')

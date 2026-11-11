@@ -4,7 +4,7 @@
 @section('aktif', 'bildirim-reklamlari')
 
 @push('stil')
-    <link rel="stylesheet" href="/css/bildirim-reklamlari-v2.css?v=1">
+    <link rel="stylesheet" href="/css/bildirim-reklamlari-v2.css?v=2">
 @endpush
 
 @section('icerik')

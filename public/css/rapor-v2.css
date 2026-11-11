@@ -107,7 +107,7 @@
 .rp-serit { display: flex; gap: 18px; flex-wrap: wrap; background: #faf7ff; border-radius: 12px; padding: 10px 14px; margin-bottom: 6px; font-size: 13.5px; color: #555; }
 .rp-saglama { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #e7f6ee; color: #14532d; font-size: 13.5px; }
 .rp-gs-arac { justify-content: space-between; }
-@media (max-width: 560px) { .rp-detay { grid-template-columns: 1fr; } .rp-hero-kpi { align-items: flex-start; } }
+@media (max-width: 600px) { .rp-detay { grid-template-columns: 1fr; } .rp-hero-kpi { align-items: flex-start; } }
 
 /* Gün sonu yazdır: yalnız rapor içeriği */
 @media print {

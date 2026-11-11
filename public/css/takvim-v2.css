@@ -380,9 +380,9 @@
 .rf-anahtar input:checked + .rf-anahtar-top { background: #f59e0b; }
 .rf-anahtar input:checked + .rf-anahtar-top::after { transform: translateX(16px); }
 .rf-govde .rs-btn:disabled { background: #f9fafb; }
-@media (max-width: 640px) { .rf-uc { grid-template-columns: 1fr 1fr; } .rf-uc .rf-alan:first-child { grid-column: 1 / -1; } }
+@media (max-width: 600px) { .rf-uc { grid-template-columns: 1fr 1fr; } .rf-uc .rf-alan:first-child { grid-column: 1 / -1; } }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
   .rf-iki { grid-template-columns: 1fr; }
   .rf-satir-1 { grid-template-columns: 1fr 1fr; }
   .rf-satir-1 .rf-hz { grid-column: 1 / -1; }
