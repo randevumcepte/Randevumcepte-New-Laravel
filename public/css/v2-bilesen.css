@@ -212,4 +212,9 @@
   .rc-modal-govde { padding: 14px 16px; }
   .rc-modal-alt { padding: 10px 16px; }
   .rc-kapat { width: 38px; height: 38px; }
+
+  /* Tablo işlem düğmeleri (göz, düzenle, sil...) */
+  .rc-islemler { gap: 4px; }
+  .rc-islem { height: 28px; min-width: 28px; padding: 0 7px; font-size: 12px; border-radius: 8px; gap: 4px; }
+  .rc-kartli .rc-islemler { gap: 6px; }
 }

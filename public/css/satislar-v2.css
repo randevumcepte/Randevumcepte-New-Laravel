@@ -151,3 +151,9 @@
   .s-t-toplam { background: #2d2340; color: #c9a7f0; } .s-t-odenen { background: #153925; color: #7ad9a4; }
   .s-t-kalan { background: #3a1f24; color: #ff8a8a; } .s-t-sifir { background: #2a2a3a; color: #9a9ab0; }
 }
+
+/* Sıkı görünüm (tablet + telefon; v2-bilesen.css ile aynı eşik): tablo işlem düğmeleri küçülür. */
+@media (pointer: coarse), (max-width: 1024px) {
+  .s-ib { width: 28px; height: 28px; font-size: 13px; border-radius: 8px; }
+  .s-ib-metin { height: 28px; padding: 0 9px; font-size: 12px; border-radius: 8px; gap: 4px; }
+}

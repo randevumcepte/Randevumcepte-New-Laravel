@@ -210,3 +210,9 @@
   .t-indirimler code { background: #33264a; color: #d9b8f7; }
   .t-btn-mini { background: transparent; border-color: #c79bf0; color: #c79bf0; }
 }
+
+/* Sıkı görünüm (tablet + telefon; v2-bilesen.css ile aynı eşik): satır işlem düğmeleri küçülür. */
+@media (pointer: coarse), (max-width: 1024px) {
+  .t-sil, .t-duzen, .t-tahsil { width: 26px; height: 26px; border-radius: 8px; font-size: 12px; }
+  .t-duzen, .t-tahsil { margin-right: 4px; }
+}
