@@ -264,3 +264,13 @@
      gösteriyordu: kartta hücre hep tam genişlik. */
   .rc-tablo.rc-kartli tbody td { max-width: none !important; width: auto !important; }
 }
+
+/* ═════════ ÖZET KARTLARI İKİLİ: telefon + dikey tablet (kullanıcı 2026-11-11) ═════════
+   Otomatik ızgara 3 sütun açıp 4 kartta birini alta yalnız düşürüyordu: iki sütun sabit; tek sayıda kartta son kart tam
+   genişlik (boşluk kalmaz). Sayfa stilleri sonra yüklendiği için seçiciler body ile güçlendirildi. */
+@media (max-width: 600px), (max-width: 1024px) and (orientation: portrait) {
+  body .rc-ozet, body .s-ozet, body .rp-hucreler { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body .rc-ozet > :last-child:nth-child(odd),
+  body .s-ozet > :last-child:nth-child(odd),
+  body .rp-hucreler > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}

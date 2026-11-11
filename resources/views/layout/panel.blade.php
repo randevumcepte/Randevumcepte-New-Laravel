@@ -11,7 +11,7 @@
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
     <link rel="stylesheet" href="/css/panel.css?v=25">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
-    <link rel="stylesheet" href="/css/v2-bilesen.css?v=11">
+    <link rel="stylesheet" href="/css/v2-bilesen.css?v=12">
     {{-- Sağ alt hatırlatma kartları (eski partials/hatirlatma_popup) --}}
     <link rel="stylesheet" href="/css/hatirlatma-kartlari.css?v=1">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
