@@ -81,7 +81,13 @@ function tarihDeger(sel) {
 async function adisyonYukle() {
   const { ok, kod, govde } = await api('GET', '/adisyon/' + adisyonId);
   if (!ok) { mesaj(`Adisyon yüklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
-  adisyon = govde.veri;
+  await adisyonCiz(govde.veri);
+  await indirimYukle();
+}
+
+/** Adisyon verisini ekrana yazar (istek atmaz). Kalem ekleme cevabi guncel adisyonu getirir; yeniden yukleme gerekmez. */
+async function adisyonCiz(veri) {
+  adisyon = veri;
   salonId = adisyon.adisyon.salon_id;
   if (window.rcPanel && salonId) window.rcPanel.salonAyarla(salonId);
   if (!katalog) await katalogYukle(); // kalem satırlarındaki personel seçimi katalogdan
@@ -93,7 +99,6 @@ async function adisyonYukle() {
   studyoOdemeGoster();
   if (tahsilAlacaklar.size) tahsilAlacakCiz();
   tutarOner();
-  await indirimYukle();
 }
 
 /* ───────────── Tahsilat Tutarı / İndirim önerisi (tek yer) ─────────────
@@ -548,7 +553,8 @@ async function kalemEkle() {
     if (!ok) { mesaj(`Kalem eklenemedi (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
     mesaj('Kalem eklendi.', 'ok');
     el('#t-ekle-panel').hidden = true;
-    await adisyonYukle();
+    // Cevaptaki guncel adisyonla yalniz ekran guncellenir (indirimler kalemden etkilenmez, yeniden cekilmez).
+    if (govde?.veri?.adisyon) await adisyonCiz(govde.veri.adisyon); else await adisyonYukle();
   } finally { btn.disabled = false; }
 }
 
@@ -588,11 +594,13 @@ async function yeniSatisAc(kalem) {
   });
   if (!ok || !govde?.basarili) { mesaj(`Satış açılamadı (${kod}): ${govde?.mesaj || ''}`, 'hata'); return; }
   adisyonId = govde.veri.adisyon_id;
+  // Adres sayfa yenilenmeden satisin kendi adresine doner: yenilense de ayni satis acilir.
+  history.replaceState(null, '', `/v2/tahsilat/${adisyonId}?sube=${salonId}`);
   musteriSecici(el('#t-musteri-sec'), { salonId, yol: '/musteri/ara', baslangic: yeniMusteri, sabit: true });
   document.querySelectorAll('.t-yeni-gizle').forEach((x) => { x.hidden = false; });
   el('#t-ekle-panel').hidden = true;
   mesaj('Kalem eklendi.', 'ok');
-  await adisyonYukle();
+  if (govde.veri.adisyon) { await adisyonCiz(govde.veri.adisyon); await indirimYukle(); } else await adisyonYukle();
 }
 
 async function kalemFiyatDegistir(i) {

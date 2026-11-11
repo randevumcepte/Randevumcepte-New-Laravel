@@ -73,6 +73,8 @@ class SatisKalemController extends V2Controller
                 return ['adisyon_id' => (int) $adisyon->id, 'kalem_id' => $kalem['kalem_id'] ?? null];
             });
 
+        $sonuc['adisyon'] = $this->adisyonServisi->getir((int) $sonuc['adisyon_id']); // ekran ikinci istek atmadan cizer
+
         return ApiCevap::basarili($sonuc, 'Satış açıldı.');
     }
 
@@ -91,7 +93,9 @@ class SatisKalemController extends V2Controller
         [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId, (int) $user->id);
 
         $sonuc = $this->servis->ekle($adisyon, $tip, $katalogId, $opt + ['kullanici_id' => (int) $user->id]);
-        $sonuc['hesap'] = $this->adisyonServisi->getir($adisyon)['hesap'];
+        // Guncel adisyon cevapta: ekran ikinci istek atmadan cizer (sayfa yenileniyor gibi gorunmez).
+        $sonuc['adisyon'] = $this->adisyonServisi->getir($adisyon);
+        $sonuc['hesap'] = $sonuc['adisyon']['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Kalem eklendi.');
     }
