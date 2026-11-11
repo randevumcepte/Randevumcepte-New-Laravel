@@ -233,6 +233,10 @@
   .rc-sayfa-aksiyon:not(:has(> :not([hidden]))) { display: none; }
   .rc-sayfa-aksiyon > [hidden] { display: none !important; }
   .rc-sayfa-aksiyon .rc-btn { justify-content: center; text-align: center; padding: 9px 6px; min-width: 0; line-height: 1.15; }
+  /* Sarmalayıcı içindeki düğme (ör. stokta açılır "Ayarlar" menüsü) de sütunu tam doldurur; menü çubuğun ÜSTÜNE açılır. */
+  .rc-sayfa-aksiyon > :not(.rc-btn) { display: flex; min-width: 0; }
+  .rc-sayfa-aksiyon > :not(.rc-btn) > .rc-btn { flex: 1 1 auto; width: 100%; }
+  .rc-sayfa-aksiyon .st-menu-liste { top: auto; bottom: calc(100% + 8px); }
   .s-yeni-btn:not([hidden]) {
     position: fixed; left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 850;
     justify-content: center; margin: 0;
