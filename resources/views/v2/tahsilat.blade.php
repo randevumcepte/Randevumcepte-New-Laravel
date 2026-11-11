@@ -1,7 +1,7 @@
 @extends('layout.panel')
 
 @section('baslik', $adisyonId ? 'Satış & Tahsilat' : 'Yeni Satış')
-@section('aktif', 'tahsilat-modern')
+@section('aktif', 'satis-takibi')
 
 @push('stil')
     <link rel="stylesheet" href="/css/tahsilat-v2.css?v=16">

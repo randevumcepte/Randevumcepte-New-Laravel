@@ -51,11 +51,10 @@ class PanelMenu
             ['etiket' => 'Form Yönetimi',      'ikon' => 'bi bi-file-earmark-text','slug' => 'arsivyonetimi',     'v2_rota' => '/v2/formlar', 'pageindex' => 50, 'yetki' => ['form.olustur', 'form.gonder'], 'studyo_gizle' => true, 'randevu_modulu' => true],
 
             // ───────────── Satış & Finans
-            // Yeni Satış (eski /yenitahsilat): sayfa kapısı eskisiyle aynı — satis.adisyon_olustur.
-            ['etiket' => 'Satış & Tahsilat',   'ikon' => 'bi bi-stars',            'slug' => 'tahsilat-modern',   'v2_rota' => '/v2/yeni-satis', 'pageindex' => 1111,'yetki' => 'satis.adisyon_olustur', 'bolum' => 'Satış & Finans'],
+            // Yeni Satış ve Adisyonlar menüde yok (kullanıcı 2026-11-11): yeni satış Satış Takibi'ndeki düğmeden ve üstteki +
+            // kısayolundan açılır; adisyonların v2 karşılığı Satış Takibi'dir.
             // v2 ekran (aynı host, göreli link) — eski "Satış Takibi" (adisyonlar) karşılığı.
-            ['etiket' => 'Satış Takibi',       'ikon' => 'bi bi-receipt',          'slug' => 'satis-takibi',      'v2_rota' => '/v2/satislar', 'pageindex' => 1112, 'yetki' => ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al']],
-            ['etiket' => 'Adisyonlar',         'ikon' => 'bi bi-files',            'slug' => 'adisyonlar',        'pageindex' => 111, 'yetki' => 'satis.tum_satis_gor'],
+            ['etiket' => 'Satış Takibi',       'ikon' => 'bi bi-receipt',          'slug' => 'satis-takibi',      'v2_rota' => '/v2/satislar', 'pageindex' => 1112, 'yetki' => ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al'], 'bolum' => 'Satış & Finans'],
             ['etiket' => 'Paket Yönetimi',     'ikon' => 'bi bi-grid-3x3',         'slug' => 'paketsatislari',    'v2_rota' => '/v2/paketler', 'pageindex' => 4,   'yetki' => 'paket.tanim_olustur', 'ozellik' => 'uyelik_turu_paketli'],
             ['etiket' => 'Seans Takibi',       'ikon' => 'bi bi-check2-square',    'slug' => 'seanstakip',        'v2_rota' => '/v2/seans-takibi', 'pageindex' => 30,  'yetki' => 'paket.seans_takip'],
             ['etiket' => 'Stok Yönetimi',      'ikon' => 'bi bi-tags',             'slug' => 'urunler',           'v2_rota' => '/v2/stok', 'pageindex' => 20,  'yetki' => ['urun.tanim_olustur', 'urun.stok_giris', 'urun.stok_sayim', 'urun.tedarikci_yonet']],

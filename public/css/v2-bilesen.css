@@ -172,3 +172,44 @@
 .rc-yukleniyor-cubuk.acik { opacity: 1; animation: rc-cubuk-kay 1s linear infinite; }
 @keyframes rc-cubuk-kay { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 
+
+/* ═════════ SIKI GÖRÜNÜM: tablet + telefon (kullanıcı 2026-11-11: "butonlar ve elemanlar çok yer kaplıyor") ═════════
+   Dokunmatik ya da dar ekranda ortak bileşenler küçülür. Dokunma hedefi 36–40px'te kalır (44px yer kaplıyordu).
+   iOS'ta yazı alanı 16px kuralı (panel.css, odakta yakınlaştırma önlemi) bozulmaz. */
+@media (pointer: coarse), (max-width: 1024px) {
+  .rc-btn { font-size: 13px; padding: 8px 14px; border-radius: 10px; gap: 6px; }
+  .rc-modal-alt .rc-btn { padding: 10px 14px; }
+  .rc-sekmeler { gap: 6px; margin-bottom: 12px; }
+  .rc-sekme { padding: 6px 12px; font-size: 13px; gap: 5px; }
+  .rc-alan { gap: 4px; }
+  .rc-alan label { font-size: 10.5px; }
+  .rc-alan input, .rc-alan select, .rc-alan textarea, .rc-alan .rs-btn { padding: 7px 10px; font-size: 13.5px; border-radius: 9px; }
+  .rs-btn { min-height: 38px; }
+  .rs-sec { padding: 9px 10px; }
+
+  .rc-sayfa-baslik { gap: 10px; }
+  .rc-sayfa-ikon { width: 36px; height: 36px; font-size: 17px; border-radius: 11px; }
+  .rc-sayfa-baslik h1 { font-size: 18px; }
+
+  .rc-ozet { gap: 10px; margin-bottom: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .rc-kutu { padding: 12px; gap: 10px; border-radius: 14px; }
+  .rc-k-ikon { width: 34px; height: 34px; font-size: 16px; border-radius: 10px; }
+  .rc-k-ad { font-size: 10.5px; }
+  .rc-k-deger { font-size: 18px; }
+
+  .rc-tablo thead th { padding: 9px 10px; }
+  .rc-tablo tbody td { padding: 9px 10px; font-size: 13px; }
+
+  .rc-ic-btn, .rc-header-ic, .rc-avatar { width: 38px; height: 38px; }
+  .rc-ara { height: 38px; }
+  .rc-link { padding: 10px 12px; }
+  .rc-acilir-oge { padding: 10px 12px; }
+  .rc-sayfa { min-width: 36px; height: 36px; }
+
+  .rc-modal-bas { padding: 14px 16px; }
+  .rc-modal-ikon { width: 36px; height: 36px; font-size: 17px; border-radius: 10px; }
+  .rc-modal-bas h2 { font-size: 16px; }
+  .rc-modal-govde { padding: 14px 16px; }
+  .rc-modal-alt { padding: 10px 16px; }
+  .rc-kapat { width: 38px; height: 38px; }
+}
