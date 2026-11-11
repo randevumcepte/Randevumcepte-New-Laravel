@@ -5,7 +5,7 @@
 @endpush
 @section('content')
 {{-- Mobil müşteri ana sayfasının (musteripaneli/anasayfa/anasayfa.dart) web karşılığı. Veri: hesap-hesabim.js --}}
-@php($studyo = $salon->studyo_modu)
+@php $studyo = $salon->studyo_modu; @endphp
 <div class="hh" id="hesabim" data-randevu="{{ $linkler['ana'] }}#randevu-al">
    {{-- Üst çubuk: bildirim zili (okunmamış rozeti), salon adı, profil --}}
    <div class="hh-ust">

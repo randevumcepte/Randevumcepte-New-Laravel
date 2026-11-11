@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-@php($randevuModulu = app(\App\Services\Panel\RandevuModulu::class)->aktif())
+@php $randevuModulu = app(\App\Services\Panel\RandevuModulu::class)->aktif(); @endphp
 <html lang="tr">
 <head>
     <meta charset="utf-8">
