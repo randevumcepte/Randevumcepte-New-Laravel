@@ -9,7 +9,7 @@
     {{-- Bootstrap Icons: eski menüyle BİREBİR ikon sınıfları (bi bi-*) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
-    <link rel="stylesheet" href="/css/panel.css?v=24">
+    <link rel="stylesheet" href="/css/panel.css?v=25">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
     <link rel="stylesheet" href="/css/v2-bilesen.css?v=9">
     {{-- Sağ alt hatırlatma kartları (eski partials/hatirlatma_popup) --}}

@@ -185,7 +185,8 @@ html, body { margin: 0; padding: 0; }
 .rc-acilir-oge:hover i, .rc-acilir-oge:focus-visible i { color: var(--rc-mor); }
 .rc-avatar {
   width: 40px; height: 40px; border-radius: 50%;
-  background: var(--rc-mor); color: #fff;
+  /* Beyaz zemin (kullanıcı 2026-11-11): şeffaf PNG logo/fotoğrafın kenarında mor görünmesin; fotoğrafsızda baş harf mor. */
+  background-color: #fff; color: var(--rc-mor); border: 1px solid var(--rc-cizgi, #e6e6ef);
   display: flex; align-items: center; justify-content: center; font-weight: 700;
   background-size: cover; background-position: center;
 }
