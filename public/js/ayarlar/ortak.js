@@ -96,7 +96,8 @@ export const deger = (form, ad) => form.querySelector(`[name="${ad}"]`)?.value ?
  */
 export function planTablosu(gunler) {
   const saat = (ad, d) => `<input type="text" name="${ad}" value="${esc(d)}" data-saat inputmode="numeric" maxlength="5">`;
-  const tik = (ad, acik) => `<span class="rc-switch"><input type="checkbox" name="${ad}"${acik ? ' checked' : ''}><span class="rc-kaydir"></span></span>`;
+  // label: gizli kutu dokununca/tıklanınca değişsin (span'de anahtar tepki vermiyordu).
+  const tik = (ad, acik) => `<label class="rc-switch"><input type="checkbox" name="${ad}"${acik ? ' checked' : ''}><span class="rc-kaydir"></span></label>`;
   return `<div class="rc-tablo-sar"><table class="rc-tablo ay-saat-tablo">
     <thead><tr><th>Gün</th><th class="rc-orta">Çalışıyor</th><th>Başlangıç</th><th>Bitiş</th><th class="rc-orta">Mola</th><th>Mola Başlangıç</th><th>Mola Bitiş</th></tr></thead>
     <tbody>${gunler.map((g) => `

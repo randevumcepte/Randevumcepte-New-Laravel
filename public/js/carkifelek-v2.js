@@ -18,7 +18,7 @@ const MODULLER = {
   cark: () => import('/js/carkifelek/cark.js?v=1'),
   kazananlar: () => import('/js/carkifelek/kazananlar.js?v=1'),
   puan: () => import('/js/carkifelek/puan.js?v=1'),
-  hatirlatma: () => import('/js/carkifelek/hatirlatma.js?v=1'),
+  hatirlatma: () => import('/js/carkifelek/hatirlatma.js?v=2'),
 };
 
 (async function baslat() {

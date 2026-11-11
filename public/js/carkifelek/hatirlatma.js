@@ -20,7 +20,7 @@ export async function ciz(kap, ctx) {
       <div><h3>⏰ Çarkıfelek Hatırlatma Sistemi</h3>
         <p class="ck-ipucu">Müşterilerinize gün içinde en fazla 3 push bildirimi gönderir, çarkı çevirmelerini hatırlatır. Tıklayan müşteri çark ekranına yönlenir.</p>
         <span class="rc-rozet rc-rozet-mor">Bugün gönderilen: <b id="htBugun">${v.bugun_gonderilen}</b></span></div>
-      <span class="rc-switch ck-buyuk"><input type="checkbox" id="htAktif" ${v.aktif ? 'checked' : ''}><span class="rc-kaydir"></span></span>
+      <label class="rc-switch ck-buyuk"><input type="checkbox" id="htAktif" ${v.aktif ? 'checked' : ''}><span class="rc-kaydir"></span></label>
     </section>
     <div class="ck-hat-izgara">${v.slotlar.map((s) => `
       <section class="ck-kart ck-hat-kart" data-no="${s.no}" ${s.aktif ? '' : 'hidden'}>

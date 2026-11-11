@@ -13,5 +13,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/carkifelek-v2.js?v=1"></script>
+    <script type="module" src="/js/carkifelek-v2.js?v=2"></script>
 @endpush

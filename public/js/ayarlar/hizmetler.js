@@ -10,7 +10,7 @@ import { api, el, esc, TL, onay, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
-import { secim, secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=4';
+import { secim, secimListesi, secimFiltreBagla, seciliIdler } from '/js/ayarlar/ortak.js?v=5';
 
 const sayiOku = (v) => { const s = String(v ?? '').trim(); if (!s) return null; const n = Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s); return Number.isFinite(n) ? n : null; };
 

@@ -7,7 +7,7 @@
  * eski paneldeki aynı sekmeye link verir. Seçili sekme ?p= ile adres çubuğunda tutulur.
  */
 import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
-import { YUKLENIYOR } from '/js/ayarlar/ortak.js?v=4';
+import { YUKLENIYOR } from '/js/ayarlar/ortak.js?v=5';
 
 const kok = document.getElementById('rc-ayarlar');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;
@@ -15,15 +15,15 @@ if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 /** Sekme kodu → modül (yalnız görsel/çizim; hangi sekmenin açık olduğu API'den). */
 const MODULLER = {
-  isletme: () => import('/js/ayarlar/isletme.js?v=4'),
+  isletme: () => import('/js/ayarlar/isletme.js?v=5'),
   subeler: () => import('/js/ayarlar/subeler.js?v=4'),
-  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=4'),
-  randevu: () => import('/js/ayarlar/randevu.js?v=4'),
-  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=4'),
-  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=4'),
-  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=5'),
-  odalar: () => import('/js/ayarlar/odalar.js?v=4'),
-  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=4'),
+  calisma_saatleri: () => import('/js/ayarlar/saatler.js?v=5'),
+  randevu: () => import('/js/ayarlar/randevu.js?v=5'),
+  online_saatler: () => import('/js/ayarlar/online-saatler.js?v=5'),
+  cihazlar: () => import('/js/ayarlar/cihazlar.js?v=5'),
+  hizmetler: () => import('/js/ayarlar/hizmetler.js?v=6'),
+  odalar: () => import('/js/ayarlar/odalar.js?v=5'),
+  musteri_indirimleri: () => import('/js/ayarlar/indirim.js?v=5'),
 };
 
 let ozet = null;
