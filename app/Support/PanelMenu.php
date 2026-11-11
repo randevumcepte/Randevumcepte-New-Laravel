@@ -70,7 +70,7 @@ class PanelMenu
             ['etiket' => 'Memnuniyet Anketi',  'ikon' => 'bi bi-chat-dots',        'slug' => 'anket-sonuclari',   'v2_rota' => '/v2/memnuniyet-anketi', 'pageindex' => 80,  'yetki' => 'pazarlama.anket_yonet', 'bolum' => 'Pazarlama', 'randevu_modulu' => true],
             ['etiket' => 'Bildirim Reklamları','ikon' => 'bi bi-megaphone',        'slug' => 'bildirim-reklamlari', 'v2_rota' => '/v2/bildirim-reklamlari', 'pageindex' => 81, 'yetki' => 'pazarlama.kampanya_yonet', 'randevu_modulu' => true],
             ['etiket' => 'Reklam Yönetimi',    'ikon' => 'bi bi-cash-coin',        'slug' => 'kampanya_yonetimi', 'v2_rota' => '/v2/reklam-yonetimi', 'pageindex' => 82, 'ozellik' => 'uyelik_turu_premium',  'yetki' => 'pazarlama.kampanya_yonet'],
-            ['etiket' => 'Etkinlikler',        'ikon' => 'bi bi-text-left',        'slug' => 'etkinlik',          'pageindex' => 83,  'yetki' => 'pazarlama.kampanya_yonet'],
+            // Etkinlikler menüde yok (kullanıcı 2026-11-11).
             ['etiket' => 'Çarkıfelek',         'ikon' => 'bi bi-dpad',             'slug' => 'carkifelek',        'v2_rota' => '/v2/carkifelek', 'pageindex' => 84,  'yetki' => 'pazarlama.cark_yonet'],
             ['etiket' => 'Uygulama Afişi',     'ikon' => 'bi bi-qr-code',          'slug' => 'uygulama-afisi',    'v2_rota' => '/v2/uygulama-afisi', 'pageindex' => 85,  'yetki' => 'pazarlama.kampanya_yonet'],
             ['etiket' => 'WhatsApp Yönetimi',  'ikon' => 'bi bi-whatsapp',         'slug' => 'whatsapp',          'v2_rota' => '/v2/whatsapp', 'pageindex' => 90,  'yetki' => 'pazarlama.whatsapp_gonder'],
