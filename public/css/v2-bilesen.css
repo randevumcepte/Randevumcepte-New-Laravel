@@ -46,8 +46,12 @@
 @media (prefers-color-scheme: dark) { .rc-islem { background: #22222e; border-color: #34344c; color: #c9a7f0; } }
 
 /* ── Modal ── */
-.rc-modal-overlay { position: fixed; inset: 0; background: rgba(20, 12, 35, .5); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 9000; overflow-y: auto; }
-.rc-modal { background: #fff; border-radius: 20px; width: 100%; max-width: 760px; box-shadow: 0 16px 44px rgba(23, 25, 45, .2); overflow: hidden; animation: rc-modal-ac .18s ease; }
+/* Pencere ekrana sigar: en fazla gorunur yukseklik (dvh); baslik + alt sabit, yalniz govde kayar. Arka plan bulaniklastirilmaz
+   (backdrop-filter tum sayfayi her karede yeniden boyar, acilisi yavaslatiyordu). */
+.rc-modal-overlay { position: fixed; inset: 0; background: rgba(20, 12, 35, .55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 9000; overflow: hidden; overscroll-behavior: contain; }
+.rc-modal { background: #fff; border-radius: 20px; width: 100%; max-width: 760px; box-shadow: 0 16px 44px rgba(23, 25, 45, .2); overflow: hidden; animation: rc-modal-ac .18s ease;
+  display: flex; flex-direction: column; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); }
+.rc-modal-bas, .rc-modal-alt { flex: 0 0 auto; }
 .rc-modal.rc-dar { max-width: 620px; }
 .rc-modal.rc-genis { max-width: 980px; }
 @keyframes rc-modal-ac { from { transform: translateY(14px); opacity: 0; } }
@@ -59,7 +63,7 @@
 .rc-modal-altbaslik { font-size: 12px; color: rgba(255, 255, 255, .85); margin-top: 2px; }
 .rc-kapat { position: relative; z-index: 1; border: none; background: rgba(255, 255, 255, .18); color: #fff; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; line-height: 1; cursor: pointer; flex: 0 0 auto; transition: .15s; }
 .rc-kapat:hover { background: rgba(255, 255, 255, .3); }
-.rc-modal-govde { padding: 22px 24px; max-height: 70vh; overflow-y: auto; background: #fafbfc; }
+.rc-modal-govde { padding: 22px 24px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: #fafbfc; }
 .rc-modal-alt { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #eee; background: #fff; }
 @media (prefers-color-scheme: dark) {
   .rc-modal { background: #22222e; }
@@ -110,8 +114,8 @@
   .rc-switch .rc-kaydir::before { width: 20px; height: 20px; }
   .rc-switch input:checked + .rc-kaydir::before { transform: translateX(20px); }
   .rc-modal-overlay { padding: 0; align-items: flex-end; }
-  .rc-modal { max-width: 100%; border-radius: 20px 20px 0 0; animation: rc-modal-yukari .2s ease; }
-  .rc-modal-govde { max-height: 72vh; max-height: 72dvh; padding: 18px 16px; } /* dvh: tarayıcı çubukları açıkken de sığar */
+  .rc-modal { max-width: 100%; border-radius: 20px 20px 0 0; animation: rc-modal-yukari .2s ease; max-height: 94vh; max-height: 94dvh; }
+  .rc-modal-govde { padding: 18px 16px; } /* yukseklik .rc-modal'dan (dvh): tarayici cubuklari aciyken de sigar */
   .rc-modal-bas, .rc-modal-alt { padding: 15px 16px; }
   .rc-modal-alt { position: sticky; bottom: 0; }     /* kaydet butonu hep erişilebilir */
   .rc-modal-alt .rc-btn { flex: 1; padding: 13px 16px; }
@@ -119,10 +123,8 @@
 @keyframes rc-modal-yukari { from { transform: translateY(100%); } }
 /* Dokunmatik (tablet dahil): modal gövdesi görünür alana göre; kapat butonu parmak boyunda. */
 @media (pointer: coarse) {
-  .rc-modal-govde { max-height: 70dvh; }
   .rc-kapat { width: 44px; height: 44px; }
 }
-@media (pointer: coarse) and (max-width: 600px) { .rc-modal-govde { max-height: 72dvh; } }
 
 /* ── Müşteri seçici (lib/v2-secici.js) ── */
 .rc-ms-ara { position: relative; }
@@ -162,3 +164,11 @@
 /* Sekmeli sayfa (lib/v2-sekme.js) — tembel yüklenen sekme gövdesi */
 .rc-sekme-yuk { display: flex; justify-content: center; padding: 40px 0; }
 .rc-sekme-bos { text-align: center; color: #9191a3; padding: 40px 12px; font-size: 14px; }
+
+/* Yükleniyor çubuğu (panel-kabuk.js): ekranın üstünde ince, kayan şerit */
+.rc-yukleniyor-cubuk { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 10000; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #7b2fb8, #c084fc, transparent); background-size: 50% 100%; background-repeat: no-repeat;
+  transition: opacity .15s; }
+.rc-yukleniyor-cubuk.acik { opacity: 1; animation: rc-cubuk-kay 1s linear infinite; }
+@keyframes rc-cubuk-kay { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+

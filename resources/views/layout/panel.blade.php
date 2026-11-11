@@ -11,7 +11,7 @@
     {{-- Ortak panel kabuğu stili (tek kaynak; tüm v2 ekranları paylaşır) --}}
     <link rel="stylesheet" href="/css/panel.css?v=24">
     {{-- Ortak UI bileşenleri (modal, form alanı, buton, sekme, rozet) — tek kaynak --}}
-    <link rel="stylesheet" href="/css/v2-bilesen.css?v=5">
+    <link rel="stylesheet" href="/css/v2-bilesen.css?v=6">
     {{-- Sağ alt hatırlatma kartları (eski partials/hatirlatma_popup) --}}
     <link rel="stylesheet" href="/css/hatirlatma-kartlari.css?v=1">
     {{-- flatpickr datepicker (tüm v2 ekranları paylaşır; window.flatpickr) --}}
@@ -123,8 +123,8 @@
     {{-- Eski panel: randevu.* domaininde hatırlatma kartları çıkmaz --}}
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
     @endunless
-    <script type="module" src="/js/hizli-ekle.js?v=10"></script>
-    <script type="module" src="/js/panel-kabuk.js?v=13"></script>
+    <script type="module" src="/js/hizli-ekle.js?v=11"></script>
+    <script type="module" src="/js/panel-kabuk.js?v=14"></script>
     @stack('betik')
 </body>
 </html>

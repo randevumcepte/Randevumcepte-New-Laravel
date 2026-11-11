@@ -1,7 +1,7 @@
 /**
  * v2 RANDEVU İŞLEMLERİ bileşeni — TEK KAYNAK. Randevu Takvimi (takvim-v2.js) ve müşteri
  * detay "Randevular" sekmesi aynı bileşeni kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=12';
+ * Import yolu her yerde AYNI olmalı:  import { randevuIslemleri } from '/js/lib/v2-randevu.js?v=13';
  *
  * İçerik: detay çekmecesi (durum rozetleri, kalemler) + durum aksiyonları (POST
  * /api/v2/randevu/{id}/geldi|gelmedi|iptal|onayla, DELETE geldi-isareti, seans telafisi),
@@ -42,6 +42,21 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
   }
   const ck = () => cekmece;
   const acikMi = () => cekmece.classList.contains('acik');
+
+  // Yeni randevu formunun verisi salona ozel (randevuya degil): arka planda onceden cekilir ve 60 sn saklanir; form
+  // beklemeden acilir. Her kullanim derin kopya alir (form veriyi degistirse de sonrakine tasinmaz). Duzenlemede tazedir.
+  const FORM_ONBELLEK_MS = 60000;
+  let formOnbellek = null;
+  const formVerisi = (randevuId) => {
+    if (randevuId) return api('GET', '/randevu/form-verisi', { params: { salon_id: salonId, randevu_id: randevuId } });
+    if (!formOnbellek || Date.now() - formOnbellek.zaman > FORM_ONBELLEK_MS) {
+      const istek = api('GET', '/randevu/form-verisi', { params: { salon_id: salonId } })
+        .then((r) => { if (!r.ok || !r.govde?.basarili) formOnbellek = null; return r; });
+      formOnbellek = { zaman: Date.now(), istek };
+    }
+    return formOnbellek.istek.then((r) => ({ ...r, govde: r.govde ? structuredClone(r.govde) : r.govde }));
+  };
+  if (salonId) setTimeout(() => formVerisi(null).catch(() => {}), 1500);
   // Çekmece dışına (boşluğa) tıklayınca kapanır. Üstte açık pencere/onay varsa (çekmeceden açılan form, kod penceresi)
   // dokunulmaz; listede ya da takvimde başka randevuya tıklamak çekmeceyi o randevuyla yeniden açar.
   document.addEventListener('pointerdown', (e) => {
@@ -382,7 +397,7 @@ export function randevuIslemleri({ salonId, cekmece = null, kaynaklar = () => []
    *  - Isletme panelinden olusan randevu ONAYLIDIR (durum alani yok).
    */
   async function randevuFormu({ randevuId, start, end, kaynakId, sekme = 'randevu', musteri = null, kaydedildi = null }) {
-    const r = await api('GET', '/randevu/form-verisi', { params: { salon_id: salonId, randevu_id: randevuId } });
+    const r = await formVerisi(randevuId);
     if (!r.ok || !r.govde?.basarili) return panel().toast(r.govde?.mesaj || 'Form yüklenemedi', 'hata');
     const fv = r.govde.veri;
     const mevcut = fv.randevu;

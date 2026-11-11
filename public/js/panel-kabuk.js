@@ -254,6 +254,29 @@ window.rcPanel = {
   onay,
 };
 
+// Yükleniyor çubuğu: panelde bir /api/v2 isteği 150 ms'yi geçerse üstte ince çubuk (pencere veri beklerken ekran
+// donmuş görünmesin). Tüm ekranların api() çağrıları fetch'ten geçer; tek noktada sarılır.
+(function yukleniyorCubugu() {
+  if (window.__rcCubuk) return;
+  window.__rcCubuk = true;
+  const cubuk = document.createElement('div');
+  cubuk.className = 'rc-yukleniyor-cubuk';
+  document.body.appendChild(cubuk);
+  let bekleyen = 0, zaman = null;
+  const guncelle = () => {
+    clearTimeout(zaman);
+    if (bekleyen > 0) zaman = setTimeout(() => cubuk.classList.add('acik'), 150);
+    else cubuk.classList.remove('acik');
+  };
+  const asil = window.fetch.bind(window);
+  window.fetch = (girdi, ayar) => {
+    const url = typeof girdi === 'string' ? girdi : (girdi?.url || '');
+    if (!url.includes('/api/v2/')) return asil(girdi, ayar);
+    bekleyen++; guncelle();
+    return asil(girdi, ayar).finally(() => { bekleyen--; guncelle(); });
+  };
+})();
+
 impersonationBandi();
 etkilesimBagla();
 aramaBagla();

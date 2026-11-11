@@ -20,7 +20,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriFormuAc, formVerisi, segmentRozeti, tarihTr } from '/js/lib/v2-musteri.js?v=7';
 import { seansTakibi } from '/js/lib/v2-seans.js?v=8';
 import { formArsivi } from '/js/lib/v2-form.js?v=11';
-import { randevuTablosu } from '/js/lib/v2-randevu.js?v=12';
+import { randevuTablosu } from '/js/lib/v2-randevu.js?v=13';
 import { musteriDersSekmesi } from '/js/lib/v2-ders.js?v=7';
 
 const kok = document.getElementById('rc-musteri-detay');
