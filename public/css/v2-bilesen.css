@@ -248,3 +248,16 @@
 @media (prefers-color-scheme: dark) and (pointer: coarse), (prefers-color-scheme: dark) and (max-width: 1024px) {
   .rc-sayfa-aksiyon { background: #22222e; border-top-color: #34344c; }
 }
+
+/* ═════════ TELEFON KARTLI TABLO: tüm içerik sağa yaslı (kullanıcı 2026-11-11) ═════════
+   Başlık ve etiketsiz hücreler de sağda; hücre içindeki blok/esnek öğeler sağa itilir. Sol etiket (data-etiket) yerinde kalır. */
+@media (max-width: 600px) {
+  .rc-tablo.rc-kartli tbody td[data-mobil="baslik"],
+  .rc-tablo.rc-kartli tbody td[data-mobil="etiketsiz"] { text-align: right; }
+  .rc-tablo.rc-kartli tbody td > div,
+  .rc-tablo.rc-kartli tbody td > span:not([class*="rozet"]),
+  .rc-tablo.rc-kartli tbody td > a { text-align: right; justify-content: flex-end; margin-left: auto; }
+  .rc-tablo.rc-kartli tbody td > div[style*="display:flex"],
+  .rc-tablo.rc-kartli tbody td > div[style*="display: flex"] { justify-content: flex-end; }
+  .rc-kartli .rc-islemler { justify-content: flex-end; }
+}
