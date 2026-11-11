@@ -123,7 +123,7 @@
     {{-- Eski panel: randevu.* domaininde hatırlatma kartları çıkmaz --}}
     <script type="module" src="/js/hatirlatma-kartlari.js?v=1"></script>
     @endunless
-    <script type="module" src="/js/hizli-ekle.js?v=11"></script>
+    <script type="module" src="/js/hizli-ekle.js?v=12"></script>
     <script type="module" src="/js/panel-kabuk.js?v=14"></script>
     @stack('betik')
 </body>

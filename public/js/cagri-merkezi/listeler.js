@@ -7,7 +7,7 @@
 import { token, BASE, el, esc, mesaj, onay, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=8';
+import { alan, secenekler } from '/js/lib/v2-ongorusme.js?v=9';
 import { listeOlustur } from '/js/cagri-merkezi/liste-olustur.js?v=1';
 
 export async function ciz(kap, ctx) {

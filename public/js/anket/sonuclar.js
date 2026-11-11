@@ -7,7 +7,7 @@ import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { modalAc } from '/js/lib/v2-modal.js?v=7';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { donemSecici, sayi } from '/js/lib/v2-donem.js?v=7';
-import { secenekler } from '/js/lib/v2-ongorusme.js?v=8';
+import { secenekler } from '/js/lib/v2-ongorusme.js?v=9';
 import { googleAyarAc } from '/js/anket/google-ayar.js?v=1';
 
 const BOS = '<span class="an-bos">—</span>';

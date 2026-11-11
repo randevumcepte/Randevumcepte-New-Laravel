@@ -8,7 +8,7 @@
 import { el, esc, tarihStr, mesaj, yazSonuc, sayfalamaCiz } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=8';
+import { alan, secenekler, tarihBagla } from '/js/lib/v2-ongorusme.js?v=9';
 
 const BOY = 50;
 

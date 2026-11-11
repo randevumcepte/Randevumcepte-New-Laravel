@@ -10,7 +10,7 @@
  */
 import { qp, api, el, esc } from '/js/lib/v2-ortak.js?v=7';
 import { donemSecici } from '/js/lib/v2-donem.js?v=7';
-import { randevuTablosu } from '/js/lib/v2-randevu.js?v=13';
+import { randevuTablosu } from '/js/lib/v2-randevu.js?v=14';
 
 const kok = document.getElementById('rc-randevular');
 const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) || 0;

@@ -8,8 +8,8 @@
 import { esc, tarihStr } from '/js/lib/v2-ortak.js?v=7';
 import { veriTablosu } from '/js/lib/v2-tablo.js?v=8';
 import { ozetKart, kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { tarihBagla } from '/js/lib/v2-ongorusme.js?v=8';
-import { sure, sesOynatici, aramaBaslat } from '/js/cagri-merkezi/ortak.js?v=12';
+import { tarihBagla } from '/js/lib/v2-ongorusme.js?v=9';
+import { sure, sesOynatici, aramaBaslat } from '/js/cagri-merkezi/ortak.js?v=13';
 
 const YONLER = [{ kod: '', ad: 'Tümü', ikon: 'bi-telephone' }, { kod: 'gelen', ad: 'Gelen', ikon: 'bi-telephone-inbound' }, { kod: 'giden', ad: 'Giden', ikon: 'bi-telephone-outbound' }];
 

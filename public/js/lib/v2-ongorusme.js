@@ -1,7 +1,7 @@
 /**
  * v2 ÖN GÖRÜŞME FORMU — TEK KAYNAK. Ön Görüşmeler ekranı (ongorusmeler-v2.js) ve Çağrı Merkezi
  * "Ön Görüşme Randevusu" sonucu aynı formu kullanır (kopya yok).
- * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=8';
+ * Import yolu her yerde AYNI olmalı:  import { ongorusmeFormu } from '/js/lib/v2-ongorusme.js?v=9';
  *
  *   ongorusmeFormu({ salonId, fv, kayit, musteri, onKaydet })
  *     fv       : GET /ongorusme/form-verisi cevabı (verilmezse çekilir — formVerisi())
@@ -96,6 +96,8 @@ export async function ongorusmeFormu({ salonId, fv = null, kayit: k = null, must
   const secici = musteriSecici(el('#fMusteri', ov), {
     salonId, yol: '/ongorusme/musteri-ara', baslangic: ilk, sabit: !!musteri, onSec: doldur,
   });
+  // Müşteri hazır geldiyse (çağrı merkezi, müşteri detayı) e-mail / cinsiyet / referans da açılışta dolar.
+  if (musteri) doldur(musteri);
 
   el('#ogForm', ov).addEventListener('submit', (e) => {
     e.preventDefault();

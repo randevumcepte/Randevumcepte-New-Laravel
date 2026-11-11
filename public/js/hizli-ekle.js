@@ -21,7 +21,7 @@ const EYLEMLER = {
   randevu: {
     css: '/css/takvim-v2.css?v=19',
     async ac({ salon }) {
-      const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=13');
+      const { randevuIslemleri } = await import('/js/lib/v2-randevu.js?v=14');
       randevuIslem[salon.id] ||= randevuIslemleri({ salonId: salon.id });
       randevuIslem[salon.id].randevuFormu({ kaydedildi: ekraniTazele('takvim-v2', 'randevular-liste') });
     },
@@ -29,7 +29,7 @@ const EYLEMLER = {
   ongorusme: {
     css: '/css/ongorusmeler-v2.css?v=3',
     async ac({ salon }) {
-      const { ongorusmeFormu } = await import('/js/lib/v2-ongorusme.js?v=8');
+      const { ongorusmeFormu } = await import('/js/lib/v2-ongorusme.js?v=9');
       ongorusmeFormu({ salonId: salon.id, onKaydet: ekraniTazele('ongorusmeler') });
     },
   },

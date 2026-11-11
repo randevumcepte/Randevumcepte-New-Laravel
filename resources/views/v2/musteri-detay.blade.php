@@ -20,5 +20,5 @@
 @endsection
 
 @push('betik')
-    <script type="module" src="/js/musteri-detay-v2.js?v=25"></script>
+    <script type="module" src="/js/musteri-detay-v2.js?v=26"></script>
 @endpush

@@ -82,12 +82,17 @@ class KuyrukServisi
     public function musteriBilgisi(CagriMerkeziErisim $e, int $aranacakId): array
     {
         $k = $this->erisim->kayit($aranacakId, $e);
-        $u = DB::table('users')->where('id', $k->user_id)->first(['id', 'name', 'cep_telefon']);
+        $u = DB::table('users')->where('id', $k->user_id)->first(['id', 'name', 'cep_telefon', 'email', 'cinsiyet']);
+        $tip = DB::table('musteri_portfoy')->where('salon_id', $e->salonId)->where('user_id', $k->user_id)->value('musteri_tipi');
 
+        // Dönüşüm formu (ön görüşme) e-mail, cinsiyet ve referansı da doldurur: ön görüşme müşteri aramasıyla aynı alanlar.
         return [
-            'id'      => (int) $k->user_id,
-            'ad'      => (string) ($u->name ?? ''),
-            'telefon' => $e->telefonGor ? (string) ($u->cep_telefon ?? '') : KvkkMaske::telefon($u->cep_telefon ?? ''),
+            'id'           => (int) $k->user_id,
+            'ad'           => (string) ($u->name ?? ''),
+            'telefon'      => $e->telefonGor ? (string) ($u->cep_telefon ?? '') : KvkkMaske::telefon($u->cep_telefon ?? ''),
+            'email'        => ($u->email ?? null) ?: null,
+            'cinsiyet'     => ($u->cinsiyet ?? null) === null || $u->cinsiyet === '' ? null : (int) $u->cinsiyet,
+            'musteri_tipi' => $tip ? (int) $tip : null, // portföy (salona özel) referans
         ];
     }
 

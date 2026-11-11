@@ -6,7 +6,7 @@
 import { el, esc } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc } from '/js/lib/v2-modal.js?v=7';
 import { ozetKart } from '/js/lib/v2-bilesen.js?v=7';
-import { gecmisCiz, harf } from '/js/cagri-merkezi/ortak.js?v=12';
+import { gecmisCiz, harf } from '/js/cagri-merkezi/ortak.js?v=13';
 
 const para = (n) => Number(n || 0).toLocaleString('tr-TR');
 

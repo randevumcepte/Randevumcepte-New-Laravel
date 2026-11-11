@@ -2,7 +2,7 @@
 import { el, esc, mesaj, yazSonuc } from '/js/lib/v2-ortak.js?v=7';
 import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { kilitle } from '/js/lib/v2-bilesen.js?v=7';
-import { alan } from '/js/lib/v2-ongorusme.js?v=8';
+import { alan } from '/js/lib/v2-ongorusme.js?v=9';
 import { odulAlanlari, odulBagla } from '/js/anket/odul-form.js?v=1';
 
 const ONEK = 'google_odul_';

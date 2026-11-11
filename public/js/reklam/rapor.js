@@ -12,7 +12,7 @@ import { modalAc, modalKapat } from '/js/lib/v2-modal.js?v=7';
 import { musteriSecici } from '/js/lib/v2-secici.js?v=7';
 import { kilitle, ozetKart } from '/js/lib/v2-bilesen.js?v=7';
 import { trTarih, sayi } from '/js/lib/v2-donem.js?v=7';
-import { secenekler } from '/js/lib/v2-ongorusme.js?v=8';
+import { secenekler } from '/js/lib/v2-ongorusme.js?v=9';
 import { baglam as b, kanalRozeti, durumRozeti } from '/js/reklam/ortak.js?v=1';
 
 export async function reklamRaporu(id, { onDegisti = () => {} } = {}) {
