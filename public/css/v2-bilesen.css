@@ -260,4 +260,7 @@
   .rc-tablo.rc-kartli tbody td > div[style*="display:flex"],
   .rc-tablo.rc-kartli tbody td > div[style*="display: flex"] { justify-content: flex-end; }
   .rc-kartli .rc-islemler { justify-content: flex-end; }
+  /* Sayfa stilindeki hücre genişlik sınırı (ör. paketlerde .pk-hizmet max-width) kartta hücreyi daraltıp içeriği ortada
+     gösteriyordu: kartta hücre hep tam genişlik. */
+  .rc-tablo.rc-kartli tbody td { max-width: none !important; width: auto !important; }
 }
