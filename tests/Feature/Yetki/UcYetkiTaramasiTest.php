@@ -64,6 +64,9 @@ class UcYetkiTaramasiTest extends TestCase
 
     public const RAPOR = 'logs/uc-yetki-raporu.json';
 
+    /** Her cagridan once yazilir: surec cokerse (segfault, bellek) son satir sucluyu gosterir. */
+    public const ILERLEME = 'logs/uc-yetki-ilerleme.log';
+
     public const SINIF_RET = 'reddetti';
 
     public const SINIF_200 = '200-denetimsiz';
@@ -294,6 +297,9 @@ class UcYetkiTaramasiTest extends TestCase
 
         $sonuclar = [];
         $eslesmeyen = [];
+        $ilerleme = storage_path(self::ILERLEME);
+        @mkdir(dirname($ilerleme), 0775, true);
+        file_put_contents($ilerleme, '');
         foreach ($this->v2Rotalari() as $rota) {
             foreach ($this->yontemler($rota) as $yontem) {
                 $izin = $this->izinBul($yontem, $rota->uri());
@@ -305,6 +311,8 @@ class UcYetkiTaramasiTest extends TestCase
                     continue;
                 }
                 foreach (['web', 'mobil'] as $kip) {
+                    file_put_contents($ilerleme, sprintf("[%s] %s %s  bellek=%dMB\n", $kip, $yontem, $rota->uri(),
+                        intdiv(memory_get_usage(true), 1048576)), FILE_APPEND);
                     [$satir, $eslesme] = $this->cagir($kip, $yontem, $rota, $izin);
                     $sonuclar[] = $satir;
                     if ($eslesme !== null) {
