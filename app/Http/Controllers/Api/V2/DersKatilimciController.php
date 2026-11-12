@@ -15,6 +15,7 @@ use App\Support\ApiCevap;
  *   POST   /ders/oturum/{id}/katilimci {musteri_id}  → {katilimci_id, katilimci_durum, telafi_baglandi}
  *   DELETE /ders/katilimci/{id}                      → cikar + bekleyen terfi
  *   PATCH  /ders/katilimci/{id}/durum {yeni_durum}   → {durum, dusum: dusuldu|hak_yok|hizmet_bagli_degil|iade|telafi_korundu|null}
+ *                                                      (randevu.duzenle_iptal — randevu geldi/gelmedi ile ayni)
  */
 class DersKatilimciController extends DersTabanController
 {
@@ -40,9 +41,10 @@ class DersKatilimciController extends DersTabanController
         return ApiCevap::basarili($this->servis->cikar($id, $uid, $this->mobilYolu()));
     }
 
+    /** Katilim durumu (geldi / gelmedi) bir yazmadir: randevu geldi/gelmedi ile ayni anahtar (randevu.duzenle_iptal). */
     public function durum(KatilimciDurumIstegi $request, int $id)
     {
-        [$uid] = $this->kayitSalonu($this->oturum->katilimciSalonId($id), self::OKU, 'Katılımcı bulunamadı');
+        [$uid] = $this->kayitSalonu($this->oturum->katilimciSalonId($id), self::SIL, 'Katılımcı bulunamadı');
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->servis->durumGuncelle($id, KatilimciDurumu::from($request->validated('yeni_durum')), $uid, $this->mobilYolu()));

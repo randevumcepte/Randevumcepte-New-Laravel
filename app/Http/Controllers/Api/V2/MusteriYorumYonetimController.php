@@ -8,14 +8,17 @@ use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
 /**
- * Isletme yorum moderasyonu. Mobil menude ayri yetki yoktur: imzali mobil token'la salonun her uyesi girer.
+ * Isletme yorum moderasyonu (yalniz mobil; web karsiligi yok).
  *
- *   GET    /musteri-yorum?salon_id=   {yorumlar[], toplam, bildirilen_sayi}
- *   DELETE /musteri-yorum/{id}        salon yorumdan okunur, kapsam ona gore denetlenir
+ *   GET    /musteri-yorum?salon_id=   {yorumlar[], toplam, bildirilen_sayi}  imzali mobil token'la salonun her uyesi
+ *   DELETE /musteri-yorum/{id}        salon yorumdan okunur; kapsam + 'pazarlama.anket_yonet' (Anket / degerlendirme)
  */
 class MusteriYorumYonetimController extends V2Controller
 {
     protected ?string $yazmaAlani = 'musteri';
+
+    /** Yorum silme: musteri degerlendirmeleri anket/degerlendirme yetkisindedir (YetkiSabitleri). */
+    private const SILME_YETKI = 'pazarlama.anket_yonet';
 
     public function __construct(private MusteriYorumYonetimServisi $yorum) {}
 
@@ -32,7 +35,7 @@ class MusteriYorumYonetimController extends V2Controller
         $this->mobilOlmali($r);
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($this->yorum->salonu($id), 'Yorum bulunamadi');
-        $kapi->kapsamDenetle($uid, $salonId);
+        $kapi->denetle($uid, $salonId, self::SILME_YETKI);
         $this->yazmaAcikMi();
         $this->yorum->sil($salonId, $id, $uid);
 

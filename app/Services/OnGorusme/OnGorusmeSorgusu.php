@@ -96,6 +96,16 @@ class OnGorusmeSorgusu
     }
 
     /**
+     * Kayıt erişim kapısı (web ve mobil ortak): kısıtlı personel başkasının görüşmesine erişemez — 404, varlık sızdırılmaz.
+     */
+    public function erisimZorunlu(int $id, int $yetkiliId, int $salonId): void
+    {
+        if (! $this->erisilebilirMi($id, $this->kisitliPersonel($yetkiliId, $salonId))) {
+            throw new BulunamadiException('Ön görüşme bulunamadı');
+        }
+    }
+
+    /**
      * Yalnız kendi görüşmelerini görecek personel id'si; kısıt yoksa null.
      * (Personel rolündeki yetkili → kendi salon_personelleri kaydı.)
      */

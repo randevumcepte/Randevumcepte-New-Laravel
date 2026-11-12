@@ -9,6 +9,7 @@ use App\Services\Tahsilat\AdisyonOkumaServisi;
 use App\Services\Tahsilat\Mobil\MobilKampanyaKoduServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,9 +24,9 @@ class AdisyonIndirimController extends V2Controller
 {
     protected ?string $yazmaAlani = 'tahsilat';
 
-    private const GORME = ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al'];
+    private const GORME = IslemYetkileri::SATIS_GOR;
 
-    private const UYGULAMA = ['satis.tahsilat_al'];
+    private const UYGULAMA = IslemYetkileri::TAHSILAT;
 
     public function __construct(
         private AdisyonOkumaServisi $adisyon,
@@ -59,8 +60,8 @@ class AdisyonIndirimController extends V2Controller
     /** POST /api/v2/adisyon/{id}/cark-kuponu  body: {kod} */
     public function carkKuponu(Request $request, int $id)
     {
-        $this->yazmaAcikMi();
         [$salonId] = $this->adisyonDenetle($id, self::UYGULAMA);
+        $this->yazmaAcikMi();
         $sonuc = $this->kupon->adisyonaUygula($salonId, (int) $this->kullanici()->id, $id, (string) $request->input('kod'));
         $sonuc['hesap'] = $this->adisyon->getir($id)['hesap'];
 
@@ -70,8 +71,8 @@ class AdisyonIndirimController extends V2Controller
     /** POST /api/v2/adisyon/{id}/kampanya-kodu  body: {kod, idempotency_key} */
     public function kampanyaKodu(Request $request, int $id)
     {
-        $this->yazmaAcikMi();
         [$salonId, $userId] = $this->adisyonDenetle($id, self::UYGULAMA);
+        $this->yazmaAcikMi();
         $sonuc = $this->kampanya->kullan($salonId, (int) $this->kullanici()->id, [
             'musteri_id' => $userId, 'kod' => (string) $request->input('kod'), 'adisyon_id' => $id,
             'idempotency_key' => (string) $request->input('idempotency_key'), 'tahsilata_dusulmus' => true,

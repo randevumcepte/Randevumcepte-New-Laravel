@@ -7,6 +7,7 @@ use App\Services\Satis\KatalogServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 
 /**
@@ -32,11 +33,7 @@ class KatalogController extends V2Controller
         }
 
         // Katalog görme: satış/adisyon ile ilgili herhangi bir yetki yeterli (OR-gate).
-        $this->kapi->denetle($user->id, $salonId, [
-            'satis.adisyon_olustur',
-            'satis.tahsilat_al',
-            'satis.tum_satis_gor',
-        ]);
+        $this->kapi->denetle($user->id, $salonId, IslemYetkileri::SATIS_GOR);
 
         // fiyat_degistir: ekranlar elle fiyat alanını buna göre açar (kural sunucuda da denetlenir).
         return ApiCevap::basarili($this->servis->listele($salonId) + [

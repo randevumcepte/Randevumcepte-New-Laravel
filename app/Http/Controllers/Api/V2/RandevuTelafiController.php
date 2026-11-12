@@ -23,7 +23,7 @@ class RandevuTelafiController extends V2Controller
         private GuvenlikKapisi $kapi,
     ) {}
 
-    /** GET /api/v2/randevu/telafi-secenekler?salon_id= — personel/oda/cihaz listeleri. mobil=1: eski mobil gibi yetki anahtari aranmaz, kapsam aranir. */
+    /** GET /api/v2/randevu/telafi-secenekler?salon_id= — personel/oda/cihaz listeleri (web ve mobil randevu.olustur). */
     public function secenekler(Request $request)
     {
         $user = $this->kimlik();
@@ -31,7 +31,7 @@ class RandevuTelafiController extends V2Controller
         if (! $salonId) {
             return ApiCevap::hata('salon_id zorunlu', 422);
         }
-        $request->boolean('mobil') ? $this->kapi->kapsamDenetle($user->id, $salonId) : $this->kapi->denetle($user->id, $salonId, ['randevu.olustur']);
+        $this->kapi->denetle($user->id, $salonId, ['randevu.olustur']);
 
         return ApiCevap::basarili($this->servis->secenekler($salonId));
     }

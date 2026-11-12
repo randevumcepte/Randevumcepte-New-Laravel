@@ -13,8 +13,8 @@ use Illuminate\Http\Request;
  * kill-switch'i (config/ders.php) TEK yerde. Yetki anahtarlari eski panelle ayni:
  *   OKU = randevu.takvim_gor · YAZ = randevu.olustur · SIL = randevu.duzenle_iptal
  *
- * Mobil yolu (`mobil=1`): mobil uygulama bu isleri salonun her uyesine aciyor. Esdeger kural: yetki
- * anahtari ve modul kapisi yerine kimlik + salon kapsami. Kapsam gevsemez, web davranisi degismez.
+ * Mobil yolu (`mobil=1`): yalniz cevap bicimi ve eski mobil sonuc kurallari (mobilYolu); yetki anahtari ve modul
+ * kapisi web ile AYNI (2026-11-12).
  */
 abstract class DersTabanController extends V2Controller
 {
@@ -31,9 +31,6 @@ abstract class DersTabanController extends V2Controller
     /** @return array{0:int,1:int} [yetkili id, salon id] */
     protected function dersSalonu(Request $request, string $yetki): array
     {
-        if ($this->mobilYolu()) {
-            return $this->salonDenetle($request, []);
-        }
         [$uid, $salonId] = $this->salonDenetle($request, $yetki);
         $this->modulAcik($salonId);
 
@@ -49,18 +46,13 @@ abstract class DersTabanController extends V2Controller
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($salonId, $bulunamadi);
-        if ($this->mobilYolu()) {
-            app(GuvenlikKapisi::class)->kapsamDenetle($uid, $salonId);
-
-            return [$uid, $salonId];
-        }
         app(GuvenlikKapisi::class)->denetle($uid, $salonId, $yetki);
         $this->modulAcik($salonId);
 
         return [$uid, $salonId];
     }
 
-    /** Istek mobil uygulamanin bugunku davranisini mi istiyor? */
+    /** Istek mobil uygulamanin cevap / sonuc bicimini mi istiyor? (yetkiyi etkilemez) */
     protected function mobilYolu(): bool
     {
         return request()->boolean('mobil');

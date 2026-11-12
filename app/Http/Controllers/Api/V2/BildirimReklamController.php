@@ -63,7 +63,7 @@ class BildirimReklamController extends V2Controller
 
     public function goster(int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id);
+        [$uid, $salonId] = $this->reklamKaydi($id);
 
         return ApiCevap::basarili($this->sorgu->getir($id, $this->telGor($uid, $salonId)));
     }
@@ -98,7 +98,7 @@ class BildirimReklamController extends V2Controller
 
     public function guncelle(BildirimReklamKaydetIstegi $request, BildirimReklamYazServisi $yaz, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id);
+        [$uid, $salonId] = $this->reklamKaydi($id);
         $this->yazmaAcikMi();
         $yaz->kaydet($salonId, $id, $request->validated(), $uid);
 
@@ -107,7 +107,7 @@ class BildirimReklamController extends V2Controller
 
     public function durum(BildirimReklamDurumIstegi $request, BildirimReklamYazServisi $yaz, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id);
+        [$uid, $salonId] = $this->reklamKaydi($id);
         $this->yazmaAcikMi();
         $durum = ReklamDurumu::from($request->validated()['durum']);
         $yaz->durumDegistir($id, $durum, $uid);
@@ -117,7 +117,7 @@ class BildirimReklamController extends V2Controller
 
     public function sil(BildirimReklamYazServisi $yaz, int $id)
     {
-        [$uid] = $this->kayitDenetle($id);
+        [$uid] = $this->reklamKaydi($id);
         $this->yazmaAcikMi();
         $yaz->sil($id, $uid);
 
@@ -126,14 +126,14 @@ class BildirimReklamController extends V2Controller
 
     public function aliciSayisi(ReklamHedefKitlesi $hedef, int $id)
     {
-        $this->kayitDenetle($id);
+        $this->reklamKaydi($id);
 
         return ApiCevap::basarili($hedef->sayim($this->sorgu->satir($id)));
     }
 
     public function gonder(ReklamGonderServisi $gonderici, int $id)
     {
-        [$uid] = $this->kayitDenetle($id);
+        [$uid] = $this->reklamKaydi($id);
         $this->yazmaAcikMi();
         $sonuc = $gonderici->gonder($id, $uid);
 
@@ -152,7 +152,7 @@ class BildirimReklamController extends V2Controller
      *
      * @return array{0:int,1:int} [yetkili id, salon id]
      */
-    private function kayitDenetle(int $id): array
+    private function reklamKaydi(int $id): array
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($this->sorgu->salonId($id), 'Reklam bulunamadı');

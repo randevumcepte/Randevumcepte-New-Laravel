@@ -66,7 +66,7 @@ class AnketController extends AnketTabanController
 
     public function gonderimDetay(int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($this->gonderimler->salonId($id), 'Anket gönderimi bulunamadı');
+        [$uid, $salonId] = $this->anketKaydi($this->gonderimler->salonId($id), 'Anket gönderimi bulunamadı');
 
         return ApiCevap::basarili($this->gonderimler->detay($id, $this->telGor($uid, $salonId)));
     }
@@ -74,7 +74,7 @@ class AnketController extends AnketTabanController
     /** Olumlu yorumu salonun web sitesinde göster / gizle (mini site web_gizle'ye bakar). */
     public function webGizle(Request $request, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($this->gonderimler->salonId($id), 'Anket gönderimi bulunamadı');
+        [$uid, $salonId] = $this->anketKaydi($this->gonderimler->salonId($id), 'Anket gönderimi bulunamadı');
         $this->yazmaAcikMi();
         $gizle = $request->validate(['gizle' => ['required', 'boolean']])['gizle'];
         DB::table('anket_gonderimleri')->where('id', $id)->update(['web_gizle' => $gizle ? 1 : 0, 'updated_at' => now()]);

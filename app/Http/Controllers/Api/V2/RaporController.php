@@ -25,7 +25,7 @@ use Illuminate\Http\Request;
  *
  * Mobil yolu (mobil=1, yalniz imzali mobil token, baslangic + bitis zorunlu): eski mobil v1 rapor hesabi ve cevabi
  * (Services/Rapor/MobilSatisRaporServisi; sekme=hizmet|urun|paket, musteri listesinde olusturan_id). Kimlik, kapsam,
- * rapor.satis (kayitsiz Sekreter dahil) ve rol 5'in yalniz kendi kaydi kurali gecerlidir; rapor.ciro_kar_gor maskesi eski mobilde yoktu.
+ * rapor.satis (web ile ayni, 2026-11-12) ve rol 5'in yalniz kendi kaydi kurali gecerlidir; rapor.ciro_kar_gor maskesi eski mobilde yoktu.
  */
 class RaporController extends RaporTabanController
 {
@@ -53,8 +53,8 @@ class RaporController extends RaporTabanController
     public function kalemler(Request $r)
     {
         $sekme = (string) $r->input('sekme', 'tum');
+        [$uid, $salonId] = $this->salonYetki($r, 'rapor.satis');
         if ($r->boolean('mobil')) {
-            [$uid, $salonId] = $this->mobilYetki($r, 'rapor.satis');
             [$t1, $t2] = $this->mobilAralik($r);
             $personel = $this->personel($r, $uid, $salonId);
 
@@ -65,7 +65,6 @@ class RaporController extends RaporTabanController
                 default  => throw new GecersizIslemException('sekme şunlardan biri olmalı: hizmet, urun, paket'),
             });
         }
-        [$uid, $salonId] = $this->salonYetki($r, 'rapor.satis');
         if (! array_key_exists($sekme, SatisRaporServisi::SEKME_TURLERI)) {
             throw new GecersizIslemException('sekme şunlardan biri olmalı: '.implode(', ', array_keys(SatisRaporServisi::SEKME_TURLERI)));
         }
@@ -80,7 +79,7 @@ class RaporController extends RaporTabanController
 
     public function personeller(Request $r)
     {
-        [$uid, $salonId] = $r->boolean('mobil') ? $this->mobilYetki($r, 'rapor.satis') : $this->salonYetki($r, 'rapor.satis');
+        [$uid, $salonId] = $this->salonYetki($r, 'rapor.satis');
         if ($this->secenek->zorunluPersonel($uid, $salonId) !== null) {
             throw new GecersizIslemException('Personel raporu personel hesaplarına kapalıdır');
         }
@@ -95,8 +94,8 @@ class RaporController extends RaporTabanController
 
     public function musteriler(Request $r, string $tur, int $kalem)
     {
+        [$uid, $salonId] = $this->salonYetki($r, 'rapor.satis');
         if ($r->boolean('mobil')) {
-            [$uid, $salonId] = $this->mobilYetki($r, 'rapor.satis');
             if ($tur === 'seans') {
                 throw new GecersizIslemException('tur şunlardan biri olmalı: hizmet, urun, paket');
             }
@@ -105,7 +104,6 @@ class RaporController extends RaporTabanController
 
             return ApiCevap::basarili($this->mobil->musteriler($tur, $salonId, $kalem, $t1, $t2, $olusturan, $this->yetkiVar($uid, $salonId, 'musteri.telefon_gor')));
         }
-        [$uid, $salonId] = $this->salonYetki($r, 'rapor.satis');
         $maskeli = ! $this->yetkiVar($uid, $salonId, 'rapor.ciro_kar_gor');
 
         return ApiCevap::basarili($this->satis->musteriler(

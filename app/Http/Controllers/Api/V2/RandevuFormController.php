@@ -8,6 +8,7 @@ use App\Services\Randevu\RandevuMobilFormServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 
 /**
@@ -16,8 +17,8 @@ use Illuminate\Http\Request;
  *   GET /api/v2/randevu/musteri-ara?salon_id=&q=            (portfoy aramasi, maskeli telefon)
  *   GET /api/v2/randevu/musteri-paketleri?salon_id=&user_id= (kalan seansli paket/hizmet satislari)
  * Yetki: randevu.olustur VEYA randevu.duzenle_iptal. Telefon: musteri.telefon_gor.
- * form-verisi?mobil=1: uygulama formlarinin alanlari (RandevuMobilFormServisi). Eski mobilde yetki anahtari
- * aranmadigi icin yalniz kimlik + salon kapsami; telefon yine musteri.telefon_gor.
+ * form-verisi?mobil=1: uygulama formlarinin alanlari (RandevuMobilFormServisi). Yetki ve telefon maskesi web ile
+ * AYNI (2026-11-12); musteri listesi web aramasi gibi salonun aktif portfoyu, telefon musteri.telefon_gor ile.
  */
 class RandevuFormController extends V2Controller
 {
@@ -31,12 +32,10 @@ class RandevuFormController extends V2Controller
     public function formVerisi(Request $request)
     {
         $randevuId = $request->filled('randevu_id') ? (int) $request->input('randevu_id') : null;
+        [$uid, $salonId] = $this->kapsam($request);
         if ($request->boolean('mobil')) {
-            [$uid, $salonId] = $this->salonDenetle($request, []);
-
             return ApiCevap::basarili($this->mobilForm->veri($salonId, $randevuId, (string) $request->input('musteri_ara', ''), $this->telGor($uid, $salonId)));
         }
-        [$uid, $salonId] = $this->kapsam($request);
 
         return ApiCevap::basarili($this->servis->formVerisi($salonId, $randevuId, $this->telGor($uid, $salonId)));
     }
@@ -64,7 +63,7 @@ class RandevuFormController extends V2Controller
         if (! $salonId) {
             throw new YetkisizErisimException('salon_id zorunlu');
         }
-        $this->kapi->denetle($user->id, $salonId, ['randevu.olustur', 'randevu.duzenle_iptal']);
+        $this->kapi->denetle($user->id, $salonId, IslemYetkileri::RANDEVU_FORM);
 
         return [(int) $user->id, $salonId];
     }

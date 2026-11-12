@@ -9,6 +9,7 @@ use App\Models\Personeller;
 use App\Services\Satis\AdisyonIslemServisi;
 use App\Services\Satis\AdisyonSilServisi;
 use App\Services\Satis\MobilStudyoOdemeServisi;
+use App\Services\Satis\SatisListeKapsami;
 use App\Services\Satis\SatisListeServisi;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\HesapSahibiOnayi;
@@ -18,6 +19,7 @@ use App\Support\AktiviteLog;
 use App\Support\ApiCevap;
 use App\Support\Idempotency;
 use App\Support\ListeIstegi;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 
 /**
@@ -27,9 +29,9 @@ use Illuminate\Http\Request;
  *   sil     : satis.adisyon_sil
  *   fatura  : salon_personelleri.role_id = 1 (hesap sahibi), studyo degil
  *   odeme   : satis.tahsilat_al (yalniz studyo modu)
- * Yazmalar TAHSILAT_V2_YAZMA_AKTIF kill-switch arkasinda (kapaliyken 409).
- * Mobil yol (mobil=1, yalniz imzali mobil token): eski ApiController sonucu ve kurali; kimlik + salon
- * kapsami her zaman zorunlu. Web yolu degismez.
+ * Yazmalar TAHSILAT_V2_YAZMA_AKTIF kill-switch arkasinda (kapaliyken 409) — kimlik, kapsam ve yetki SONRASI denetlenir.
+ * Mobil yol (mobil=1, yalniz imzali mobil token): eski ApiController cevap bicimi; yetki ve liste kisiti web ile
+ * AYNI kural (2026-11-12, SatisListeKapsami).
  */
 class SatisController extends V2Controller
 {
@@ -40,7 +42,7 @@ class SatisController extends V2Controller
     /** Tablo sıralama beyaz listesi (SatisListeServisi'ndeki ifadelerle birebir). */
     private const SIRALANABILIR = ['durum', 'tarih', 'musteri', 'yaklasan', 'indirim', 'toplam', 'odenen', 'kalan', 'odeme_tarihi'];
 
-    private const LISTE_YETKI = ['satis.tum_satis_gor', 'satis.adisyon_olustur', 'satis.tahsilat_al'];
+    private const LISTE_YETKI = IslemYetkileri::SATIS_GOR;
 
     public function __construct(
         private SatisListeServisi $servis,
@@ -51,6 +53,7 @@ class SatisController extends V2Controller
         private KapsamServisi $kapsam,
         private MobilStudyoOdemeServisi $mobilOdeme,
         private HesapSahibiOnayi $onay,
+        private SatisListeKapsami $listeKapsami,
     ) {}
 
     /**
@@ -78,23 +81,11 @@ class SatisController extends V2Controller
             return $this->mobilListe($request, (int) $user->id, $salonId);
         }
 
-        $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
-
-        // Personel kapsami: 'satis.tum_satis_gor' yoksa YALNIZCA kendi satislari.
-        // (Musteri karti + 'musteri.gecmis_satis_gor' istisnasi: kisit kalkar.)
-        $kisit = null;
+        // Kapi + personel kisiti + kapali adisyon gizleme: web ve mobil ortak (SatisListeKapsami).
         $musteriId = $request->input('musteri_id') ?: $request->input('musteriid');
-        $personel = Personeller::where('yetkili_id', $user->id)->where('salon_id', $salonId)->first(['id', 'role_id']);
-        if (! $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'satis.tum_satis_gor')) {
-            $gecmisGor = $musteriId
-                && $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'musteri.gecmis_satis_gor');
-            if (! $gecmisGor && $personel) {
-                $kisit = (int) $personel->id;
-            }
-        }
+        $kapsam = $this->listeKapsami->denetle((int) $user->id, $salonId, (bool) $musteriId);
+        $kisit = $kapsam['kisit'];
 
-        // personel.kapali_adisyon_gizle: personel kaydi olan kullanici kapali
-        // adisyonlari goremez → yalniz acik + kapali sayisi 0 (eski mobil kural).
         $acikKapali = $request->input('acik_kapali', $request->input('acikKapali'));
         $fatura = $request->input('fatura');
         switch ((string) $request->input('satis_durumu')) {
@@ -103,8 +94,7 @@ class SatisController extends V2Controller
             case 'faturali':  $fatura = '1'; break;
             case 'faturasiz': $fatura = '0'; break;
         }
-        $kapaliGizle = $personel
-            && $this->yetki->yetkiliYetkiVar($user->id, $salonId, 'personel.kapali_adisyon_gizle');
+        $kapaliGizle = $kapsam['kapali_gizle'];
         if ($kapaliGizle) {
             $acikKapali = '1';
         }
@@ -150,10 +140,9 @@ class SatisController extends V2Controller
     public function sil(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $this->kapi->denetle($user->id, $salonId, ['satis.adisyon_sil']);
+        $this->yazmaAcikMi();
         $this->onay->adisyonSilme($salonId, (int) $user->id, $id, $request->input('onay_kodu'));
 
         return ApiCevap::basarili($this->silServisi->sil($id, (int) $user->id, $request->boolean('mobil')), 'Adisyon kaydı başarıyla kaldırıldı');
@@ -163,19 +152,16 @@ class SatisController extends V2Controller
     public function fatura(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $mobil = $request->boolean('mobil');
         if ($mobil) {
             $this->mobilSalonEslesmeli($request, $salonId);
-            $this->kapi->kapsamDenetle($user->id, $salonId);
-        } else {
-            $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
         }
+        $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
         if (! $this->yetki->yetkiliHesapSahibiIslem($user->id, $salonId) || (! $mobil && $this->islem->studyoModu($salonId))) {
             throw new YetkisizErisimException('Bu işlem için yetkiniz yok.');
         }
+        $this->yazmaAcikMi();
 
         $sonuc = $this->islem->faturaIsaretle($id, $salonId, $this->personelId($user->id, $salonId));
         if ($mobil) {
@@ -189,17 +175,16 @@ class SatisController extends V2Controller
     public function faturasizGizle(Request $request)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = (int) $request->input('salon_id');
         if (! $salonId) {
             return ApiCevap::hata('salon_id zorunlu', 422);
         }
         $mobil = $request->boolean('mobil');
-        $mobil ? $this->kapi->kapsamDenetle($user->id, $salonId) : $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
+        $this->kapi->denetle($user->id, $salonId, self::LISTE_YETKI);
         if (! $this->yetki->yetkiliHesapSahibiIslem($user->id, $salonId)) {
             throw new YetkisizErisimException('Bu işlem için yetkiniz yok.');
         }
+        $this->yazmaAcikMi();
 
         $sonuc = $this->islem->faturasizGizle($salonId);
         if ($mobil) {
@@ -213,15 +198,17 @@ class SatisController extends V2Controller
     public function odeme(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
         $alindi = filter_var($request->input('alindi'), FILTER_VALIDATE_BOOLEAN);
+        if ($request->boolean('mobil')) {
+            $this->mobilSalonEslesmeli($request, $salonId);
+        }
+        $this->kapi->denetle($user->id, $salonId, IslemYetkileri::TAHSILAT);
+        $this->yazmaAcikMi();
         if ($request->boolean('mobil')) {
             return $this->mobilOdeme($request, $id, (int) $user->id, $salonId, $alindi);
         }
 
-        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
         if (! $this->islem->studyoModu($salonId)) {
             return ApiCevap::hata('Yalnızca stüdyo modunda kullanılabilir', 422);
         }
@@ -237,11 +224,11 @@ class SatisController extends V2Controller
     public function odemeTarihi(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
         $request->validate(['tarih' => ['nullable', 'date_format:Y-m-d']]);
 
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Adisyon bulunamadı');
-        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+        $this->kapi->denetle($user->id, $salonId, IslemYetkileri::TAHSILAT);
+        $this->yazmaAcikMi();
         if (! $this->islem->studyoModu($salonId)) {
             return ApiCevap::hata('Yalnızca stüdyo modunda kullanılabilir', 422);
         }
@@ -253,18 +240,17 @@ class SatisController extends V2Controller
     }
 
     /**
-     * Eski mobil listesi. user_id yalniz filtre secer: rol 5 ve tum_satis_gor yetkisi yoksa baskasinin
-     * satisi istenemez (musteri karti haric, mobil birlestirme onu kullanir). personel.kapali_adisyon_gizle
-     * filtre kullanicisinin uzerinden okunur (eskiyle ayni). personel_id eskide de yok sayilirdi.
+     * Eski mobil listesi (cevap bicimi). Kapi, personel kisiti ve kapali adisyon gizleme web ile AYNI (SatisListeKapsami).
+     * user_id yalniz kisitsiz kullanicida filtre secer (o yetkilinin personel satislari); kisitliyse yok sayilir.
+     * personel_id eskide de yok sayilirdi.
      */
     private function mobilListe(Request $request, int $yetkiliId, int $salonId)
     {
-        $this->kapi->kapsamDenetle($yetkiliId, $salonId);
-
         $musteriId = $request->input('musteriid') ?: $request->input('musteri_id');
-        $hedef = $this->mobilFiltreKullanicisi($yetkiliId, $salonId, (int) $request->input('user_id'), (bool) $musteriId);
-        $personelId = $hedef ? $this->personelId($hedef, $salonId) : null;
-        $kapaliGizle = $personelId && $this->yetki->yetkiliYetkiVar($hedef, $salonId, 'personel.kapali_adisyon_gizle');
+        $kapsam = $this->listeKapsami->denetle($yetkiliId, $salonId, (bool) $musteriId);
+        $hedef = (int) $request->input('user_id');
+        $personelId = $kapsam['kisit'] ?? ($hedef ? $this->personelId($hedef, $salonId) : null);
+        $kapaliGizle = $kapsam['kapali_gizle'];
 
         $veri = $this->servis->liste($salonId, [
             'mobil'             => true,
@@ -292,7 +278,6 @@ class SatisController extends V2Controller
     public function tarih(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
         $request->validate(['tarih' => ['required', 'date_format:Y-m-d']]);
 
         $salonId = $this->bulundu($this->islem->adisyonSalonId($id), 'Satış bulunamadı');
@@ -300,6 +285,7 @@ class SatisController extends V2Controller
         if ($this->satisKisitli($user->id, $salonId)) {
             throw new YetkisizErisimException('Yetkisiz işlem');
         }
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->islem->satisTarihiGuncelle($id, $salonId, (string) $request->input('tarih')), 'Satış tarihi güncellendi.');
     }
@@ -311,21 +297,9 @@ class SatisController extends V2Controller
             && ! $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, 'satis.tum_satis_gor');
     }
 
-    private function mobilFiltreKullanicisi(int $yetkiliId, int $salonId, int $istenen, bool $musteriVar): ?int
-    {
-        $sinirli = $this->satisKisitli($yetkiliId, $salonId);
-        if (! $sinirli) {
-            return $istenen ?: null;
-        }
-
-        return $istenen === 0 && $musteriVar ? null : $yetkiliId;
-    }
-
-    /** Eski adisyonOdemeIsaretle: salon eslesmeli, stüdyo sarti ve yetki yoktu; tekrar gonderim ikinci tahsilat yazmaz. */
+    /** Eski adisyonOdemeIsaretle cevabi (stüdyo sarti yoktu); salon eslesmesi ve yetki odeme()'de. Tekrar gonderim ikinci tahsilat yazmaz. */
     private function mobilOdeme(Request $request, int $id, int $yetkiliId, int $salonId, bool $alindi)
     {
-        $this->mobilSalonEslesmeli($request, $salonId);
-        $this->kapi->kapsamDenetle($yetkiliId, $salonId);
         $this->odemeGeriAlmaOnayi($request, $id, $yetkiliId, $salonId, $alindi);
 
         $sonuc = Idempotency::calistir('mobil_odeme', (string) $request->input('idempotency_key'), $yetkiliId, $salonId,

@@ -17,8 +17,8 @@ use Illuminate\Http\Request;
  * AYNI uclari tuketir.
  *
  * KVKK: kimlik + kapsam + rol 5 (personel) degil (eski personelmi() yonlendirmesi).
- * Mobil yolu (mobil_gorunum, mobil=1): mobil uygulama gorevleri rol ayirmadan gosterir. Esdeger kural: kimlik +
- * salon kapsami; liste ve metinler mobilin bugunkuyle aynidir. Web davranisi degismez.
+ * Mobil gorunum (mobil_gorunum): mobil uygulama gorev LISTESINI rol ayirmadan gosterir (kimlik + salon kapsami; liste
+ * ve metinler mobilin bugunkuyle ayni). Gorev iptali web ile ayni kural (rol 5 degil) — 2026-11-12.
  * Yazmalar config('asistan.yazma_aktif') kill-switch arkasinda (kapaliyken 409).
  */
 class AsistanController extends V2Controller
@@ -50,7 +50,7 @@ class AsistanController extends V2Controller
         $user = $this->kullanici();
         $gorevTuru = GorevTuru::from($tur); // route kisiti gecersiz turu zaten eler
         $salonId = $this->bulundu($servis->salonId($gorevTuru, $id), 'Görev bulunamadı');
-        $request->boolean('mobil') ? $this->kapi->kapsamDenetle($user->id, $salonId) : $this->kapi->yoneticiDenetle($user->id, $salonId);
+        $this->kapi->yoneticiDenetle($user->id, $salonId); // web ve mobil ayni kural (2026-11-12)
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili(null, $servis->iptalEt($gorevTuru, $id, $salonId, (int) $user->id));

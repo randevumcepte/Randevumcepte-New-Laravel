@@ -16,6 +16,7 @@ use App\Services\Yetki\GuvenlikKapisi;
 use App\Support\ApiCevap;
 use App\Support\Idempotency;
 use App\Support\ListeIstegi;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 
 /**
@@ -29,8 +30,8 @@ use Illuminate\Http\Request;
  *   POST   /paket/satis {salon_id, musteri_id, personel_id?, tarih?, kalemler[{paket_id, seans?, fiyat?}], idempotency_key}
  *   GET    /paket/musteri-kontrol?salon_id=&user_id=&onay_var=   randevu formu kalan seans popup'i (mobil)
  *
- * mobil=1 (yalniz imzali mobil token, MobilBayraklar): eski mobil uclarin ham liste + yazma kurali,
- * yetki anahtari aranmaz, kimlik ve salon kapsami zorunlu. Yeni kayit idempotency_key ister.
+ * mobil=1 (yalniz imzali mobil token, MobilBayraklar): eski mobil uclarin ham liste + yazma kurali (cevap bicimi);
+ * yetki web ile AYNI anahtarlar (2026-11-12). Yeni kayit idempotency_key ister.
  *
  * Yetki (eski menu/sayfa + satis kapisiyla ayni anahtarlar):
  *   okuma : paket.tanim_olustur | paket.sat     tanim yaz : paket.tanim_olustur
@@ -40,6 +41,8 @@ use Illuminate\Http\Request;
 class PaketController extends V2Controller
 {
     private const OKU = ['paket.tanim_olustur', 'paket.sat'];
+
+    private const TANIM = 'paket.tanim_olustur';
 
     protected ?string $yazmaAlani = 'paket';
 
@@ -68,15 +71,13 @@ class PaketController extends V2Controller
 
     public function liste(Request $request)
     {
+        [, $salonId] = $this->salonDenetle($request, self::OKU);
         if ($request->boolean('mobil')) {
-            [, $salonId] = $this->salonDenetle($request, []);
-
             return ApiCevap::basarili($request->boolean('tumu')
                 ? $this->sorgu->mobilKatalog($salonId, (string) $request->input('yon'))
                 : $this->sorgu->mobilSayfa($salonId, (string) $request->input('arama', ''), max(1, $request->integer('page', 1))));
         }
 
-        [, $salonId] = $this->salonDenetle($request, self::OKU);
         $liste = ListeIstegi::istekten($request, 25, PaketSorgusu::SIRALANABILIR, 'id', 'desc')->dizi();
 
         return ApiCevap::basarili($this->sorgu->listele($salonId, $liste, $request->boolean('tumu')));
@@ -84,46 +85,39 @@ class PaketController extends V2Controller
 
     public function goster(int $id)
     {
-        $this->kayitDenetle($id, self::OKU);
+        $this->paketDenetle($id, self::OKU);
 
         return ApiCevap::basarili($this->sorgu->getir($id));
     }
 
     public function ekle(PaketKaydetIstegi $request)
     {
+        [$uid, $salonId] = $this->salonDenetle($request, self::TANIM);
+        $this->yazmaAcikMi();
         if ($request->boolean('mobil')) {
-            [$uid, $salonId] = $this->salonDenetle($request, []);
-            $this->yazmaAcikMi();
             $sonuc = Idempotency::calistir('paket_mobil_ekle', (string) $request->input('idempotency_key'), $uid, $salonId,
                 fn () => ['id' => $this->yaz->mobilKaydet($salonId, null, $request->validated(), $uid)]);
 
             return ApiCevap::basarili($sonuc, 'Paket başarıyla eklendi', 201);
         }
 
-        [$uid, $salonId] = $this->salonDenetle($request, 'paket.tanim_olustur');
-        $this->yazmaAcikMi();
-
         return ApiCevap::basarili($this->yaz->kaydet($salonId, null, $request->validated(), $uid), 'Paket başarıyla eklendi', 201);
     }
 
     public function guncelle(PaketKaydetIstegi $request, int $id)
     {
+        [$uid, $salonId] = $this->paketDenetle($id, self::TANIM);
+        $this->yazmaAcikMi();
         if ($request->boolean('mobil')) {
-            [$uid, $salonId] = $this->kayitDenetle($id, []);
-            $this->yazmaAcikMi();
-
             return ApiCevap::basarili(['id' => $this->yaz->mobilKaydet($salonId, $id, $request->validated(), $uid)], 'Paket başarıyla güncellendi');
         }
-
-        [$uid, $salonId] = $this->kayitDenetle($id, 'paket.tanim_olustur');
-        $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->kaydet($salonId, $id, $request->validated(), $uid), 'Paket başarıyla güncellendi');
     }
 
-    public function sil(Request $request, int $id)
+    public function sil(int $id)
     {
-        [$uid] = $this->kayitDenetle($id, $request->boolean('mobil') ? [] : 'paket.tanim_olustur');
+        [$uid] = $this->paketDenetle($id, self::TANIM);
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($this->yaz->sil($id, $uid), 'Paket başarıyla kaldırıldı');
@@ -131,7 +125,7 @@ class PaketController extends V2Controller
 
     public function musteriKontrol(Request $request, PaketMusteriKontrolu $kontrol)
     {
-        [, $salonId] = $this->salonDenetle($request, $request->boolean('mobil') ? [] : ['randevu.olustur', 'randevu.duzenle_iptal']);
+        [, $salonId] = $this->salonDenetle($request, IslemYetkileri::RANDEVU_FORM);
 
         return ApiCevap::basarili($kontrol->getir($salonId, $request->integer('user_id'), $request->boolean('onay_var')));
     }
@@ -160,13 +154,11 @@ class PaketController extends V2Controller
      *
      * @return array{0:int,1:int} [yetkili id, salon id]
      */
-    private function kayitDenetle(int $id, array|string $yetki): array
+    private function paketDenetle(int $id, array|string $yetki): array
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($this->sorgu->salonId($id), 'Paket bulunamadı');
-        $yetki === []
-            ? app(GuvenlikKapisi::class)->kapsamDenetle($uid, $salonId)
-            : app(GuvenlikKapisi::class)->denetle($uid, $salonId, $yetki);
+        app(GuvenlikKapisi::class)->denetle($uid, $salonId, $yetki);
 
         return [$uid, $salonId];
     }

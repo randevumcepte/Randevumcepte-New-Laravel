@@ -35,7 +35,7 @@ use Illuminate\Http\Request;
  *   GET   /seans/dokum?tur=&kalem_id=                      seans dokumu PDF (mobil)
  *
  * mobil=1 (yalniz imzali mobil token, MobilBayraklar): eski mobil sayac, satir ve yazma kurali
- * (SeansMobilServisi), yetki anahtari aranmaz, kimlik ve salon kapsami zorunlu.
+ * (SeansMobilServisi); yetki web ile AYNI (2026-11-12).
  *
  * Yetki her uçta 'paket.seans_takip' (eski sayfa kapisi). Kayit uclarinda salon
  * istekten degil kaydin adisyonundan cozulur (baska salonun kaydi 404/403).
@@ -65,13 +65,11 @@ class SeansController extends V2Controller
 
     public function liste(Request $request)
     {
+        [, $salonId] = $this->salonDenetle($request, self::YETKI);
         if ($request->boolean('mobil')) {
-            [, $salonId] = $this->salonDenetle($request, []);
-
             return ApiCevap::basarili($this->mobil->liste($salonId, (string) $request->input('arama', ''), (string) $request->input('musteri_id', ''), max(1, $request->integer('page', 1))));
         }
 
-        [, $salonId] = $this->salonDenetle($request, self::YETKI);
         $l = ListeIstegi::istekten($request, 10, array_keys(SeansTakipServisi::SIRALANABILIR), 'tarih', 'desc');
 
         return ApiCevap::basarili($this->takip->liste($salonId, $l, $request->integer('musteri_id') ?: null));
@@ -92,7 +90,7 @@ class SeansController extends V2Controller
         ]);
         $tur = SeansKalemTuru::from($g['tur']);
         $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
-        $this->kayitDenetle((int) $kalem->salon_id);
+        $this->seansDenetle((int) $kalem->salon_id);
         $this->geldiKodu($request, $g['geldi'], $kalem, ['kalem' => $tur->value.':'.$kalem->id, 'hizmet' => (int) $g['hizmet_id']]);
 
         $sonuc = $this->yaz->ekle($tur, $kalem, (int) $g['hizmet_id'], SeansDurumu::geldidenCoz($g['geldi']), $g['tarih'] ?? now()->toDateString());
@@ -106,12 +104,12 @@ class SeansController extends V2Controller
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
         $geldiKodu = fn () => $this->geldiKodu($request, $g['geldi'] ?? null, $kalem, ['seans' => (int) $seans->id]);
         if ($request->boolean('mobil')) {
-            $this->kayitDenetle((int) $kalem->salon_id, true, true);
+            $this->seansDenetle((int) $kalem->salon_id);
             $geldiKodu();
 
             return ApiCevap::basarili($this->mobil->durum($seans, isset($g['geldi']) ? (int) $g['geldi'] : null, (int) $kalem->salon_id, (int) $this->kullanici()->id));
         }
-        $this->kayitDenetle((int) $kalem->salon_id);
+        $this->seansDenetle((int) $kalem->salon_id);
         $geldiKodu();
 
         $durum = SeansDurumu::geldidenCoz($g['geldi']);
@@ -126,7 +124,7 @@ class SeansController extends V2Controller
     public function cihaz(int $id)
     {
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
-        $this->kayitDenetle((int) $kalem->salon_id, false);
+        $this->seansDenetle((int) $kalem->salon_id, false);
 
         return ApiCevap::basarili($this->cihaz->getir($seans, $tur, $kalem));
     }
@@ -145,7 +143,7 @@ class SeansController extends V2Controller
             'bolgeler.*.notlar'           => ['nullable', 'string', 'max:1000'],
         ]);
         [$seans, $tur, $kalem] = $this->kapsam->seans($id);
-        $this->kayitDenetle((int) $kalem->salon_id);
+        $this->seansDenetle((int) $kalem->salon_id);
 
         $adet = $this->cihaz->kaydet($seans, $tur, $kalem, $g['bolgeler'], (int) $this->kullanici()->id);
 
@@ -160,7 +158,7 @@ class SeansController extends V2Controller
         ]);
         $tur = SeansKalemTuru::from($g['tur']);
         $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
-        $this->kayitDenetle((int) $kalem->salon_id, false, $request->boolean('mobil'));
+        $this->seansDenetle((int) $kalem->salon_id, false);
         $belge = $dokum->pdf($tur, $kalem);
 
         return $belge['pdf']->stream($belge['ad']);
@@ -179,7 +177,7 @@ class SeansController extends V2Controller
         $tur = SeansKalemTuru::from($g['tur']);
         $kalem = $this->kapsam->kalem($tur, (int) $g['kalem_id']);
         $salonId = (int) $kalem->salon_id;
-        $this->kayitDenetle($salonId, true, true);
+        $this->seansDenetle($salonId);
         $this->geldiKodu($request, $g['geldi'], $kalem, ['kalem' => $tur->value.':'.$kalem->id, 'hizmet' => (int) $g['hizmet_id']]);
         $uid = (int) $this->kullanici()->id;
         $tarih = MobilSeansKurali::seansTarihi($g['tarih'] ?? null, now()->toDateString());
@@ -199,12 +197,10 @@ class SeansController extends V2Controller
         }
     }
 
-    /** Kaydin salonunda kapsam + yetki (mobilde yalniz kapsam); yazma ise ardindan kill-switch. */
-    private function kayitDenetle(int $salonId, bool $yazma = true, bool $mobil = false): void
+    /** Kaydin salonunda kapsam + yetki (web ve mobil ayni); yazma ise ardindan kill-switch. */
+    private function seansDenetle(int $salonId, bool $yazma = true): void
     {
-        $mobil
-            ? app(GuvenlikKapisi::class)->kapsamDenetle($this->kullanici()->id, $salonId)
-            : app(GuvenlikKapisi::class)->denetle($this->kullanici()->id, $salonId, self::YETKI);
+        app(GuvenlikKapisi::class)->denetle($this->kullanici()->id, $salonId, self::YETKI);
         if ($yazma) {
             $this->yazmaAcikMi();
         }

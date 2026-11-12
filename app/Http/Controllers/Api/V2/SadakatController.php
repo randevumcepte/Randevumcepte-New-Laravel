@@ -61,7 +61,7 @@ class SadakatController extends V2Controller
 
     public function odulGuncelle(PuanOdulIstegi $request, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id);
+        [$uid, $salonId] = $this->sadakatKaydi($id);
         $this->yazmaAcikMi();
         $hedefler = $request->filled('salon_ids') ? $this->subeler->hedefler($uid, $salonId, $request->input('salon_ids'), CarkController::YONET) : null;
         $this->oduller->guncelle($salonId, $uid, $id, $request->validated(), $hedefler);
@@ -71,7 +71,7 @@ class SadakatController extends V2Controller
 
     public function odulSil(int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id);
+        [$uid, $salonId] = $this->sadakatKaydi($id);
         $this->yazmaAcikMi();
         $this->oduller->sil($salonId, $uid, $id);
 
@@ -96,7 +96,7 @@ class SadakatController extends V2Controller
     }
 
     /** Yol parametresindeki ödülün salonu (yoksa 404) → kapsam + yetki o salonda. */
-    private function kayitDenetle(int $id): array
+    private function sadakatKaydi(int $id): array
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($this->oduller->salonId($id), 'Puan ödülü bulunamadı');

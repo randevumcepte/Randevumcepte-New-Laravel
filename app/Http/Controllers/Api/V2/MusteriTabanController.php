@@ -33,10 +33,8 @@ abstract class MusteriTabanController extends V2Controller
     protected function musteriDenetle(Request $r, int $musteriId, array|string $yetki): array
     {
         [$uid, $salonId] = $this->salonDenetle($r, $yetki);
-        $kisit = $this->portfoy()->kisitliPersonel($uid, $salonId);
-        app(MusteriOkumaServisi::class)->portfoyZorunlu($salonId, $musteriId, $kisit);
 
-        return [$uid, $salonId, $kisit];
+        return [$uid, $salonId, app(MusteriOkumaServisi::class)->kapsamdaZorunlu($uid, $salonId, $musteriId)];
     }
 
     /** Personel (rol 5) hesaplarina kapali islemler (eski panelde butonlar gizliydi). */

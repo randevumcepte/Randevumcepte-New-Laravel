@@ -9,7 +9,6 @@ use App\Services\Kasa\GunSonuServisi;
 use App\Services\Kasa\KasaRaporServisi;
 use App\Services\Kasa\KasaYazServisi;
 use App\Services\Kasa\MobilKasaServisi;
-use App\Services\Rapor\RaporSecenekServisi;
 use App\Support\ApiCevap;
 use Illuminate\Http\Request;
 
@@ -34,7 +33,7 @@ use Illuminate\Http\Request;
  *
  * Mobil yolu (mobil=1, yalniz imzali mobil token): ozet, gelirler, giderler, gun-sonu, aylik eski mobil v1 hesabini ve
  * cevabini verir (Services/Kasa/MobilKasaServisi), filtre baslangic/bitis/odeme_yontemi_id, giderlerde harcayan.
- * Yetki eski mobil ekraninin giris kuraliyladir: kasa ekraninin menu yetkilerinden biri (gun sonu: rapor.kasa), kayitsiz Sekreter dahil.
+ * Yetki web ile AYNI (2026-11-12): her uc web dalinin anahtarini ister (rapor.kasa; giderlerde + finans.masraf_gor).
  */
 class KasaController extends RaporTabanController
 {
@@ -46,24 +45,20 @@ class KasaController extends RaporTabanController
 
     public function ozet(Request $r)
     {
+        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         if ($r->boolean('mobil')) {
-            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
-
             return ApiCevap::basarili($this->mobil->ozet($salonId, $this->mobilFiltre($r)));
         }
-        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($this->rapor->ozet($salonId, $this->donem($r), $this->odemeYontemi($r), $r->integer('banka_id') ?: null));
     }
 
     public function gelirler(Request $r)
     {
+        [$uid, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         if ($r->boolean('mobil')) {
-            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
-
             return ApiCevap::basarili($this->mobil->tahsilatSayfasi($salonId, $this->mobilFiltre($r), max(1, $r->integer('page'))));
         }
-        [$uid, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($this->rapor->gelirler(
             $salonId, $this->donem($r), $this->odemeYontemi($r),
@@ -75,13 +70,11 @@ class KasaController extends RaporTabanController
 
     public function giderler(Request $r)
     {
-        if ($r->boolean('mobil')) {
-            [, $salonId] = $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS);
-
-            return ApiCevap::basarili($this->mobil->masrafSayfasi($salonId, $this->mobilFiltre($r), $r->input('harcayan'), max(1, $r->integer('page'))));
-        }
         [$uid, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         $this->salonYetki($r, 'finans.masraf_gor');
+        if ($r->boolean('mobil')) {
+            return ApiCevap::basarili($this->mobil->masrafSayfasi($salonId, $this->mobilFiltre($r), $r->input('harcayan'), max(1, $r->integer('page'))));
+        }
 
         return ApiCevap::basarili($this->rapor->giderler(
             $salonId, $this->donem($r), $this->odemeYontemi($r),
@@ -99,21 +92,20 @@ class KasaController extends RaporTabanController
 
     public function gunSonu(Request $r, GunSonuServisi $gunSonu)
     {
+        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         if ($r->boolean('mobil')) {
-            [, $salonId] = $this->mobilYetki($r, 'rapor.kasa');
             $f = $this->mobilFiltre($r);
             $t1 = $f['tarih1'] ?? date('Y-m-d');
 
             return ApiCevap::basarili($this->mobil->gunSonu($salonId, $t1, $f['tarih2'] ?? $t1));
         }
-        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
 
         return ApiCevap::basarili($gunSonu->rapor($salonId, $this->donem($r, 'bugun')));
     }
 
     public function aylik(Request $r)
     {
-        [, $salonId] = $r->boolean('mobil') ? $this->mobilYetki($r, RaporSecenekServisi::KASA_GIRIS) : $this->salonYetki($r, 'rapor.kasa');
+        [, $salonId] = $this->salonYetki($r, 'rapor.kasa');
         $yil = $r->integer('yil') ?: (int) date('Y');
         if ($yil < 2000 || $yil > (int) date('Y') + 1) {
             throw new GecersizIslemException('yil geçersiz');

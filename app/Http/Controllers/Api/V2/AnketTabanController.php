@@ -22,7 +22,7 @@ abstract class AnketTabanController extends V2Controller
     }
 
     /** @return array{0:int,1:int} [yetkili id, salon id] — kayıt yoksa 404, kapsam dışıysa 403. */
-    protected function kayitDenetle(?int $salonId, string $bulunamadi): array
+    protected function anketKaydi(?int $salonId, string $bulunamadi): array
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($salonId, $bulunamadi);

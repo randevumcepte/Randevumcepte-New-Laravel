@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Exceptions\BulunamadiException;
 use App\Exceptions\CakismaException;
+use App\Exceptions\CokFazlaIstekException;
 use App\Exceptions\GecersizIslemException;
 use App\Exceptions\YetkisizErisimException;
 use App\Http\Controllers\Controller;
 use App\Services\Yetki\GuvenlikKapisi;
 use App\Services\Yetki\KapsamServisi;
 use App\Support\DogrulamaMetinleri;
+use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -50,11 +53,80 @@ abstract class V2Controller extends Controller
     {
         $user = $this->kullanici();
         $salonId = $this->salonId($request);
-        $yetkiler === []
-            ? app(GuvenlikKapisi::class)->kapsamDenetle($user->id, $salonId)   // salonun her uyesi (yetki anahtari aranmaz)
-            : app(GuvenlikKapisi::class)->denetle($user->id, $salonId, $yetkiler);
+        $this->kapiDenetle((int) $user->id, $salonId, $yetkiler);
 
         return [(int) $user->id, $salonId];
+    }
+
+    /**
+     * Kayit id'li uc (PATCH/DELETE /x/{id}): kaydin salonu cozulur; kayit YOKSA da kullanicinin kapsami DISINDAKI bir
+     * salondaysa da AYNI 404 doner (id yoklama: "yok" ile "baskasinin" ayirt edilemez). Kapsam icindeyse lisans + yetki
+     * (OR-gate; [] → yalniz kapsam) denetlenir, eksikse 403. Yazma bayragi (yazmaAcikMi) bundan SONRA cagrilir.
+     *
+     * @param  array<string>|string  $yetkiler
+     * @return array{0:int,1:int} [yetkili id, kaydin salon id'si]
+     */
+    protected function kayitDenetle(?int $kayitSalonId, array|string $yetkiler, string $mesaj = 'Kayıt bulunamadı'): array
+    {
+        $user = $this->kullanici();
+        $salonId = $this->bulundu($kayitSalonId, $mesaj);
+        if (! app(KapsamServisi::class)->salonaBagliMi($user->id, $salonId)) {
+            throw new BulunamadiException($mesaj);
+        }
+        $this->kapiDenetle((int) $user->id, $salonId, $yetkiler);
+
+        return [(int) $user->id, $salonId];
+    }
+
+    /**
+     * Govdede id'si gelen, istekteki salona ait olmasi gereken kayit (orn. POST /tahsilat {salon_id, adisyon_id}):
+     * ONCE salon_id + kapsam + yetki, SONRA kaydin salonu cozulur ($kayitSalonu tembel calisir). Kayit yoksa ya da
+     * baska salonunsa ayni 404.
+     *
+     * @param  array<string>|string  $yetkiler
+     * @param  Closure(): ?int  $kayitSalonu
+     * @return array{0:int,1:int} [yetkili id, salon id]
+     */
+    protected function salondakiKayit(Request $request, array|string $yetkiler, Closure $kayitSalonu, string $mesaj = 'Kayıt bulunamadı'): array
+    {
+        [$uid, $salonId] = $this->salonDenetle($request, $yetkiler);
+        if ($kayitSalonu() !== $salonId) {
+            throw new BulunamadiException($mesaj);
+        }
+
+        return [$uid, $salonId];
+    }
+
+    /** Kapsam (+ lisans) ve yetki (OR-gate); $yetkiler = [] → yalniz kapsam (salonun her uyesi). */
+    private function kapiDenetle(int $yetkiliId, int $salonId, array|string $yetkiler): void
+    {
+        $yetkiler === []
+            ? app(GuvenlikKapisi::class)->kapsamDenetle($yetkiliId, $salonId)
+            : app(GuvenlikKapisi::class)->denetle($yetkiliId, $salonId, $yetkiler);
+    }
+
+    /**
+     * Kullanici + salon basina kota (ucretli dis servis, toplu sorgu). $pencereler: [saniye => sinir]; $adet bu istegin
+     * tukettigi birim (orn. sorulan numara sayisi). Herhangi bir pencere asilacaksa hicbir sayac artmadan 429; yoksa tum
+     * pencereler $adet kadar artar. Kimlik + kapsam + yetki denetiminden SONRA cagrilir (yetkisiz istek kota yemez).
+     *
+     * @param  array<int,int>  $pencereler
+     */
+    protected function kotaDenetle(string $ad, int $yetkiliId, int $salonId, array $pencereler, int $adet = 1): void
+    {
+        foreach ($pencereler as $saniye => $sinir) {
+            if (RateLimiter::attempts($this->kotaAnahtari($ad, $yetkiliId, $salonId, $saniye)) + $adet > $sinir) {
+                throw new CokFazlaIstekException('İstek sınırı aşıldı. Lütfen daha sonra tekrar deneyin.');
+            }
+        }
+        foreach ($pencereler as $saniye => $sinir) {
+            RateLimiter::increment($this->kotaAnahtari($ad, $yetkiliId, $salonId, $saniye), $saniye, $adet);
+        }
+    }
+
+    private function kotaAnahtari(string $ad, int $yetkiliId, int $salonId, int $saniye): string
+    {
+        return "v2-kota:{$ad}:{$yetkiliId}:{$salonId}:{$saniye}";
     }
 
     /** Istekteki zorunlu salon_id (yoksa 422). Kapsam denetimi cagirana aittir. */

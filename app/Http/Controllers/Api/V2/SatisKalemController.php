@@ -16,11 +16,13 @@ use App\Services\Yetki\SalonSahipligi;
 use App\Services\Yetki\YetkiServisi;
 use App\Support\ApiCevap;
 use App\Support\Idempotency;
+use App\Support\Yetki\IslemYetkileri;
 use Illuminate\Http\Request;
 
 /**
- * Satış kalem yönetimi (Satış & Tahsilat Düzenleme). Flag + KVKK (kimlik+kapsam+yetki).
- * Gerçek yazma TAHSILAT_V2_YAZMA_AKTIF arkasında (tüm v2 yazmalar birlikte kontrol).
+ * Satış kalem yönetimi (Satış & Tahsilat Düzenleme). KVKK (kimlik+kapsam+yetki), ardından flag.
+ * Gerçek yazma TAHSILAT_V2_YAZMA_AKTIF arkasında (tüm v2 yazmalar birlikte kontrol) — yetkiden SONRA denetlenir:
+ * yetkisiz istek bayrağın durumunu öğrenmez. Mobil kalem silme web ile aynı yetki ve onay kuralını kullanır.
  */
 class SatisKalemController extends V2Controller
 {
@@ -28,7 +30,7 @@ class SatisKalemController extends V2Controller
 
     protected string $yazmaKapaliMesaj = 'Düzenleme henüz etkin değil';
 
-    private const DUZENLEME_YETKI = ['satis.adisyon_olustur'];
+    private const DUZENLEME_YETKI = IslemYetkileri::ADISYON_DUZENLE;
 
     /** Fiyatı elle değiştirme (eski *tahsilattutaridegistir kapısı; v2 satış yazıcılarıyla aynı). */
     private const FIYAT_YETKI = 'satis.indirim_uygula';
@@ -53,14 +55,13 @@ class SatisKalemController extends V2Controller
     public function adisyonAc(Request $request)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = (int) $request->input('salon_id');
         $musteriId = (int) $request->input('musteri_id');
         if (! $salonId || ! $musteriId) {
             return ApiCevap::hata('salon_id ve musteri_id zorunlu', 422);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
         $this->sahiplik->musteriOlmali($musteriId, $salonId);
         [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId, (int) $user->id);
         $tarih = $request->input('tarih') ? date('Y-m-d', strtotime((string) $request->input('tarih'))) : null;
@@ -82,13 +83,12 @@ class SatisKalemController extends V2Controller
     public function ekle(Request $request, int $adisyon)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->adisyonServisi->salonIdGetir($adisyon);
         if (! $salonId) {
             return ApiCevap::hata('Adisyon bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
 
         [$tip, $katalogId, $opt] = $this->kalemGirdisi($request, $salonId, (int) $user->id);
 
@@ -104,13 +104,12 @@ class SatisKalemController extends V2Controller
     public function fiyat(Request $request, string $tip, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, [self::FIYAT_YETKI]);
+        $this->yazmaAcikMi();
 
         $sonuc = $this->servis->fiyatGuncelle($tip, $id, $this->fiyatGirdisi($request) ?? throw new GecersizIslemException('fiyat zorunlu'), (int) $user->id);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
@@ -125,13 +124,12 @@ class SatisKalemController extends V2Controller
     public function seans(Request $request, string $tip, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
 
         $sonuc = $tip === 'paket'
             ? $this->servis->paketSeansGuncelle($id, $request->input('seans'))
@@ -144,13 +142,12 @@ class SatisKalemController extends V2Controller
     public function personel(Request $request, string $tip, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
 
         return ApiCevap::basarili(
             $this->servis->personelGuncelle($tip, $id, $this->personelGirdisi($request, $tip, $salonId)),
@@ -181,13 +178,12 @@ class SatisKalemController extends V2Controller
     public function paketYukselt(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->servis->kalemSalonId('paket', $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
         $hedef = $request->input('hedef_paket_id');
         if (! is_numeric($hedef) || (int) $hedef < 1) {
             throw new GecersizIslemException('hedef_paket_id zorunlu');
@@ -206,13 +202,12 @@ class SatisKalemController extends V2Controller
     public function urunAdet(Request $request, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $salonId = $this->servis->kalemSalonId('urun', $id);
         if (! $salonId) {
             return ApiCevap::hata('Ürün kalemi bulunamadı', 404);
         }
         $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
 
         $adet = (int) $request->input('adet');
         if ($adet < 1) {
@@ -225,27 +220,24 @@ class SatisKalemController extends V2Controller
         return ApiCevap::basarili($sonuc, 'Adet güncellendi.');
     }
 
-    /** DELETE /api/v2/kalem/{tip}/{id} */
+    /**
+     * DELETE /api/v2/kalem/{tip}/{id} — web ve mobil ayni kapi: yetki (satis.adisyon_olustur), flag, SMS ayari 23
+     * hesap sahibi onayi (kod yoksa 428). Mobilin tek farki eski tahsilat_*_sil cevabi.
+     */
     public function sil(Request $request, int|string $tip, int $id)
     {
         $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $tip = (string) $tip;
         $salonId = $this->servis->kalemSalonId($tip, $id);
         if (! $salonId) {
             return ApiCevap::hata('Kalem bulunamadı', 404);
         }
-        // Mobil: eski tahsilat_*_sil sonucu; yetki istegi eski mobilde etkisizdi, kapsam zorunlu.
-        // SMS ayari 23 (hesap sahibi onayi) web ve mobilde ayni kapi: kod yoksa 428.
+        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
+        $this->yazmaAcikMi();
+        $this->onay->kalemSilme($salonId, (int) $user->id, $tip, $id, $request->input('onay_kodu'));
         if ($request->boolean('mobil')) {
-            $this->kapi->kapsamDenetle($user->id, $salonId);
-            $this->onay->kalemSilme($salonId, (int) $user->id, $tip, $id, $request->input('onay_kodu'));
-
             return ApiCevap::basarili($this->mobilKalem->sil($tip, $id, $salonId, (int) $user->id));
         }
-        $this->kapi->denetle($user->id, $salonId, self::DUZENLEME_YETKI);
-        $this->onay->kalemSilme($salonId, (int) $user->id, $tip, $id, $request->input('onay_kodu'));
 
         $sonuc = $this->servis->sil($tip, $id, (int) $user->id);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];

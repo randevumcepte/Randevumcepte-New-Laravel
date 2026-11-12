@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V2;
 
 use App\Domain\Tahsilat\TahsilatNet;
 use App\Exceptions\GecersizIslemException;
-use App\Exceptions\YetkisizErisimException;
 use App\Models\Personeller;
 use App\Models\Tahsilat;
 use App\Services\Ayar\MusteriIndirimServisi;
@@ -19,9 +18,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Tahsilat YAZMA API v2 — şimdilik yalnızca DRY-RUN.
- * KVKK: kimlik + kapsam (adisyon bu işletmeye mi ait) + satis.tahsilat_al.
- * Gerçek yazma KAPALI (dry_run=1 zorunlu); kullanıcı onayıyla açılacak.
+ * Tahsilat YAZMA API v2 (dry_run=1 → yalnız plan).
+ * Sıra her uçta: kimlik → kapsam → yetki → yazma bayrağı (tahsilat.yazma_aktif) → girdi. Başka salonun adisyonu/tahsilatı
+ * ile olmayan kayıt aynı 404'ü alır (id yoklama yok); bayrak durumu yetkisize söylenmez.
  */
 class TahsilatController extends V2Controller
 {
@@ -38,53 +37,33 @@ class TahsilatController extends V2Controller
     /** POST /api/v2/tahsilat */
     public function ekle(Request $request)
     {
-        $user = $this->kullanici();
-
-        $salonId = (int) $request->input('salon_id');
-        if (! $salonId) {
-            return ApiCevap::hata('salon_id zorunlu', 422);
-        }
-
-        $adisyonId = (int) $request->input('adisyon_id');
-        if (! $adisyonId) {
-            return ApiCevap::hata('adisyon_id zorunlu', 422);
-        }
-
-        // Tenant izolasyonu: adisyon GERÇEKTEN bu salona mı ait?
-        $adisyonSalon = $this->adisyonServisi->salonIdGetir($adisyonId);
-        if (! $adisyonSalon) {
-            return ApiCevap::hata('Adisyon bulunamadı', 404);
-        }
-        if ($adisyonSalon !== $salonId) {
-            throw new YetkisizErisimException('Adisyon bu işletmeye ait değil');
-        }
-
-        // Kapsam + yetki.
-        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+        // Kapsam + yetki, sonra adisyon bu salonun mu (değilse / yoksa 404).
+        $adisyonId = $request->integer('adisyon_id');
+        [$uid, $salonId] = $this->salondakiKayit($request, 'satis.tahsilat_al', fn () => $this->adisyonServisi->salonIdGetir($adisyonId), 'Adisyon bulunamadı');
         $this->vadelerSalonun($salonId, (array) $request->input('taksit_vade_id', []), 'taksit_vadeleri', 'taksitli_tahsilatlar', 'taksitli_tahsilat_id');
         $this->vadelerSalonun($salonId, (array) $request->input('senet_vade_id', []), 'senet_vadeleri', 'senetler', 'senet_id');
 
         // GERÇEK YAZMA yolu — yalnızca dry_run=false iken.
         if (! $request->boolean('dry_run')) {
-            // Çift güvenlik: config bayrağı kapalıysa asla yazma.
-            $this->yazmaAcikMi('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).');
             // Harici indirim varsa ek yetki: satis.indirim_uygula. Müşterinin hak ettiği aktif/sadık indirim payı
             // (brüt = tutar + indirim üzerinden %) yetkisiz uygulanabilir — eski ekranda kendiliğinden düşüyordu.
             $indirim = (float) $request->input('indirim', 0);
             if ($indirim > 0 && ! $this->musteriIndirimiIcinde($salonId, $adisyonId, (float) $request->input('tutar', 0), $indirim)) {
-                $this->kapi->denetle($user->id, $salonId, ['satis.indirim_uygula']);
+                $this->kapi->denetle($uid, $salonId, ['satis.indirim_uygula']);
             }
+            // Çift güvenlik: config bayrağı kapalıysa asla yazma (yetkilerden sonra).
+            $this->yazmaAcikMi('Gerçek yazma henüz etkin değil (dry_run=1 zorunlu).');
             // Taksit/senet vade ödemesi + harici indirim: ARTIK destekleniyor.
             if (! $request->filled('idempotency_key')) {
                 return ApiCevap::hata('idempotency_key zorunlu', 422);
             }
 
             $olusturanId = Personeller::where('salon_id', $salonId)
-                ->where('yetkili_id', $user->id)->value('id');
+                ->where('yetkili_id', $uid)->value('id');
 
             $sonuc = $this->servis->yaz(
                 array_merge($request->all(), ['salon_id' => $salonId, 'adisyon_id' => $adisyonId]),
-                ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
+                ['yetkili_id' => $uid, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
             );
 
             $sonuc['hesap'] = $this->adisyonServisi->getir($adisyonId)['hesap'];
@@ -129,15 +108,10 @@ class TahsilatController extends V2Controller
      */
     public function taksit(Request $request, int $id, TaksitServisi $taksit)
     {
-        $user = $this->kullanici();
-        $salonId = $this->adisyonServisi->salonIdGetir($id);
-        if (! $salonId) {
-            return ApiCevap::hata('Adisyon bulunamadı', 404);
-        }
+        [$uid, $salonId] = $this->kayitDenetle($this->adisyonServisi->salonIdGetir($id), 'satis.senet_olustur', 'Adisyon bulunamadı');
         $onOdeme = (float) $request->input('on_odeme', 0);
-        $this->kapi->denetle($user->id, $salonId, ['satis.senet_olustur']);
         if ($onOdeme > 0) {
-            $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
+            $this->kapi->denetle($uid, $salonId, ['satis.tahsilat_al']);
         }
         $this->yazmaAcikMi();
         if ($onOdeme > 0 && ! $request->filled('on_odeme_yontemi_id')) {
@@ -147,10 +121,10 @@ class TahsilatController extends V2Controller
             return ApiCevap::hata('idempotency_key zorunlu', 422);
         }
 
-        $olusturanId = Personeller::where('salon_id', $salonId)->where('yetkili_id', $user->id)->value('id');
+        $olusturanId = Personeller::where('salon_id', $salonId)->where('yetkili_id', $uid)->value('id');
         $sonuc = $taksit->adisyonTaksiti($id,
             $request->only(['on_odeme', 'on_odeme_yontemi_id', 'odeme_tarihi', 'vade', 'vade_baslangic_tarihi', 'notlar', 'idempotency_key']),
-            ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]);
+            ['yetkili_id' => $uid, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]);
         $sonuc['hesap'] = $this->adisyonServisi->getir($id)['hesap'];
 
         return ApiCevap::basarili($sonuc, $sonuc['replay'] ? 'Bu istek zaten işlenmişti.' : 'Taksitli alacak kayıtları oluşturuldu.');
@@ -163,17 +137,10 @@ class TahsilatController extends V2Controller
      */
     public function guncelle(Request $request, int $id)
     {
-        $user = $this->kullanici();
-        $this->yazmaAcikMi();
-
         $t = Tahsilat::find($id);
-        if (! $t) {
-            return ApiCevap::hata('Tahsilat bulunamadı', 404);
-        }
-        $salonId = (int) $t->salon_id;
+        [$uid, $salonId] = $this->kayitDenetle($t ? (int) $t->salon_id : null, 'satis.tahsilat_al', 'Tahsilat bulunamadı');
+        $this->yazmaAcikMi();
         $adisyonId = (int) $t->adisyon_id;
-
-        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_al']);
 
         $tutar = (float) $request->input('tutar', 0);
         if ($tutar <= 0) {
@@ -191,20 +158,20 @@ class TahsilatController extends V2Controller
         // satis.tahsilat_sil + SMS ayari 23 hesap sahibi onayi (silmeyle ortak kapi).
         $komisyon = (float) $request->input('komisyon', 0);
         if (TahsilatNet::azaltmaMi((float) $t->tutar, $tutar, $komisyon)) {
-            $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_sil']);
-            $this->onay->tahsilatAzaltma($salonId, (int) $user->id, $id, $tutar, $request->input('onay_kodu'), $komisyon);
+            $this->kapi->denetle($uid, $salonId, ['satis.tahsilat_sil']);
+            $this->onay->tahsilatAzaltma($salonId, $uid, $id, $tutar, $request->input('onay_kodu'), $komisyon);
         }
 
         $olusturanId = Personeller::where('salon_id', $salonId)
-            ->where('yetkili_id', $user->id)->value('id');
+            ->where('yetkili_id', $uid)->value('id');
 
         // Atomik: önce eski kaydı iade et, sonra yeniyi yaz (kalan doğru yeniden dağıtılır).
-        $sonuc = DB::transaction(function () use ($id, $request, $salonId, $adisyonId, $user, $olusturanId) {
-            $this->silServisi->sil($id, ['yetkili_id' => $user->id, 'salon_id' => $salonId]);
+        $sonuc = DB::transaction(function () use ($id, $request, $salonId, $adisyonId, $uid, $olusturanId) {
+            $this->silServisi->sil($id, ['yetkili_id' => $uid, 'salon_id' => $salonId]);
 
             return $this->servis->yaz(
                 array_merge($request->all(), ['salon_id' => $salonId, 'adisyon_id' => $adisyonId]),
-                ['yetkili_id' => $user->id, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
+                ['yetkili_id' => $uid, 'salon_id' => $salonId, 'olusturan_id' => $olusturanId ? (int) $olusturanId : null]
             );
         });
 
@@ -220,22 +187,12 @@ class TahsilatController extends V2Controller
      */
     public function sil(Request $request, int $id)
     {
-        $user = $this->kullanici();
-
-        // Gerçek yazma/iade flag'i (yazma ile aynı kapı).
+        [$uid, $salonId] = $this->kayitDenetle(Tahsilat::where('id', $id)->value('salon_id'), 'satis.tahsilat_sil', 'Tahsilat bulunamadı');
+        // Gerçek yazma/iade flag'i (yazma ile aynı kapı) — yetkiden SONRA: yetkisize bayrak durumu söylenmez.
         $this->yazmaAcikMi('Gerçek iade/silme henüz etkin değil');
+        $this->onay->tahsilatSilme($salonId, $uid, $id, $request->input('onay_kodu'));
 
-        $t = Tahsilat::find($id);
-        if (! $t) {
-            return ApiCevap::hata('Tahsilat bulunamadı', 404);
-        }
-        $salonId = (int) $t->salon_id;
-
-        // Kapsam + yetki.
-        $this->kapi->denetle($user->id, $salonId, ['satis.tahsilat_sil']);
-        $this->onay->tahsilatSilme($salonId, (int) $user->id, $id, $request->input('onay_kodu'));
-
-        $sonuc = $this->silServisi->sil($id, ['yetkili_id' => $user->id, 'salon_id' => $salonId]);
+        $sonuc = $this->silServisi->sil($id, ['yetkili_id' => $uid, 'salon_id' => $salonId]);
         $sonuc['hesap'] = $this->adisyonServisi->getir($sonuc['adisyon_id'])['hesap'];
 
         return ApiCevap::basarili($sonuc, 'Tahsilat iade edildi (silindi).');

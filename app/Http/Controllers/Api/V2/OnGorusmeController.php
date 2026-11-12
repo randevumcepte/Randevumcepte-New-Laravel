@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Exceptions\BulunamadiException;
 use App\Http\Requests\OnGorusme\OnGorusmeKaydetIstegi;
 use App\Http\Requests\OnGorusme\OnGorusmeSatisIstegi;
 use App\Http\Requests\OnGorusme\OnGorusmeSatisYapilmadiIstegi;
@@ -39,7 +38,8 @@ class OnGorusmeController extends V2Controller
 {
     private const OKU = 'gorusme.liste_gor';
 
-    private const YAZ = 'gorusme.ekle_duzenle';
+    /** Görüşme yazma — mobil ön görüşme satışı (TahsilatMobilController) da bu anahtarı ister. */
+    public const YAZ = 'gorusme.ekle_duzenle';
 
     protected ?string $yazmaAlani = 'ongorusme';
 
@@ -77,7 +77,7 @@ class OnGorusmeController extends V2Controller
 
     public function goster(int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id, self::OKU);
+        [$uid, $salonId] = $this->gorusmeDenetle($id, self::OKU);
 
         return ApiCevap::basarili($this->sorgu->getir($id, $this->ctx($uid, $salonId)));
     }
@@ -100,7 +100,7 @@ class OnGorusmeController extends V2Controller
 
     public function guncelle(OnGorusmeKaydetIstegi $request, OnGorusmeYazServisi $yaz, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id, self::YAZ);
+        [$uid, $salonId] = $this->gorusmeDenetle($id, self::YAZ);
         $this->yazmaAcikMi();
 
         return $this->kayitCevabi($yaz->kaydet($salonId, $id, $request->validated(), $uid), $uid, $salonId, 'Ön görüşme başarıyla güncellendi');
@@ -108,7 +108,7 @@ class OnGorusmeController extends V2Controller
 
     public function satisYapildi(OnGorusmeSatisIstegi $request, OnGorusmeSonucServisi $sonuc, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id, self::YAZ);
+        [$uid, $salonId] = $this->gorusmeDenetle($id, self::YAZ);
         $this->yazmaAcikMi();
 
         $veri = $sonuc->satisYapildi($salonId, $id, $request->validated(), [
@@ -122,7 +122,7 @@ class OnGorusmeController extends V2Controller
 
     public function satisYapilmadi(OnGorusmeSatisYapilmadiIstegi $request, OnGorusmeSonucServisi $sonuc, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($id, self::YAZ);
+        [$uid, $salonId] = $this->gorusmeDenetle($id, self::YAZ);
         $this->yazmaAcikMi();
         $sonuc->satisYapilmadi($salonId, $id, (string) ($request->validated()['not'] ?? ''), $uid);
 
@@ -157,15 +157,12 @@ class OnGorusmeController extends V2Controller
      *
      * @return array{0:int,1:int} [yetkili id, salon id]
      */
-    private function kayitDenetle(int $id, array|string $yetki): array
+    private function gorusmeDenetle(int $id, array|string $yetki): array
     {
         $uid = (int) $this->kullanici()->id;
         $salonId = $this->bulundu($this->sorgu->salonId($id), 'Ön görüşme bulunamadı');
         app(GuvenlikKapisi::class)->denetle($uid, $salonId, $yetki);
-
-        if (! $this->sorgu->erisilebilirMi($id, $this->sorgu->kisitliPersonel($uid, $salonId))) {
-            throw new BulunamadiException('Ön görüşme bulunamadı');
-        }
+        $this->sorgu->erisimZorunlu($id, $uid, $salonId);
 
         return [$uid, $salonId];
     }

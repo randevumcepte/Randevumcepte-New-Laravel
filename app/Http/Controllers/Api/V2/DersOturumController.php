@@ -28,8 +28,8 @@ class DersOturumController extends DersTabanController
     {
         [$uid, $salonId] = $this->dersSalonu($request, self::OKU);
         $tarih = $request->input('tarih', date('Y-m-d'));
-        // Mobil ana sayfa dersleri tum salon icin listeler; web'de rol 5 yalniz kendi derslerini gorur.
-        $kisit = $this->mobilYolu() ? null : $this->servis->kisitliPersonel($salonId, $uid, $this->yetkiVar($uid, $salonId, 'randevu.tum_personel_gor'));
+        // Web ve mobil ayni kisit (2026-11-12): randevu.tum_personel_gor yoksa yalniz kendi dersleri.
+        $kisit = $this->servis->kisitliPersonel($salonId, $uid, $this->yetkiVar($uid, $salonId, 'randevu.tum_personel_gor'));
 
         return ApiCevap::basarili($this->servis->liste(
             $salonId,

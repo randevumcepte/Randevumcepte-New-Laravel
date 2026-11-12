@@ -22,10 +22,10 @@ class MobilSatisOkumaServisi
         'ek_saglik_sorunu', 'cilt_tipi', 'tc_kimlik_no', 'musteri_tipi', 'meslek', 'bildirim_kimligi', 'kayit_tarihi', 'referans', 'profil_resim',
     ];
 
-    /** Eski paketsatisget: bugun olusan paket kalemleri, faturasiz gizleme uygulanmaz. */
-    public function gunlukPaketler(int $salonId, ?string $ara): array
+    /** Eski paketsatisget: bugun olusan paket kalemleri, faturasiz gizleme uygulanmaz. $kisitPersonel: SatisListeKapsami kisiti. */
+    public function gunlukPaketler(int $salonId, ?string $ara, ?int $kisitPersonel = null): array
     {
-        return $this->gunlukTaban('adisyon_paketler', $salonId, $ara)
+        return $this->gunlukTaban('adisyon_paketler', $salonId, $ara, $kisitPersonel)
             ->join('paketler', 'adisyon_paketler.paket_id', '=', 'paketler.id')
             ->select(
                 'adisyon_paketler.id as id',
@@ -39,9 +39,9 @@ class MobilSatisOkumaServisi
     }
 
     /** Eski urunsatisget: bugun olusan urun kalemleri. */
-    public function gunlukUrunler(int $salonId, ?string $ara): array
+    public function gunlukUrunler(int $salonId, ?string $ara, ?int $kisitPersonel = null): array
     {
-        return $this->gunlukTaban('adisyon_urunler', $salonId, $ara)
+        return $this->gunlukTaban('adisyon_urunler', $salonId, $ara, $kisitPersonel)
             ->join('urunler', 'adisyon_urunler.urun_id', '=', 'urunler.id')
             ->select(
                 'adisyon_urunler.id as id',
@@ -53,7 +53,7 @@ class MobilSatisOkumaServisi
             ->paginate(self::SAYFA_BOYU)->toArray();
     }
 
-    private function gunlukTaban(string $tablo, int $salonId, ?string $ara)
+    private function gunlukTaban(string $tablo, int $salonId, ?string $ara, ?int $kisitPersonel)
     {
         return DB::table($tablo)
             ->join('salon_personelleri', $tablo.'.personel_id', '=', 'salon_personelleri.id')
@@ -61,7 +61,8 @@ class MobilSatisOkumaServisi
             ->join('users', 'adisyonlar.user_id', '=', 'users.id')
             ->where('users.name', 'like', '%'.$ara.'%')
             ->where('adisyonlar.salon_id', $salonId)
-            ->where($tablo.'.created_at', 'like', '%'.date('Y-m-d').'%');
+            ->where($tablo.'.created_at', 'like', '%'.date('Y-m-d').'%')
+            ->when($kisitPersonel, fn ($q, $pid) => $q->where($tablo.'.personel_id', $pid));
     }
 
     public function musteriTuru(int $musteriId, int $salonId): int

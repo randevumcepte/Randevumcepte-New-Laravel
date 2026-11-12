@@ -29,6 +29,9 @@ class RandevuListeServisi
 {
     public const SIRALANABILIR = ['tarih', 'olusturulma', 'musteri'];
 
+    /** Kisitli kullanicinin personel kaydi yoksa kullanilan, hicbir kalemle eslesmeyen personel id'si. */
+    private const KISIT_HICBIRI = -1;
+
     /** Olusturma kaynagi filtresi: randevular.<kolon> = 1 (eski: salon / web / uygulama). */
     public const KAYNAKLAR = ['salon' => 'Salon', 'web' => 'Web', 'uygulama' => 'Uygulama'];
 
@@ -45,8 +48,11 @@ class RandevuListeServisi
     {
         $var = fn (string $k) => $this->yetki->yetkiliYetkiVar($yetkiliId, $salonId, $k);
 
+        // Fail-closed: tum_personel_gor yok ve bu salonda personel kaydi da yoksa hicbir satir eslesmez (kisitsiz kalmaz).
+        $kisit = $var('randevu.tum_personel_gor') ? null : ($this->portfoy->personelId($yetkiliId, $salonId) ?? self::KISIT_HICBIRI);
+
         return [
-            'kisit_personel_id' => $var('randevu.tum_personel_gor') ? null : $this->portfoy->personelId($yetkiliId, $salonId),
+            'kisit_personel_id' => $kisit,
             'yetki'             => [
                 'onayla'        => $var('randevu.onayla'),
                 'duzenle_iptal' => $var('randevu.duzenle_iptal'),

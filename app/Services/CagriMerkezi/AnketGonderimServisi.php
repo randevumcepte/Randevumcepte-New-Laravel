@@ -25,12 +25,10 @@ class AnketGonderimServisi
         private WhatsappOturumServisi $oturum,
     ) {}
 
-    /** $listeYetkisiYeter: kaydın listesini işleyebilen gönderir (mobil dialer); web göndermez, eylem anahtarı aranır. */
-    public function gonder(CagriMerkeziErisim $e, int $aranacakId, bool $listeYetkisiYeter = false): array
+    /** Web ve mobil ayni kural (2026-11-12): Anket eylem yetkisi her zaman aranır. */
+    public function gonder(CagriMerkeziErisim $e, int $aranacakId): array
     {
-        if (! $listeYetkisiYeter) {
-            $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Anket);
-        }
+        $this->erisim->eylemZorunlu($e, CagriMerkeziEylemi::Anket);
         $k = $this->erisim->kayit($aranacakId, $e);
         $musteri = DB::table('users')->where('id', $k->user_id)->first(['id', 'name', 'cep_telefon']);
         if (! $musteri) {

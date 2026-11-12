@@ -55,6 +55,20 @@ class MusteriOkumaServisi
     }
 
     /**
+     * Giris yapanin portfoy kapsaminda musteri zorunlu (musteri.tum_portfoy_gor yoksa kendi portfoyu) — musteri
+     * ekranlari ve mobil musteri karti ortak kapisi. Degilse 404.
+     *
+     * @return ?int kisit personel id (kisit yoksa null)
+     */
+    public function kapsamdaZorunlu(int $yetkiliId, int $salonId, int $userId): ?int
+    {
+        $kisit = $this->kapsam->kisitliPersonel($yetkiliId, $salonId);
+        $this->portfoyZorunlu($salonId, $userId, $kisit);
+
+        return $kisit;
+    }
+
+    /**
      * Musterinin bu salonun aktif portfoyunde (ve kullanicinin kapsaminda) oldugunu dogrular.
      * Degilse 404 — baska isletmenin musterisinin varligi sizdirilmaz.
      */

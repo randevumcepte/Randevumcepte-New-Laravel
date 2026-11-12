@@ -34,7 +34,7 @@ class AnketSablonController extends AnketTabanController
 
     public function goster(int $id)
     {
-        $this->kayitDenetle($this->sorgu->salonId($id), self::BULUNAMADI);
+        $this->anketKaydi($this->sorgu->salonId($id), self::BULUNAMADI);
 
         return ApiCevap::basarili($this->sorgu->getir($id));
     }
@@ -50,7 +50,7 @@ class AnketSablonController extends AnketTabanController
 
     public function guncelle(AnketSablonKaydetIstegi $request, AnketSablonYazServisi $yaz, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($this->sorgu->salonId($id), self::BULUNAMADI);
+        [$uid, $salonId] = $this->anketKaydi($this->sorgu->salonId($id), self::BULUNAMADI);
         $this->yazmaAcikMi();
         $yaz->kaydet($salonId, $id, $request->validated(), $uid);
 
@@ -59,7 +59,7 @@ class AnketSablonController extends AnketTabanController
 
     public function sil(AnketSablonYazServisi $yaz, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($this->sorgu->salonId($id), self::BULUNAMADI);
+        [$uid, $salonId] = $this->anketKaydi($this->sorgu->salonId($id), self::BULUNAMADI);
         $this->yazmaAcikMi();
         $sonuc = $yaz->sil($id, $salonId, $uid);
 
@@ -70,7 +70,7 @@ class AnketSablonController extends AnketTabanController
 
     public function gonder(AnketManuelGonderIstegi $request, AnketGonderServisi $gonderici, int $id)
     {
-        [$uid, $salonId] = $this->kayitDenetle($this->sorgu->salonId($id), self::BULUNAMADI);
+        [$uid, $salonId] = $this->anketKaydi($this->sorgu->salonId($id), self::BULUNAMADI);
         $this->yazmaAcikMi();
 
         return ApiCevap::basarili($gonderici->manuel($salonId, $id, $request->validated(), $uid), 'Anket gönderim kuyruğuna alındı', 201);
