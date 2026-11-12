@@ -279,6 +279,9 @@ class UcYetkiTaramasiTest extends TestCase
 
     public function test_izin_listesinde_eskimis_ya_da_gereksiz_girdi_yok(): void
     {
+        if (self::onek() !== null) {
+            $this->markTestSkipped('UC_TARAMA_ONEK ile parcali taramada izin listesi butunu denetlenemez.');
+        }
         $tarama = $this->tarama();
 
         $this->assertCount(0, $tarama['izin_listesi_sorunlari'], "Izin listesi (UcYetkiIzinListesi) duzeltilmeli:\n"
@@ -332,10 +335,20 @@ class UcYetkiTaramasiTest extends TestCase
         return self::$tarama = $tarama;
     }
 
+    /** @return array<int,string>|null */
+    private static function onek(): ?array
+    {
+        $deger = trim((string) getenv('UC_TARAMA_ONEK'));
+
+        return $deger === '' ? null : array_values(array_filter(explode(',', $deger)));
+    }
+
     /** @return array<int, Rota> */
     private function v2Rotalari(): array
     {
-        $rotalar = array_filter(Route::getRoutes()->getRoutes(), fn (Rota $r) => Str::startsWith($r->uri(), 'api/v2/'));
+        // UC_TARAMA_ONEK=satis → yalniz api/v2/satis* (az bellekli parcali calistirma; virgulle birden cok onek)
+        $onekler = array_map(fn ($o) => 'api/v2/'.trim($o, " /"), self::onek() ?? ['']);
+        $rotalar = array_filter(Route::getRoutes()->getRoutes(), fn (Rota $r) => Str::startsWith($r->uri(), $onekler));
         usort($rotalar, fn (Rota $a, Rota $b) => strcmp($a->uri(), $b->uri()));
 
         return $rotalar;
@@ -673,7 +686,8 @@ class UcYetkiTaramasiTest extends TestCase
             'uclar' => $tarama['sonuclar'],
         ];
 
-        $dosya = storage_path(self::RAPOR);
+        $dosya = storage_path(self::onek() === null ? self::RAPOR
+            : str_replace('.json', '-'.Str::slug(implode('-', self::onek())).'.json', self::RAPOR));
         @mkdir(dirname($dosya), 0775, true);
         file_put_contents($dosya, json_encode($rapor, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
