@@ -302,3 +302,34 @@
   .rc-modal-overlay:has(> .rc-diyalog) { padding: 16px; align-items: center; }
   .rc-modal.rc-diyalog { max-width: 460px; border-radius: 20px; animation: rc-modal-ac .18s ease; }
 }
+
+/* ═════════ TELEFON: SADE GÖRÜNÜM + TAŞMA YOK (kullanıcı 2026-11-12) ═════════
+   Izgara kutusu içerik kadar genişlemez (min-width:0) → tutarlar taşmaz; tutar ekran genişliğine göre küçülür, yine sığmazsa
+   "…" ile kesilir. Kart ikonları, sayfa alt açıklaması gizli; başlık, sekme ve filtreler sıkı. Satış Takibi (s-) dahil; sayfa
+   stilleri sonra yüklendiği için seçiciler body ile güçlü. */
+@media (max-width: 600px) {
+  body .rc-icerik { padding: 10px; }
+  body .rc-ozet, body .s-ozet { gap: 8px; margin-bottom: 12px; }
+  body .rc-ozet > *, body .s-ozet > *, body .rp-hucreler > * { min-width: 0; }
+  body .rc-kutu, body .s-kutu { padding: 10px 12px; gap: 8px; border-radius: 14px; }
+  body .rc-k-ikon, body .s-k-ikon { display: none; }
+  body .rc-k-ic, body .s-k-ic { min-width: 0; width: 100%; }
+  body .rc-k-ad, body .s-k-ad { font-size: 10px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body .rc-k-deger, body .s-k-deger { font-size: clamp(14px, 4.6vw, 18px); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  body .rc-sayfa-ust, body .s-ust { margin-bottom: 12px; }
+  body .rc-sayfa-ikon, body .s-baslik-ikon { width: 32px; height: 32px; font-size: 15px; border-radius: 10px; }
+  body .rc-sayfa-baslik h1, body .s-baslik h1 { font-size: 17px; }
+  body .rc-sayfa-alt, body .s-alt { display: none; }
+
+  /* Sekmeler tek satır, yana kayar */
+  body .rc-sekmeler, body .s-sekmeler { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 6px; margin-bottom: 10px; padding-bottom: 2px; }
+  body .rc-sekme, body .s-sekme { flex: 0 0 auto; padding: 6px 11px; font-size: 12.5px; }
+
+  /* Filtre kartı: iki sütun, alanlar tam genişlik */
+  body .s-filtre-kart { padding: 10px 12px; margin-bottom: 12px; border-radius: 14px; }
+  body .s-filtre { gap: 8px 10px; }
+  body .s-f-grup { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  body .s-f-grup label { font-size: 10px; }
+  body .s-f-grup input, body .s-f-grup select, body .s-f-grup .rs-btn { width: 100%; max-width: none; }
+}
