@@ -2,6 +2,7 @@
 
 namespace App\Services\BildirimKuyrugu;
 
+use App\Domain\Anket\AnketGonderimKanali;
 use App\Services\BildirimKuyrugu\Kanal\SmsKanali;
 use App\Services\BildirimKuyrugu\Kanal\WhatsappKanali;
 use App\Support\EskiPanelLinki;
@@ -9,8 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Anket linki gonderimi; eski StoreAdminController::anketSmsGonder ile birebir: salon WhatsApp'i bagliysa once WhatsApp,
- * olmazsa Controller::sms_gonder yolu. Gonderim hatasi yutulur, kayit tamamlanmis sayilir (eskisi gibi).
+ * Anket linki gonderimi; eski StoreAdminController::anketSmsGonder ile birebir. Kanal sirasi isletmeye ozel
+ * (AnketGonderimKanali): varsayilan WhatsApp bagliysa once WA, olmazsa SMS; 'sms' secili salonda once SMS, istisnada WA yedek.
+ * Gonderim hatasi yutulur, kayit tamamlanmis sayilir (eskisi gibi).
  *
  * Host: eskide HTTP_HOST, yoksa salonlar.domain, o da NULL ise panel host'u. Isleyici konsolda calistigindan HTTP_HOST yoktur.
  * Anket sayfasi /anket/{token} eski monolittedir; yeni app'in adresi (app.url) kullanilmaz.
@@ -31,15 +33,33 @@ class AnketLinkGonderici
         $mesaj = $this->mesaj($gonderim, $sablon, $musteri, $salon);
 
         $oturumSalonu = $salon ? $this->whatsapp->oturumSalonu($salon) : null;
-        if ($oturumSalonu && $this->whatsapp->bagliMi($oturumSalonu) && $this->whatsappIle($salon, $gonderim, $musteri, $mesaj)) {
+        $waBagli = $oturumSalonu && $this->whatsapp->bagliMi($oturumSalonu);
+
+        if (AnketGonderimKanali::smsOnceMi($salon)) {
+            if (! $this->smsIle($gonderim, $mesaj) && $waBagli) {
+                $this->whatsappIle($salon, $gonderim, $musteri, $mesaj);
+            }
+
             return;
         }
 
-        // Eskideki gibi yalniz \Exception yakalanir.
+        if ($waBagli && $this->whatsappIle($salon, $gonderim, $musteri, $mesaj)) {
+            return;
+        }
+        $this->smsIle($gonderim, $mesaj);
+    }
+
+    /** Istisna olmadiysa true (saglayici hatasi SmsKanali icinde loglanir). */
+    private function smsIle(object $gonderim, string $mesaj): bool
+    {
         try {
             $this->sms->gonder($gonderim->salon_id, [['to' => $gonderim->telefon, 'message' => $mesaj]]);
-        } catch (\Exception $e) {
+
+            return true;
+        } catch (\Throwable $e) {
             Log::error('anketSmsGonder hata: '.$e->getMessage());
+
+            return false;
         }
     }
 
@@ -63,13 +83,13 @@ class AnketLinkGonderici
 
                 return true;
             }
-            Log::warning('[ANKET-WA] basarisiz → SMS fallback', [
+            Log::warning('[ANKET-WA] basarisiz', [
                 'salon_id'    => $salon->id,
                 'gonderim_id' => $gonderim->id,
                 'err'         => $sonuc['error'] ?? 'unknown',
             ]);
         } catch (\Throwable $e) {
-            Log::warning('[ANKET-WA] istisna → SMS fallback: '.$e->getMessage(), ['salon_id' => $salon->id, 'gonderim_id' => $gonderim->id]);
+            Log::warning('[ANKET-WA] istisna: '.$e->getMessage(), ['salon_id' => $salon->id, 'gonderim_id' => $gonderim->id]);
         }
 
         return false;

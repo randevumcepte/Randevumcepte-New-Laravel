@@ -2,6 +2,7 @@
 
 namespace App\Services\Anket;
 
+use App\Domain\Anket\AnketGonderimKanali;
 use App\Domain\Anket\AnketOdulu;
 use App\Domain\Anket\GoogleYorumBaglantisi;
 use App\Domain\Anket\ReputasyonEsikleri;
@@ -11,6 +12,7 @@ use App\Exceptions\GecersizIslemException;
 use App\Support\AktiviteLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Reputation Booster ayarları (salonlar kolonları) — eski web googleReviewKaydet + reputationPremiumAc
@@ -29,7 +31,7 @@ class AnketAyarServisi
 
     public function satir(int $salonId): object
     {
-        $s = DB::table('salonlar')->where('id', $salonId)->first(self::KOLONLAR);
+        $s = DB::table('salonlar')->where('id', $salonId)->first($this->kolonlar());
         if (! $s) {
             throw new BulunamadiException('Salon bulunamadı');
         }
@@ -37,7 +39,20 @@ class AnketAyarServisi
         return $s;
     }
 
-    /** Alan adları mobil v1 anketAyarlar ile aynı (+ premium + uyarı telefonu). */
+    /** Kanal kolonu canlıda elle migrate edilir; kolon yokken select 500 vermesin. */
+    private function kolonlar(): array
+    {
+        return $this->kanalKolonuVar() ? [...self::KOLONLAR, AnketGonderimKanali::KOLON] : self::KOLONLAR;
+    }
+
+    private function kanalKolonuVar(): bool
+    {
+        static $var = null;
+
+        return $var ??= Schema::hasColumn('salonlar', AnketGonderimKanali::KOLON);
+    }
+
+    /** Alan adları mobil v1 anketAyarlar ile aynı (+ premium + uyarı telefonu + gönderim kanalı). */
     public function oku(int $salonId): array
     {
         $s = $this->satir($salonId);
@@ -46,6 +61,7 @@ class AnketAyarServisi
             'reputation_premium_aktif' => (bool) $s->reputation_premium_aktif,
             'google_url'               => (string) ($s->google_review_url ?? ''),
             'kotu_puan_uyari_telefon'  => (string) ($s->kotu_puan_uyari_telefon ?? ''),
+            'anket_gonderim_kanali'    => AnketGonderimKanali::normalize($s->anket_gonderim_kanali ?? null),
         ] + ReputasyonEsikleri::satirdan($s)->dizi()
           + AnketOdulu::satirdan($s, AnketOdulu::ONEK_GOOGLE)->kolonlar(AnketOdulu::ONEK_GOOGLE);
     }
@@ -77,6 +93,9 @@ class AnketAyarServisi
         }
         if (array_key_exists('kotu_puan_uyari_telefon', $g)) {
             $k['kotu_puan_uyari_telefon'] = TelefonNumarasi::kanonik($g['kotu_puan_uyari_telefon']) ?: null;
+        }
+        if (array_key_exists('anket_gonderim_kanali', $g) && $this->kanalKolonuVar()) {
+            $k[AnketGonderimKanali::KOLON] = AnketGonderimKanali::normalize($g['anket_gonderim_kanali']);
         }
         if (array_key_exists('google_odul_tipi', $g)) {
             $k += AnketOdulu::girdiden($g, AnketOdulu::ONEK_GOOGLE)->kolonlar(AnketOdulu::ONEK_GOOGLE);

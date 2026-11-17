@@ -13,7 +13,7 @@ const salonId = parseInt(kok.dataset.salon, 10) || parseInt(qp.get('sube'), 10) 
 if (salonId && window.rcPanel) window.rcPanel.salonAyarla(salonId);
 
 const MODULLER = {
-  sonuclar: () => import('/js/anket/sonuclar.js?v=1'),
+  sonuclar: () => import('/js/anket/sonuclar.js?v=2'),
   sablonlar: () => import('/js/anket/sablonlar.js?v=1'),
 };
 

@@ -24,6 +24,13 @@ export async function googleAyarAc(ctx, onKaydet) {
     <div class="rc-form-izgara">
       ${alan('Yorum Bağlantısı', `<input id="anGoogleUrl" value="${esc(a.google_url)}" placeholder="https://g.page/r/.../review">`, 'rc-tam')}
     </div>
+    <h4 class="an-baslik"><i class="bi bi-send"></i> Anket Gönderim Kanalı</h4>
+    <div class="rc-form-izgara">
+      ${alan('Anket daveti önce', `<select id="anKanal" data-arama="yok">
+        <option value="whatsapp"${a.anket_gonderim_kanali === 'sms' ? '' : ' selected'}>WhatsApp (bağlı değilse SMS)</option>
+        <option value="sms"${a.anket_gonderim_kanali === 'sms' ? ' selected' : ''}>SMS (gönderilemezse WhatsApp)</option>
+      </select>`, 'rc-tam')}
+    </div>
     <h4 class="an-baslik an-yesil"><i class="bi bi-star-fill"></i> Yüksek Puan → Google'a Yönlendir</h4>
     <div class="rc-form-izgara">
       ${sayiAlan('NPS eşiği (bu ve üstü)', 'anEsikNps', a.google_review_esik_nps, 'min="0" max="10"')}
@@ -45,6 +52,7 @@ export async function googleAyarAc(ctx, onKaydet) {
   el('#anAyarVazgec', ov).onclick = modalKapat;
   el('#anAyarKaydet', ov).onclick = (e) => kilitle(e.currentTarget, 'Kaydediliyor…', async () => {
     const s = await ctx.yaz('PATCH', '/ayarlar', {
+      anket_gonderim_kanali: el('#anKanal', ov).value,
       google_url: el('#anGoogleUrl', ov).value.trim(),
       google_review_esik_nps: el('#anEsikNps', ov).value,
       google_review_esik_csat: el('#anEsikCsat', ov).value,
