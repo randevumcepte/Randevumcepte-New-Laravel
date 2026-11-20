@@ -31,12 +31,13 @@ class AnketLinkGonderici
     {
         $salon = $this->whatsapp->salon($gonderim->salon_id);
         $mesaj = $this->mesaj($gonderim, $sablon, $musteri, $salon);
+        $smsMesaj = $this->smsMesaji($gonderim, $sablon, $musteri, $salon);
 
         $oturumSalonu = $salon ? $this->whatsapp->oturumSalonu($salon) : null;
         $waBagli = $oturumSalonu && $this->whatsapp->bagliMi($oturumSalonu);
 
         if (AnketGonderimKanali::smsOnceMi($salon)) {
-            if (! $this->smsIle($gonderim, $mesaj) && $waBagli) {
+            if (! $this->smsIle($gonderim, $smsMesaj) && $waBagli) {
                 $this->whatsappIle($salon, $gonderim, $musteri, $mesaj);
             }
 
@@ -46,7 +47,7 @@ class AnketLinkGonderici
         if ($waBagli && $this->whatsappIle($salon, $gonderim, $musteri, $mesaj)) {
             return;
         }
-        $this->smsIle($gonderim, $mesaj);
+        $this->smsIle($gonderim, $smsMesaj);
     }
 
     /** Saglayici kabul ettiyse true; istisna, kara liste veya saglayici reddinde (bakiye/baslik) false. */
@@ -99,16 +100,35 @@ class AnketLinkGonderici
         return false;
     }
 
-    private function mesaj(object $gonderim, object $sablon, object $musteri, ?object $salon): string
+    /** @return array{0:string,1:string,2:string,3:?string} [link, ilkAd, salonAd, odulIfade] */
+    private function parcalar(object $gonderim, object $sablon, object $musteri, ?object $salon): array
     {
         $domain = rtrim((string) preg_replace('#^https?://#i', '', trim((string) ($salon->domain ?? ''))), '/');
         $host = $domain !== '' ? $domain : EskiPanelLinki::host();
-        $link = 'https://'.$host.'/anket/'.$gonderim->token;
-        // Yalniz ilk ad: soyad SMS karakter tasarrufu icin atlanir.
+        // Yalniz ilk ad: soyad karakter tasarrufu icin atlanir.
         $adSoyad = $musteri->name ?? '';
-        $ilkAd = $adSoyad ? trim(explode(' ', $adSoyad)[0]) : '';
-        $salonAd = $salon->salon_adi ?? '';
-        $odulIfade = $this->odulIfadesi($sablon);
+
+        return ['https://'.$host.'/anket/'.$gonderim->token, $adSoyad ? trim(explode(' ', $adSoyad)[0]) : '', $salon->salon_adi ?? '', $this->odulIfadesi($sablon)];
+    }
+
+    /**
+     * SMS metni: kisa, Turkce karaktersiz (GSM 7-bit, tek parca hedefi); Turkce karakter/emoji UCS-2'ye (70 kr/parca) cevirir.
+     * Eski StoreAdminController::anketSmsKisaMetin ile ayni metin.
+     */
+    private function smsMesaji(object $gonderim, object $sablon, object $musteri, ?object $salon): string
+    {
+        [$link, $ilkAd, $salonAd, $odulIfade] = $this->parcalar($gonderim, $sablon, $musteri, $salon);
+        $metin = $odulIfade
+            ? 'Sn. '.$ilkAd.', '.$salonAd.' anketimizi doldurun, '.str_replace('₺', 'TL', $odulIfade).' kazanin: '.$link
+            : 'Sn. '.$ilkAd.', '.$salonAd.' deneyiminizi degerlendirir misiniz? '.$link;
+        $metin = strtr($metin, ['ç' => 'c', 'Ç' => 'C', 'ğ' => 'g', 'Ğ' => 'G', 'ı' => 'i', 'İ' => 'I', 'ö' => 'o', 'Ö' => 'O', 'ş' => 's', 'Ş' => 'S', 'ü' => 'u', 'Ü' => 'U', 'â' => 'a', 'Â' => 'A', 'î' => 'i', 'û' => 'u']);
+
+        return (string) preg_replace('/\s+/', ' ', trim((string) preg_replace('/[^\x20-\x7E]/', '', $metin)));
+    }
+
+    private function mesaj(object $gonderim, object $sablon, object $musteri, ?object $salon): string
+    {
+        [$link, $ilkAd, $salonAd, $odulIfade] = $this->parcalar($gonderim, $sablon, $musteri, $salon);
 
         if ($odulIfade) {
             return 'Merhaba Sn. '.$ilkAd." 🎁\n\n"
