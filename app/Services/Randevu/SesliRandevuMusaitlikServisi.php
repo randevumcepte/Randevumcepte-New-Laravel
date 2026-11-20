@@ -16,8 +16,6 @@ class SesliRandevuMusaitlikServisi
 
     private const VARSAYILAN_SURE_DK = 30;
 
-    private const IPTAL_DURUMU = 2;
-
     /** Personel takvimde gorunur mu ve tanimli hizmeti var mi? */
     public function takvimDurumu(int $personelId): array
     {
@@ -155,7 +153,7 @@ class SesliRandevuMusaitlikServisi
     private function doluAraliklar(int $personelId, string $tarih): array
     {
         $satirlar = DB::table('randevu_hizmetler as rh')->join('randevular as r', 'rh.randevu_id', '=', 'r.id')
-            ->where('rh.personel_id', $personelId)->where('r.tarih', $tarih)->where('r.durum', '!=', self::IPTAL_DURUMU)
+            ->where('rh.personel_id', $personelId)->where('r.tarih', $tarih)->where('r.durum', '<', \App\Models\Randevular::IPTAL_EDILDI) // 2 iptal, 3 kabul edilmedi: saat bos
             ->get(['r.saat', 'r.saat_bitis', 'rh.sure_dk']);
 
         $araliklar = [];
