@@ -5,7 +5,7 @@ namespace App\Domain\Anket;
 /**
  * Memnuniyet anketi davetinin ilk kanalı (salonlar.anket_gonderim_kanali) — SAF, TEK KAYNAK.
  *   whatsapp (varsayılan) : WhatsApp bağlıysa önce WA, olmazsa SMS
- *   sms                   : önce SMS; SMS istisna verirse ve WA bağlıysa WA yedek
+ *   sms                   : önce SMS; SMS gönderilemezse (sağlayıcı reddi dahil) ve WA bağlıysa WA yedek
  * Eski monolitte StoreAdminController::anketSmsGonder aynı kuralı uygular.
  */
 final class AnketGonderimKanali

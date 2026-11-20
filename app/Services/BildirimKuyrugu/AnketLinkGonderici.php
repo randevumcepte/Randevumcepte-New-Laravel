@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Anket linki gonderimi; eski StoreAdminController::anketSmsGonder ile birebir. Kanal sirasi isletmeye ozel
- * (AnketGonderimKanali): varsayilan WhatsApp bagliysa once WA, olmazsa SMS; 'sms' secili salonda once SMS, istisnada WA yedek.
+ * (AnketGonderimKanali): varsayilan WhatsApp bagliysa once WA, olmazsa SMS; 'sms' secili salonda once SMS, gonderilemezse WA yedek.
  * Gonderim hatasi yutulur, kayit tamamlanmis sayilir (eskisi gibi).
  *
  * Host: eskide HTTP_HOST, yoksa salonlar.domain, o da NULL ise panel host'u. Isleyici konsolda calistigindan HTTP_HOST yoktur.
@@ -49,13 +49,17 @@ class AnketLinkGonderici
         $this->smsIle($gonderim, $mesaj);
     }
 
-    /** Istisna olmadiysa true (saglayici hatasi SmsKanali icinde loglanir). */
+    /** Saglayici kabul ettiyse true; istisna, kara liste veya saglayici reddinde (bakiye/baslik) false. */
     private function smsIle(object $gonderim, string $mesaj): bool
     {
         try {
             $this->sms->gonder($gonderim->salon_id, [['to' => $gonderim->telefon, 'message' => $mesaj]]);
+            $ok = $this->sms->sonBasarili;
+            Log::info('[ANKET-SMS] '.($ok ? 'saglayici kabul etti' : 'GONDERILEMEDI'), [
+                'salon_id' => $gonderim->salon_id, 'gonderim_id' => $gonderim->id, 'to' => $gonderim->telefon,
+            ]);
 
-            return true;
+            return $ok;
         } catch (\Throwable $e) {
             Log::error('anketSmsGonder hata: '.$e->getMessage());
 

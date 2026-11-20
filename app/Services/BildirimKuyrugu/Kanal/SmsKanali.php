@@ -38,9 +38,13 @@ class SmsKanali
         private WhatsappKanali $whatsapp,
     ) {}
 
+    /** Son gonder() cagrisinda saglayici mesaji kabul etti mi (donus eski kontrat geregi Efetech cevabi; yedek kanal karari bunu okur). */
+    public bool $sonBasarili = false;
+
     /** Eski Controller::sms_gonder. Bos $salonId: sistem SMS'i (Efetech, config sistem_sms). @return ?array Efetech cevabi */
     public function gonder(int|string|null $salonId, array $mesajlar, ?string $gonderimTipi = null): ?array
     {
+        $this->sonBasarili = false;
         $mesajlar = KaraListeFiltresi::topluSuz($salonId, $mesajlar, $gonderimTipi);
         if (! $mesajlar) {
             Log::info('[SMS-API] sms_gonder: tumu kara listede, hic gonderim yok', ['salon_id' => $salonId]);
@@ -57,6 +61,7 @@ class SmsKanali
             // Eski hata KORUNUR: paket tek metin tasir, farkli metinli mesajlarda herkese ilk metin gider.
             $sonuc = $this->voiceTelekom->gonder($salon, 'Bildirim', (string) $mesajlar[0]['message'], array_column($mesajlar, 'to'));
             Log::info('[SMS-API] VoiceTelekom yanit', ['salon_id' => $salonId, 'pkgID' => $sonuc['pkgID'], 'err' => $sonuc['err']]);
+            $this->sonBasarili = $sonuc['err'] === null && ! empty($sonuc['pkgID']);
 
             return null;
         }
@@ -72,6 +77,7 @@ class SmsKanali
 
         if (! $sistem) {
             if ($this->efetechCevabiDolu($cevap)) {
+                $this->sonBasarili = ! empty($cevap['response']['message']['id']);
                 $this->kabulSonrasi($salonId, function () use ($cevap, $salon, $salonId, $mesajlar) {
                     $mesaj = $this->efetechMesaji($cevap);
                     sleep(1);
