@@ -112,15 +112,13 @@ class AnketLinkGonderici
     }
 
     /**
-     * SMS metni: kisa, Turkce karaktersiz (GSM 7-bit, tek parca hedefi); Turkce karakter/emoji UCS-2'ye (70 kr/parca) cevirir.
-     * Eski StoreAdminController::anketSmsKisaMetin ile ayni metin.
+     * SMS metni: SABIT (sablon/odul metnine bagli degil), kisa, Turkce karaktersiz (GSM 7-bit, tek parca);
+     * Turkce karakter/emoji UCS-2'ye (70 kr/parca) cevirir. Eski StoreAdminController::anketSmsKisaMetin ile ayni metin.
      */
     private function smsMesaji(object $gonderim, object $sablon, object $musteri, ?object $salon): string
     {
-        [$link, $ilkAd, $salonAd, $odulIfade] = $this->parcalar($gonderim, $sablon, $musteri, $salon);
-        $metin = $odulIfade
-            ? 'Sn. '.$ilkAd.', '.$salonAd.' anketimizi doldurun, '.str_replace('₺', 'TL', $odulIfade).' kazanin: '.$link
-            : 'Sn. '.$ilkAd.', '.$salonAd.' deneyiminizi degerlendirir misiniz? '.$link;
+        [$link, $ilkAd, $salonAd] = $this->parcalar($gonderim, $sablon, $musteri, $salon);
+        $metin = 'Sn. '.$ilkAd.', '.$salonAd.' deneyiminizi degerlendirir misiniz? '.$link;
         $metin = strtr($metin, ['ç' => 'c', 'Ç' => 'C', 'ğ' => 'g', 'Ğ' => 'G', 'ı' => 'i', 'İ' => 'I', 'ö' => 'o', 'Ö' => 'O', 'ş' => 's', 'Ş' => 'S', 'ü' => 'u', 'Ü' => 'U', 'â' => 'a', 'Â' => 'A', 'î' => 'i', 'û' => 'u']);
 
         return (string) preg_replace('/\s+/', ' ', trim((string) preg_replace('/[^\x20-\x7E]/', '', $metin)));
